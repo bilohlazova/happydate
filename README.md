@@ -35,4 +35,4 @@ Maria Bilohlazova
 Founder & Fullstack Developer
 
 
-GitHub: https://github.com/bilohlazova
+GitHub: https://github.com/bilohlazova/happydate

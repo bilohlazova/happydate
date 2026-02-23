@@ -34,5 +34,5 @@ Hosting: Vercel
 Maria Bilohlazova  
 Founder & Fullstack Developer
 
-GitHub:
-https://github.com/Darkwomen99
+
+GitHub: https://github.com/bilohlazova

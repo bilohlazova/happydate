@@ -127,26 +127,33 @@ const { url: avatarUrl } = useAvatar(user?.id);
   const NAV: NavItem[] = NAV_BASE;
 
   return (
-    <>
-      <header className="bg-gradient-to-r from-blue-400 to-cyan-400 py-3 sm:py-4 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-8">
-          <div className="flex justify-between items-center">
-            {/* Logo */}
-            <div className="flex items-center gap-2">
-              <Link href="/" className="text-2xl font-bold hover:underline text-white">
-                🎁 HappyDate
-              </Link>
-              <span className="hidden md:inline ml-2 text-base italic text-white/90">
-                Twój ciepły asystент prezentowy
-              </span>
-              <button
-                onClick={() => setAudioOpen(true)}
-                title="Posłuchaj nas"
-                className="text-white text-2xl p-2 rounded hover:bg-white/10 transition focus:ring-2 focus:ring-cyan-300"
-              >
-                ✨
-              </button>
-            </div>
+  <>
+    <header
+  className="bg-gradient-to-r from-blue-400 to-cyan-400 sticky top-0 z-50 pb-3 sm:pb-4"
+  style={{ paddingTop: "max(env(safe-area-inset-top), 12px)" }}
+>
+  <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-8">
+    <div className="flex justify-between items-center">
+
+      {/* Logo */}
+      <div className="flex items-center gap-2">
+        <Link href="/" className="text-2xl font-bold hover:underline text-white">
+          🎁 HappyDate
+        </Link>
+
+        <span className="hidden md:inline ml-2 text-base italic text-white/90">
+          Twój ciepły asystent prezentowy
+        </span>
+
+        <button
+          onClick={() => setAudioOpen(true)}
+          title="Posłuchaj nas"
+          className="text-white text-2xl p-2 rounded hover:bg-white/10 transition focus:ring-2 focus:ring-cyan-300"
+        >
+          ✨
+        </button>
+
+      </div>
 
             {/* Hamburger for mobile */}
             <button

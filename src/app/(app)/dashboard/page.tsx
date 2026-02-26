@@ -593,6 +593,32 @@ export default function DashboardPage() {
 
       {/* Two columns */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-0 pt-6">
+        {/* MOBILE HERO */}
+  <div className="lg:hidden mb-6">
+    {upcoming.length > 0 && (
+      <div className="bg-gradient-to-r from-pink-500 to-amber-400 text-white rounded-3xl p-5 shadow-lg">
+        <p className="text-sm opacity-90">Najbliższe wydarzenie</p>
+
+        <h2 className="text-xl font-bold">
+          {upcoming[0].title}
+        </h2>
+
+        <p className="text-sm opacity-90">
+          {daysLeftLabel(upcoming[0].date)}
+        </p>
+
+        <Link
+          href={`/gift/start?eventId=${upcoming[0].id}`}
+          className="inline-block mt-3 bg-white text-pink-600 px-4 py-2 rounded-xl font-semibold"
+        >
+          🎁 Znajdź prezent
+        </Link>
+      </div>
+    )}
+  </div>
+
+  {/* Two columns */}
+  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6"></div>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* LEFT */}
           <div className="lg:col-span-8">

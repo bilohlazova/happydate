@@ -5,6 +5,7 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import BottomNav from "@/components/BottomNav";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,18 +24,41 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="pl" className="h-full">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased h-full min-h-screen flex flex-col bg-slate-50`}
+        className={`
+          ${geistSans.variable} 
+          ${geistMono.variable} 
+          antialiased 
+          h-full 
+          bg-slate-50
+        `}
       >
-        <Header />
-        {/* Контент завжди розтягується, немає «білої смуги» перед футером */}
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <div className="flex flex-col min-h-screen">
+
+          {/* Header */}
+          <Header />
+
+          {/* Main content */}
+          <main className="flex-1 pb-20">
+            {children}
+          </main>
+
+          {/* Bottom nav – тільки mobile */}
+          <div className="md:hidden">
+            <BottomNav />
+          </div>
+
+          {/* Footer – тільки desktop */}
+          <div className="hidden md:block">
+            <Footer />
+          </div>
+
+        </div>
       </body>
     </html>
   );

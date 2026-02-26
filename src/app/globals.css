@@ -345,3 +345,35 @@ label[for],summary{ cursor:pointer; }
   20%  { opacity: 0; transform: translateY(-6px); }
   100% { opacity: 0; }
 }
+
+/* ───────────────────────────────────────────────────────────
+   iOS SAFE AREA — production-ready fix
+   ─────────────────────────────────────────────────────────── */
+
+/* універсальний safe padding */
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* header fix (найважливіше) */
+.hd-safe-header {
+  padding-top: max(env(safe-area-inset-top), 12px);
+}
+
+/* якщо header sticky */
+.hd-safe-header-sticky {
+  padding-top: max(env(safe-area-inset-top), 12px);
+  min-height: calc(56px + env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+}
+
+/* optional — safe container */
+.safe-container {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}

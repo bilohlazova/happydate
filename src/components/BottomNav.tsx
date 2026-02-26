@@ -7,50 +7,54 @@ export default function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // функція для відкриття modal Add (через custom event)
-  const handleAddClick = (e: React.MouseEvent) => {
+  // відкриття modal "Dodaj notatkę"
+  const handleAddNoteClick = (e: React.MouseEvent) => {
     e.preventDefault();
 
-    // якщо ми вже на dashboard — відкриваємо modal
+    // якщо вже на dashboard → відкриваємо modal
     if (pathname === "/dashboard") {
-      window.dispatchEvent(new CustomEvent("happydate:add-event"));
+      window.dispatchEvent(new CustomEvent("happydate:add-note"));
     } else {
-      // якщо не на dashboard — переходимо і відкриваємо modal
+      // якщо не на dashboard → переходимо і відкриваємо modal
       router.push("/dashboard");
 
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent("happydate:add-event"));
+        window.dispatchEvent(new CustomEvent("happydate:add-note"));
       }, 300);
     }
   };
 
   const items = [
     {
+      type: "link",
       href: "/dashboard",
       label: "Start",
       icon: "🏠",
       isActive: pathname === "/dashboard",
     },
     {
+      type: "link",
+      href: "/people",
+      label: "Osoby",
+      icon: "👥",
+      isActive: pathname.startsWith("/people"),
+    },
+    {
+      type: "action",
+      label: "Notatka",
+      icon: "➕",
+      onClick: handleAddNoteClick,
+      isActive: false,
+    },
+    {
+      type: "link",
       href: "/dashboard#calendar",
       label: "Kalendarz",
       icon: "📅",
       isActive: pathname === "/dashboard",
     },
     {
-      href: "#add",
-      label: "Dodaj",
-      icon: "➕",
-      isActive: false,
-      onClick: handleAddClick,
-    },
-    {
-      href: "/ideas",
-      label: "Pomysły",
-      icon: "🎁",
-      isActive: pathname.startsWith("/ideas"),
-    },
-    {
+      type: "link",
       href: "/profile",
       label: "Profil",
       icon: "👤",
@@ -80,7 +84,7 @@ export default function BottomNav() {
           <>
             <span
               className={`
-                text-lg transition-colors
+                text-xl transition-colors
                 ${active ? "text-pink-600" : "text-slate-400"}
               `}
             >
@@ -98,7 +102,8 @@ export default function BottomNav() {
           </>
         );
 
-        if (item.onClick) {
+        // кнопка (Notatka)
+        if (item.type === "action") {
           return (
             <button
               key={item.label}
@@ -114,10 +119,11 @@ export default function BottomNav() {
           );
         }
 
+        // link
         return (
           <Link
             key={item.href}
-            href={item.href}
+            href={item.href!}
             className="
               flex flex-col items-center justify-center
               flex-1 h-full

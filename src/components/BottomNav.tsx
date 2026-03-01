@@ -7,20 +7,17 @@ export default function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // відкриття modal "Dodaj notatkę"
   const handleAddNoteClick = (e: React.MouseEvent) => {
     e.preventDefault();
 
-    // якщо вже на dashboard → відкриваємо modal
     if (pathname === "/dashboard") {
       window.dispatchEvent(new CustomEvent("happydate:add-note"));
     } else {
-      // якщо не на dashboard → переходимо і відкриваємо modal
       router.push("/dashboard");
 
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent("happydate:add-note"));
-      }, 300);
+      }, 250);
     }
   };
 
@@ -65,12 +62,9 @@ export default function BottomNav() {
   return (
     <nav
       className="
-        fixed bottom-0 left-0 right-0
-        bg-white/95 backdrop-blur-md
-        border-t border-slate-200
+        bg-white border-t border-slate-200
         flex justify-around items-center
         h-16
-        z-50
         shadow-[0_-4px_20px_rgba(0,0,0,0.05)]
       "
       style={{
@@ -102,33 +96,23 @@ export default function BottomNav() {
           </>
         );
 
-        // кнопка (Notatka)
         if (item.type === "action") {
           return (
             <button
               key={item.label}
               onClick={item.onClick}
-              className="
-                flex flex-col items-center justify-center
-                flex-1 h-full
-                active:scale-95 transition-transform
-              "
+              className="flex flex-col items-center justify-center flex-1 h-full active:scale-95 transition-transform"
             >
               {content}
             </button>
           );
         }
 
-        // link
         return (
           <Link
             key={item.href}
             href={item.href!}
-            className="
-              flex flex-col items-center justify-center
-              flex-1 h-full
-              active:scale-95 transition-transform
-            "
+            className="flex flex-col items-center justify-center flex-1 h-full active:scale-95 transition-transform"
           >
             {content}
           </Link>

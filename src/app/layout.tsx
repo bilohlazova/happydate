@@ -34,26 +34,27 @@ export default function RootLayout({
           ${geistSans.variable} 
           ${geistMono.variable} 
           antialiased 
-          h-full 
+          h-screen 
+          overflow-hidden
           bg-slate-50
         `}
       >
-        <div className="flex flex-col min-h-screen">
+        <div className="flex flex-col h-full">
 
-          {/* Header */}
+          {/* HEADER */}
           <Header />
 
-          {/* Main content */}
-          <main className="flex-1 pb-20">
+          {/* CONTENT */}
+          <main className="flex-1 overflow-y-auto">
             {children}
           </main>
 
-          {/* Bottom nav – тільки mobile */}
+          {/* MOBILE NAV */}
           <div className="md:hidden">
             <BottomNav />
           </div>
 
-          {/* Footer – тільки desktop */}
+          {/* DESKTOP FOOTER */}
           <div className="hidden md:block">
             <Footer />
           </div>

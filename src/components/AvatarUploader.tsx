@@ -6,30 +6,27 @@ import { supabase } from "@/lib/supabaseClient";
 type Props = {
   userId: string;
   currentPath?: string | null;
-  onUploaded?: (newPath: string) => void;
 };
 
-export default function AvatarUploader({ userId, currentPath, onUploaded }: Props) {
+export default function AvatarUploader({ userId, currentPath }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onFile = async (file?: File | null) => {
     if (!file) return;
+
     try {
       setBusy(true);
       setError(null);
 
-      // 1) видаляємо старий файл (якщо був)
       if (currentPath) {
         const oldKey = currentPath.replace(/^avatars\//, "");
         await supabase.storage.from("avatars").remove([oldKey]);
       }
 
-      // 2) генеруємо новий шлях
       const ext = file.name.split(".").pop() || "png";
       const objectKey = `${userId}/${Date.now()}.${ext}`;
 
-      // 3) завантажуємо в bucket "avatars"
       const { error: upErr } = await supabase.storage
         .from("avatars")
         .upload(objectKey, file, {
@@ -39,17 +36,19 @@ export default function AvatarUploader({ userId, currentPath, onUploaded }: Prop
 
       if (upErr) throw upErr;
 
-      const newPath = objectKey;
-
-      // 4) оновлюємо профіль
       const { error: updErr } = await supabase
         .from("profiles")
-        .update({ avatar_url: newPath })
+        .update({ avatar_url: objectKey })
         .eq("id", userId);
 
       if (updErr) throw updErr;
 
-      onUploaded?.(newPath);
+      // 🔥 замість onUploaded — кидаємо подію
+      window.dispatchEvent(
+        new CustomEvent("happydate:avatar-updated", {
+          detail: objectKey,
+        })
+      );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Upload failed";
       setError(msg);
@@ -70,7 +69,12 @@ export default function AvatarUploader({ userId, currentPath, onUploaded }: Prop
           disabled={busy}
         />
       </label>
-      {error && <span className="text-red-600 text-sm">{error}</span>}
+
+      {error && (
+        <span className="text-red-600 text-sm">
+          {error}
+        </span>
+      )}
     </div>
   );
 }

@@ -1,10 +1,7 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { useSearchParams } from "next/navigation";
 
 type Person = {
   id: string;
@@ -12,9 +9,9 @@ type Person = {
   relation: string;
 };
 
-type Note = {
+type Memory = {
   id: string;
-  content: string;
+  content_text: string | null;
   created_at: string;
   person_id: string | null;
   event_id: string | null;
@@ -28,31 +25,22 @@ type AiIdea = {
 };
 
 export default function NotesPage() {
-  const searchParams = useSearchParams();
-
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [memories, setMemories] = useState<Memory[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [noteText, setNoteText] = useState("");
-  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
 
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const [filterPersonId, setFilterPersonId] = useState<string | "all">("all");
 
-  const [isNoteOpen, setIsNoteOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [aiIdeas, setAiIdeas] = useState<AiIdea[]>([]);
-  const [isLoadingAI, setIsLoadingAI] = useState(false);
 
-  const streamingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    const eventId = searchParams.get("eventId");
-    setSelectedEventId(eventId);
-  }, [searchParams]);
+  const streamingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
@@ -62,6 +50,7 @@ export default function NotesPage() {
     };
   }, []);
 
+  // ===== LOAD PEOPLE =====
   const loadPeople = useCallback(async () => {
     const { data, error } = await supabase
       .from("people")
@@ -76,38 +65,33 @@ export default function NotesPage() {
     setPeople(data ?? []);
   }, []);
 
-  const loadNotes = useCallback(async () => {
-    let query = supabase.from("notes").select("*").order("created_at", { ascending: false });
-
-    if (selectedEventId) {
-      query = query.eq("event_id", selectedEventId);
-    }
-
-    const { data, error } = await query;
+  // ===== LOAD MEMORIES =====
+  const loadMemories = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("memories")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error(error);
       return;
     }
 
-    setNotes(data ?? []);
-  }, [selectedEventId]);
+    setMemories(data ?? []);
+  }, []);
 
   useEffect(() => {
     async function init() {
       setLoading(true);
-      await Promise.all([loadPeople(), loadNotes()]);
+      await Promise.all([loadPeople(), loadMemories()]);
       setLoading(false);
     }
 
     init();
-  }, [loadPeople, loadNotes]);
+  }, [loadPeople, loadMemories]);
 
-  useEffect(() => {
-    loadNotes();
-  }, [selectedEventId, loadNotes]);
-
-  async function saveNote() {
+  // ===== SAVE MEMORY =====
+  async function saveMemory() {
     const { data: auth } = await supabase.auth.getUser();
 
     if (!auth.user) {
@@ -120,22 +104,25 @@ export default function NotesPage() {
       return;
     }
 
-    const payload = {
-      content: noteText.trim(),
-      person_id: selectedPersonId,
-      event_id: selectedEventId,
-    };
-
     let error;
 
-    if (editingNote) {
-      const res = await supabase.from("notes").update(payload).eq("id", editingNote.id);
+    if (editingMemory) {
+      const res = await supabase
+        .from("memories")
+        .update({
+          content_text: noteText.trim(),
+          person_id: selectedPersonId,
+        })
+        .eq("id", editingMemory.id);
+
       error = res.error;
     } else {
-      const res = await supabase.from("notes").insert({
+      const res = await supabase.from("memories").insert({
         user_id: auth.user.id,
-        ...payload,
+        content_text: noteText.trim(),
+        person_id: selectedPersonId,
       });
+
       error = res.error;
     }
 
@@ -144,7 +131,7 @@ export default function NotesPage() {
       return;
     }
 
-    await loadNotes();
+    await loadMemories();
     closeModal();
 
     if (selectedPersonId) {
@@ -152,42 +139,41 @@ export default function NotesPage() {
     }
   }
 
-  async function deleteNote(id: string) {
+  // ===== DELETE =====
+  async function deleteMemory(id: string) {
     if (!confirm("Usunąć notatkę?")) return;
 
-    await supabase.from("notes").delete().eq("id", id);
-    loadNotes();
+    await supabase.from("memories").delete().eq("id", id);
+    loadMemories();
   }
 
-  function openNewNote() {
-    setEditingNote(null);
+  // ===== MODAL =====
+  function openNew() {
+    setEditingMemory(null);
     setNoteText("");
     setSelectedPersonId(null);
-    setIsNoteOpen(true);
+    setIsModalOpen(true);
   }
 
-  function openEditNote(note: Note) {
-    setEditingNote(note);
-    setNoteText(note.content);
-    setSelectedPersonId(note.person_id);
-    setIsNoteOpen(true);
+  function openEdit(memory: Memory) {
+    setEditingMemory(memory);
+    setNoteText(memory.content_text ?? "");
+    setSelectedPersonId(memory.person_id);
+    setIsModalOpen(true);
   }
 
   function closeModal() {
-    setIsNoteOpen(false);
-    setEditingNote(null);
+    setIsModalOpen(false);
+    setEditingMemory(null);
     setNoteText("");
   }
 
+  // ===== AI =====
   async function triggerAI(personId: string) {
-    setIsLoadingAI(true);
-
     try {
       const res = await fetch("/api/ai/gift-suggestions", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ personId, occasion: "general" }),
       });
 
@@ -206,20 +192,19 @@ export default function NotesPage() {
       }
     } catch (e) {
       console.error(e);
-    } finally {
-      setIsLoadingAI(false);
     }
   }
 
-  const filteredNotes =
-    filterPersonId === "all" ? notes : notes.filter((n) => n.person_id === filterPersonId);
+  const filteredMemories =
+    filterPersonId === "all"
+      ? memories
+      : memories.filter((m) => m.person_id === filterPersonId);
 
   return (
     <div className="max-w-3xl mx-auto p-6">
       <div className="flex justify-between mb-4">
         <h1 className="text-xl font-semibold">Notatki</h1>
-
-        <button onClick={openNewNote} className="bg-blue-600 text-white px-4 py-2 rounded">
+        <button onClick={openNew} className="bg-blue-600 text-white px-4 py-2 rounded">
           + Dodaj
         </button>
       </div>
@@ -244,19 +229,23 @@ export default function NotesPage() {
         <div>Ładowanie...</div>
       ) : (
         <div className="space-y-3">
-          {filteredNotes.map((note) => {
-            const person = people.find((p) => p.id === note.person_id);
+          {filteredMemories.map((memory) => {
+            const person = people.find((p) => p.id === memory.person_id);
 
             return (
-              <div key={note.id} className="border p-4 rounded">
-                <div>{note.content}</div>
-                <div className="text-sm text-gray-500">{person ? person.name : "—"}</div>
+              <div key={memory.id} className="border p-4 rounded">
+                <div>{memory.content_text}</div>
+                <div className="text-sm text-gray-500">
+                  {person ? person.name : "—"}
+                </div>
                 <div className="flex gap-4 mt-2">
-                  <button onClick={() => openEditNote(note)} className="text-blue-600">
+                  <button onClick={() => openEdit(memory)} className="text-blue-600">
                     Edytuj
                   </button>
-
-                  <button onClick={() => deleteNote(note.id)} className="text-red-600">
+                  <button
+                    onClick={() => deleteMemory(memory.id)}
+                    className="text-red-600"
+                  >
                     Usuń
                   </button>
                 </div>
@@ -266,24 +255,24 @@ export default function NotesPage() {
         </div>
       )}
 
-      {(isLoadingAI || aiIdeas.length > 0) && (
-        <section className="mt-6 border rounded p-4">
-          <h2 className="font-medium mb-2">Pomysły AI na prezent</h2>
-          {isLoadingAI && <p className="text-sm text-gray-500 mb-2">Generowanie pomysłów...</p>}
-          <ul className="space-y-2">
-            {aiIdeas.map((idea, idx) => (
-              <li key={`${idea.title}-${idx}`} className="border rounded p-2">
-                <p className="font-medium">{idea.title}</p>
-                <p className="text-sm">{idea.explanation}</p>
-                <p className="text-xs text-gray-500">Dlaczego: {idea.why}</p>
-                <p className="text-xs text-gray-500">Budżet: {idea.price_range}</p>
-              </li>
+      {/* AI Ideas */}
+      {aiIdeas.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-lg font-semibold mb-2">Propozycje AI</h2>
+          <div className="space-y-3">
+            {aiIdeas.map((idea, i) => (
+              <div key={i} className="border p-3 rounded bg-blue-50">
+                <div className="font-medium">{idea.title}</div>
+                <div className="text-sm text-gray-600">{idea.explanation}</div>
+                <div className="text-sm text-gray-500">{idea.why}</div>
+                <div className="text-sm font-medium text-blue-700">{idea.price_range}</div>
+              </div>
             ))}
-          </ul>
-        </section>
+          </div>
+        </div>
       )}
 
-      {isNoteOpen && (
+      {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
           <div className="bg-white p-4 rounded w-full max-w-md">
             <textarea
@@ -309,10 +298,12 @@ export default function NotesPage() {
             </div>
 
             <div className="flex gap-3">
-              <button onClick={saveNote} className="bg-blue-600 text-white px-4 py-2 rounded">
+              <button
+                onClick={saveMemory}
+                className="bg-blue-600 text-white px-4 py-2 rounded"
+              >
                 Zapisz
               </button>
-
               <button onClick={closeModal}>Anuluj</button>
             </div>
           </div>

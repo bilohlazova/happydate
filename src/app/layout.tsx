@@ -31,26 +31,25 @@ export default function RootLayout({
     <html lang="pl" className="h-full">
       <body
         className={`
-          ${geistSans.variable} 
-          ${geistMono.variable} 
-          antialiased 
-          h-screen 
-          overflow-hidden
+          ${geistSans.variable}
+          ${geistMono.variable}
+          antialiased
+          min-h-screen
           bg-slate-50
         `}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col min-h-screen">
 
           {/* HEADER */}
           <Header />
 
           {/* CONTENT */}
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1 overflow-y-auto pb-20">
             {children}
           </main>
 
-          {/* MOBILE NAV */}
-          <div className="md:hidden">
+          {/* MOBILE NAV (FIXED) */}
+          <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
             <BottomNav />
           </div>
 

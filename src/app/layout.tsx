@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "react-big-calendar/lib/css/react-big-calendar.css";
@@ -22,6 +22,12 @@ export const metadata: Metadata = {
   description: "Twój ciepły asystent prezentowy",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover", // ✅ дозволяє контенту заходити під notch/Dynamic Island
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -37,10 +43,14 @@ export default function RootLayout({
           min-h-screen
           bg-slate-50
         `}
+        style={{
+          // ✅ Відступ знизу для home indicator на iPhone
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
       >
         <div className="flex flex-col min-h-screen">
 
-          {/* HEADER */}
+          {/* HEADER — сам розтягується під статус-бар через paddingTop у Header.tsx */}
           <Header />
 
           {/* CONTENT */}
@@ -49,7 +59,13 @@ export default function RootLayout({
           </main>
 
           {/* MOBILE NAV (FIXED) */}
-          <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+          <div
+            className="md:hidden fixed bottom-0 left-0 right-0 z-50"
+            style={{
+              // ✅ BottomNav не перекривається home indicator
+              paddingBottom: "env(safe-area-inset-bottom)",
+            }}
+          >
             <BottomNav />
           </div>
 

@@ -67,9 +67,11 @@ export default function Header() {
       <header
         className="sticky top-0 z-40 bg-gradient-to-r from-blue-400 to-cyan-400"
         style={{
+          // ✅ Розтягуємо фон ПІД статус-бар (Dynamic Island / notch)
           paddingTop: "env(safe-area-inset-top)",
         }}
       >
+        {/* ✅ Контентний рядок — завжди 56px, незалежно від safe-area */}
         <div className="flex items-center justify-between px-4 h-14">
 
           {/* LOGO */}
@@ -113,17 +115,17 @@ export default function Header() {
               <div className="relative" ref={profileMenuRef}>
                 <button
                   onClick={() => setProfileMenuOpen((v) => !v)}
-                  className="h-9 w-9 rounded-full overflow-hidden bg-white/30"
+                  className="h-9 w-9 rounded-full overflow-hidden bg-white/30 flex items-center justify-center"
                 >
                   {avatarUrl ? (
                     <Image
-                  src={avatarUrl}
-                  alt="Avatar"
-                 width={36}
-                 height={36}
-                 className="object-cover rounded-full"
-                 unoptimized
-                />
+                      src={avatarUrl}
+                      alt="Avatar"
+                      width={36}
+                      height={36}
+                      className="object-cover rounded-full"
+                      unoptimized
+                    />
                   ) : (
                     <span className="text-white text-sm font-bold">
                       {avatarFallback}
@@ -151,10 +153,11 @@ export default function Header() {
               </div>
             )}
 
-            {/* MOBILE MENU */}
+            {/* MOBILE MENU TOGGLE */}
             <button
               onClick={() => setMobileMenuOpen((v) => !v)}
               className="sm:hidden text-white text-xl"
+              aria-label="Toggle menu"
             >
               ☰
             </button>

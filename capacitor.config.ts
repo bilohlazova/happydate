@@ -6,8 +6,8 @@ const config: CapacitorConfig = {
   webDir: 'public',
   server: {
     url: 'https://happydate.vercel.app',
-    cleartext: true
-  }
+    cleartext: true,
+  },
 };
 
 export default config;

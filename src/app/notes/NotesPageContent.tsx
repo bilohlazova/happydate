@@ -31,93 +31,6 @@ function getInitials(name: string) {
   return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
-/* ═══════════════════ VOICE HOOK ═══════════════════ */
-
-function useVoice(onResult: (text: string) => void) {
-  const [listening, setListening] = useState(false);
-  const stopRef = useRef<(() => void) | null>(null);
-
-  const start = useCallback(async () => {
-
-    // ── Спроба @capacitor-community/speech-recognition ──
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mod = await import("@capacitor-community/speech-recognition") as any;
-      const SpeechRecognition = mod.SpeechRecognition ?? mod.default?.SpeechRecognition;
-
-      const { available } = await SpeechRecognition.available();
-      if (!available) throw new Error("unavailable");
-
-      await SpeechRecognition.requestPermissions();
-      setListening(true);
-
-      await SpeechRecognition.start({
-        language: "pl-PL",
-        maxResults: 2,
-        partialResults: true,
-        popup: false,
-      });
-
-      const handle = await SpeechRecognition.addListener(
-        "partialResults",
-        (data: { matches?: string[] }) => {
-          const text = data.matches?.[0];
-          if (text) {
-            onResult(text);
-            void SpeechRecognition.stop();
-            handle.remove();
-            setListening(false);
-            stopRef.current = null;
-          }
-        }
-      );
-
-      stopRef.current = () => {
-        handle.remove();
-        void SpeechRecognition.stop();
-        setListening(false);
-        stopRef.current = null;
-      };
-
-      return;
-    } catch {
-      // fallback
-    }
-
-    // ── Web Speech API (браузер) ─────────────────────────
-    const W = window as unknown as {
-      SpeechRecognition?: new () => SpeechRecLike;
-      webkitSpeechRecognition?: new () => SpeechRecLike;
-    };
-    interface SpeechRecLike {
-      lang: string; continuous: boolean; interimResults: boolean;
-      start(): void; stop(): void;
-      onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
-      onend: (() => void) | null;
-      onerror: (() => void) | null;
-    }
-    const SR = W.SpeechRecognition ?? W.webkitSpeechRecognition;
-    if (!SR) {
-      alert("Nagrywanie głosu nie jest obsługiwane w tej przeglądarce.");
-      return;
-    }
-    const rec = new SR();
-    rec.lang = "pl-PL";
-    rec.continuous = false;
-    rec.interimResults = false;
-    rec.onresult = (e) => onResult(e.results[0][0].transcript);
-    rec.onend    = () => { setListening(false); stopRef.current = null; };
-    rec.onerror  = () => { setListening(false); stopRef.current = null; };
-    rec.start();
-    setListening(true);
-    stopRef.current = () => { rec.stop(); setListening(false); };
-  }, [onResult]);
-
-  const stop = useCallback(() => { stopRef.current?.(); }, []);
-
-  return { listening, start, stop };
-}
-
 /* ═══════════════════ MAIN COMPONENT ═══════════════════ */
 
 export default function NotesPageContent() {
@@ -130,10 +43,11 @@ export default function NotesPageContent() {
   const [filterPersonId, setFilterPersonId] = useState<string>("all");
 
   // Lightbox
-  const [lightboxUrl,    setLightboxUrl]    = useState<string | null>(null);
-  const [lightboxAll,    setLightboxAll]    = useState<string[]>([]);
-  const [lightboxIdx,    setLightboxIdx]    = useState(0);
+  const [lightboxUrl,  setLightboxUrl]  = useState<string | null>(null);
+  const [lightboxAll,  setLightboxAll]  = useState<string[]>([]);
+  const [lightboxIdx,  setLightboxIdx]  = useState(0);
 
+  // Form
   const [noteText,       setNoteText]       = useState("");
   const [selectedPerson, setSelectedPerson] = useState<string>("");
   const [photoFiles,     setPhotoFiles]     = useState<File[]>([]);
@@ -142,11 +56,6 @@ export default function NotesPageContent() {
   const [uploadProgress, setUploadProgress] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const appendTranscript = useCallback((text: string) => {
-    setNoteText(prev => prev ? prev + " " + text : text);
-  }, []);
-  const { listening, start: startVoice, stop: stopVoice } = useVoice(appendTranscript);
 
   /* ── Lightbox ── */
   function openLightbox(urls: string[], idx: number) {
@@ -196,10 +105,12 @@ export default function NotesPageContent() {
       reader.readAsDataURL(f);
     });
   }
+
   function removePhoto(idx: number) {
     setPhotoFiles(prev => prev.filter((_, i) => i !== idx));
     setPhotoPreviews(prev => prev.filter((_, i) => i !== idx));
   }
+
   function removeExistingPhoto(url: string) {
     setExistingImages(prev => prev.filter(u => u !== url));
   }
@@ -228,6 +139,7 @@ export default function NotesPageContent() {
     setPhotoFiles([]); setPhotoPreviews([]); setExistingImages([]);
     setShowModal(true);
   }
+
   function openEdit(m: Memory) {
     setEditingMemory(m);
     setNoteText(m.content_text ?? "");
@@ -236,10 +148,10 @@ export default function NotesPageContent() {
     setExistingImages(m.images ?? []);
     setShowModal(true);
   }
+
   function closeModal() {
     setShowModal(false);
     setEditingMemory(null);
-    stopVoice();
   }
 
   /* ── Save ── */
@@ -248,18 +160,22 @@ export default function NotesPageContent() {
     setSaving(true);
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) { setSaving(false); return; }
+
     const newUrls   = await uploadPhotos(auth.user.id);
     const allImages = [...existingImages, ...newUrls];
+
     const payload = {
       content_text: noteText.trim(),
       person_id:    selectedPerson || null,
       images:       allImages.length ? allImages : null,
     };
+
     if (editingMemory) {
       await supabase.from("memories").update(payload).eq("id", editingMemory.id);
     } else {
       await supabase.from("memories").insert({ ...payload, user_id: auth.user.id });
     }
+
     setSaving(false);
     closeModal();
     loadMemories();
@@ -330,42 +246,16 @@ export default function NotesPageContent() {
         .np-empty-title { font-size:16px; font-weight:700; color:#1a1040; margin-bottom:6px; }
         .np-empty-sub { font-size:13px; color:#7c6f9f; line-height:1.5; }
 
-        /* ── Lightbox ── */
-        .np-lightbox {
-          position: fixed; inset: 0; z-index: 500;
-          background: rgba(0,0,0,.92);
-          display: flex; align-items: center; justify-content: center;
-          animation: npFadeIn .2s ease;
-        }
-        .np-lightbox-img {
-          max-width: 100%; max-height: 100vh;
-          object-fit: contain;
-          border-radius: 4px;
-          user-select: none;
-        }
-        .np-lightbox-close {
-          position: absolute; top: 16px; right: 16px;
-          width: 40px; height: 40px; border-radius: 50%;
-          background: rgba(255,255,255,.15); border: none; cursor: pointer;
-          color: #fff; font-size: 20px;
-          display: flex; align-items: center; justify-content: center;
-        }
-        .np-lightbox-nav {
-          position: absolute; top: 50%; transform: translateY(-50%);
-          width: 44px; height: 44px; border-radius: 50%;
-          background: rgba(255,255,255,.15); border: none; cursor: pointer;
-          color: #fff; font-size: 22px;
-          display: flex; align-items: center; justify-content: center;
-        }
-        .np-lightbox-prev { left: 12px; }
-        .np-lightbox-next { right: 12px; }
-        .np-lightbox-counter {
-          position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-          color: rgba(255,255,255,.7); font-size: 13px; font-weight: 600;
-          font-family: 'Plus Jakarta Sans', sans-serif;
-        }
+        /* Lightbox */
+        .np-lightbox { position:fixed; inset:0; z-index:500; background:rgba(0,0,0,.93); display:flex; align-items:center; justify-content:center; animation:npFadeIn .2s ease; }
+        .np-lightbox-img { max-width:100%; max-height:100svh; object-fit:contain; border-radius:4px; user-select:none; }
+        .np-lightbox-close { position:absolute; top:16px; right:16px; width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,.15); border:none; cursor:pointer; color:#fff; font-size:20px; display:flex; align-items:center; justify-content:center; }
+        .np-lightbox-nav { position:absolute; top:50%; transform:translateY(-50%); width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,.15); border:none; cursor:pointer; color:#fff; font-size:22px; display:flex; align-items:center; justify-content:center; }
+        .np-lightbox-prev { left:12px; }
+        .np-lightbox-next { right:12px; }
+        .np-lightbox-counter { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,.7); font-size:13px; font-weight:600; font-family:'Plus Jakarta Sans',sans-serif; }
 
-        /* ── Modal ── */
+        /* Modal */
         .np-overlay { position:fixed; inset:0; background:rgba(10,5,30,.6); display:flex; align-items:flex-start; justify-content:center; padding:60px 16px 40px; z-index:200; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); animation:npFadeIn .2s ease; overflow-y:auto; -webkit-overflow-scrolling:touch; }
         @keyframes npFadeIn { from{opacity:0} to{opacity:1} }
         .np-modal { background:#fff; border-radius:24px; padding:24px 20px 28px; width:100%; max-width:480px; animation:npPop .25s cubic-bezier(.34,1.3,.64,1); position:relative; flex-shrink:0; }
@@ -375,14 +265,8 @@ export default function NotesPageContent() {
 
         .np-field { margin-bottom:14px; }
         .np-label { font-size:12px; font-weight:700; color:#7c6f9f; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; display:block; }
-        .np-textarea { width:100%; border:1.5px solid #e8e3f5; border-radius:14px; padding:12px 14px; font-size:15px; font-family:'Plus Jakarta Sans',sans-serif; color:#1a1040; background:#f8f7ff; outline:none; resize:none; min-height:90px; max-height:200px; overflow-y:auto; transition:border-color .15s; box-sizing:border-box; }
+        .np-textarea { width:100%; border:1.5px solid #e8e3f5; border-radius:14px; padding:12px 14px; font-size:15px; font-family:'Plus Jakarta Sans',sans-serif; color:#1a1040; background:#f8f7ff; outline:none; resize:none; min-height:100px; max-height:200px; overflow-y:auto; transition:border-color .15s; box-sizing:border-box; }
         .np-textarea:focus { border-color:#7c3aed; background:#fff; }
-
-        .np-voice-row { display:flex; gap:8px; align-items:center; margin-bottom:14px; }
-        .np-voice-btn { display:flex; align-items:center; gap:6px; border:1.5px solid #e8e3f5; background:#f8f7ff; border-radius:12px; padding:9px 14px; font-size:13px; font-weight:700; color:#7c6f9f; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; transition:all .15s; flex-shrink:0; }
-        .np-voice-btn.active { border-color:#ec4899; background:#fce7f3; color:#be185d; }
-        .np-voice-pulse { width:8px; height:8px; border-radius:50%; background:#ec4899; animation:npPulse 1s ease infinite; flex-shrink:0; }
-        @keyframes npPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
 
         .np-photo-upload-btn { display:flex; align-items:center; gap:8px; border:1.5px dashed #c4b5f8; background:#f8f7ff; border-radius:12px; padding:10px 14px; font-size:13px; font-weight:600; color:#7c3aed; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; transition:all .15s; width:100%; justify-content:center; box-sizing:border-box; }
         .np-photo-upload-btn:active { background:#ede9fe; }
@@ -403,6 +287,8 @@ export default function NotesPageContent() {
       `}</style>
 
       <div className="np-root">
+
+        {/* Header */}
         <div className="np-header">
           <div className="np-header-top">
             <div>
@@ -416,6 +302,7 @@ export default function NotesPageContent() {
           </div>
         </div>
 
+        {/* Filters */}
         <div className="np-filters">
           <button className={`np-filter-chip ${filterPersonId==="all"?"active":""}`} onClick={() => setFilterPersonId("all")}>Wszystkie</button>
           <button className={`np-filter-chip ${filterPersonId==="none"?"active":""}`} onClick={() => setFilterPersonId("none")}>📓 Moje</button>
@@ -426,13 +313,15 @@ export default function NotesPageContent() {
           ))}
         </div>
 
+        {/* List */}
         <div className="np-list">
           {loading && <div style={{ textAlign:"center", padding:40, color:"#b0a8cc", fontSize:14 }}>Ładowanie...</div>}
+
           {!loading && filtered.length === 0 && (
             <div className="np-empty">
               <div className="np-empty-icon">📝</div>
               <div className="np-empty-title">Brak notatek</div>
-              <div className="np-empty-sub">Dodaj pierwszą notatkę — tekstem, zdjęciem lub głosem ✨</div>
+              <div className="np-empty-sub">Dodaj pierwszą notatkę — tekstem lub zdjęciem ✨</div>
             </div>
           )}
 
@@ -468,13 +357,7 @@ export default function NotesPageContent() {
                     <div className={`np-photo-grid ${gc}`}>
                       {show.map((url, i) => (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          key={i}
-                          src={url}
-                          alt=""
-                          loading="lazy"
-                          onClick={() => openLightbox(imgs, i)}
-                        />
+                        <img key={i} src={url} alt="" loading="lazy" onClick={() => openLightbox(imgs, i)} />
                       ))}
                     </div>
                   )}
@@ -490,16 +373,11 @@ export default function NotesPageContent() {
         </div>
       </div>
 
-      {/* ── Lightbox ── */}
+      {/* Lightbox */}
       {lightboxUrl && (
         <div className="np-lightbox" onClick={closeLightbox}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            className="np-lightbox-img"
-            src={lightboxUrl}
-            alt=""
-            onClick={e => e.stopPropagation()}
-          />
+          <img className="np-lightbox-img" src={lightboxUrl} alt="" onClick={e => e.stopPropagation()} />
           <button className="np-lightbox-close" onClick={closeLightbox}>✕</button>
           {lightboxAll.length > 1 && (
             <>
@@ -511,7 +389,7 @@ export default function NotesPageContent() {
         </div>
       )}
 
-      {/* ── Modal ── */}
+      {/* Modal */}
       {showModal && (
         <div className="np-overlay" onClick={e => { if (e.target===e.currentTarget) closeModal(); }}>
           <div className="np-modal">
@@ -531,21 +409,9 @@ export default function NotesPageContent() {
               />
             </div>
 
-            <div className="np-voice-row">
-              <button
-                className={`np-voice-btn ${listening?"active":""}`}
-                onClick={listening ? stopVoice : startVoice}
-              >
-                {listening
-                  ? <><div className="np-voice-pulse"/> Zatrzymaj</>
-                  : <>🎙️ Nagraj głosowo</>
-                }
-              </button>
-              {listening && <span style={{ fontSize:12, color:"#be185d", fontWeight:600 }}>Mówisz...</span>}
-            </div>
-
             <div className="np-field">
               <label className="np-label">Zdjęcia (opcjonalnie)</label>
+
               {existingImages.length > 0 && (
                 <div className="np-preview-grid">
                   {existingImages.map((url, i) => (
@@ -557,6 +423,7 @@ export default function NotesPageContent() {
                   ))}
                 </div>
               )}
+
               {photoPreviews.length > 0 && (
                 <div className="np-preview-grid">
                   {photoPreviews.map((src, i) => (
@@ -568,6 +435,7 @@ export default function NotesPageContent() {
                   ))}
                 </div>
               )}
+
               <button className="np-photo-upload-btn" onClick={() => fileInputRef.current?.click()}>
                 📷 Dodaj zdjęcie
               </button>

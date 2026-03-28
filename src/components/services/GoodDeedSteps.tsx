@@ -1,54 +1,43 @@
 "use client";
 
+const STEPS = [
+  { emoji: "🎯", title: "Wybierz kierunek", text: "Zwierzęta, dzieci lub planeta — co porusza Twoje serce?" },
+  { emoji: "📅", title: "Zarezerwuj termin", text: "Podaj datę i miejsce. Pomożemy skoordynować wizytę." },
+  { emoji: "🎁", title: "Przygotuj gest", text: "Karma, książeczki, roślinka — lub po prostu Twój czas." },
+  { emoji: "✨", title: "Zostaw ślad dobra", text: "Przyjdź, poznaj, pobądź. To wystarczy." },
+];
+
 export default function GoodDeedSteps() {
-  const steps = [
-    {
-      title: "Wybierz kierunek dobra",
-      text:
-        "Zwierzęta, dzieci lub planeta — wybierz to, co porusza Twoje serce najbardziej.",
-      emoji: "🎯",
-    },
-    {
-      title: "Zarezerwuj termin",
-      text:
-        "Podaj wygodną datę i miejsce. Pomożemy Ci skoordynować wizytę.",
-      emoji: "📅",
-    },
-    {
-      title: "Przygotuj drobny gest",
-      text:
-        "Może to być paczka karmy, książeczki, roślinka do posadzenia lub po prostu Twój czas.",
-      emoji: "🎁",
-    },
-    {
-      title: "Zostaw ślad dobra",
-      text:
-        "Przyjdź, poznaj, pobądź. To wystarczy. A jeśli chcesz — opowiedz o tym innym.",
-      emoji: "✨",
-    },
-  ];
-
   return (
-    <section className="py-16 md:py-20 bg-white dark:bg-gray-900">
-      <div className="max-w-5xl mx-auto px-6">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-10">
-          Jak to działa?
-        </h2>
+    <section style={{ background: "#fff", padding: "24px 16px" }}>
+      <h2 style={{ fontSize: 18, fontWeight: 800, color: "#1a1040", textAlign: "center", marginBottom: 16 }}>
+        Jak to działa?
+      </h2>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {steps.map((s, i) => (
-            <div
-              key={i}
-              className="rounded-2xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm hover:shadow-md transition-shadow bg-white/70 dark:bg-gray-800/60 backdrop-blur"
-            >
-              <div className="text-3xl mb-3">{s.emoji}</div>
-              <h3 className="font-semibold text-lg mb-2">{s.title}</h3>
-              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                {s.text}
-              </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 480, margin: "0 auto" }}>
+        {STEPS.map((s, i) => (
+          <div key={i} style={{
+            display: "flex", alignItems: "flex-start", gap: 12,
+            background: "#f8f7ff", borderRadius: 14,
+            border: "1.5px solid #ede9f8", padding: "12px 14px",
+          }}>
+            {/* Numer + emoji */}
+            <div style={{
+              width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+              background: "linear-gradient(135deg,#ede9fe,#fce7f3)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 20,
+            }}>
+              {s.emoji}
             </div>
-          ))}
-        </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1040", marginBottom: 2 }}>
+                <span style={{ color: "#b0a8cc", marginRight: 6 }}>{i + 1}.</span>{s.title}
+              </div>
+              <div style={{ fontSize: 12, color: "#7c6f9f", lineHeight: 1.4 }}>{s.text}</div>
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );

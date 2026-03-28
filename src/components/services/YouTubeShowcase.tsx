@@ -1,75 +1,111 @@
-// src/components/services/YouTubeShowcase.tsx
 "use client";
+
+import { useState } from "react";
+
+const VIDEOS = [
+  {
+    id: "4jwYAuj8QO4",
+    title: "Pomoc dla zwierząt",
+    emoji: "🐾",
+    desc: "Wspieramy lokalne schroniska — odwiedzamy, karmimy, kochamy.",
+  },
+  {
+    id: "TbSiXeDoo1A",
+    title: "Wizyta w domu dziecka",
+    emoji: "👧",
+    desc: "Dajemy dzieciom uwagę, czas i prezenty — tworzymy wspomnienia.",
+  },
+  {
+    id: "3VnezHfE5iQ",
+    title: "Akcja ekologiczna",
+    emoji: "🌿",
+    desc: "Sprzątamy lasy, sadzimy rośliny, edukujemy — razem dla natury.",
+  },
+];
+
+function VideoCard({ id, title, emoji, desc }: typeof VIDEOS[0]) {
+  const [playing, setPlaying] = useState(false);
+  const thumb = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+
+  return (
+    <div style={{
+      background: "#111", borderRadius: 16, overflow: "hidden",
+      border: "1px solid rgba(255,255,255,.08)",
+    }}>
+      {/* Thumbnail або iframe */}
+      <div style={{ position: "relative", aspectRatio: "16/9", background: "#000" }}>
+        {playing ? (
+          <iframe
+            style={{ width: "100%", height: "100%", border: "none" }}
+            src={`https://www.youtube.com/embed/${id}?autoplay=1`}
+            title={title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        ) : (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={thumb}
+              alt={title}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              loading="lazy"
+            />
+            {/* Overlay з кнопкою play */}
+            <button
+              onClick={() => setPlaying(true)}
+              style={{
+                position: "absolute", inset: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: "rgba(0,0,0,.35)",
+                border: "none", cursor: "pointer",
+              }}
+              aria-label={`Odtwórz: ${title}`}
+            >
+              <div style={{
+                width: 56, height: 56, borderRadius: "50%",
+                background: "rgba(255,255,255,.92)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {/* Play triangle */}
+                <div style={{
+                  width: 0, height: 0,
+                  borderTop: "10px solid transparent",
+                  borderBottom: "10px solid transparent",
+                  borderLeft: "18px solid #e53e3e",
+                  marginLeft: 4,
+                }} />
+              </div>
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Підпис */}
+      <div style={{ padding: "12px 14px" }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 4 }}>
+          {emoji} {title}
+        </div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,.65)", lineHeight: 1.4 }}>
+          {desc}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function YouTubeShowcase() {
   return (
-    <section className="bg-black py-16 md:py-20">
-      <div className="max-w-6xl mx-auto px-4 text-center">
-        <h3 className="text-3xl font-bold text-white mb-10">
-          Zobacz, jak pomagamy 💛
-        </h3>
+    <section style={{ background: "#0a0a0a", padding: "32px 16px" }}>
+      <h3 style={{
+        fontSize: 18, fontWeight: 800, color: "#fff",
+        textAlign: "center", marginBottom: 16,
+      }}>
+        Zobacz, jak pomagamy 💛
+      </h3>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          {/* Schronisko */}
-          <div className="bg-gray-900 rounded-xl shadow-lg overflow-hidden">
-            <div className="aspect-video">
-              <iframe
-                className="w-full h-full"
-                src="https://www.youtube.com/embed/4jwYAuj8QO4"
-                title="Pomoc dla zwierząt"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allowFullScreen
-              />
-            </div>
-            <div className="p-4 text-white">
-              <h4 className="text-lg font-semibold mb-2">🐾 Pomoc dla zwierząt</h4>
-              <p className="text-sm opacity-80">
-                Wspieramy lokalne schroniska — odwiedzamy, karmimy, kochamy.
-              </p>
-            </div>
-          </div>
-
-          {/* Dom dziecka */}
-          <div className="bg-gray-900 rounded-xl shadow-lg overflow-hidden">
-            <div className="aspect-video">
-              <iframe
-                className="w-full h-full"
-                src="https://www.youtube.com/embed/TbSiXeDoo1A"
-                title="Wizyta w domu dziecka"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allowFullScreen
-              />
-            </div>
-            <div className="p-4 text-white">
-              <h4 className="text-lg font-semibold mb-2">👧👦 Wizyta w domu dziecka</h4>
-              <p className="text-sm opacity-80">
-                Dajemy dzieciom uwagę, czas i prezenty – tworzymy wspomnienia.
-              </p>
-            </div>
-          </div>
-
-          {/* Ekologia */}
-          <div className="bg-gray-900 rounded-xl shadow-lg overflow-hidden">
-            <div className="aspect-video">
-              <iframe
-                className="w-full h-full"
-                src="https://www.youtube.com/embed/3VnezHfE5iQ"
-                title="Akcja ekologiczna"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allowFullScreen
-              />
-            </div>
-            <div className="p-4 text-white">
-              <h4 className="text-lg font-semibold mb-2">🌿 Akcja ekologiczna</h4>
-              <p className="text-sm opacity-80">
-                Sprzątamy lasy, sadzimy rośliny, edukujemy – razem dla natury.
-              </p>
-            </div>
-          </div>
-        </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 480, margin: "0 auto" }}>
+        {VIDEOS.map(v => <VideoCard key={v.id} {...v} />)}
       </div>
     </section>
   );

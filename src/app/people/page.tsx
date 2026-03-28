@@ -12,6 +12,8 @@ type Person = {
   created_at: string;
 };
 
+type ModalMode = "add" | "edit";
+
 const RELATIONS = [
   { value: "family",  label: "Rodzina",    emoji: "👨‍👩‍👧" },
   { value: "friend",  label: "Przyjaciel", emoji: "🤝" },
@@ -50,15 +52,19 @@ function BirthdayBadge({ birthday }: { birthday: string | null }) {
 export default function PeoplePage() {
   const router = useRouter();
 
-  const [people,      setPeople]      = useState<Person[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [showModal,   setShowModal]   = useState(false);
-  const [saving,      setSaving]      = useState(false);
-  const [search,      setSearch]      = useState("");
-  const [filterRel,   setFilterRel]   = useState("all");
-  const [newName,     setNewName]     = useState("");
-  const [newBirthday, setNewBirthday] = useState("");
-  const [newRelation, setNewRelation] = useState("friend");
+  const [people,        setPeople]        = useState<Person[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [showModal,     setShowModal]     = useState(false);
+  const [modalMode,     setModalMode]     = useState<ModalMode>("add");
+  const [editingId,     setEditingId]     = useState<string | null>(null);
+  const [saving,        setSaving]        = useState(false);
+  const [deleting,      setDeleting]      = useState<string | null>(null);
+  const [showDeleteFor, setShowDeleteFor] = useState<string | null>(null);
+  const [search,        setSearch]        = useState("");
+  const [filterRel,     setFilterRel]     = useState("all");
+  const [formName,      setFormName]      = useState("");
+  const [formBirthday,  setFormBirthday]  = useState("");
+  const [formRelation,  setFormRelation]  = useState("friend");
 
   async function loadPeople() {
     setLoading(true);
@@ -74,23 +80,66 @@ export default function PeoplePage() {
 
   useEffect(() => { loadPeople(); }, []);
 
-  async function createPerson() {
-    if (!newName.trim()) return;
+  // ── Відкрити модалку додавання ──────────────────────────
+  function openAdd() {
+    setModalMode("add");
+    setEditingId(null);
+    setFormName(""); setFormBirthday(""); setFormRelation("friend");
+    setShowModal(true);
+  }
+
+  // ── Відкрити модалку редагування ────────────────────────
+  function openEdit(p: Person, e: React.MouseEvent) {
+    e.stopPropagation();
+    setModalMode("edit");
+    setEditingId(p.id);
+    setFormName(p.name);
+    setFormBirthday(p.birthday ?? "");
+    setFormRelation(p.relation ?? "friend");
+    setShowDeleteFor(null);
+    setShowModal(true);
+  }
+
+  function closeModal() {
+    setShowModal(false);
+    setEditingId(null);
+  }
+
+  // ── Зберегти (додати або оновити) ───────────────────────
+  async function savePerson() {
+    if (!formName.trim()) return;
     setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaving(false); return; }
-    const { error } = await supabase.from("people").insert({
-      user_id:  user.id,
-      name:     newName.trim(),
-      birthday: newBirthday || null,
-      relation: newRelation,
-    });
-    setSaving(false);
-    if (!error) {
-      setShowModal(false);
-      setNewName(""); setNewBirthday(""); setNewRelation("friend");
-      loadPeople();
+
+    if (modalMode === "add") {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setSaving(false); return; }
+      await supabase.from("people").insert({
+        user_id:  user.id,
+        name:     formName.trim(),
+        birthday: formBirthday || null,
+        relation: formRelation,
+      });
+    } else {
+      await supabase.from("people").update({
+        name:     formName.trim(),
+        birthday: formBirthday || null,
+        relation: formRelation,
+      }).eq("id", editingId!);
     }
+
+    setSaving(false);
+    closeModal();
+    loadPeople();
+  }
+
+  // ── Видалити ────────────────────────────────────────────
+  async function deletePerson(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setDeleting(id);
+    await supabase.from("people").delete().eq("id", id);
+    setDeleting(null);
+    setShowDeleteFor(null);
+    loadPeople();
   }
 
   const filtered = people
@@ -136,63 +185,66 @@ export default function PeoplePage() {
         .pp-upcoming-days { font-size:11px; color:#ec4899; font-weight:600; }
 
         .pp-list { padding:0 16px; display:flex; flex-direction:column; gap:10px; }
-        .pp-card { background:#fff; border-radius:18px; border:1.5px solid #ede9f8; padding:14px 16px; display:flex; align-items:center; gap:14px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.04); transition:transform .15s,border-color .15s; -webkit-tap-highlight-color:transparent; }
+
+        /* ── Картка з кнопками дій ── */
+        .pp-card-wrap { position:relative; }
+        .pp-card {
+          background:#fff; border-radius:18px; border:1.5px solid #ede9f8;
+          padding:14px 16px; display:flex; align-items:center; gap:14px;
+          cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.04);
+          transition:transform .15s,border-color .15s;
+          -webkit-tap-highlight-color:transparent;
+          position:relative;
+        }
         .pp-card:active { transform:scale(.985); border-color:#c4b5f8; }
         .pp-avatar { width:48px; height:48px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; background:linear-gradient(135deg,#ede9fe,#fce7f3); }
         .pp-card-body { flex:1; min-width:0; }
         .pp-card-name { font-size:15px; font-weight:700; color:#1a1040; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .pp-card-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
         .pp-rel-tag { font-size:11px; color:#7c6f9f; font-weight:500; }
-        .pp-arrow { color:#c4b5f8; font-size:20px; flex-shrink:0; }
+
+        /* Кнопки дій на картці */
+        .pp-card-actions { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+        .pp-icon-btn {
+          width:34px; height:34px; border-radius:10px; border:none;
+          display:flex; align-items:center; justify-content:center;
+          cursor:pointer; font-size:15px; transition:all .15s;
+          flex-shrink:0;
+        }
+        .pp-icon-btn-edit { background:#f1eeff; color:#7c3aed; }
+        .pp-icon-btn-edit:active { background:#e0d9ff; }
+        .pp-icon-btn-delete { background:#fff0f0; color:#e53e3e; }
+        .pp-icon-btn-delete:active { background:#ffe0e0; }
+
+        /* Підтвердження видалення */
+        .pp-delete-confirm {
+          position:absolute; right:0; top:calc(100% + 6px);
+          background:#fff; border:1.5px solid #fde8e8;
+          border-radius:14px; padding:12px 14px;
+          box-shadow:0 8px 24px rgba(0,0,0,.12);
+          z-index:10; min-width:200px;
+          animation:ppPop .2s cubic-bezier(.34,1.3,.64,1);
+        }
+        .pp-delete-confirm-text { font-size:13px; font-weight:600; color:#1a1040; margin-bottom:10px; }
+        .pp-delete-confirm-btns { display:flex; gap:8px; }
+        .pp-delete-no { flex:1; border:1.5px solid #e8e3f5; background:#f8f7ff; border-radius:10px; padding:8px; font-size:13px; font-weight:700; color:#7c6f9f; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; }
+        .pp-delete-yes { flex:1; border:none; background:#e53e3e; border-radius:10px; padding:8px; font-size:13px; font-weight:700; color:#fff; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; transition:opacity .15s; }
+        .pp-delete-yes:disabled { opacity:.6; }
 
         .pp-empty { text-align:center; padding:48px 24px; }
         .pp-empty-icon { font-size:52px; margin-bottom:12px; }
         .pp-empty-title { font-size:16px; font-weight:700; color:#1a1040; margin-bottom:6px; }
         .pp-empty-sub { font-size:13px; color:#7c6f9f; line-height:1.5; }
 
-        /* ── Modal — по центру зверху ── */
-        .pp-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(10,5,30,.6);
-          display: flex;
-          /* вирівнювання: трохи вище центру щоб клавіатура не перекривала */
-          align-items: flex-start;
-          justify-content: center;
-          padding: 60px 16px 16px;
-          z-index: 200;
-          backdrop-filter: blur(6px);
-          -webkit-backdrop-filter: blur(6px);
-          animation: ppFadeIn .2s ease;
-          /* прокрутка якщо клавіатура маленький екран */
-          overflow-y: auto;
-        }
+        /* ── Modal ── */
+        .pp-overlay { position:fixed; inset:0; background:rgba(10,5,30,.6); display:flex; align-items:flex-start; justify-content:center; padding:60px 16px 16px; z-index:200; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); animation:ppFadeIn .2s ease; overflow-y:auto; }
         @keyframes ppFadeIn { from{opacity:0} to{opacity:1} }
 
-        .pp-modal {
-          background: #fff;
-          border-radius: 24px;
-          padding: 24px 20px 28px;
-          width: 100%;
-          max-width: 420px;
-          /* без max-height — модалка завжди повністю видима */
-          animation: ppPop .25s cubic-bezier(.34,1.3,.64,1);
-          position: relative;
-        }
-        @keyframes ppPop {
-          from { opacity:0; transform:scale(.92) translateY(-10px); }
-          to   { opacity:1; transform:scale(1) translateY(0); }
-        }
+        .pp-modal { background:#fff; border-radius:24px; padding:24px 20px 28px; width:100%; max-width:420px; animation:ppPop .25s cubic-bezier(.34,1.3,.64,1); position:relative; }
+        @keyframes ppPop { from{opacity:0;transform:scale(.92) translateY(-10px)} to{opacity:1;transform:scale(1) translateY(0)} }
 
-        .pp-modal-close {
-          position: absolute; top: 16px; right: 16px;
-          width: 32px; height: 32px; border-radius: 50%;
-          background: #f1eeff; border: none; cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 16px; color: #7c6f9f; transition: background .15s;
-        }
-        .pp-modal-close:active { background: #e0d9ff; }
-
+        .pp-modal-close { position:absolute; top:16px; right:16px; width:32px; height:32px; border-radius:50%; background:#f1eeff; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; color:#7c6f9f; transition:background .15s; }
+        .pp-modal-close:active { background:#e0d9ff; }
         .pp-modal-title { font-size:20px; font-weight:800; color:#1a1040; margin-bottom:20px; padding-right:40px; }
 
         .pp-field { margin-bottom:14px; }
@@ -212,9 +264,13 @@ export default function PeoplePage() {
         .pp-btn-save { flex:2; border:none; background:linear-gradient(135deg,#7c3aed,#ec4899); border-radius:14px; padding:13px; font-size:15px; font-weight:700; color:#fff; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; box-shadow:0 4px 14px rgba(124,58,237,.3); transition:all .15s; }
         .pp-btn-save:disabled { opacity:.6; cursor:not-allowed; }
         .pp-btn-save:active:not(:disabled) { transform:scale(.97); }
+
+        /* Кнопка видалити в модалці редагування */
+        .pp-btn-delete-modal { width:100%; border:1.5px solid #fde8e8; background:#fff0f0; border-radius:14px; padding:12px; font-size:14px; font-weight:700; color:#e53e3e; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; margin-top:10px; transition:all .15s; }
+        .pp-btn-delete-modal:active { background:#ffe0e0; }
       `}</style>
 
-      <div className="pp-root">
+      <div className="pp-root" onClick={() => setShowDeleteFor(null)}>
 
         <div className="pp-header">
           <div className="pp-header-top">
@@ -225,7 +281,7 @@ export default function PeoplePage() {
               </div>
               <p className="pp-subtitle">Twoi bliscy w jednym miejscu</p>
             </div>
-            <button className="pp-add-btn" onClick={() => setShowModal(true)}>
+            <button className="pp-add-btn" onClick={openAdd}>
               <span>＋</span> Dodaj
             </button>
           </div>
@@ -275,41 +331,83 @@ export default function PeoplePage() {
               <div className="pp-empty-sub">{search?`Brak wyników dla "${search}"`:"Dodaj pierwszą osobę — zapamiętaj co ją uszczęśliwia ✨"}</div>
             </div>
           )}
+
           {filtered.map(person => {
             const rel = getRelation(person.relation);
+            const isDeleteOpen = showDeleteFor === person.id;
             return (
-              <div key={person.id} className="pp-card" onClick={() => router.push(`/person/${person.id}`)}>
-                <div className="pp-avatar">{rel.emoji}</div>
-                <div className="pp-card-body">
-                  <div className="pp-card-name">{person.name}</div>
-                  <div className="pp-card-meta">
-                    <span className="pp-rel-tag">{rel.label}</span>
-                    <BirthdayBadge birthday={person.birthday} />
+              <div key={person.id} className="pp-card-wrap">
+                <div
+                  className="pp-card"
+                  onClick={() => router.push(`/person/${person.id}`)}
+                >
+                  <div className="pp-avatar">{rel.emoji}</div>
+                  <div className="pp-card-body">
+                    <div className="pp-card-name">{person.name}</div>
+                    <div className="pp-card-meta">
+                      <span className="pp-rel-tag">{rel.label}</span>
+                      <BirthdayBadge birthday={person.birthday} />
+                    </div>
+                  </div>
+
+                  {/* Кнопки ✏️ і 🗑️ */}
+                  <div className="pp-card-actions" onClick={e => e.stopPropagation()}>
+                    <button
+                      className="pp-icon-btn pp-icon-btn-edit"
+                      onClick={e => openEdit(person, e)}
+                      title="Edytuj"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      className="pp-icon-btn pp-icon-btn-delete"
+                      onClick={e => { e.stopPropagation(); setShowDeleteFor(isDeleteOpen ? null : person.id); }}
+                      title="Usuń"
+                    >
+                      🗑️
+                    </button>
                   </div>
                 </div>
-                <span className="pp-arrow">›</span>
+
+                {/* Підтвердження видалення */}
+                {isDeleteOpen && (
+                  <div className="pp-delete-confirm" onClick={e => e.stopPropagation()}>
+                    <div className="pp-delete-confirm-text">Usunąć {person.name}?</div>
+                    <div className="pp-delete-confirm-btns">
+                      <button className="pp-delete-no" onClick={() => setShowDeleteFor(null)}>Anuluj</button>
+                      <button
+                        className="pp-delete-yes"
+                        disabled={deleting === person.id}
+                        onClick={e => deletePerson(person.id, e)}
+                      >
+                        {deleting === person.id ? "..." : "Usuń"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
       </div>
 
+      {/* Modal — додавання або редагування */}
       {showModal && (
-        <div className="pp-overlay" onClick={e => { if (e.target===e.currentTarget) setShowModal(false); }}>
+        <div className="pp-overlay" onClick={e => { if (e.target===e.currentTarget) closeModal(); }}>
           <div className="pp-modal">
+            <button className="pp-modal-close" onClick={closeModal}>✕</button>
 
-            {/* Кнопка закрити */}
-            <button className="pp-modal-close" onClick={() => setShowModal(false)}>✕</button>
-
-            <div className="pp-modal-title">Nowa osoba ✨</div>
+            <div className="pp-modal-title">
+              {modalMode === "add" ? "Nowa osoba ✨" : "Edytuj osobę ✏️"}
+            </div>
 
             <div className="pp-field">
               <label className="pp-label">Imię i nazwisko</label>
               <input
                 className="pp-input"
                 placeholder="np. Anna Kowalska"
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
+                value={formName}
+                onChange={e => setFormName(e.target.value)}
                 autoFocus
               />
             </div>
@@ -319,8 +417,8 @@ export default function PeoplePage() {
               <input
                 className="pp-input"
                 type="date"
-                value={newBirthday}
-                onChange={e => setNewBirthday(e.target.value)}
+                value={formBirthday}
+                onChange={e => setFormBirthday(e.target.value)}
               />
             </div>
 
@@ -328,7 +426,7 @@ export default function PeoplePage() {
               <label className="pp-label">Relacja</label>
               <div className="pp-rel-grid">
                 {RELATIONS.map(r => (
-                  <button key={r.value} className={`pp-rel-btn ${newRelation===r.value?"active":""}`} onClick={() => setNewRelation(r.value)}>
+                  <button key={r.value} className={`pp-rel-btn ${formRelation===r.value?"active":""}`} onClick={() => setFormRelation(r.value)}>
                     <span className="pp-rel-btn-emoji">{r.emoji}</span>
                     <span className="pp-rel-btn-label">{r.label}</span>
                   </button>
@@ -337,11 +435,28 @@ export default function PeoplePage() {
             </div>
 
             <div className="pp-modal-actions">
-              <button className="pp-btn-cancel" onClick={() => setShowModal(false)}>Anuluj</button>
-              <button className="pp-btn-save" onClick={createPerson} disabled={!newName.trim()||saving}>
-                {saving?"Zapisywanie...":"Dodaj osobę →"}
+              <button className="pp-btn-cancel" onClick={closeModal}>Anuluj</button>
+              <button className="pp-btn-save" onClick={savePerson} disabled={!formName.trim()||saving}>
+                {saving ? "Zapisywanie..." : modalMode === "add" ? "Dodaj osobę →" : "Zapisz zmiany →"}
               </button>
             </div>
+
+            {/* Видалити з модалки редагування */}
+            {modalMode === "edit" && editingId && (
+              <button
+                className="pp-btn-delete-modal"
+                disabled={deleting === editingId}
+                onClick={async () => {
+                  setDeleting(editingId);
+                  await supabase.from("people").delete().eq("id", editingId);
+                  setDeleting(null);
+                  closeModal();
+                  loadPeople();
+                }}
+              >
+                {deleting === editingId ? "Usuwanie..." : "🗑️ Usuń tę osobę"}
+              </button>
+            )}
           </div>
         </div>
       )}

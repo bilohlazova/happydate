@@ -29,8 +29,8 @@ function VideoCard({ id, title, emoji, desc }: typeof VIDEOS[0]) {
 
   return (
     <div style={{
-      background: "#2d1b5e", borderRadius: 16, overflow: "hidden",
-      border: "1px solid rgba(255,255,255,.12)",
+      background: "#fff", borderRadius: 16, overflow: "hidden",
+      border: "1.5px solid #ede9f8",
     }}>
       {/* Thumbnail або iframe */}
       <div style={{ position: "relative", aspectRatio: "16/9", background: "#000" }}>
@@ -83,10 +83,10 @@ function VideoCard({ id, title, emoji, desc }: typeof VIDEOS[0]) {
 
       {/* Підпис */}
       <div style={{ padding: "12px 14px" }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 4 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1040", marginBottom: 4 }}>
           {emoji} {title}
         </div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,.75)", lineHeight: 1.4 }}>
+        <div style={{ fontSize: 12, color: "#7c6f9f", lineHeight: 1.4 }}>
           {desc}
         </div>
       </div>
@@ -96,9 +96,9 @@ function VideoCard({ id, title, emoji, desc }: typeof VIDEOS[0]) {
 
 export default function YouTubeShowcase() {
   return (
-    <section style={{ background: "#1a1040", padding: "32px 16px" }}>
+    <section style={{ background: "#f8f7ff", padding: "24px 16px" }}>
       <h3 style={{
-        fontSize: 18, fontWeight: 800, color: "#fff",
+        fontSize: 18, fontWeight: 800, color: "#1a1040",
         textAlign: "center", marginBottom: 16,
       }}>
         Zobacz, jak pomagamy 💛

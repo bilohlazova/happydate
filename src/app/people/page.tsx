@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 
@@ -59,31 +59,7 @@ export default function PeoplePage() {
   const [newName,     setNewName]     = useState("");
   const [newBirthday, setNewBirthday] = useState("");
   const [newRelation, setNewRelation] = useState("friend");
-  const [modalBottom, setModalBottom] = useState(0);
-  const modalRef = useRef<HTMLDivElement>(null);
 
-  // ── Піднімаємо модалку над клавіатурою (iOS) ────────────
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const onViewport = () => {
-      // скільки пікселів займає клавіатура
-      const kbHeight = window.innerHeight - vv.height;
-      setModalBottom(Math.max(0, kbHeight));
-    };
-    vv.addEventListener("resize", onViewport);
-    vv.addEventListener("scroll", onViewport);
-    return () => {
-      vv.removeEventListener("resize", onViewport);
-      vv.removeEventListener("scroll", onViewport);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!showModal) setModalBottom(0);
-  }, [showModal]);
-
-  // ── Дані ────────────────────────────────────────────────
   async function loadPeople() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -160,10 +136,8 @@ export default function PeoplePage() {
         .pp-upcoming-days { font-size:11px; color:#ec4899; font-weight:600; }
 
         .pp-list { padding:0 16px; display:flex; flex-direction:column; gap:10px; }
-
         .pp-card { background:#fff; border-radius:18px; border:1.5px solid #ede9f8; padding:14px 16px; display:flex; align-items:center; gap:14px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,.04); transition:transform .15s,border-color .15s; -webkit-tap-highlight-color:transparent; }
         .pp-card:active { transform:scale(.985); border-color:#c4b5f8; }
-
         .pp-avatar { width:48px; height:48px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; background:linear-gradient(135deg,#ede9fe,#fce7f3); }
         .pp-card-body { flex:1; min-width:0; }
         .pp-card-name { font-size:15px; font-weight:700; color:#1a1040; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -176,36 +150,50 @@ export default function PeoplePage() {
         .pp-empty-title { font-size:16px; font-weight:700; color:#1a1040; margin-bottom:6px; }
         .pp-empty-sub { font-size:13px; color:#7c6f9f; line-height:1.5; }
 
-        /* ── Modal ── */
+        /* ── Modal — по центру зверху ── */
         .pp-overlay {
-          position:fixed; inset:0;
-          background:rgba(10,5,30,.55);
-          display:flex; align-items:flex-end; justify-content:center;
-          z-index:200;
-          backdrop-filter:blur(4px);
-          -webkit-backdrop-filter:blur(4px);
-          animation:ppFadeIn .2s ease;
+          position: fixed;
+          inset: 0;
+          background: rgba(10,5,30,.6);
+          display: flex;
+          /* вирівнювання: трохи вище центру щоб клавіатура не перекривала */
+          align-items: flex-start;
+          justify-content: center;
+          padding: 60px 16px 16px;
+          z-index: 200;
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+          animation: ppFadeIn .2s ease;
+          /* прокрутка якщо клавіатура маленький екран */
+          overflow-y: auto;
         }
         @keyframes ppFadeIn { from{opacity:0} to{opacity:1} }
 
         .pp-modal {
-          background:#fff;
-          border-radius:28px 28px 0 0;
-          padding:24px 20px 32px;
-          width:100%; max-width:480px;
-          /* Скрол всередині модалки — не сторінка */
-          max-height:85svh;
-          overflow-y:auto;
-          -webkit-overflow-scrolling:touch;
-          /* Плавний підйом над клавіатурою */
-          transition:transform .22s cubic-bezier(.32,.72,0,1);
-          will-change:transform;
-          animation:ppSlideUp .28s cubic-bezier(.34,1.2,.64,1);
+          background: #fff;
+          border-radius: 24px;
+          padding: 24px 20px 28px;
+          width: 100%;
+          max-width: 420px;
+          /* без max-height — модалка завжди повністю видима */
+          animation: ppPop .25s cubic-bezier(.34,1.3,.64,1);
+          position: relative;
         }
-        @keyframes ppSlideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+        @keyframes ppPop {
+          from { opacity:0; transform:scale(.92) translateY(-10px); }
+          to   { opacity:1; transform:scale(1) translateY(0); }
+        }
 
-        .pp-modal-handle { width:36px; height:4px; background:#e8e3f5; border-radius:2px; margin:0 auto 20px; }
-        .pp-modal-title { font-size:20px; font-weight:800; color:#1a1040; margin-bottom:20px; }
+        .pp-modal-close {
+          position: absolute; top: 16px; right: 16px;
+          width: 32px; height: 32px; border-radius: 50%;
+          background: #f1eeff; border: none; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 16px; color: #7c6f9f; transition: background .15s;
+        }
+        .pp-modal-close:active { background: #e0d9ff; }
+
+        .pp-modal-title { font-size:20px; font-weight:800; color:#1a1040; margin-bottom:20px; padding-right:40px; }
 
         .pp-field { margin-bottom:14px; }
         .pp-label { font-size:12px; font-weight:700; color:#7c6f9f; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; display:block; }
@@ -308,22 +296,32 @@ export default function PeoplePage() {
 
       {showModal && (
         <div className="pp-overlay" onClick={e => { if (e.target===e.currentTarget) setShowModal(false); }}>
-          <div
-            ref={modalRef}
-            className="pp-modal"
-            style={{ transform:`translateY(-${modalBottom}px)` }}
-          >
-            <div className="pp-modal-handle" />
+          <div className="pp-modal">
+
+            {/* Кнопка закрити */}
+            <button className="pp-modal-close" onClick={() => setShowModal(false)}>✕</button>
+
             <div className="pp-modal-title">Nowa osoba ✨</div>
 
             <div className="pp-field">
               <label className="pp-label">Imię i nazwisko</label>
-              <input className="pp-input" placeholder="np. Anna Kowalska" value={newName} onChange={e => setNewName(e.target.value)} autoFocus />
+              <input
+                className="pp-input"
+                placeholder="np. Anna Kowalska"
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                autoFocus
+              />
             </div>
 
             <div className="pp-field">
               <label className="pp-label">Data urodzin (opcjonalnie)</label>
-              <input className="pp-input" type="date" value={newBirthday} onChange={e => setNewBirthday(e.target.value)} />
+              <input
+                className="pp-input"
+                type="date"
+                value={newBirthday}
+                onChange={e => setNewBirthday(e.target.value)}
+              />
             </div>
 
             <div className="pp-field">

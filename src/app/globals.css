@@ -1,335 +1,321 @@
 @import "tailwindcss";
 
-/* ───────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════
    БАЗА
-   ─────────────────────────────────────────────────────────── */
-:root{
-  --background:#ffffff;
-  --foreground:#171717;
+═══════════════════════════════════════════════════════════ */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
   color-scheme: light dark;
 }
-@media (prefers-color-scheme: dark){
-  :root{ --background:#0a0a0a; --foreground:#ededed; }
+@media (prefers-color-scheme: dark) {
+  :root { --background: #0a0a0a; --foreground: #ededed; }
 }
 
-body{
+body {
   background:
     radial-gradient(1200px 600px at 80% -100px, rgba(255,199,164,.18), transparent 60%),
     radial-gradient(900px 500px at -10% 30%, rgba(146,231,255,.18), transparent 55%),
     var(--background);
-  color:var(--foreground);
+  color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-  min-height:100dvh;
-  overscroll-behavior-y:none;
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
 }
 
-/* курсор-рука для інтерактивних елементів */
-button,[role="button"],a[href],
-input[type="button"],input[type="submit"],input[type="reset"],
-input[type="checkbox"],input[type="radio"],
-label[for],summary{ cursor:pointer; }
+/* курсор-рука */
+button, [role="button"], a[href],
+input[type="button"], input[type="submit"], input[type="reset"],
+input[type="checkbox"], input[type="radio"],
+label[for], summary { cursor: pointer; }
 
-/* дружній focus-ring */
-:where(button,.btn,.icon-btn,a,.hd-event-card):focus-visible{
-  outline:0;
-  box-shadow:0 0 0 3px rgba(34,211,238,.35), 0 0 0 6px rgba(34,211,238,.15);
-  border-radius:12px;
+/* focus-ring */
+:where(button, .btn, .icon-btn, a, .hd-event-card):focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(34,211,238,.35), 0 0 0 6px rgba(34,211,238,.15);
+  border-radius: 12px;
 }
 
-/* ───────────────────────────────────────────────────────────
-   REACT-BIG-CALENDAR (місячний вигляд)
-   ─────────────────────────────────────────────────────────── */
-.rbc-month-view .rbc-off-range-bg{ background:transparent !important; }
-.rbc-month-view .rbc-off-range .rbc-button-link{ color:inherit !important; opacity:.7; }
-.rbc-today{ background:transparent !important; }
-.rbc-today .rbc-date-cell .rbc-button-link{ box-shadow:0 0 0 2px #22d3ee inset; border-radius:6px; }
+/* ═══════════════════════════════════════════════════════════
+   REACT-BIG-CALENDAR — повний рестайлінг
+═══════════════════════════════════════════════════════════ */
 
-.rbc-event{ padding:0 !important; border-radius:9999px !important; overflow:hidden; }
-.rbc-event-content{ display:flex; align-items:center; gap:.35rem; font-size:.82rem; padding:2px 8px; font-weight:600; }
-
-.rbc-calendar,.rbc-month-view,.rbc-time-view{
-  border:0 !important; border-radius:0 !important; width:100%;
+/* Скидаємо дефолтні бордери */
+.rbc-calendar,
+.rbc-month-view,
+.rbc-time-view {
+  border: 0 !important;
+  border-radius: 0 !important;
+  width: 100%;
+  font-family: inherit;
 }
-.rbc-month-row + .rbc-month-row{ border-top:1px solid #eef2f7; }
-.rbc-day-bg + .rbc-day-bg{ border-left:1px solid #eef2f7; }
 
-/* вихідні — легкий відтінок */
+/* Заголовки днів тижня */
+.rbc-header {
+  border-bottom: 1px solid #f1f5f9 !important;
+  border-left: none !important;
+  padding: 8px 4px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+  text-align: center !important;
+  letter-spacing: 0.05em;
+  background: transparent !important;
+}
+.rbc-header + .rbc-header { border-left: none !important; }
+
+/* Рядки місяця */
+.rbc-month-row {
+  border-top: 1px solid #f1f5f9 !important;
+  min-height: 52px !important;
+}
+.rbc-month-row + .rbc-month-row { border-top: 1px solid #f1f5f9 !important; }
+
+/* Комірки днів */
+.rbc-day-bg { border-left: none !important; transition: background .12s ease; }
+.rbc-day-bg + .rbc-day-bg { border-left: 1px solid #f1f5f9 !important; }
+.rbc-day-bg:hover { background: rgba(14,165,233,.04) !important; }
+
+/* Числа в комірках */
+.rbc-date-cell {
+  padding: 4px 6px 2px !important;
+  text-align: center !important;
+}
+.rbc-date-cell .rbc-button-link {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background .12s, color .12s;
+}
+.rbc-date-cell .rbc-button-link:hover {
+  background: rgba(14,165,233,.12);
+  color: #0ea5e9 !important;
+}
+
+/* Сьогодні — синє коло */
+.rbc-today { background: rgba(14,165,233,.06) !important; }
+.hd-today .rbc-button-link,
+.rbc-today .rbc-date-cell .rbc-button-link {
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(14,165,233,.4) !important;
+  border: none !important;
+  border-radius: 50% !important;
+}
+/* прибираємо старий ::after з hd-today */
+.hd-today .rbc-button-link::after { display: none !important; }
+
+/* Дні поза місяцем */
+.rbc-off-range-bg { background: transparent !important; }
+.rbc-off-range .rbc-button-link { color: #cbd5e1 !important; opacity: 1 !important; }
+
+/* Вихідні — легкий відтінок */
 .rbc-month-row .rbc-date-cell:nth-child(6),
-.rbc-month-row .rbc-date-cell:nth-child(7){
-  background: rgba(2,132,199,.04);
-}
-/* hover дня */
-.rbc-month-view .rbc-day-bg:hover{ background:rgba(2,132,199,.05); }
-
-/* поповер “+jeszcze N” */
-.rbc-overlay{
-  border-radius:12px; border:1px solid #e5e7eb;
-  box-shadow:0 10px 25px rgba(0,0,0,.08); overflow:hidden;
+.rbc-month-row .rbc-date-cell:nth-child(7) {
+  background: rgba(2,132,199,.03);
 }
 
-/* «сьогодні» — кільце + бейдж через клас hd-today */
-.hd-today .rbc-button-link{
-  position:relative; background:rgba(34,211,238,.12);
-  border:2px solid #22d3ee; border-radius:10px; padding:2px 6px;
-  box-shadow:0 0 0 2px rgba(34,211,238,.18);
+/* Івенти — пілюлі */
+.rbc-event {
+  padding: 0 !important;
+  border-radius: 999px !important;
+  overflow: hidden;
+  box-shadow: none !important;
+  outline: none !important;
 }
-.hd-today .rbc-button-link::after{
-  content:""; position:absolute; top:3px; right:5px;
-  width:6px; height:6px; border-radius:9999px; background:#06b6d4;
+.rbc-event:focus { outline: none !important; box-shadow: none !important; }
+.rbc-event-content {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* клікабельність */
-.rbc-toolbar button,.rbc-btn-group>button,.rbc-event,.rbc-show-more,.rbc-day-bg{ cursor:pointer; }
+/* «+N більше» */
+.rbc-show-more {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #0ea5e9 !important;
+  background: transparent !important;
+  padding: 0 6px !important;
+}
 
-/* ───────────────────────────────────────────────────────────
+/* Поповер */
+.rbc-overlay {
+  border-radius: 14px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 12px 32px rgba(15,23,42,.12) !important;
+  overflow: hidden;
+  padding: 8px !important;
+}
+.rbc-overlay-header {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  padding: 6px 8px !important;
+  margin-bottom: 4px !important;
+}
+
+/* Тулбар — повністю кастомний через CalendarToolbar */
+.rbc-toolbar { margin-bottom: 0 !important; padding: 0 !important; }
+.rbc-toolbar button { display: none !important; }
+
+/* Клікабельність */
+.rbc-event, .rbc-show-more, .rbc-day-bg { cursor: pointer; }
+
+/* ═══════════════════════════════════════════════════════════
+   iOS SAFE AREA
+═══════════════════════════════════════════════════════════ */
+.pt-safe  { padding-top:    env(safe-area-inset-top); }
+.pb-safe  { padding-bottom: env(safe-area-inset-bottom); }
+
+.hd-safe-header {
+  padding-top: max(env(safe-area-inset-top), 12px);
+}
+.hd-safe-header-sticky {
+  padding-top: max(env(safe-area-inset-top), 12px);
+  min-height: calc(56px + env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+}
+.safe-container {
+  padding-top:    env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ═══════════════════════════════════════════════════════════
    КОМПОНЕНТИ / УТИЛІТИ
-   ─────────────────────────────────────────────────────────── */
-.hd-card{
-  background:rgba(255,255,255,.7);
-  backdrop-filter:saturate(1.05) blur(10px);
-  -webkit-backdrop-filter:saturate(1.05) blur(10px);
-  border:1px solid rgba(229,231,235,.7);
-  border-radius:16px;
-  box-shadow:0 12px 32px rgba(15,23,42,.08);
+═══════════════════════════════════════════════════════════ */
+.hd-card {
+  background: rgba(255,255,255,.7);
+  backdrop-filter: saturate(1.05) blur(10px);
+  -webkit-backdrop-filter: saturate(1.05) blur(10px);
+  border: 1px solid rgba(229,231,235,.7);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(15,23,42,.08);
 }
-.hd-card-hover{ transition:transform .15s ease, box-shadow .15s ease; }
-.hd-card-hover:hover{ transform:translateY(-2px); box-shadow:0 16px 40px rgba(15,23,42,.12); }
+.hd-card-hover { transition: transform .15s ease, box-shadow .15s ease; }
+.hd-card-hover:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(15,23,42,.12); }
 
-/* кнопки (за потреби) */
-.btn{
-  display:inline-flex; align-items:center; gap:.5rem; font-weight:600;
-  border-radius:9999px; padding:.6rem 1rem; border:1px solid transparent;
-  transition:transform .06s ease, box-shadow .2s ease, opacity .2s ease;
+/* Кнопки */
+.btn {
+  display: inline-flex; align-items: center; gap: .5rem; font-weight: 600;
+  border-radius: 9999px; padding: .6rem 1rem; border: 1px solid transparent;
+  transition: transform .06s ease, box-shadow .2s ease, opacity .2s ease;
 }
-.btn:active{ transform:translateY(1px); }
-.btn-primary{
-  background:linear-gradient(90deg,#fbbf24,#fb923c); color:#111827; border:1px solid rgba(0,0,0,.06);
-  box-shadow:0 8px 20px rgba(251,146,60,.35);
+.btn:active { transform: translateY(1px); }
+.btn-primary {
+  background: linear-gradient(90deg,#fbbf24,#fb923c); color: #111827;
+  border: 1px solid rgba(0,0,0,.06); box-shadow: 0 8px 20px rgba(251,146,60,.35);
 }
-.btn-primary:hover{ box-shadow:0 12px 28px rgba(251,146,60,.45); }
-.btn-ghost{ background:rgba(255,255,255,.7); color:#0b1a33; border-color:rgba(0,0,0,.06); }
-.btn-ghost:hover{ background:rgba(255,255,255,.9); }
+.btn-primary:hover { box-shadow: 0 12px 28px rgba(251,146,60,.45); }
+.btn-ghost { background: rgba(255,255,255,.7); color: #0b1a33; border-color: rgba(0,0,0,.06); }
+.btn-ghost:hover { background: rgba(255,255,255,.9); }
 
-/* бейджі/чіпи */
-.hd-chip{ display:inline-flex; align-items:center; gap:.35rem; font-size:.75rem; font-weight:600; padding:.25rem .6rem; border-radius:9999px; border:1px solid transparent; white-space:nowrap; }
-.hd-badge-urodziny{ background:#ffe6ef; color:#9c1b54; border-color:#ffc2d7; }
-.hd-badge-praca{ background:#e6f2ff; color:#1d4ed8; border-color:#c7ddff; }
-.hd-badge-osobiste{ background:#eafff5; color:#047857; border-color:#c7ffea; }
-
-.hd-subtle{ color:#475569; }
-
-/* невеликі іконкові кнопки */
-.hd-quick{ display:flex; gap:.4rem; }
-.hd-quick .icon-btn{
-  width:34px; height:34px; display:flex; align-items:center; justify-content:center;
-  border-radius:10px; background:#fff; border:1px solid #e5e7eb;
-  transition:transform .12s ease, box-shadow .2s ease;
+/* Бейджі */
+.hd-chip {
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-size: .75rem; font-weight: 600; padding: .25rem .6rem;
+  border-radius: 9999px; border: 1px solid transparent; white-space: nowrap;
 }
-.hd-quick .icon-btn:hover{ transform:translateY(-1px); box-shadow:0 8px 20px rgba(15,23,42,.08); }
+.hd-badge-urodziny { background: #ffe6ef; color: #9c1b54; border-color: #ffc2d7; }
+.hd-badge-praca    { background: #e6f2ff; color: #1d4ed8; border-color: #c7ddff; }
+.hd-badge-osobiste { background: #eafff5; color: #047857; border-color: #c7ffea; }
+.hd-subtle { color: #475569; }
 
-/* порожній стан */
-.hd-empty{
-  text-align:center; padding:28px; border-radius:16px;
-  border:1px dashed #cbd5e1; color:#64748b; background:rgba(248,250,252,.65);
+/* Іконкові кнопки */
+.hd-quick { display: flex; gap: .4rem; }
+.hd-quick .icon-btn {
+  width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+  border-radius: 10px; background: #fff; border: 1px solid #e5e7eb;
+  transition: transform .12s ease, box-shadow .2s ease;
 }
+.hd-quick .icon-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15,23,42,.08); }
 
-/* карти подій — hover */
-.hd-event-card{ transition:background .15s ease, transform .12s ease, box-shadow .2s ease; border-radius:14px; }
-.hd-event-card:hover{ background:rgba(241,245,249,.55); transform:translateY(-1px); box-shadow:0 10px 28px rgba(2,132,199,.10); }
-
-/* мобільний FAB */
-@media (max-width:768px){ .fab-add{ position:fixed; right:16px; bottom:16px; z-index:60; } }
-
-/* плавна поява */
-@keyframes hd-pop{ from{ opacity:0; transform:translateY(8px) scale(.98); } to{ opacity:1; transform:translateY(0) scale(1); } }
-.hd-animate-in{ animation:hd-pop .18s ease-out both; }
-
-/* ───────────────────────────────────────────────────────────
-   HERO: статичний pastel-gradient + soft spot + sparkle
-   ─────────────────────────────────────────────────────────── */
-
-/* фон як на скріні: рожевий → кремовий → м’ятний */
-.hd-aurora{
-  background: linear-gradient(90deg, #ffdbe9 0%, #fff0d4 48%, #e6fff0 100%);
-  position: relative;
+/* Порожній стан */
+.hd-empty {
+  text-align: center; padding: 28px; border-radius: 16px;
+  border: 1px dashed #cbd5e1; color: #64748b; background: rgba(248,250,252,.65);
 }
 
-/* легка «віньєтка» зверху-справа/зліва (м’який об’єм) */
-.hd-aurora::after{
-  content:"";
-  position:absolute; inset:0; pointer-events:none;
-  background:
-    radial-gradient(1200px 600px at -10% 20%, rgba(255,255,255,.20), transparent 60%),
-    radial-gradient(900px 520px at 110% 15%, rgba(255,255,255,.18), transparent 55%);
+/* Карти подій */
+.hd-event-card { transition: background .15s ease, transform .12s ease, box-shadow .2s ease; border-radius: 14px; }
+.hd-event-card:hover { background: rgba(241,245,249,.55); transform: translateY(-1px); box-shadow: 0 10px 28px rgba(2,132,199,.10); }
+
+/* FAB */
+@media (max-width: 768px) { .fab-add { position: fixed; right: 16px; bottom: 16px; z-index: 60; } }
+
+/* ═══════════════════════════════════════════════════════════
+   АНІМАЦІЇ
+═══════════════════════════════════════════════════════════ */
+@keyframes hd-pop {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.hd-animate-in { animation: hd-pop .18s ease-out both; }
+
+@keyframes hd-slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.hd-spot::before{
-  content:""; position:absolute; inset:0; margin:auto;
-  width:min(560px,80vw); height:260px; transform:translateY(-10px);
-  background:radial-gradient(closest-side, rgba(255,255,255,.8), rgba(255,255,255,0));
-  filter:blur(28px); z-index:-1;
+@keyframes hd-sway {
+  0%,100% { transform: rotate3d(0,0,1,-1.5deg) translateZ(0); }
+  50%     { transform: rotate3d(0,0,1, 1.5deg) translateZ(0); }
+}
+.animate-hd-sway { animation: hd-sway 5.6s ease-in-out infinite; animation-delay: .6s; }
+
+@layer utilities {
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fadeIn { animation: fadeIn .25s ease-out forwards; }
+
+  @keyframes pulseRing {
+    0%   { transform: scale(1);    box-shadow: 0 0 0 0   rgba(59,130,246,.5); }
+    70%  { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(59,130,246,0); }
+    100% { transform: scale(1);    box-shadow: 0 0 0 0   rgba(59,130,246,0); }
+  }
+  .animate-pulseRing { animation: pulseRing 1.8s cubic-bezier(.4,0,.6,1) infinite; }
 }
 
-/* маленький sparkle біля 💛 */
-.hd-sparkle{ position:relative; display:inline-block; }
-.hd-sparkle .hd-star{
-  position:absolute; left:1.05em; top:-.25em; width:14px; height:14px;
-  opacity:0; pointer-events:none; transform-origin:center;
+/* Sparkle */
+.hd-sparkle { position: relative; display: inline-block; }
+.hd-sparkle .hd-star {
+  position: absolute; left: 1.05em; top: -.25em; width: 14px; height: 14px;
+  opacity: 0; pointer-events: none; transform-origin: center;
   animation: hd-spark 10s ease-in-out infinite;
   filter: drop-shadow(0 2px 6px rgba(255,200,80,.35));
 }
-.hd-sparkle .hd-star.b{ left:1.35em; top:-.45em; width:10px; height:10px; animation-delay:.12s; }
+.hd-sparkle .hd-star.b { left: 1.35em; top: -.45em; width: 10px; height: 10px; animation-delay: .12s; }
 
-@keyframes hd-spark{
-  0%,88%{ opacity:0; transform:scale(.2) rotate(0deg); }
-  89%   { opacity:1; transform:scale(1) rotate(12deg); }
-  92%   { opacity:.95; transform:scale(.9) rotate(28deg) translateY(-2px); }
-  94%,100%{ opacity:0; transform:scale(.2) rotate(45deg) translateY(-4px); }
+@keyframes hd-spark {
+  0%,88%  { opacity: 0; transform: scale(.2) rotate(0deg); }
+  89%     { opacity: 1; transform: scale(1) rotate(12deg); }
+  92%     { opacity: .95; transform: scale(.9) rotate(28deg) translateY(-2px); }
+  94%,100%{ opacity: 0; transform: scale(.2) rotate(45deg) translateY(-4px); }
 }
 
-/* повага до reduced motion */
-@media (prefers-reduced-motion: reduce){
-  .hd-sparkle .hd-star{ animation:none; display:none; }
-}
-
-/* ───────────────────────────────────────────────────────────
-   СЕКЦІЙНІ СМУГИ / СКЛО / ЛІНІЇ / БУЛІТИ
-   ─────────────────────────────────────────────────────────── */
-.hd-section{ position:relative; overflow:hidden; }
-.hd-fade-top::before,
-.hd-fade-bot::after{
-  content:"";
-  position:absolute;
-  left:0;
-  right:0;
-  height:56px;
-  pointer-events:none;
-}
-.hd-fade-top::before{ top:0; background:linear-gradient(180deg,#fff,rgba(255,255,255,0)); }
-.hd-fade-bot::after{ bottom:0; background:linear-gradient(0deg,#fff,rgba(255,255,255,0)); }
-
-.hd-band-rose{ background:linear-gradient(180deg,#fff6fa 0%, #fff 65%); }
-.hd-band-mint{ background:linear-gradient(180deg,#f4fffb 0%, #fff 65%); }
-.hd-band-sun { background:linear-gradient(180deg,#fff9eb 0%, #fff 65%); }
-
-.hd-glass{
-  background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.7));
-  border:1px solid rgba(255,255,255,.7);
-  box-shadow:0 12px 32px rgba(0,0,0,.06);
-  backdrop-filter:blur(6px);
-}
-
-.hd-divider{ height:2px; background:linear-gradient(90deg,transparent,#e5e7eb,transparent); }
-
-.hd-bullet{
-  display:flex; align-items:center; justify-content:center;
-  width:40px; height:40px; border-radius:9999px;
-  background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.66));
-  border:1px solid rgba(255,255,255,.8);
-  box-shadow:0 6px 22px rgba(0,0,0,.06);
-}
-
-/* заголовок секції з підкресленням */
-.hd-sec-title{ display:inline-block; position:relative; }
-.hd-sec-title::after{
-  content:""; display:block; height:3px; width:min(200px,36%);
-  margin:10px auto 0; border-radius:999px;
-  background:linear-gradient(90deg,transparent,#d4d4d8,transparent);
-}
-
-/* ───────────────────────────────────────────────────────────
-   ЧАТ-ПАНЕЛЬ
-   ─────────────────────────────────────────────────────────── */
-.hd-chat-panel{
-  background:rgba(255,255,255,.98);
-  backdrop-filter:saturate(1.05) blur(8px);
-  -webkit-backdrop-filter:saturate(1.05) blur(8px);
-  box-shadow:0 18px 45px rgba(0,0,0,.18);
-}
-
-/* легка «гойдалка» */
-@keyframes hd-sway{ 0%,100%{ transform:rotate3d(0,0,1,-1.5deg) translateZ(0); } 50%{ transform:rotate3d(0,0,1,1.5deg) translateZ(0); } }
-.animate-hd-sway{ animation:hd-sway 5.6s ease-in-out infinite; animation-delay:.6s; }
-
-/* дрібні утиліти-анімації */
-@layer utilities{
-  @keyframes fadeIn{ from{ opacity:0; transform:translateY(10px);} to{ opacity:1; transform:translateY(0);} }
-  .animate-fadeIn{ animation:fadeIn .25s ease-out forwards; }
-
-  @keyframes pulseRing{
-    0%{ transform:scale(1);   box-shadow:0 0 0 0 rgba(59,130,246,.5); }
-    70%{ transform:scale(1.05); box-shadow:0 0 0 12px rgba(59,130,246,0); }
-    100%{ transform:scale(1);  box-shadow:0 0 0 0 rgba(59,130,246,0); }
-  }
-  .animate-pulseRing{ animation:pulseRing 1.8s cubic-bezier(.4,0,.6,1) infinite; }
-}
-@media (prefers-reduced-motion: reduce){
-  .animate-fadeIn,.animate-pulseRing{ animation:none !important; }
-}
-
-/* ───────────────────────────────────────────────────────────
-   KEYFRAMES для Tailwind arbitrary animations
-   ─────────────────────────────────────────────────────────── */
-
-/* Виявлення/поп-ефект (модалка) */
-@keyframes hd-pop {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* Слайд-ап (панель контакту) */
-@keyframes hd-slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Повага до reduced motion */
-@media (prefers-reduced-motion: reduce){
-  @keyframes hd-pop { from { opacity: 1; transform: none; } to { opacity: 1; transform: none; } }
-  @keyframes hd-slide-up { from { opacity: 1; transform: none; } to { opacity: 1; transform: none; } }
-}
-
-/* ====== HappyDate • bubbles (Mikołaj + Elfy) ====== */
-@keyframes hd-floatY {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
-@keyframes hd-cycleQuote {
-  0% { opacity: 0; }
-  2% { opacity: 1; }
-  18% { opacity: 1; }  /* ~2s видимості при 12s циклу */
-  25% { opacity: 0; }
-  100% { opacity: 0; }
-}
+/* Bubbles */
+@keyframes hd-floatY { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 .hd-bubble {
   animation: hd-floatY 6s ease-in-out infinite;
-  filter: drop-shadow(0 6px 16px rgba(15, 23, 42, 0.12));
+  filter: drop-shadow(0 6px 18px rgba(16,24,40,.08));
 }
 .hd-bubble-line {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  animation: hd-cycleQuote 12s linear infinite;
-}
-.hd-bubble {
-  filter: drop-shadow(0 6px 18px rgba(16, 24, 40, 0.08));
-}
-.hd-bubble-line {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
+  position: absolute; inset: 0; opacity: 0;
   transform: translateY(6px);
   animation: hdBubbleCycle 12s infinite;
   will-change: opacity, transform;
@@ -346,34 +332,74 @@ label[for],summary{ cursor:pointer; }
   100% { opacity: 0; }
 }
 
-/* ───────────────────────────────────────────────────────────
-   iOS SAFE AREA — production-ready fix
-   ─────────────────────────────────────────────────────────── */
-
-/* універсальний safe padding */
-.pt-safe {
-  padding-top: env(safe-area-inset-top);
+/* ═══════════════════════════════════════════════════════════
+   HERO / СЕКЦІЙНІ СМУГИ
+═══════════════════════════════════════════════════════════ */
+.hd-aurora {
+  background: linear-gradient(90deg, #ffdbe9 0%, #fff0d4 48%, #e6fff0 100%);
+  position: relative;
+}
+.hd-aurora::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(1200px 600px at -10% 20%, rgba(255,255,255,.20), transparent 60%),
+    radial-gradient(900px 520px at 110% 15%, rgba(255,255,255,.18), transparent 55%);
+}
+.hd-spot::before {
+  content: ""; position: absolute; inset: 0; margin: auto;
+  width: min(560px,80vw); height: 260px; transform: translateY(-10px);
+  background: radial-gradient(closest-side, rgba(255,255,255,.8), rgba(255,255,255,0));
+  filter: blur(28px); z-index: -1;
 }
 
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom);
+.hd-section { position: relative; overflow: hidden; }
+.hd-fade-top::before, .hd-fade-bot::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 56px; pointer-events: none;
+}
+.hd-fade-top::before { top: 0;    background: linear-gradient(180deg,#fff,rgba(255,255,255,0)); }
+.hd-fade-bot::after  { bottom: 0; background: linear-gradient(0deg,#fff,rgba(255,255,255,0)); }
+
+.hd-band-rose { background: linear-gradient(180deg,#fff6fa 0%, #fff 65%); }
+.hd-band-mint { background: linear-gradient(180deg,#f4fffb 0%, #fff 65%); }
+.hd-band-sun  { background: linear-gradient(180deg,#fff9eb 0%, #fff 65%); }
+
+.hd-glass {
+  background: linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.7));
+  border: 1px solid rgba(255,255,255,.7);
+  box-shadow: 0 12px 32px rgba(0,0,0,.06);
+  backdrop-filter: blur(6px);
+}
+.hd-divider { height: 2px; background: linear-gradient(90deg,transparent,#e5e7eb,transparent); }
+
+.hd-bullet {
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 9999px;
+  background: linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.66));
+  border: 1px solid rgba(255,255,255,.8);
+  box-shadow: 0 6px 22px rgba(0,0,0,.06);
+}
+.hd-sec-title { display: inline-block; position: relative; }
+.hd-sec-title::after {
+  content: ""; display: block; height: 3px; width: min(200px,36%);
+  margin: 10px auto 0; border-radius: 999px;
+  background: linear-gradient(90deg,transparent,#d4d4d8,transparent);
 }
 
-/* header fix (найважливіше) */
-.hd-safe-header {
-  padding-top: max(env(safe-area-inset-top), 12px);
+/* Чат-панель */
+.hd-chat-panel {
+  background: rgba(255,255,255,.98);
+  backdrop-filter: saturate(1.05) blur(8px);
+  -webkit-backdrop-filter: saturate(1.05) blur(8px);
+  box-shadow: 0 18px 45px rgba(0,0,0,.18);
 }
 
-/* якщо header sticky */
-.hd-safe-header-sticky {
-  padding-top: max(env(safe-area-inset-top), 12px);
-  min-height: calc(56px + env(safe-area-inset-top));
-  display: flex;
-  align-items: center;
-}
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .hd-sparkle .hd-star,
+  .animate-fadeIn,
+  .animate-pulseRing,
+  .animate-hd-sway { animation: none !important; }
 
-/* optional — safe container */
-.safe-container {
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
+  @keyframes hd-pop      { from { opacity:1; transform:none; } to { opacity:1; transform:none; } }
+  @keyframes hd-slide-up { from { opacity:1; transform:none; } to { opacity:1; transform:none; } }
 }

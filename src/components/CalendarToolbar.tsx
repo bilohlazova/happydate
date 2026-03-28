@@ -3,7 +3,6 @@
 import React from "react";
 import { Views, type View, type ToolbarProps } from "react-big-calendar";
 
-/* Нормалізація views */
 function normalizeViews(views: ToolbarProps["views"]): View[] {
   if (!views) return [Views.MONTH, Views.WEEK, Views.DAY];
   if (Array.isArray(views)) return views as View[];
@@ -11,6 +10,12 @@ function normalizeViews(views: ToolbarProps["views"]): View[] {
     .filter(([, enabled]) => Boolean(enabled))
     .map(([k]) => k as View);
 }
+
+const VIEW_LABELS: Record<string, string> = {
+  [Views.MONTH]: "Miesiąc",
+  [Views.WEEK]: "Tydzień",
+  [Views.DAY]: "Dzień",
+};
 
 export default function CalendarToolbar({
   label,
@@ -23,74 +28,61 @@ export default function CalendarToolbar({
   const order: View[] = [Views.MONTH, Views.WEEK, Views.DAY];
   const toShow = order.filter((v) => available.includes(v));
 
-  const navBtn =
-    "h-8 w-8 flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 active:scale-95 transition";
-
-  const tabBtn = (active: boolean) =>
-    `h-8 px-3 rounded-full text-xs transition ${
-      active
-        ? "bg-sky-600 text-white shadow"
-        : "bg-slate-100 text-slate-700"
-    }`;
-
   return (
-    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="px-3 py-3 flex flex-col gap-3">
 
-      {/* Верхній ряд (на мобільному) */}
-      <div className="flex items-center justify-between">
+      {/* Рядок: навігація + заголовок */}
+      <div className="flex items-center justify-between gap-2">
 
-        {/* Навігація */}
-        <div className="flex items-center gap-2">
+        {/* Назад */}
+        <button
+          type="button"
+          onClick={() => onNavigate("PREV")}
+          aria-label="Poprzedni"
+          className="h-8 w-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 active:scale-95 transition text-sm"
+        >
+          ‹
+        </button>
+
+        {/* Заголовок + кнопка "Сьогодні" */}
+        <div className="flex flex-col items-center gap-0.5">
+          <span className="text-sm font-bold text-slate-800 capitalize">
+            {label}
+          </span>
           <button
             type="button"
-            className={navBtn}
-            onClick={() => onNavigate("PREV")}
-            aria-label="Poprzedni"
-          >
-            ◀
-          </button>
-
-          <button
-            type="button"
-            className="h-8 px-3 rounded-full bg-slate-100 text-xs"
             onClick={() => onNavigate("TODAY")}
+            className="text-[10px] text-sky-500 font-semibold hover:text-sky-700 transition"
           >
             Dziś
           </button>
-
-          <button
-            type="button"
-            className={navBtn}
-            onClick={() => onNavigate("NEXT")}
-            aria-label="Następny"
-          >
-            ▶
-          </button>
         </div>
 
-        {/* Поточний період */}
-        <div
-          className="text-sm font-semibold text-slate-800 text-right sm:text-center"
-          aria-live="polite"
+        {/* Вперед */}
+        <button
+          type="button"
+          onClick={() => onNavigate("NEXT")}
+          aria-label="Następny"
+          className="h-8 w-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 active:scale-95 transition text-sm"
         >
-          {label}
-        </div>
+          ›
+        </button>
       </div>
 
-      {/* Вкладки */}
-      <div className="flex justify-center sm:justify-end gap-2">
+      {/* Вкладки вигляду */}
+      <div className="flex rounded-xl bg-slate-100 p-0.5 gap-0.5">
         {toShow.map((v) => (
           <button
             key={v}
             type="button"
-            className={tabBtn(view === v)}
             onClick={() => onView(v)}
+            className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+              view === v
+                ? "bg-white text-sky-600 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
           >
-            {v === Views.MONTH
-              ? "Miesiąc"
-              : v === Views.WEEK
-              ? "Tydzień"
-              : "Dzień"}
+            {VIEW_LABELS[v] ?? v}
           </button>
         ))}
       </div>

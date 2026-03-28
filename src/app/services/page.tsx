@@ -1,133 +1,145 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ServiceSection } from "@/components/services/ServiceSection";
-import { ServiceCard } from "@/components/services/ServiceCard";
 
 export const metadata: Metadata = {
-  title: "HappyDate – Jak pomagamy dbać o relacje",
-  description:
-    "HappyDate Care i rytuały online. Pamięć, emocje i wsparcie — bez fizycznych produktów.",
+  title: "HappyDate – Usługi",
+  description: "HappyDate Care i rytuały online. Pamięć, emocje i wsparcie.",
   robots: { index: true, follow: true },
   alternates: { canonical: "/services" },
 };
 
+const SERVICES = [
+  {
+    emoji: "💬",
+    title: "Wysłuchaj mnie",
+    description: "Anonimowa rozmowa z kimś, kto naprawdę słucha.",
+    href: "/services/wysluchaj-mnie",
+    color: "#e0f2fe",
+    textColor: "#0369a1",
+  },
+  {
+    emoji: "🌙",
+    title: "Wiadomość z Nieba",
+    description: "Słowa, których nigdy nie udało się wypowiedzieć.",
+    href: "/services/wiadomosc-z-nieba",
+    color: "#ede9fe",
+    textColor: "#6d28d9",
+  },
+  {
+    emoji: "🎥",
+    title: "Wiadomość od Grupy",
+    description: "Jedna wiadomość z głosów wielu bliskich osób.",
+    href: "/services/wiadomosc-grupowa",
+    color: "#dbeafe",
+    textColor: "#1d4ed8",
+  },
+  {
+    emoji: "💸",
+    title: "Zrzutka",
+    description: "Wspólny gest i emocje — bez produktów.",
+    href: "/services/zrzutka",
+    color: "#dcfce7",
+    textColor: "#15803d",
+  },
+  {
+    emoji: "🕊️",
+    title: "Podaruj Dobro",
+    description: "Zrób coś dobrego dla innych i dla siebie.",
+    href: "/services/podaruj-dobro",
+    color: "#fce7f3",
+    textColor: "#be185d",
+  },
+];
+
 export default function ServicesPage() {
   return (
-    <main className="overflow-x-hidden bg-white">
+    <main style={{ background: "#f8f7ff", minHeight: "100svh", paddingBottom: 100, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
-      {/* ================= HERO ================= */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-pink-100 via-yellow-100 to-blue-100 py-12 md:py-16">
-        <div className="mx-auto max-w-4xl px-4 text-center">
-          <h1 className="mb-4 text-3xl font-extrabold md:text-5xl">
-            Jedna usługa. <br className="hidden sm:block" />
-            Wiele spokojnych chwil.
-          </h1>
-
-          <p className="mb-6 text-gray-700 md:text-lg">
-            HappyDate to online-serwis, który pamięta za Ciebie o ważnych osobach,
-            datach i emocjach — żebyś mógł być bliżej, bez stresu i zapominania.
-          </p>
-
-          <a
-            href="#happydate-care"
-            className="inline-block rounded-full bg-pink-500 px-6 py-3 font-semibold text-white shadow hover:bg-pink-600 transition"
-          >
-            Zobacz, jak działa HappyDate Care ↓
-          </a>
-        </div>
+      {/* ── HERO — компактний ── */}
+      <section style={{ background: "linear-gradient(135deg,#fce7f3,#fef9c3,#dbeafe)", padding: "24px 16px 20px", textAlign: "center" }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a1040", margin: "0 0 8px", lineHeight: 1.3 }}>
+          Jedna usługa.<br />Wiele spokojnych chwil.
+        </h1>
+        <p style={{ fontSize: 13, color: "#6b5e8a", margin: "0 0 14px", lineHeight: 1.5 }}>
+          HappyDate pamięta za Ciebie — bez stresu i zapominania.
+        </p>
+        <a
+          href="#care"
+          style={{ display: "inline-block", background: "linear-gradient(135deg,#ec4899,#f59e0b)", color: "#fff", borderRadius: 20, padding: "9px 20px", fontSize: 13, fontWeight: 700, textDecoration: "none" }}
+        >
+          Zobacz HappyDate Care ↓
+        </a>
       </section>
 
-      {/* ================= HAPPYDATE CARE ================= */}
-      <section
-        id="happydate-care"
-        className="py-14 md:py-16 bg-white"
-      >
-        <div className="mx-auto max-w-4xl px-4 text-center">
+      <div style={{ padding: "16px 16px 0" }}>
 
-          <div className="mx-auto mb-6 h-1 w-20 rounded-full bg-gradient-to-r from-pink-400 to-yellow-400" />
-
-          <h2 className="mb-3 text-2xl font-bold md:text-3xl">
-            💛 HappyDate Care
-          </h2>
-
-          <p className="mb-8 text-gray-700">
-            To serce HappyDate. Subskrypcja, która przejmuje pamiętanie,
-            porządkowanie i delikatne przypominanie — za Ciebie.
-          </p>
-
-          <div className="grid gap-4 sm:grid-cols-3 mb-8">
-            <div className="rounded-xl bg-gray-100 p-4 text-sm font-medium">
-              📅 Ważne daty i osoby
-            </div>
-            <div className="rounded-xl bg-gray-100 p-4 text-sm font-medium">
-              📝 Notatki, marzenia i preferencje
-            </div>
-            <div className="rounded-xl bg-gray-100 p-4 text-sm font-medium">
-              🔔 Przypomnienia i podpowiedzi AI
+        {/* ── HAPPYDATE CARE — kompaktna karta ── */}
+        <section id="care" style={{ background: "#fff", borderRadius: 20, border: "1.5px solid #ede9f8", padding: "18px 16px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <span style={{ fontSize: 28 }}>💛</span>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#1a1040" }}>HappyDate Care</div>
+              <div style={{ fontSize: 11, color: "#7c6f9f" }}>od 29 zł / miesiąc</div>
             </div>
           </div>
 
-          <p className="mb-6 text-base font-semibold">
-            od 29 zł / miesiąc <span className="font-normal">lub taniej w planie rocznym</span>
+          <p style={{ fontSize: 13, color: "#6b5e8a", margin: "0 0 12px", lineHeight: 1.5 }}>
+            Subskrypcja, która przejmuje pamiętanie i delikatne przypominanie — za Ciebie.
           </p>
+
+          {/* 3 featury w rzędzie */}
+          <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+            {[
+              { icon: "📅", text: "Daty" },
+              { icon: "📝", text: "Notatki" },
+              { icon: "🔔", text: "AI" },
+            ].map(f => (
+              <div key={f.text} style={{ flex: 1, background: "#f8f7ff", borderRadius: 10, padding: "8px 4px", textAlign: "center", fontSize: 11, fontWeight: 600, color: "#7c6f9f" }}>
+                <div style={{ fontSize: 16, marginBottom: 2 }}>{f.icon}</div>
+                {f.text}
+              </div>
+            ))}
+          </div>
 
           <Link
             href="/care"
-            className="inline-block rounded-full bg-pink-500 px-8 py-3 font-semibold text-white shadow hover:bg-pink-600 transition"
+            style={{ display: "block", background: "linear-gradient(135deg,#7c3aed,#ec4899)", color: "#fff", borderRadius: 14, padding: "11px", textAlign: "center", fontSize: 14, fontWeight: 700, textDecoration: "none" }}
           >
-            Zobacz HappyDate Care
+            Zobacz HappyDate Care →
           </Link>
+        </section>
+
+        {/* ── RYTUAŁY — nagłówek ── */}
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#b0a8cc", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+          ❤️ Dodatkowe rytuały online
         </div>
-      </section>
 
-      {/* ================= DODATKOWE RYTUAŁY ================= */}
-      <ServiceSection
-        emoji="❤️"
-        title="Dodatkowe rytuały online"
-        intro="Gdy sama pamięć to za mało — te usługi pomagają wyrazić emocje i być bliżej."
-        gradient="pink"
-      >
-        <ServiceCard
-          emoji="💬"
-          title="Wysłuchaj mnie"
-          description="Anonimowa rozmowa z kimś, kto naprawdę słucha. Bez ocen i bez presji."
-          href="/services/wysluchaj-mnie"
-          accent="blue"
-        />
+        {/* ── SERWISY — kompaktna lista ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {SERVICES.map(s => (
+            <Link
+              key={s.href}
+              href={s.href}
+              style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 12, background: "#fff", borderRadius: 16, border: "1.5px solid #ede9f8", padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}
+            >
+              {/* Emoji w kolorowym kółku */}
+              <div style={{ width: 44, height: 44, borderRadius: 14, background: s.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
+                {s.emoji}
+              </div>
 
-        <ServiceCard
-          emoji="🌙"
-          title="Wiadomość z Nieba"
-          description="Słowa, których nigdy nie udało się wypowiedzieć — w bezpiecznej formie."
-          href="/services/wiadomosc-z-nieba"
-          accent="indigo"
-        />
+              {/* Tekst */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1040", marginBottom: 2 }}>{s.title}</div>
+                <div style={{ fontSize: 12, color: "#7c6f9f", lineHeight: 1.4 }}>{s.description}</div>
+              </div>
 
-        <ServiceCard
-          emoji="🎥"
-          title="Wiadomość od Grupy"
-          description="Jedna wiadomość stworzona z głosów wielu bliskich osób."
-          href="/services/wiadomosc-grupowa"
-          accent="blue"
-        />
+              {/* Strzałka */}
+              <div style={{ fontSize: 16, color: "#c4b5f8", flexShrink: 0 }}>›</div>
+            </Link>
+          ))}
+        </div>
 
-        <ServiceCard
-          emoji="💸"
-          title="Zrzutka"
-          description="Wspólny gest i emocje — bez produktów i logistyki."
-          href="/services/zrzutka"
-          accent="green"
-        />
-
-        <ServiceCard
-          emoji="🕊️"
-          title="Podaruj Dobro"
-          description="Zrób coś dobrego dla innych i dla siebie — bez kupowania rzeczy."
-          href="/services/podaruj-dobro"
-          accent="pink"
-        />
-      </ServiceSection>
-
+      </div>
     </main>
   );
 }

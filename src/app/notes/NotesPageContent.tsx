@@ -32,42 +32,39 @@ function getInitials(name: string) {
 }
 
 /* ═══════════════════ VOICE HOOK ═══════════════════ */
-// Спочатку пробує @capacitor-community/speech-recognition (iOS нативний),
-// якщо недоступний — fallback на Web Speech API (браузер/Chrome)
 
 function useVoice(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false);
   const stopRef = useRef<(() => void) | null>(null);
 
   const start = useCallback(async () => {
-    // ── Capacitor (iOS/Android native) ──────────────────
+
+    // ── Спроба @capacitor-community/speech-recognition ──
     try {
-      const mod = await import("@capacitor-community/speech-recognition");
-      const SR  = mod.SpeechRecognition;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mod = await import("@capacitor-community/speech-recognition") as any;
+      const SpeechRecognition = mod.SpeechRecognition ?? mod.default?.SpeechRecognition;
 
-      const avail = await SR.available();
-      if (!avail.available) throw new Error("not available");
+      const { available } = await SpeechRecognition.available();
+      if (!available) throw new Error("unavailable");
 
-      const perm = await SR.requestPermissions();
-      if (
-        (perm as unknown as Record<string, string>).speechRecognition !== "granted" ||
-        (perm as unknown as Record<string, string>).microphone !== "granted"
-      ) {
-        alert("Brak uprawnień do mikrofonu. Zezwól w Ustawieniach.");
-        return;
-      }
-
+      await SpeechRecognition.requestPermissions();
       setListening(true);
 
-      await SR.start({ language: "pl-PL", maxResults: 1, partialResults: true, popup: false });
+      await SpeechRecognition.start({
+        language: "pl-PL",
+        maxResults: 2,
+        partialResults: true,
+        popup: false,
+      });
 
-      const handle = await SR.addListener(
+      const handle = await SpeechRecognition.addListener(
         "partialResults",
         (data: { matches?: string[] }) => {
           const text = data.matches?.[0];
           if (text) {
             onResult(text);
-            void SR.stop();
+            void SpeechRecognition.stop();
             handle.remove();
             setListening(false);
             stopRef.current = null;
@@ -77,22 +74,21 @@ function useVoice(onResult: (text: string) => void) {
 
       stopRef.current = () => {
         handle.remove();
-        void SR.stop();
+        void SpeechRecognition.stop();
         setListening(false);
         stopRef.current = null;
       };
 
-      return; // Capacitor OK — не йдемо у fallback
+      return;
     } catch {
-      // Capacitor недоступний або помилка — використовуємо Web Speech
+      // fallback
     }
 
-    // ── Web Speech API (Safari desktop / Chrome) ────────
+    // ── Web Speech API (браузер) ─────────────────────────
     const W = window as unknown as {
       SpeechRecognition?: new () => SpeechRecLike;
       webkitSpeechRecognition?: new () => SpeechRecLike;
     };
-
     interface SpeechRecLike {
       lang: string; continuous: boolean; interimResults: boolean;
       start(): void; stop(): void;
@@ -100,14 +96,12 @@ function useVoice(onResult: (text: string) => void) {
       onend: (() => void) | null;
       onerror: (() => void) | null;
     }
-
-    const SR2 = W.SpeechRecognition ?? W.webkitSpeechRecognition;
-    if (!SR2) {
-      alert("Nagrywanie głosu wymaga aplikacji mobilnej lub przeglądarki Chrome.");
+    const SR = W.SpeechRecognition ?? W.webkitSpeechRecognition;
+    if (!SR) {
+      alert("Nagrywanie głosu nie jest obsługiwane w tej przeglądarce.");
       return;
     }
-
-    const rec = new SR2();
+    const rec = new SR();
     rec.lang = "pl-PL";
     rec.continuous = false;
     rec.interimResults = false;
@@ -119,9 +113,7 @@ function useVoice(onResult: (text: string) => void) {
     stopRef.current = () => { rec.stop(); setListening(false); };
   }, [onResult]);
 
-  const stop = useCallback(() => {
-    stopRef.current?.();
-  }, []);
+  const stop = useCallback(() => { stopRef.current?.(); }, []);
 
   return { listening, start, stop };
 }
@@ -137,6 +129,11 @@ export default function NotesPageContent() {
   const [editingMemory,  setEditingMemory]  = useState<Memory | null>(null);
   const [filterPersonId, setFilterPersonId] = useState<string>("all");
 
+  // Lightbox
+  const [lightboxUrl,    setLightboxUrl]    = useState<string | null>(null);
+  const [lightboxAll,    setLightboxAll]    = useState<string[]>([]);
+  const [lightboxIdx,    setLightboxIdx]    = useState(0);
+
   const [noteText,       setNoteText]       = useState("");
   const [selectedPerson, setSelectedPerson] = useState<string>("");
   const [photoFiles,     setPhotoFiles]     = useState<File[]>([]);
@@ -149,8 +146,23 @@ export default function NotesPageContent() {
   const appendTranscript = useCallback((text: string) => {
     setNoteText(prev => prev ? prev + " " + text : text);
   }, []);
-
   const { listening, start: startVoice, stop: stopVoice } = useVoice(appendTranscript);
+
+  /* ── Lightbox ── */
+  function openLightbox(urls: string[], idx: number) {
+    setLightboxAll(urls);
+    setLightboxIdx(idx);
+    setLightboxUrl(urls[idx]);
+  }
+  function closeLightbox() { setLightboxUrl(null); }
+  function lightboxPrev() {
+    const i = (lightboxIdx - 1 + lightboxAll.length) % lightboxAll.length;
+    setLightboxIdx(i); setLightboxUrl(lightboxAll[i]);
+  }
+  function lightboxNext() {
+    const i = (lightboxIdx + 1) % lightboxAll.length;
+    setLightboxIdx(i); setLightboxUrl(lightboxAll[i]);
+  }
 
   /* ── Load ── */
   const loadPeople = useCallback(async () => {
@@ -184,12 +196,10 @@ export default function NotesPageContent() {
       reader.readAsDataURL(f);
     });
   }
-
   function removePhoto(idx: number) {
     setPhotoFiles(prev => prev.filter((_, i) => i !== idx));
     setPhotoPreviews(prev => prev.filter((_, i) => i !== idx));
   }
-
   function removeExistingPhoto(url: string) {
     setExistingImages(prev => prev.filter(u => u !== url));
   }
@@ -218,7 +228,6 @@ export default function NotesPageContent() {
     setPhotoFiles([]); setPhotoPreviews([]); setExistingImages([]);
     setShowModal(true);
   }
-
   function openEdit(m: Memory) {
     setEditingMemory(m);
     setNoteText(m.content_text ?? "");
@@ -227,7 +236,6 @@ export default function NotesPageContent() {
     setExistingImages(m.images ?? []);
     setShowModal(true);
   }
-
   function closeModal() {
     setShowModal(false);
     setEditingMemory(null);
@@ -240,22 +248,18 @@ export default function NotesPageContent() {
     setSaving(true);
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) { setSaving(false); return; }
-
     const newUrls   = await uploadPhotos(auth.user.id);
     const allImages = [...existingImages, ...newUrls];
-
     const payload = {
       content_text: noteText.trim(),
       person_id:    selectedPerson || null,
       images:       allImages.length ? allImages : null,
     };
-
     if (editingMemory) {
       await supabase.from("memories").update(payload).eq("id", editingMemory.id);
     } else {
       await supabase.from("memories").insert({ ...payload, user_id: auth.user.id });
     }
-
     setSaving(false);
     closeModal();
     loadMemories();
@@ -298,7 +302,6 @@ export default function NotesPageContent() {
 
         .np-list { padding:0 16px; display:flex; flex-direction:column; gap:12px; }
 
-        /* Card */
         .np-card { background:#fff; border-radius:20px; border:1.5px solid #ede9f8; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.04); }
         .np-card-body { padding:14px 16px; }
         .np-card-top { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
@@ -307,12 +310,12 @@ export default function NotesPageContent() {
         .np-card-date { font-size:11px; color:#b0a8cc; margin-left:auto; }
         .np-card-text { font-size:14px; color:#1a1040; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
 
-        /* Photo grid — простий <img> без next/image */
         .np-photo-grid { display:grid; gap:2px; margin-top:10px; border-radius:12px; overflow:hidden; }
         .np-photo-grid.g1 { grid-template-columns:1fr; }
         .np-photo-grid.g2 { grid-template-columns:1fr 1fr; }
         .np-photo-grid.g3 { grid-template-columns:1fr 1fr 1fr; }
-        .np-photo-grid img { width:100%; height:160px; object-fit:cover; display:block; }
+        .np-photo-grid img { width:100%; height:160px; object-fit:cover; display:block; cursor:pointer; transition:opacity .15s; }
+        .np-photo-grid img:active { opacity:.85; }
         .np-photo-grid.g1 img { height:220px; }
 
         .np-card-actions { display:flex; gap:8px; padding:10px 16px 14px; border-top:1px solid #f5f3ff; }
@@ -327,43 +330,51 @@ export default function NotesPageContent() {
         .np-empty-title { font-size:16px; font-weight:700; color:#1a1040; margin-bottom:6px; }
         .np-empty-sub { font-size:13px; color:#7c6f9f; line-height:1.5; }
 
-        /* Modal — overlay скролить, модалка фіксованої ширини */
-        .np-overlay {
-          position: fixed; inset: 0;
-          background: rgba(10,5,30,.6);
-          display: flex;
-          align-items: flex-start;
-          justify-content: center;
-          padding: 60px 16px 40px;
-          z-index: 200;
-          backdrop-filter: blur(6px);
-          -webkit-backdrop-filter: blur(6px);
+        /* ── Lightbox ── */
+        .np-lightbox {
+          position: fixed; inset: 0; z-index: 500;
+          background: rgba(0,0,0,.92);
+          display: flex; align-items: center; justify-content: center;
           animation: npFadeIn .2s ease;
-          /* ключове: скрол на overlay, не на сторінці */
-          overflow-y: auto;
-          -webkit-overflow-scrolling: touch;
         }
+        .np-lightbox-img {
+          max-width: 100%; max-height: 100vh;
+          object-fit: contain;
+          border-radius: 4px;
+          user-select: none;
+        }
+        .np-lightbox-close {
+          position: absolute; top: 16px; right: 16px;
+          width: 40px; height: 40px; border-radius: 50%;
+          background: rgba(255,255,255,.15); border: none; cursor: pointer;
+          color: #fff; font-size: 20px;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .np-lightbox-nav {
+          position: absolute; top: 50%; transform: translateY(-50%);
+          width: 44px; height: 44px; border-radius: 50%;
+          background: rgba(255,255,255,.15); border: none; cursor: pointer;
+          color: #fff; font-size: 22px;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .np-lightbox-prev { left: 12px; }
+        .np-lightbox-next { right: 12px; }
+        .np-lightbox-counter {
+          position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+          color: rgba(255,255,255,.7); font-size: 13px; font-weight: 600;
+          font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* ── Modal ── */
+        .np-overlay { position:fixed; inset:0; background:rgba(10,5,30,.6); display:flex; align-items:flex-start; justify-content:center; padding:60px 16px 40px; z-index:200; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); animation:npFadeIn .2s ease; overflow-y:auto; -webkit-overflow-scrolling:touch; }
         @keyframes npFadeIn { from{opacity:0} to{opacity:1} }
-
-        .np-modal {
-          background: #fff;
-          border-radius: 24px;
-          padding: 24px 20px 28px;
-          width: 100%;
-          max-width: 480px;
-          /* не ставимо max-height — нехай росте, overlay скролить */
-          animation: npPop .25s cubic-bezier(.34,1.3,.64,1);
-          position: relative;
-          flex-shrink: 0; /* важливо щоб не стискався */
-        }
+        .np-modal { background:#fff; border-radius:24px; padding:24px 20px 28px; width:100%; max-width:480px; animation:npPop .25s cubic-bezier(.34,1.3,.64,1); position:relative; flex-shrink:0; }
         @keyframes npPop { from{opacity:0;transform:scale(.92) translateY(-10px)} to{opacity:1;transform:scale(1) translateY(0)} }
-
         .np-modal-close { position:absolute; top:16px; right:16px; width:32px; height:32px; border-radius:50%; background:#f1eeff; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; color:#7c6f9f; }
         .np-modal-title { font-size:20px; font-weight:800; color:#1a1040; margin-bottom:18px; padding-right:40px; }
 
         .np-field { margin-bottom:14px; }
         .np-label { font-size:12px; font-weight:700; color:#7c6f9f; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; display:block; }
-
         .np-textarea { width:100%; border:1.5px solid #e8e3f5; border-radius:14px; padding:12px 14px; font-size:15px; font-family:'Plus Jakarta Sans',sans-serif; color:#1a1040; background:#f8f7ff; outline:none; resize:none; min-height:90px; max-height:200px; overflow-y:auto; transition:border-color .15s; box-sizing:border-box; }
         .np-textarea:focus { border-color:#7c3aed; background:#fff; }
 
@@ -392,7 +403,6 @@ export default function NotesPageContent() {
       `}</style>
 
       <div className="np-root">
-
         <div className="np-header">
           <div className="np-header-top">
             <div>
@@ -418,7 +428,6 @@ export default function NotesPageContent() {
 
         <div className="np-list">
           {loading && <div style={{ textAlign:"center", padding:40, color:"#b0a8cc", fontSize:14 }}>Ładowanie...</div>}
-
           {!loading && filtered.length === 0 && (
             <div className="np-empty">
               <div className="np-empty-icon">📝</div>
@@ -429,8 +438,9 @@ export default function NotesPageContent() {
 
           {filtered.map(memory => {
             const person = people.find(p => p.id === memory.person_id);
-            const imgs   = (memory.images ?? []).slice(0, 3);
-            const gc     = imgs.length === 1 ? "g1" : imgs.length === 2 ? "g2" : "g3";
+            const imgs   = memory.images ?? [];
+            const show   = imgs.slice(0, 3);
+            const gc     = show.length === 1 ? "g1" : show.length === 2 ? "g2" : "g3";
 
             return (
               <div key={memory.id} className="np-card">
@@ -454,11 +464,17 @@ export default function NotesPageContent() {
                     <div className="np-card-text">{memory.content_text}</div>
                   )}
 
-                  {imgs.length > 0 && (
+                  {show.length > 0 && (
                     <div className={`np-photo-grid ${gc}`}>
-                      {imgs.map((url, i) => (
+                      {show.map((url, i) => (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img key={i} src={url} alt="" loading="lazy" />
+                        <img
+                          key={i}
+                          src={url}
+                          alt=""
+                          loading="lazy"
+                          onClick={() => openLightbox(imgs, i)}
+                        />
                       ))}
                     </div>
                   )}
@@ -474,6 +490,28 @@ export default function NotesPageContent() {
         </div>
       </div>
 
+      {/* ── Lightbox ── */}
+      {lightboxUrl && (
+        <div className="np-lightbox" onClick={closeLightbox}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            className="np-lightbox-img"
+            src={lightboxUrl}
+            alt=""
+            onClick={e => e.stopPropagation()}
+          />
+          <button className="np-lightbox-close" onClick={closeLightbox}>✕</button>
+          {lightboxAll.length > 1 && (
+            <>
+              <button className="np-lightbox-nav np-lightbox-prev" onClick={e => { e.stopPropagation(); lightboxPrev(); }}>‹</button>
+              <button className="np-lightbox-nav np-lightbox-next" onClick={e => { e.stopPropagation(); lightboxNext(); }}>›</button>
+              <div className="np-lightbox-counter">{lightboxIdx + 1} / {lightboxAll.length}</div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Modal ── */}
       {showModal && (
         <div className="np-overlay" onClick={e => { if (e.target===e.currentTarget) closeModal(); }}>
           <div className="np-modal">
@@ -508,7 +546,6 @@ export default function NotesPageContent() {
 
             <div className="np-field">
               <label className="np-label">Zdjęcia (opcjonalnie)</label>
-
               {existingImages.length > 0 && (
                 <div className="np-preview-grid">
                   {existingImages.map((url, i) => (
@@ -520,7 +557,6 @@ export default function NotesPageContent() {
                   ))}
                 </div>
               )}
-
               {photoPreviews.length > 0 && (
                 <div className="np-preview-grid">
                   {photoPreviews.map((src, i) => (
@@ -532,18 +568,10 @@ export default function NotesPageContent() {
                   ))}
                 </div>
               )}
-
               <button className="np-photo-upload-btn" onClick={() => fileInputRef.current?.click()}>
                 📷 Dodaj zdjęcie
               </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                style={{ display:"none" }}
-                onChange={handlePhotoChange}
-              />
+              <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={handlePhotoChange} />
             </div>
 
             <div className="np-field">

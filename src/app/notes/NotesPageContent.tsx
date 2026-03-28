@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import Image from "next/image";
 
 /* ═══════════════════ TYPES ═══════════════════ */
 
@@ -33,57 +32,95 @@ function getInitials(name: string) {
 }
 
 /* ═══════════════════ VOICE HOOK ═══════════════════ */
-
-interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionInstance extends EventTarget {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  start(): void;
-  stop(): void;
-  onresult: ((e: SpeechRecognitionEvent) => void) | null;
-  onend: (() => void) | null;
-  onerror: (() => void) | null;
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition?: new () => SpeechRecognitionInstance;
-    webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
-  }
-}
+// Спочатку пробує @capacitor-community/speech-recognition (iOS нативний),
+// якщо недоступний — fallback на Web Speech API (браузер/Chrome)
 
 function useVoice(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false);
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const stopRef = useRef<(() => void) | null>(null);
 
-  const start = useCallback(() => {
-    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    if (!SR) { alert("Twoja przeglądarka nie obsługuje nagrywania głosu"); return; }
+  const start = useCallback(async () => {
+    // ── Capacitor (iOS/Android native) ──────────────────
+    try {
+      const mod = await import("@capacitor-community/speech-recognition");
+      const SR  = mod.SpeechRecognition;
 
-    const rec = new SR();
+      const avail = await SR.available();
+      if (!avail.available) throw new Error("not available");
+
+      const perm = await SR.requestPermissions();
+      if (
+        (perm as unknown as Record<string, string>).speechRecognition !== "granted" ||
+        (perm as unknown as Record<string, string>).microphone !== "granted"
+      ) {
+        alert("Brak uprawnień do mikrofonu. Zezwól w Ustawieniach.");
+        return;
+      }
+
+      setListening(true);
+
+      await SR.start({ language: "pl-PL", maxResults: 1, partialResults: true, popup: false });
+
+      const handle = await SR.addListener(
+        "partialResults",
+        (data: { matches?: string[] }) => {
+          const text = data.matches?.[0];
+          if (text) {
+            onResult(text);
+            void SR.stop();
+            handle.remove();
+            setListening(false);
+            stopRef.current = null;
+          }
+        }
+      );
+
+      stopRef.current = () => {
+        handle.remove();
+        void SR.stop();
+        setListening(false);
+        stopRef.current = null;
+      };
+
+      return; // Capacitor OK — не йдемо у fallback
+    } catch {
+      // Capacitor недоступний або помилка — використовуємо Web Speech
+    }
+
+    // ── Web Speech API (Safari desktop / Chrome) ────────
+    const W = window as unknown as {
+      SpeechRecognition?: new () => SpeechRecLike;
+      webkitSpeechRecognition?: new () => SpeechRecLike;
+    };
+
+    interface SpeechRecLike {
+      lang: string; continuous: boolean; interimResults: boolean;
+      start(): void; stop(): void;
+      onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+      onend: (() => void) | null;
+      onerror: (() => void) | null;
+    }
+
+    const SR2 = W.SpeechRecognition ?? W.webkitSpeechRecognition;
+    if (!SR2) {
+      alert("Nagrywanie głosu wymaga aplikacji mobilnej lub przeglądarki Chrome.");
+      return;
+    }
+
+    const rec = new SR2();
     rec.lang = "pl-PL";
     rec.continuous = false;
     rec.interimResults = false;
-
-    rec.onresult = (e: SpeechRecognitionEvent) => {
-      const transcript = e.results[0][0].transcript;
-      onResult(transcript);
-    };
-    rec.onend  = () => setListening(false);
-    rec.onerror = () => setListening(false);
-
-    recognitionRef.current = rec;
+    rec.onresult = (e) => onResult(e.results[0][0].transcript);
+    rec.onend    = () => { setListening(false); stopRef.current = null; };
+    rec.onerror  = () => { setListening(false); stopRef.current = null; };
     rec.start();
     setListening(true);
+    stopRef.current = () => { rec.stop(); setListening(false); };
   }, [onResult]);
 
   const stop = useCallback(() => {
-    recognitionRef.current?.stop();
-    setListening(false);
+    stopRef.current?.();
   }, []);
 
   return { listening, start, stop };
@@ -112,6 +149,7 @@ export default function NotesPageContent() {
   const appendTranscript = useCallback((text: string) => {
     setNoteText(prev => prev ? prev + " " + text : text);
   }, []);
+
   const { listening, start: startVoice, stop: stopVoice } = useVoice(appendTranscript);
 
   /* ── Load ── */
@@ -135,7 +173,7 @@ export default function NotesPageContent() {
     })();
   }, [loadPeople, loadMemories]);
 
-  /* ── Photo picker ── */
+  /* ── Photo ── */
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
@@ -156,7 +194,6 @@ export default function NotesPageContent() {
     setExistingImages(prev => prev.filter(u => u !== url));
   }
 
-  /* ── Upload ── */
   async function uploadPhotos(userId: string): Promise<string[]> {
     if (!photoFiles.length) return [];
     setUploadProgress(true);
@@ -261,6 +298,7 @@ export default function NotesPageContent() {
 
         .np-list { padding:0 16px; display:flex; flex-direction:column; gap:12px; }
 
+        /* Card */
         .np-card { background:#fff; border-radius:20px; border:1.5px solid #ede9f8; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.04); }
         .np-card-body { padding:14px 16px; }
         .np-card-top { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
@@ -269,12 +307,13 @@ export default function NotesPageContent() {
         .np-card-date { font-size:11px; color:#b0a8cc; margin-left:auto; }
         .np-card-text { font-size:14px; color:#1a1040; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
 
+        /* Photo grid — простий <img> без next/image */
         .np-photo-grid { display:grid; gap:2px; margin-top:10px; border-radius:12px; overflow:hidden; }
-        .np-photo-grid.count-1 { grid-template-columns:1fr; }
-        .np-photo-grid.count-2 { grid-template-columns:1fr 1fr; }
-        .np-photo-grid.count-3 { grid-template-columns:1fr 1fr 1fr; }
-        .np-photo-grid .np-img { width:100%; height:160px; object-fit:cover; display:block; position:relative; }
-        .np-photo-grid.count-1 .np-img { height:220px; }
+        .np-photo-grid.g1 { grid-template-columns:1fr; }
+        .np-photo-grid.g2 { grid-template-columns:1fr 1fr; }
+        .np-photo-grid.g3 { grid-template-columns:1fr 1fr 1fr; }
+        .np-photo-grid img { width:100%; height:160px; object-fit:cover; display:block; }
+        .np-photo-grid.g1 img { height:220px; }
 
         .np-card-actions { display:flex; gap:8px; padding:10px 16px 14px; border-top:1px solid #f5f3ff; }
         .np-card-action-btn { flex:1; border:none; background:transparent; border-radius:10px; padding:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; transition:all .15s; }
@@ -288,30 +327,59 @@ export default function NotesPageContent() {
         .np-empty-title { font-size:16px; font-weight:700; color:#1a1040; margin-bottom:6px; }
         .np-empty-sub { font-size:13px; color:#7c6f9f; line-height:1.5; }
 
-        .np-overlay { position:fixed; inset:0; background:rgba(10,5,30,.6); display:flex; align-items:flex-start; justify-content:center; padding:60px 16px 24px; z-index:200; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); animation:npFadeIn .2s ease; overflow-y:auto; }
+        /* Modal — overlay скролить, модалка фіксованої ширини */
+        .np-overlay {
+          position: fixed; inset: 0;
+          background: rgba(10,5,30,.6);
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+          padding: 60px 16px 40px;
+          z-index: 200;
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+          animation: npFadeIn .2s ease;
+          /* ключове: скрол на overlay, не на сторінці */
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+        }
         @keyframes npFadeIn { from{opacity:0} to{opacity:1} }
-        .np-modal { background:#fff; border-radius:24px; padding:24px 20px 28px; width:100%; max-width:480px; animation:npPop .25s cubic-bezier(.34,1.3,.64,1); position:relative; }
+
+        .np-modal {
+          background: #fff;
+          border-radius: 24px;
+          padding: 24px 20px 28px;
+          width: 100%;
+          max-width: 480px;
+          /* не ставимо max-height — нехай росте, overlay скролить */
+          animation: npPop .25s cubic-bezier(.34,1.3,.64,1);
+          position: relative;
+          flex-shrink: 0; /* важливо щоб не стискався */
+        }
         @keyframes npPop { from{opacity:0;transform:scale(.92) translateY(-10px)} to{opacity:1;transform:scale(1) translateY(0)} }
+
         .np-modal-close { position:absolute; top:16px; right:16px; width:32px; height:32px; border-radius:50%; background:#f1eeff; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; color:#7c6f9f; }
         .np-modal-title { font-size:20px; font-weight:800; color:#1a1040; margin-bottom:18px; padding-right:40px; }
 
         .np-field { margin-bottom:14px; }
         .np-label { font-size:12px; font-weight:700; color:#7c6f9f; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; display:block; }
-        .np-textarea { width:100%; border:1.5px solid #e8e3f5; border-radius:14px; padding:12px 14px; font-size:15px; font-family:'Plus Jakarta Sans',sans-serif; color:#1a1040; background:#f8f7ff; outline:none; resize:none; min-height:100px; transition:border-color .15s; box-sizing:border-box; }
+
+        .np-textarea { width:100%; border:1.5px solid #e8e3f5; border-radius:14px; padding:12px 14px; font-size:15px; font-family:'Plus Jakarta Sans',sans-serif; color:#1a1040; background:#f8f7ff; outline:none; resize:none; min-height:90px; max-height:200px; overflow-y:auto; transition:border-color .15s; box-sizing:border-box; }
         .np-textarea:focus { border-color:#7c3aed; background:#fff; }
 
         .np-voice-row { display:flex; gap:8px; align-items:center; margin-bottom:14px; }
-        .np-voice-btn { display:flex; align-items:center; gap:6px; border:1.5px solid #e8e3f5; background:#f8f7ff; border-radius:12px; padding:9px 14px; font-size:13px; font-weight:700; color:#7c6f9f; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; transition:all .15s; }
+        .np-voice-btn { display:flex; align-items:center; gap:6px; border:1.5px solid #e8e3f5; background:#f8f7ff; border-radius:12px; padding:9px 14px; font-size:13px; font-weight:700; color:#7c6f9f; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; transition:all .15s; flex-shrink:0; }
         .np-voice-btn.active { border-color:#ec4899; background:#fce7f3; color:#be185d; }
-        .np-voice-pulse { width:8px; height:8px; border-radius:50%; background:#ec4899; animation:npPulse 1s ease infinite; }
+        .np-voice-pulse { width:8px; height:8px; border-radius:50%; background:#ec4899; animation:npPulse 1s ease infinite; flex-shrink:0; }
         @keyframes npPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
 
         .np-photo-upload-btn { display:flex; align-items:center; gap:8px; border:1.5px dashed #c4b5f8; background:#f8f7ff; border-radius:12px; padding:10px 14px; font-size:13px; font-weight:600; color:#7c3aed; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; transition:all .15s; width:100%; justify-content:center; box-sizing:border-box; }
         .np-photo-upload-btn:active { background:#ede9fe; }
 
-        .np-preview-grid { display:flex; gap:8px; flex-wrap:wrap; }
+        .np-preview-grid { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
         .np-preview-item { position:relative; width:72px; height:72px; border-radius:10px; overflow:hidden; flex-shrink:0; }
-        .np-preview-remove { position:absolute; top:2px; right:2px; width:18px; height:18px; border-radius:50%; background:rgba(0,0,0,.6); color:#fff; border:none; cursor:pointer; font-size:10px; display:flex; align-items:center; justify-content:center; line-height:1; }
+        .np-preview-item img { width:100%; height:100%; object-fit:cover; display:block; }
+        .np-preview-remove { position:absolute; top:2px; right:2px; width:18px; height:18px; border-radius:50%; background:rgba(0,0,0,.6); color:#fff; border:none; cursor:pointer; font-size:10px; display:flex; align-items:center; justify-content:center; line-height:1; padding:0; }
 
         .np-select { width:100%; border:1.5px solid #e8e3f5; border-radius:14px; padding:12px 14px; font-size:15px; font-family:'Plus Jakarta Sans',sans-serif; color:#1a1040; background:#f8f7ff; outline:none; appearance:none; box-sizing:border-box; }
         .np-select:focus { border-color:#7c3aed; }
@@ -334,9 +402,7 @@ export default function NotesPageContent() {
               </div>
               <p className="np-subtitle">Wspomnienia i myśli w jednym miejscu</p>
             </div>
-            <button className="np-add-btn" onClick={openNew}>
-              <span>＋</span> Dodaj
-            </button>
+            <button className="np-add-btn" onClick={openNew}>＋ Dodaj</button>
           </div>
         </div>
 
@@ -363,8 +429,8 @@ export default function NotesPageContent() {
 
           {filtered.map(memory => {
             const person = people.find(p => p.id === memory.person_id);
-            const imgs   = memory.images ?? [];
-            const count  = Math.min(imgs.length, 3);
+            const imgs   = (memory.images ?? []).slice(0, 3);
+            const gc     = imgs.length === 1 ? "g1" : imgs.length === 2 ? "g2" : "g3";
 
             return (
               <div key={memory.id} className="np-card">
@@ -389,18 +455,10 @@ export default function NotesPageContent() {
                   )}
 
                   {imgs.length > 0 && (
-                    <div className={`np-photo-grid count-${count}`}>
-                      {imgs.slice(0, 3).map((url, i) => (
-                        <div key={i} className="np-img">
-                          <Image
-                            src={url}
-                            alt=""
-                            fill
-                            sizes="(max-width:768px) 100vw, 33vw"
-                            style={{ objectFit:"cover" }}
-                            unoptimized
-                          />
-                        </div>
+                    <div className={`np-photo-grid ${gc}`}>
+                      {imgs.map((url, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={i} src={url} alt="" loading="lazy" />
                       ))}
                     </div>
                   )}
@@ -441,7 +499,7 @@ export default function NotesPageContent() {
                 onClick={listening ? stopVoice : startVoice}
               >
                 {listening
-                  ? <><div className="np-voice-pulse"/> Zatrzymaj nagrywanie</>
+                  ? <><div className="np-voice-pulse"/> Zatrzymaj</>
                   : <>🎙️ Nagraj głosowo</>
                 }
               </button>
@@ -452,10 +510,11 @@ export default function NotesPageContent() {
               <label className="np-label">Zdjęcia (opcjonalnie)</label>
 
               {existingImages.length > 0 && (
-                <div className="np-preview-grid" style={{ marginBottom:8 }}>
+                <div className="np-preview-grid">
                   {existingImages.map((url, i) => (
                     <div key={i} className="np-preview-item">
-                      <Image src={url} alt="" fill style={{ objectFit:"cover" }} unoptimized />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt="" />
                       <button className="np-preview-remove" onClick={() => removeExistingPhoto(url)}>✕</button>
                     </div>
                   ))}
@@ -463,11 +522,11 @@ export default function NotesPageContent() {
               )}
 
               {photoPreviews.length > 0 && (
-                <div className="np-preview-grid" style={{ marginBottom:8 }}>
+                <div className="np-preview-grid">
                   {photoPreviews.map((src, i) => (
                     <div key={i} className="np-preview-item">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                      <img src={src} alt="" />
                       <button className="np-preview-remove" onClick={() => removePhoto(i)}>✕</button>
                     </div>
                   ))}
@@ -477,7 +536,14 @@ export default function NotesPageContent() {
               <button className="np-photo-upload-btn" onClick={() => fileInputRef.current?.click()}>
                 📷 Dodaj zdjęcie
               </button>
-              <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={handlePhotoChange} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                style={{ display:"none" }}
+                onChange={handlePhotoChange}
+              />
             </div>
 
             <div className="np-field">

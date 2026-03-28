@@ -7,25 +7,23 @@ export default function BottomNav() {
   const router = useRouter();
 
   const items = [
-    { href: "/dashboard", label: "Start", icon: "🏠" },
-    { href: "/people", label: "Osoby", icon: "👥" },
-    { href: "/notes", label: "Notatki", icon: "📝" },
-    { href: "/dashboard#calendar", label: "Kalendarz", icon: "📅" },
-    { href: "/profile", label: "Profil", icon: "👤" },
+    { href: "/",          label: "Start",    icon: "🏠" },
+    { href: "/people",    label: "Osoby",    icon: "👥" },
+    { href: "/notes",     label: "Notatki",  icon: "📝" },
+    { href: "/dashboard", label: "Kalendarz", icon: "📅" },
+    { href: "/profile",   label: "Profil",   icon: "👤" },
   ];
 
   return (
     <nav
-      className="
-        fixed bottom-0 left-0 right-0
-        bg-white border-t border-slate-200
-        flex justify-around items-center
-        h-16 z-50
-      "
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center h-16 z-50"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {items.map((item) => {
-        const active = pathname.startsWith(item.href);
+        // Точне порівняння для "/" щоб не підсвічувати все підряд
+        const active = item.href === "/"
+          ? pathname === "/"
+          : pathname.startsWith(item.href);
 
         return (
           <button
@@ -36,14 +34,7 @@ export default function BottomNav() {
             <span className={active ? "text-pink-600 text-xl" : "text-slate-400 text-xl"}>
               {item.icon}
             </span>
-
-            <span
-              className={
-                active
-                  ? "text-pink-600 text-[11px] font-medium"
-                  : "text-slate-400 text-[11px]"
-              }
-            >
+            <span className={active ? "text-pink-600 text-[11px] font-medium" : "text-slate-400 text-[11px]"}>
               {item.label}
             </span>
           </button>

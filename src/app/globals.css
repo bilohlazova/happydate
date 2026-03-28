@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════
@@ -18,28 +19,23 @@ body {
     radial-gradient(900px 500px at -10% 30%, rgba(146,231,255,.18), transparent 55%),
     var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
   min-height: 100dvh;
   overscroll-behavior-y: none;
-
-  /* ── КЛЮЧОВЕ для iOS: висота вікна = видима область без клавіатури ── */
   height: 100%;
 }
 
-/* Забороняємо сторінці скролитись поки відкрита модалка з клавіатурою */
 body.modal-open {
   overflow: hidden;
   position: fixed;
   width: 100%;
 }
 
-/* курсор-рука */
 button, [role="button"], a[href],
 input[type="button"], input[type="submit"], input[type="reset"],
 input[type="checkbox"], input[type="radio"],
 label[for], summary { cursor: pointer; }
 
-/* focus-ring */
 :where(button, .btn, .icon-btn, a, .hd-event-card):focus-visible {
   outline: 0;
   box-shadow: 0 0 0 3px rgba(34,211,238,.35), 0 0 0 6px rgba(34,211,238,.15);
@@ -47,7 +43,7 @@ label[for], summary { cursor: pointer; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   REACT-BIG-CALENDAR — повний рестайлінг
+   REACT-BIG-CALENDAR
 ═══════════════════════════════════════════════════════════ */
 
 .rbc-calendar,

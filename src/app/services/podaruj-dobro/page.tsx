@@ -53,31 +53,31 @@ export default function PodarujDobroPage() {
 
       {/* ══ HERO ══════════════════════════════════════════ */}
       <section style={{
-        background: "linear-gradient(160deg,#1a0533 0%,#3b0764 50%,#831843 100%)",
+        background: "linear-gradient(160deg,#fff0f6 0%,#fce7f3 40%,#fff9c4 100%)",
         padding: "36px 20px 32px",
         textAlign: "center",
         position: "relative",
         overflow: "hidden",
       }}>
         {/* Декоративні кола */}
-        <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: "50%", background: "rgba(236,72,153,.15)" }} />
-        <div style={{ position: "absolute", bottom: -30, left: -30, width: 120, height: 120, borderRadius: "50%", background: "rgba(167,139,250,.12)" }} />
+        <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: "50%", background: "rgba(236,72,153,.12)" }} />
+        <div style={{ position: "absolute", bottom: -30, left: -30, width: 120, height: 120, borderRadius: "50%", background: "rgba(251,191,36,.15)" }} />
 
         <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,.6)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12, background: "rgba(255,255,255,.1)", padding: "4px 12px", borderRadius: 20 }}>
+          <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, color: "#be185d", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12, background: "rgba(236,72,153,.1)", padding: "4px 12px", borderRadius: 20 }}>
             Podaruj Dobro
           </div>
 
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: "#fff", margin: "0 0 8px", lineHeight: 1.2, letterSpacing: "-0.5px" }}>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: "#1a1040", margin: "0 0 8px", lineHeight: 1.2, letterSpacing: "-0.5px" }}>
             Dobro ma wiele twarzy.
           </h1>
-          <p style={{ fontSize: 22, fontWeight: 800, color: "#f9a8d4", margin: "0 0 20px", lineHeight: 1.2 }}>
+          <p style={{ fontSize: 22, fontWeight: 800, color: "#e11d48", margin: "0 0 20px", lineHeight: 1.2 }}>
             Którą z nich pokażesz dzisiaj?
           </p>
 
-          <p style={{ fontSize: 14, color: "rgba(255,255,255,.75)", lineHeight: 1.6, maxWidth: 300, margin: "0 auto 24px" }}>
+          <p style={{ fontSize: 14, color: "#6b5e8a", lineHeight: 1.6, maxWidth: 300, margin: "0 auto 24px" }}>
             Nie potrzebujesz wiele. Wystarczy obecność.
-            <br /><strong style={{ color: "#fff" }}>Zostaw po sobie ślad dobra.</strong>
+            <br /><strong style={{ color: "#1a1040" }}>Zostaw po sobie ślad dobra.</strong>
           </p>
 
           <a

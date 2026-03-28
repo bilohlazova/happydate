@@ -29,8 +29,8 @@ function VideoCard({ id, title, emoji, desc }: typeof VIDEOS[0]) {
 
   return (
     <div style={{
-      background: "#111", borderRadius: 16, overflow: "hidden",
-      border: "1px solid rgba(255,255,255,.08)",
+      background: "#2d1b5e", borderRadius: 16, overflow: "hidden",
+      border: "1px solid rgba(255,255,255,.12)",
     }}>
       {/* Thumbnail або iframe */}
       <div style={{ position: "relative", aspectRatio: "16/9", background: "#000" }}>
@@ -86,7 +86,7 @@ function VideoCard({ id, title, emoji, desc }: typeof VIDEOS[0]) {
         <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 4 }}>
           {emoji} {title}
         </div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,.65)", lineHeight: 1.4 }}>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,.75)", lineHeight: 1.4 }}>
           {desc}
         </div>
       </div>
@@ -96,7 +96,7 @@ function VideoCard({ id, title, emoji, desc }: typeof VIDEOS[0]) {
 
 export default function YouTubeShowcase() {
   return (
-    <section style={{ background: "#0a0a0a", padding: "32px 16px" }}>
+    <section style={{ background: "#1a1040", padding: "32px 16px" }}>
       <h3 style={{
         fontSize: 18, fontWeight: 800, color: "#fff",
         textAlign: "center", marginBottom: 16,

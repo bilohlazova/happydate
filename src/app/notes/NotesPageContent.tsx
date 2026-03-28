@@ -248,12 +248,16 @@ export default function NotesPageContent() {
 
         /* Lightbox */
         .np-lightbox { position:fixed; inset:0; z-index:500; background:rgba(0,0,0,.93); display:flex; align-items:center; justify-content:center; animation:npFadeIn .2s ease; }
-        .np-lightbox-img { max-width:100%; max-height:100svh; object-fit:contain; border-radius:4px; user-select:none; }
-        .np-lightbox-close { position:absolute; top:16px; right:16px; width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,.15); border:none; cursor:pointer; color:#fff; font-size:20px; display:flex; align-items:center; justify-content:center; }
-        .np-lightbox-nav { position:absolute; top:50%; transform:translateY(-50%); width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,.15); border:none; cursor:pointer; color:#fff; font-size:22px; display:flex; align-items:center; justify-content:center; }
+        .np-lightbox-img { max-width:100%; max-height:80svh; object-fit:contain; border-radius:4px; user-select:none; }
+        .np-lightbox-close { position:absolute; top:calc(env(safe-area-inset-top) + 16px); right:16px; width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,.25); border:1.5px solid rgba(255,255,255,.3); cursor:pointer; color:#fff; font-size:22px; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+        .np-lightbox-close:active { background:rgba(255,255,255,.4); }
+        .np-lightbox-nav { position:absolute; top:50%; transform:translateY(-50%); width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,.2); border:1.5px solid rgba(255,255,255,.3); cursor:pointer; color:#fff; font-size:26px; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+        .np-lightbox-nav:active { background:rgba(255,255,255,.35); }
         .np-lightbox-prev { left:12px; }
         .np-lightbox-next { right:12px; }
-        .np-lightbox-counter { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,.7); font-size:13px; font-weight:600; font-family:'Plus Jakarta Sans',sans-serif; }
+        .np-lightbox-bottom { position:absolute; bottom:calc(env(safe-area-inset-bottom) + 20px); left:50%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:6px; }
+        .np-lightbox-counter { color:rgba(255,255,255,.7); font-size:13px; font-weight:600; font-family:'Plus Jakarta Sans',sans-serif; }
+        .np-lightbox-hint { color:rgba(255,255,255,.4); font-size:11px; font-family:'Plus Jakarta Sans',sans-serif; }
 
         /* Modal */
         .np-overlay { position:fixed; inset:0; background:rgba(10,5,30,.6); display:flex; align-items:flex-start; justify-content:center; padding:60px 16px 40px; z-index:200; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); animation:npFadeIn .2s ease; overflow-y:auto; -webkit-overflow-scrolling:touch; }
@@ -383,7 +387,10 @@ export default function NotesPageContent() {
             <>
               <button className="np-lightbox-nav np-lightbox-prev" onClick={e => { e.stopPropagation(); lightboxPrev(); }}>‹</button>
               <button className="np-lightbox-nav np-lightbox-next" onClick={e => { e.stopPropagation(); lightboxNext(); }}>›</button>
-              <div className="np-lightbox-counter">{lightboxIdx + 1} / {lightboxAll.length}</div>
+              <div className="np-lightbox-bottom">
+                <div className="np-lightbox-counter">{lightboxIdx + 1} / {lightboxAll.length}</div>
+                <div className="np-lightbox-hint">dotknij tło, aby zamknąć</div>
+              </div>
             </>
           )}
         </div>

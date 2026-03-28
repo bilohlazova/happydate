@@ -80,6 +80,16 @@ function escICS(s: string) {
 }
 
 /* ═══════════════════════════════════════════
+   TYPES
+═══════════════════════════════════════════ */
+
+type PersonRow = {
+  id: string;
+  name: string;
+  birthday: string | null;
+};
+
+/* ═══════════════════════════════════════════
    TOAST
 ═══════════════════════════════════════════ */
 type Toast = { id: number; type: "success" | "error"; msg: string };
@@ -128,7 +138,6 @@ function useFocusTrap(active: boolean) {
       Array.from(el.querySelectorAll<HTMLElement>(
         'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'
       )).filter(n => !n.hasAttribute("disabled"));
-
     foc()[0]?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Tab") return;
@@ -239,9 +248,7 @@ function AddEditModal({
                 <h3 id="ae-title" className="font-bold text-slate-900 text-base">
                   {mode === "add" ? "Nowe wydarzenie" : "Edytuj wydarzenie"}
                 </h3>
-                {date && (
-                  <p className="text-xs text-slate-500">{formatPL(date)}</p>
-                )}
+                {date && <p className="text-xs text-slate-500">{formatPL(date)}</p>}
               </div>
             </div>
             <button onClick={onCancel} className="w-8 h-8 rounded-full bg-white/70 hover:bg-white flex items-center justify-center text-slate-500 transition">
@@ -252,7 +259,6 @@ function AddEditModal({
 
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
-          {/* Назва */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Tytuł *</label>
             <input
@@ -264,8 +270,6 @@ function AddEditModal({
               className="w-full border border-slate-200 rounded-2xl px-4 h-11 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-transparent transition"
             />
           </div>
-
-          {/* Дата */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Data *</label>
             <input
@@ -275,8 +279,6 @@ function AddEditModal({
               className="w-full border border-slate-200 rounded-2xl px-4 h-11 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 transition"
             />
           </div>
-
-          {/* Категорія — сегментований контрол */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Kategoria</label>
             <div className="grid grid-cols-3 gap-2">
@@ -296,8 +298,6 @@ function AddEditModal({
               ))}
             </div>
           </div>
-
-          {/* Нотатки */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Notatki</label>
             <input
@@ -342,31 +342,32 @@ function AddEditModal({
 ═══════════════════════════════════════════ */
 export default function DashboardPage() {
   const router = useRouter();
-  const [email, setEmail]   = useState<string | null>(null);
-  const [events, setEvents] = useState<EventRow[]>([]);
+  const [email,   setEmail]   = useState<string | null>(null);
+  const [events,  setEvents]  = useState<EventRow[]>([]);
+  const [people,  setPeople]  = useState<PersonRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [query, setQuery] = useState("");
+  const [query,     setQuery]     = useState("");
   const [filterCat, setFilterCat] = useState("all");
 
   /* Add modal */
   const [addOpen, setAddOpen] = useState(false);
-  const [mDate, setMDate] = useState("");
-  const [mTitle, setMTitle] = useState("");
-  const [mNotes, setMNotes] = useState("");
-  const [mCat, setMCat]   = useState("personal");
+  const [mDate,   setMDate]   = useState("");
+  const [mTitle,  setMTitle]  = useState("");
+  const [mNotes,  setMNotes]  = useState("");
+  const [mCat,    setMCat]    = useState("personal");
 
   /* Edit modal */
   const [editOpen, setEditOpen] = useState(false);
-  const [eId, setEId]     = useState("");
+  const [eId,    setEId]    = useState("");
   const [eTitle, setETitle] = useState("");
-  const [eDate, setEDate]   = useState("");
+  const [eDate,  setEDate]  = useState("");
   const [eNotes, setENotes] = useState("");
-  const [eCat, setECat]     = useState("personal");
+  const [eCat,   setECat]   = useState("personal");
 
   const [confirm, setConfirm] = useState<ConfirmState>({ open: false });
   const { toasts, push } = useToasts();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const fileRef  = useRef<HTMLInputElement>(null);
   const [showAll, setShowAll] = useState(false);
   const MAX = 3;
 
@@ -378,7 +379,7 @@ export default function DashboardPage() {
     try { localStorage.setItem("hd:lastCat", mCat); } catch {}
   }, [mCat]);
 
-  /* init + realtime */
+  /* ── Init + realtime ── */
   useEffect(() => {
     let ch: RealtimeChannel | null = null;
     const init = async () => {
@@ -386,16 +387,28 @@ export default function DashboardPage() {
       if (!user) { router.replace("/auth/login"); return; }
       setEmail(user.email ?? null);
 
-      const { data, error } = await supabase
+      // Завантажуємо події
+      const { data: evData, error: evErr } = await supabase
         .from("events")
         .select("id,user_id,title,date,notes,category")
         .eq("user_id", user.id)
         .order("date", { ascending: true });
 
-      if (error) push({ type: "error", msg: "Nie udało się pobrać wydarzeń." });
-      if (!error && data) setEvents(data as EventRow[]);
+      if (evErr) push({ type: "error", msg: "Nie udało się pobrać wydarzeń." });
+      if (!evErr && evData) setEvents(evData as EventRow[]);
+
+      // Завантажуємо людей з днями народження
+      const { data: peopleData } = await supabase
+        .from("people")
+        .select("id, name, birthday")
+        .eq("user_id", user.id)
+        .not("birthday", "is", null);
+
+      if (peopleData) setPeople(peopleData as PersonRow[]);
+
       setLoading(false);
 
+      // Realtime для events
       ch = supabase.channel("ev-ch")
         .on("postgres_changes",
           { event: "*", schema: "public", table: "events", filter: `user_id=eq.${user.id}` },
@@ -411,7 +424,34 @@ export default function DashboardPage() {
     return () => { if (ch) supabase.removeChannel(ch); };
   }, [router, push]);
 
-  /* Handlers */
+  /* ── Дні народження з people → EventRow ── */
+  const birthdayEvents = useMemo<EventRow[]>(() => {
+    const year = new Date().getFullYear();
+    return people
+      .filter(p => !!p.birthday)
+      .map(p => {
+        const bday = new Date(p.birthday! + "T00:00:00");
+        const month = String(bday.getMonth() + 1).padStart(2, "0");
+        const day   = String(bday.getDate()).padStart(2, "0");
+        return {
+          id:       `birthday-${p.id}`,
+          title:    `🎂 ${p.name}`,
+          date:     `${year}-${month}-${day}`,
+          notes:    `Urodziny`,
+          category: "birthday",
+        };
+      });
+  }, [people]);
+
+  /* ── Всі події разом (events + дні народження) ── */
+  const allEvents = useMemo<EventRow[]>(() => {
+    // Щоб не дублювати якщо вже є вручну доданий день народження
+    const existingIds = new Set(events.map(e => e.id));
+    const uniqueBirthdays = birthdayEvents.filter(b => !existingIds.has(b.id));
+    return [...events, ...uniqueBirthdays].sort((a, b) => a.date.localeCompare(b.date));
+  }, [events, birthdayEvents]);
+
+  /* ── Handlers ── */
   const openAdd = (ymd?: string) => {
     const d = ymd ?? (() => {
       const t = new Date();
@@ -433,7 +473,10 @@ export default function DashboardPage() {
   };
 
   const openEdit = (id: string) => {
-    const ev = events.find(e => e.id === id); if (!ev) return;
+    // Nie edytujemy auto-urodzin z people
+    if (id.startsWith("birthday-")) return;
+    const ev = events.find(e => e.id === id);
+    if (!ev) return;
     setEId(ev.id); setETitle(ev.title); setEDate(ev.date);
     setENotes(ev.notes ?? ""); setECat(ev.category ?? "personal");
     setEditOpen(true);
@@ -457,6 +500,7 @@ export default function DashboardPage() {
   };
 
   const doDelete = (ev: EventRow) => {
+    if (ev.id.startsWith("birthday-")) return; // auto-urodziny nie usuwamy
     setConfirm({
       open: true, type: "delete",
       title: "Usunąć wydarzenie?",
@@ -470,28 +514,28 @@ export default function DashboardPage() {
     });
   };
 
-  /* Derived */
+  /* ── Derived ── */
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return events.filter(e => {
+    return allEvents.filter(e => {
       const okCat = filterCat === "all" || (e.category ?? "default") === filterCat;
-      const okQ = !q || `${e.title} ${e.notes ?? ""}`.toLowerCase().includes(q);
+      const okQ   = !q || `${e.title} ${e.notes ?? ""}`.toLowerCase().includes(q);
       return okCat && okQ;
     });
-  }, [events, query, filterCat]);
+  }, [allEvents, query, filterCat]);
 
   const upcoming = useMemo(() => {
     const today = new Date(); today.setHours(0,0,0,0);
-    const in30 = new Date(today); in30.setDate(today.getDate() + 30);
-    return events
+    const in30  = new Date(today); in30.setDate(today.getDate() + 30);
+    return allEvents
       .filter(e => { const d = new Date(e.date + "T00:00:00"); return d >= today && d <= in30; })
-      .sort((a,b) => a.date.localeCompare(b.date))
+      .sort((a, b) => a.date.localeCompare(b.date))
       .slice(0, 6);
-  }, [events]);
+  }, [allEvents]);
 
   const visible = showAll ? filtered : filtered.slice(0, MAX);
 
-  /* Export */
+  /* ── Export ── */
   const exportICS = () => {
     const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//HappyDate//PL","CALSCALE:GREGORIAN"];
     filtered.forEach(e => {
@@ -533,24 +577,16 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-rose-50">
       <ToastStack items={toasts} />
 
-      {/* ── PAGE HEADER ── */}
+      {/* PAGE HEADER */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-2">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
               🗓️ Moje wydarzenia
             </h1>
-            <p className="mt-0.5 text-sm text-slate-500">
-              Twój osobisty kalendarz szczęścia ✨
-            </p>
-            {email && (
-              <p className="text-xs text-slate-400 mt-0.5">
-                {email}
-              </p>
-            )}
+            <p className="mt-0.5 text-sm text-slate-500">Twój osobisty kalendarz szczęścia ✨</p>
+            {email && <p className="text-xs text-slate-400 mt-0.5">{email}</p>}
           </div>
-
-          {/* Action buttons */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={() => openAdd()}
@@ -559,15 +595,12 @@ export default function DashboardPage() {
               <span>＋</span>
               <span className="hidden sm:inline">Dodaj</span>
             </button>
-
             <input ref={fileRef} type="file" accept=".ics,text/calendar" className="hidden"
               onChange={e => { const f = e.target.files?.[0]; if (f) importICS(f); e.currentTarget.value = ""; }} />
-
             <button onClick={() => fileRef.current?.click()}
               className="hidden sm:inline-flex items-center gap-1.5 h-10 px-3 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-sm transition">
               📥 Import
             </button>
-
             <button onClick={exportICS}
               className="hidden sm:inline-flex items-center gap-1.5 h-10 px-3 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-sm transition">
               📤 Export
@@ -576,7 +609,19 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── UPCOMING BANNER (mobile) ── */}
+      {/* INFO BANNER — скільки днів народження синхронізовано */}
+      {people.length > 0 && (
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-3">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-pink-50 border border-pink-200 rounded-2xl text-sm text-pink-700">
+            <span>🎂</span>
+            <span>
+              Zsynchronizowano <strong>{people.length}</strong> {people.length === 1 ? "urodziny" : "urodzin"} z listy osób
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* UPCOMING BANNER (mobile) */}
       {upcoming.length > 0 && (
         <div className="lg:hidden max-w-5xl mx-auto px-4 sm:px-6 mt-4">
           <div className="bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 rounded-3xl p-5 text-white shadow-lg relative overflow-hidden">
@@ -585,25 +630,26 @@ export default function DashboardPage() {
             <p className="text-xs font-semibold opacity-80 uppercase tracking-wider">Najbliższe wydarzenie</p>
             <p className="text-xl font-extrabold mt-1">{upcoming[0].title}</p>
             <p className="text-sm opacity-90 mt-0.5">{daysLeftLabel(upcoming[0].date)} · {formatPL(upcoming[0].date)}</p>
-            <Link href={`/gift/start?eventId=${upcoming[0].id}`}
-              className="inline-flex items-center gap-1.5 mt-3 bg-white/20 hover:bg-white/30 backdrop-blur px-4 py-2 rounded-xl text-sm font-semibold transition">
-              🎁 Znajdź prezent
-            </Link>
+            {!upcoming[0].id.startsWith("birthday-") && (
+              <Link href={`/gift/start?eventId=${upcoming[0].id}`}
+                className="inline-flex items-center gap-1.5 mt-3 bg-white/20 hover:bg-white/30 backdrop-blur px-4 py-2 rounded-xl text-sm font-semibold transition">
+                🎁 Znajdź prezent
+              </Link>
+            )}
           </div>
         </div>
       )}
 
-      {/* ── MAIN GRID ── */}
+      {/* MAIN GRID */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-24 pt-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
 
-          {/* ════ LEFT COLUMN ════ */}
+          {/* LEFT COLUMN */}
           <div className="lg:col-span-8 space-y-5">
 
             {/* SEARCH & FILTERS */}
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
               <div className="flex flex-col sm:flex-row gap-3">
-                {/* Search */}
                 <div className="relative flex-1">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔎</span>
                   <input
@@ -614,8 +660,6 @@ export default function DashboardPage() {
                     className="w-full pl-10 pr-4 h-11 rounded-2xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 transition"
                   />
                 </div>
-
-                {/* Category tabs */}
                 <div className="flex gap-1.5 overflow-x-auto pb-0.5 sm:pb-0">
                   {CATEGORIES.map(c => (
                     <button key={c.value} type="button"
@@ -638,7 +682,6 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
-
               {filtered.length > 0 && (
                 <p className="text-xs text-slate-400 mt-2.5 pl-1">
                   {filtered.length} {filtered.length === 1 ? "wynik" : "wyniki"}
@@ -657,9 +700,7 @@ export default function DashboardPage() {
 
               {loading ? (
                 <div className="px-5 pb-5 space-y-3">
-                  {[1,2,3].map(i => (
-                    <div key={i} className="h-16 rounded-2xl bg-slate-100 animate-pulse" />
-                  ))}
+                  {[1,2,3].map(i => <div key={i} className="h-16 rounded-2xl bg-slate-100 animate-pulse" />)}
                 </div>
               ) : filtered.length === 0 ? (
                 <div className="px-5 pb-8 text-center">
@@ -675,17 +716,14 @@ export default function DashboardPage() {
                   <ul className="divide-y divide-slate-50">
                     {visible.map(ev => {
                       const { day, mon } = dayBadgeParts(ev.date);
+                      const isBirthday = ev.id.startsWith("birthday-");
                       return (
                         <li key={ev.id}
                           className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/60 transition group">
-
-                          {/* Date badge */}
                           <div className="flex flex-col items-center justify-center w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 shrink-0 group-hover:border-slate-200 transition">
                             <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider leading-none">{mon}</span>
                             <span className="text-lg font-extrabold text-slate-800 leading-none">{day}</span>
                           </div>
-
-                          {/* Content */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-semibold text-slate-800 text-sm truncate">{ev.title}</p>
@@ -693,37 +731,36 @@ export default function DashboardPage() {
                                 <span className={`w-1.5 h-1.5 rounded-full ${BADGE_DOT[ev.category ?? "default"] ?? BADGE_DOT.default}`} />
                                 {labelKat(ev.category)}
                               </span>
+                              {isBirthday && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200 font-semibold">
+                                  auto
+                                </span>
+                              )}
                             </div>
-                            {ev.notes && (
+                            {ev.notes && !isBirthday && (
                               <p className="text-xs text-slate-400 mt-0.5 truncate">{ev.notes}</p>
                             )}
                           </div>
-
-                          {/* Actions */}
                           <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition sm:opacity-100">
-                            <Link
-                              href={`/gift/start?eventId=${ev.id}&date=${encodeURIComponent(ev.date)}&title=${encodeURIComponent(ev.title)}`}
-                              className="w-8 h-8 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 flex items-center justify-center text-sm transition"
-                              title="Zrób prezent"
-                            >
-                              🎁
-                            </Link>
-                            <button onClick={() => openEdit(ev.id)}
-                              className="w-8 h-8 rounded-xl border border-sky-200 bg-sky-50 hover:bg-sky-100 flex items-center justify-center text-sm transition"
-                              title="Edytuj">
-                              ✏️
-                            </button>
-                            <button onClick={() => doDelete(ev)}
-                              className="w-8 h-8 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 flex items-center justify-center text-sm transition"
-                              title="Usuń">
-                              🗑️
-                            </button>
+                            {!isBirthday && (
+                              <>
+                                <Link
+                                  href={`/gift/start?eventId=${ev.id}&date=${encodeURIComponent(ev.date)}&title=${encodeURIComponent(ev.title)}`}
+                                  className="w-8 h-8 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 flex items-center justify-center text-sm transition"
+                                  title="Zrób prezent">🎁</Link>
+                                <button onClick={() => openEdit(ev.id)}
+                                  className="w-8 h-8 rounded-xl border border-sky-200 bg-sky-50 hover:bg-sky-100 flex items-center justify-center text-sm transition"
+                                  title="Edytuj">✏️</button>
+                                <button onClick={() => doDelete(ev)}
+                                  className="w-8 h-8 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 flex items-center justify-center text-sm transition"
+                                  title="Usuń">🗑️</button>
+                              </>
+                            )}
                           </div>
                         </li>
                       );
                     })}
                   </ul>
-
                   {filtered.length > MAX && (
                     <div className="px-5 py-3 border-t border-slate-50">
                       <button onClick={() => setShowAll(v => !v)}
@@ -759,10 +796,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* ════ RIGHT COLUMN ════ */}
+          {/* RIGHT COLUMN */}
           <aside className="lg:col-span-4 space-y-5">
-
-            {/* QUICK ADD button (desktop) */}
             <button onClick={() => openAdd()}
               className="hidden lg:flex w-full h-12 items-center justify-center gap-2 rounded-3xl bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-600 hover:to-cyan-600 text-white font-bold shadow-md transition">
               ＋ Dodaj wydarzenie
@@ -772,16 +807,11 @@ export default function DashboardPage() {
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
               <div className="px-5 pt-5 pb-3 flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-                    🎁 Nadchodzące
-                  </h3>
+                  <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">🎁 Nadchodzące</h3>
                   <p className="text-xs text-slate-400">Najbliższe 30 dni</p>
                 </div>
-                <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                  {upcoming.length}
-                </span>
+                <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{upcoming.length}</span>
               </div>
-
               {upcoming.length === 0 ? (
                 <div className="px-5 pb-6 text-center">
                   <p className="text-3xl mb-1.5">🌙</p>
@@ -789,34 +819,39 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <ul className="px-3 pb-4 space-y-2">
-                  {upcoming.map(ev => (
-                    <li key={ev.id}
-                      className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50/80 hover:bg-slate-100/80 transition group">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 truncate">{ev.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-slate-400">{formatPL(ev.date)}</span>
-                          <span className="text-[10px] font-semibold text-cyan-600 bg-cyan-50 border border-cyan-200 px-1.5 py-0.5 rounded-full">
-                            {daysLeftLabel(ev.date)}
-                          </span>
+                  {upcoming.map(ev => {
+                    const isBirthday = ev.id.startsWith("birthday-");
+                    return (
+                      <li key={ev.id}
+                        className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50/80 hover:bg-slate-100/80 transition group">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-800 truncate">{ev.title}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-slate-400">{formatPL(ev.date)}</span>
+                            <span className="text-[10px] font-semibold text-cyan-600 bg-cyan-50 border border-cyan-200 px-1.5 py-0.5 rounded-full">
+                              {daysLeftLabel(ev.date)}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                        <Link
-                          href={`/gift/start?eventId=${ev.id}&date=${encodeURIComponent(ev.date)}&title=${encodeURIComponent(ev.title)}`}
-                          className="w-7 h-7 rounded-xl flex items-center justify-center bg-white border border-emerald-200 hover:bg-emerald-50 text-xs transition"
-                          title="Zrób prezent">🎁</Link>
-                        <button onClick={() => openEdit(ev.id)}
-                          className="w-7 h-7 rounded-xl flex items-center justify-center bg-white border border-sky-200 hover:bg-sky-50 text-xs transition"
-                          title="Edytuj">✏️</button>
-                      </div>
-                    </li>
-                  ))}
+                        {!isBirthday && (
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                            <Link
+                              href={`/gift/start?eventId=${ev.id}&date=${encodeURIComponent(ev.date)}&title=${encodeURIComponent(ev.title)}`}
+                              className="w-7 h-7 rounded-xl flex items-center justify-center bg-white border border-emerald-200 hover:bg-emerald-50 text-xs transition"
+                              title="Zrób prezent">🎁</Link>
+                            <button onClick={() => openEdit(ev.id)}
+                              className="w-7 h-7 rounded-xl flex items-center justify-center bg-white border border-sky-200 hover:bg-sky-50 text-xs transition"
+                              title="Edytuj">✏️</button>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
 
-            {/* ICS ACTIONS (mobile/desktop) */}
+            {/* ICS */}
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 space-y-2">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Importuj / Eksportuj</p>
               <button onClick={() => fileRef.current?.click()}

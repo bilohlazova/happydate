@@ -1,8 +1,13 @@
 "use client";
 
+// ─── якщо page.tsx є Server Component — використай цей варіант ───
+// Якщо він Client Component — дивись коментарі нижче
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { createClient } from "@/utils/supabase/server"; // Server Component version
 
+import AIAssistant from "@/components/AIAssistant";
 import FloatingActions from "@/components/FloatingActions";
 import ChatUIMount from "@/components/ChatUIMount";
 
@@ -12,28 +17,73 @@ const OPINIONS = [
   { text: "To nie jest aplikacja. To spokój w głowie.", author: "Ola" },
 ];
 
-export default function HomePage() {
-  useEffect(() => {
-    const el = document.getElementById("wowBlock");
-    if (!el) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            el.classList.remove("translate-y-10", "opacity-0");
-            el.classList.add("translate-y-0", "opacity-100");
-            io.unobserve(el);
-          }
-        });
-      },
-      { threshold: 0.3 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
+// ─────────────────────────────────────────────────────────────
+// SERVER COMPONENT VERSION (рекомендована — без useEffect)
+// ─────────────────────────────────────────────────────────────
+export default async function HomePage() {
+  const supabase = createClient();
+
+  // Отримуємо юзера
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Отримуємо профіль
+  const { data: profile } = user
+    ? await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single()
+    : { data: null };
+
+  // Витягуємо ім'я (перше слово з full_name)
+  const firstName = profile?.full_name
+    ? profile.full_name.split(" ")[0]
+    : "Użytkowniku";
+
+  // Отримуємо події на найближчі 14 днів
+  const today = new Date();
+  const in14  = new Date();
+  in14.setDate(today.getDate() + 14);
+
+  const { data: events } = user
+    ? await supabase
+        .from("events")
+        .select(`
+          id,
+          title,
+          date,
+          is_important,
+          person_name,
+          people ( name, relation )
+        `)
+        .eq("user_id", user.id)
+        .gte("date", today.toISOString().split("T")[0])
+        .lte("date", in14.toISOString().split("T")[0])
+        .order("is_important", { ascending: false })
+        .order("date", { ascending: true })
+    : { data: [] };
+
+  // Нормалізуємо events для компонента
+  const normalizedEvents = (events ?? []).map((e: any) => ({
+    id:           e.id,
+    title:        e.title,
+    date:         e.date,
+    is_important: e.is_important ?? false,
+    // person_name з поля або з joined people
+    person_name:  e.person_name ?? e.people?.name ?? null,
+    relation:     e.people?.relation ?? null,
+  }));
 
   return (
     <main className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+
+      {/* ── AI ASSISTANT — перший елемент сторінки ── */}
+      <div className="max-w-xl mx-auto px-4 pt-4">
+        <AIAssistant
+          userName={firstName}
+          events={normalizedEvents}
+        />
+      </div>
 
       {/* HERO */}
       <section className="bg-gradient-to-r from-pink-100 via-yellow-100 to-blue-100 py-16 sm:py-20 px-4 text-center relative overflow-hidden">
@@ -147,6 +197,9 @@ export default function HomePage() {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// COOKIE CONSENT (без змін)
+// ─────────────────────────────────────────────────────────────
 function CookieConsent() {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -161,7 +214,10 @@ function CookieConsent() {
           <Link href="/privacy" className="underline">Polityką Prywatności</Link>.
         </p>
         <button
-          onClick={() => { localStorage.setItem("happydate_cookie_consent", "true"); setVisible(false); }}
+          onClick={() => {
+            localStorage.setItem("happydate_cookie_consent", "true");
+            setVisible(false);
+          }}
           className="bg-blue-500 px-4 py-2 rounded-md font-semibold hover:bg-blue-600"
         >
           Akceptuję

@@ -4,17 +4,43 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 
+// ─────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────
+
 type Person = {
   id: string;
   name: string;
   birthday: string | null;
   relation: string | null;
   created_at: string;
-  notes_count?: number;
-  last_note_at?: string | null;
+};
+
+type Note = {
+  id: string;
+  content: string;
+  created_at: string;
+  person_id: string;
+};
+
+type PersonInsight = {
+  personId: string;
+  noteCount: number;
+  lastNoteAt: string | null;
+  topKeywords: string[];
+  recentNote: string | null;
+};
+
+type InsightSheetData = {
+  person: Person;
+  insight: PersonInsight;
 };
 
 type ModalMode = "add" | "edit";
+
+// ─────────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────────
 
 const RELATIONS = [
   { value: "family",  label: "Rodzina",    bg: "#e8f0fe", text: "#1a4a9e" },
@@ -30,6 +56,19 @@ const TABS = [
   { value: "friend",  label: "Przyjaciele" },
   { value: "partner", label: "Partner"     },
 ];
+
+// Stop-words to skip when extracting keywords from notes
+const STOP_WORDS = new Set([
+  "i","w","z","na","do","że","się","to","jest","nie","tak","ale","jak","co","po",
+  "już","też","by","go","jej","jego","ich","nam","nas","pan","pani","ten","ta",
+  "te","tego","tej","ale","czy","dla","gdy","jak","lub","ma","mi","my","no",
+  "o","od","ok","on","ona","one","oni","po","pod","przy","są","się","też","u",
+  "we","za","ze","być","być","który","która","które",
+]);
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
 
 function getRelation(val: string | null) {
   return RELATIONS.find(r => r.value === val) ?? RELATIONS[4];
@@ -48,10 +87,9 @@ function getDaysUntilBirthday(birthday: string | null): number | null {
   return Math.ceil((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function formatLastNote(dateStr: string | null | undefined): string | null {
+function formatRelativeDate(dateStr: string | null | undefined): string | null {
   if (!dateStr) return null;
-  const d = new Date(dateStr);
-  const diff = Math.floor((Date.now() - d.getTime()) / 86400000);
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
   if (diff === 0) return "dziś";
   if (diff === 1) return "wczoraj";
   if (diff < 7)  return `${diff} dni temu`;
@@ -59,53 +97,260 @@ function formatLastNote(dateStr: string | null | undefined): string | null {
   return `${Math.floor(diff / 30)} mies. temu`;
 }
 
+function getZodiacSign(birthday: string | null): string | null {
+  if (!birthday) return null;
+  const d = new Date(birthday);
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  if ((m === 3 && day >= 21) || (m === 4 && day <= 19)) return "Baran ♈";
+  if ((m === 4 && day >= 20) || (m === 5 && day <= 20)) return "Byk ♉";
+  if ((m === 5 && day >= 21) || (m === 6 && day <= 20)) return "Bliźnięta ♊";
+  if ((m === 6 && day >= 21) || (m === 7 && day <= 22)) return "Rak ♋";
+  if ((m === 7 && day >= 23) || (m === 8 && day <= 22)) return "Lew ♌";
+  if ((m === 8 && day >= 23) || (m === 9 && day <= 22)) return "Panna ♍";
+  if ((m === 9 && day >= 23) || (m === 10 && day <= 22)) return "Waga ♎";
+  if ((m === 10 && day >= 23) || (m === 11 && day <= 21)) return "Skorpion ♏";
+  if ((m === 11 && day >= 22) || (m === 12 && day <= 21)) return "Strzelec ♐";
+  if ((m === 12 && day >= 22) || (m === 1 && day <= 19)) return "Koziorożec ♑";
+  if ((m === 1 && day >= 20) || (m === 2 && day <= 18)) return "Wodnik ♒";
+  return "Ryby ♓";
+}
+
+/** Extract top N keywords from an array of note contents (real data only) */
+function extractTopKeywords(notes: Note[], topN = 5): string[] {
+  const freq: Record<string, number> = {};
+  for (const note of notes) {
+    const words = note.content
+      .toLowerCase()
+      .replace(/[^a-ząćęłńóśźżа-я\s]/gi, " ")
+      .split(/\s+/)
+      .filter(w => w.length > 3 && !STOP_WORDS.has(w));
+    for (const w of words) {
+      freq[w] = (freq[w] ?? 0) + 1;
+    }
+  }
+  return Object.entries(freq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, topN)
+    .map(([w]) => w);
+}
+
+// ─────────────────────────────────────────────
+// SUB-COMPONENTS
+// ─────────────────────────────────────────────
+
 function Avatar({ name, relation }: { name: string; relation: string | null }) {
   const rel = getRelation(relation);
   return (
-    <div style={{
-      width: 44, height: 44, borderRadius: 14,
-      background: rel.bg, color: rel.text,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: 14, fontWeight: 600, flexShrink: 0, letterSpacing: "0.3px",
-    }}>
+    <div className="hd-avatar" style={{ background: rel.bg, color: rel.text }}>
       {getInitials(name)}
     </div>
   );
 }
 
+function AiInsightSheet({
+  data,
+  onClose,
+}: {
+  data: InsightSheetData;
+  onClose: () => void;
+}) {
+  const { person, insight } = data;
+  const days = getDaysUntilBirthday(person.birthday);
+  const zodiac = getZodiacSign(person.birthday);
+  const rel = getRelation(person.relation);
 
+  return (
+    <div className="hd-sheet-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="hd-sheet">
+        <div className="hd-sheet-handle" />
+
+        {/* Header */}
+        <div className="hd-sheet-hdr">
+          <div className="hd-sheet-avatar" style={{ background: rel.bg, color: rel.text }}>
+            {getInitials(person.name)}
+          </div>
+          <div className="hd-sheet-person">
+            <div className="hd-sheet-name">{person.name}</div>
+            <div className="hd-sheet-rel">{rel.label}{zodiac ? ` · ${zodiac}` : ""}</div>
+          </div>
+          <button className="hd-sheet-close" onClick={onClose} aria-label="Zamknij">✕</button>
+        </div>
+
+        <div className="hd-sheet-divider" />
+
+        {/* Warm AI observations */}
+        <div className="hd-sheet-ai-section">
+          <div className="hd-sheet-ai-label">
+            <span className="hd-ai-glyph">✦</span> AI zauważyło
+          </div>
+
+          {/* Birthday */}
+          {days !== null && (
+            <div className="hd-sheet-bubble">
+              {days === 0
+                ? `Dziś urodziny ${person.name.split(" ")[0]}! 🎉`
+                : days <= 7
+                  ? `Urodziny ${person.name.split(" ")[0]} już za ${days} dni 🎂`
+                  : `Urodziny ${person.name.split(" ")[0]} za ${days} dni 🎂`
+              }
+            </div>
+          )}
+
+          {/* Keywords from real notes */}
+          {insight.topKeywords.length > 0 && (
+            <div className="hd-sheet-bubble">
+              Najczęściej pojawiają się:{" "}
+              {insight.topKeywords.join(" · ")}
+            </div>
+          )}
+
+          {/* Most recent note snippet */}
+          {insight.recentNote && (
+            <div className="hd-sheet-bubble">
+              Ostatnio wspomniała: &ldquo;{insight.recentNote.slice(0, 80)}{insight.recentNote.length > 80 ? "…" : ""}&rdquo;
+            </div>
+          )}
+
+          {/* Note activity */}
+          {insight.noteCount > 0 && (
+            <div className="hd-sheet-bubble hd-sheet-bubble-soft">
+              {insight.noteCount === 1 ? "1 notatka" : `${insight.noteCount} notatek`}
+              {insight.lastNoteAt ? ` · ostatnia ${formatRelativeDate(insight.lastNoteAt)}` : ""}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {insight.noteCount === 0 && days === null && (
+            <div className="hd-sheet-bubble hd-sheet-bubble-soft">
+              Dodaj pierwsze notatki, żeby AI mogło lepiej zapamiętać tę osobę.
+            </div>
+          )}
+        </div>
+
+        {/* Footer CTA */}
+        <div className="hd-sheet-footer">
+          <button
+            className="hd-sheet-cta"
+            onClick={onClose}
+          >
+            Zamknij
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────
 
 export default function PeoplePage() {
   const router = useRouter();
 
+  // Core state
   const [people,        setPeople]        = useState<Person[]>([]);
   const [loading,       setLoading]       = useState(true);
+  const [search,        setSearch]        = useState("");
+  const [filterRel,     setFilterRel]     = useState("all");
+
+  // Insights state — keyed by person_id
+  const [insights, setInsights] = useState<Record<string, PersonInsight>>({});
+
+  // Insight sheet
+  const [insightSheet, setInsightSheet] = useState<InsightSheetData | null>(null);
+  const [loadingInsight, setLoadingInsight] = useState<string | null>(null);
+
+  // Add/edit modal
   const [showModal,     setShowModal]     = useState(false);
   const [modalMode,     setModalMode]     = useState<ModalMode>("add");
   const [editingId,     setEditingId]     = useState<string | null>(null);
   const [saving,        setSaving]        = useState(false);
   const [deleting,      setDeleting]      = useState<string | null>(null);
-  const [search,        setSearch]        = useState("");
-  const [filterRel,     setFilterRel]     = useState("all");
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [formName,      setFormName]      = useState("");
   const [formBirthday,  setFormBirthday]  = useState("");
   const [formRelation,  setFormRelation]  = useState("friend");
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
+  // ── Load people ──
   const loadPeople = useCallback(async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
     const { data, error } = await supabase
-      .from("people").select("*")
+      .from("people")
+      .select("*")
       .eq("user_id", user.id)
       .order("name", { ascending: true });
-    if (!error && data) setPeople(data);
+    if (!error && data) {
+      setPeople(data);
+      loadInsightsMeta(data);
+    }
     setLoading(false);
-  }, [router]);
+  }, [router]); 
+
+  // ── Load lightweight insight metadata for all people at once ──
+  async function loadInsightsMeta(personList: Person[]) {
+    if (personList.length === 0) return;
+    const ids = personList.map(p => p.id);
+
+    const { data: notes } = await supabase
+      .from("notes")
+      .select("id, person_id, content, created_at")
+      .in("person_id", ids)
+      .order("created_at", { ascending: false });
+
+    if (!notes) return;
+
+    const grouped: Record<string, Note[]> = {};
+    for (const n of notes) {
+      if (!grouped[n.person_id]) grouped[n.person_id] = [];
+      grouped[n.person_id].push(n);
+    }
+
+    const result: Record<string, PersonInsight> = {};
+    for (const person of personList) {
+      const pNotes = grouped[person.id] ?? [];
+      result[person.id] = {
+        personId:    person.id,
+        noteCount:   pNotes.length,
+        lastNoteAt:  pNotes[0]?.created_at ?? null,
+        topKeywords: extractTopKeywords(pNotes, 4),
+        recentNote:  pNotes[0]?.content ?? null,
+      };
+    }
+    setInsights(result);
+  }
 
   useEffect(() => { loadPeople(); }, [loadPeople]);
 
+  // ── Open AI insight sheet (loads full notes if not cached) ──
+  async function openInsight(person: Person) {
+    setLoadingInsight(person.id);
+
+    // Always fetch full notes for this person when opening sheet
+    const { data: notes } = await supabase
+      .from("notes")
+      .select("id, person_id, content, created_at")
+      .eq("person_id", person.id)
+      .order("created_at", { ascending: false });
+
+    const pNotes: Note[] = notes ?? [];
+    const fullInsight: PersonInsight = {
+      personId:    person.id,
+      noteCount:   pNotes.length,
+      lastNoteAt:  pNotes[0]?.created_at ?? null,
+      topKeywords: extractTopKeywords(pNotes, 6),
+      recentNote:  pNotes[0]?.content ?? null,
+    };
+
+    setInsights(prev => ({ ...prev, [person.id]: fullInsight }));
+    setInsightSheet({ person, insight: fullInsight });
+    setLoadingInsight(null);
+  }
+
+  // ── Modal helpers ──
   function openAdd() {
     setModalMode("add"); setEditingId(null);
     setFormName(""); setFormBirthday(""); setFormRelation("friend");
@@ -144,285 +389,435 @@ export default function PeoplePage() {
     setDeleting(null); setDeleteConfirm(null); closeModal(); loadPeople();
   }
 
+  // ── Derived data ──
   const filtered = people
     .filter(p => filterRel === "all" || p.relation === filterRel)
     .filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
 
-  // First person with upcoming birthday — used for the top AI chip
   const firstUpcoming = [...people]
     .filter(p => { const d = getDaysUntilBirthday(p.birthday); return d !== null && d <= 14; })
     .sort((a, b) => (getDaysUntilBirthday(a.birthday) ?? 99) - (getDaysUntilBirthday(b.birthday) ?? 99))[0];
 
-  // Insert an AI chip after every 3rd card
-  const AI_CHIP_INTERVAL = 3;
+  // ─────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────
 
   return (
     <>
       <style>{`
-        .pp {
+        /* ══════════════════════════════════════
+           HAPPYDATE — DESIGN TOKENS
+           Used across People, Notes, Person Detail
+        ══════════════════════════════════════ */
+
+        /* Root */
+        .hd-page {
           font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
           min-height: 100svh;
           background: #f2f2f7;
-          padding-bottom: 100px;
+          padding-top: env(safe-area-inset-top);
+          padding-bottom: calc(96px + env(safe-area-inset-bottom));
           color: #000;
+          -webkit-font-smoothing: antialiased;
         }
 
-        /* ── HEADER ── */
-        .pp-hdr {
-          padding: 16px 20px 12px;
+        /* ── Header ── */
+        .hd-header {
+          padding: 16px 20px 8px;
           display: flex;
-          align-items: center;
+          align-items: flex-end;
           justify-content: space-between;
+          gap: 12px;
         }
-        .pp-title {
-          font-size: 28px;
+        .hd-header-left h1 {
+          font-size: 32px;
           font-weight: 700;
           color: #000;
-          letter-spacing: -.5px;
-          margin: 0 0 1px;
+          letter-spacing: -.7px;
+          line-height: 1;
+          margin: 0 0 3px;
         }
-        .pp-count {
+        .hd-header-left p {
           font-size: 13px;
-          color: #8e8e93;
+          color: #aeaeb2;
           font-weight: 400;
+          margin: 0;
         }
-        .pp-add-btn {
-          width: 34px; height: 34px;
+        .hd-add-btn {
+          width: 36px; height: 36px;
           border-radius: 50%;
           background: #007aff;
           display: flex; align-items: center; justify-content: center;
           border: none; cursor: pointer;
-          box-shadow: 0 3px 10px rgba(0,122,255,.28);
-          transition: transform .1s, box-shadow .1s;
-          flex-shrink: 0;
+          box-shadow: 0 4px 12px rgba(0,122,255,.32);
+          transition: transform .14s cubic-bezier(.34,1.56,.64,1), box-shadow .14s;
+          flex-shrink: 0; margin-bottom: 1px;
         }
-        .pp-add-btn:active { transform: scale(.93); box-shadow: 0 1px 5px rgba(0,122,255,.2); }
-        .pp-add-btn svg { width: 16px; height: 16px; color: #fff; }
+        .hd-add-btn:active { transform: scale(.88); box-shadow: 0 2px 6px rgba(0,122,255,.2); }
+        .hd-add-btn svg { width: 15px; height: 15px; color: #fff; }
 
-        /* ── SEARCH ── */
-        .pp-search {
-          margin: 0 16px 10px;
-          background: #fff;
-          border-radius: 14px;
-          display: flex; align-items: center; gap: 8px;
-          padding: 0 14px;
-          box-shadow: 0 1px 4px rgba(0,0,0,.06);
+        /* ── Search ── */
+        .hd-search {
+          margin: 6px 16px 10px;
+          background: rgba(118,118,128,.12);
+          border-radius: 12px;
+          display: flex; align-items: center; gap: 7px;
+          padding: 0 12px;
         }
-        .pp-search svg { width: 14px; height: 14px; color: #c7c7cc; flex-shrink: 0; }
-        .pp-search input {
+        .hd-search svg { width: 14px; height: 14px; color: #8e8e93; flex-shrink: 0; }
+        .hd-search input {
           flex: 1; border: none; background: transparent;
-          padding: 11px 0; font-size: 14px;
-          font-family: -apple-system, sans-serif; color: #000; outline: none;
+          padding: 10px 0; font-size: 15px;
+          font-family: -apple-system, sans-serif;
+          color: #000; outline: none;
         }
-        .pp-search input::placeholder { color: #c7c7cc; }
-        .pp-search-clear {
-          background: none; border: none; cursor: pointer;
-          color: #c7c7cc; font-size: 15px; padding: 4px; line-height: 1;
+        .hd-search input::placeholder { color: #8e8e93; }
+        .hd-search-clear {
+          width: 16px; height: 16px; border-radius: 50%;
+          background: rgba(60,60,67,.22); border: none; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          color: #fff; font-size: 9px; flex-shrink: 0;
+          font-family: -apple-system, sans-serif;
         }
 
-        /* ── TABS ── */
-        .pp-tabs {
-          display: flex; gap: 6px;
-          padding: 0 16px 14px;
+        /* ── Filter tabs ── */
+        .hd-tabs {
+          display: flex; gap: 7px;
+          padding: 2px 16px 14px;
           overflow-x: auto; scrollbar-width: none;
         }
-        .pp-tabs::-webkit-scrollbar { display: none; }
-        .pp-tab {
-          flex-shrink: 0; background: #fff; border-radius: 20px;
-          padding: 5px 14px; font-size: 12px; font-weight: 500;
-          color: #8e8e93; border: none; cursor: pointer;
+        .hd-tabs::-webkit-scrollbar { display: none; }
+        .hd-tab {
+          flex-shrink: 0;
+          background: rgba(118,118,128,.12);
+          border-radius: 20px;
+          padding: 6px 15px;
+          font-size: 13px; font-weight: 500;
+          color: #3c3c43; border: none; cursor: pointer;
           font-family: -apple-system, sans-serif;
-          transition: background .12s, color .12s;
+          transition: background .12s, color .12s, box-shadow .12s;
+          letter-spacing: -.1px;
+          min-height: 32px;
         }
-        .pp-tab.on { background: #007aff; color: #fff; }
+        .hd-tab.on {
+          background: #007aff; color: #fff;
+          box-shadow: 0 2px 8px rgba(0,122,255,.28);
+        }
 
-        /* ── AI CHIP ── */
-        .pp-ai-chip {
+        /* ── AI chip (top) ── */
+        .hd-ai-chip {
           margin: 0 16px 12px;
-          background: #fff;
-          border-radius: 14px;
-          padding: 10px 14px;
-          display: flex; align-items: flex-start; gap: 8px;
-          box-shadow: 0 1px 4px rgba(0,0,0,.05);
-        }
-        .pp-ai-chip-inner {
           background: rgba(0,122,255,.07);
-          border-radius: 14px;
-          padding: 10px 14px;
-          display: flex; align-items: flex-start; gap: 8px;
+          border-radius: 12px;
+          padding: 9px 13px;
+          display: flex; align-items: center; gap: 8px;
         }
-        .pp-ai-glyph { font-size: 11px; color: #007aff; margin-top: 1px; flex-shrink: 0; }
-        .pp-ai-text { font-size: 12px; color: #3c3c43; line-height: 1.45; }
-        .pp-ai-text strong { color: #000; font-weight: 600; }
+        .hd-ai-glyph { font-size: 11px; color: #007aff; flex-shrink: 0; }
+        .hd-ai-text { font-size: 13px; color: #3c3c43; line-height: 1.4; }
+        .hd-ai-text strong { color: #000; font-weight: 600; }
 
-        /* ── LIST ── */
-        .pp-list { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
+        /* ── People list ── */
+        .hd-list {
+          padding: 0 16px;
+          display: flex; flex-direction: column;
+        }
 
-        /* ── CARD ── */
-        .pp-card {
+        /* ── Grouped card borders (Apple Reminders style) ── */
+        .hd-item:first-child .hd-card            { border-radius: 14px 14px 0 0; }
+        .hd-item:last-child .hd-card             { border-radius: 0 0 14px 14px; border-top: .5px solid rgba(60,60,67,.1); }
+        .hd-item:only-child .hd-card             { border-radius: 14px; border-top: none !important; }
+        .hd-item + .hd-item .hd-card             { border-top: .5px solid rgba(60,60,67,.1); border-radius: 0; }
+
+        /* ── Card ── */
+        .hd-card {
           background: #fff;
-          border-radius: 16px;
-          padding: 13px 14px;
-          display: flex; align-items: center; gap: 12px;
-          cursor: pointer;
-          box-shadow: 0 1px 3px rgba(0,0,0,.05);
-          transition: transform .1s;
+          padding: 11px 12px 11px 16px;
+          display: flex; align-items: center; gap: 13px;
+          cursor: pointer; position: relative;
+          transition: background .08s;
           -webkit-tap-highlight-color: transparent;
+          min-height: 64px;
         }
-        .pp-card:active { transform: scale(.99); }
+        .hd-card:active { background: #f2f2f7; }
 
-        .pp-card-body { flex: 1; min-width: 0; }
-        .pp-card-name {
-          font-size: 15px; font-weight: 600; color: #000;
-          margin-bottom: 3px; white-space: nowrap;
-          overflow: hidden; text-overflow: ellipsis; letter-spacing: -.1px;
-        }
-        .pp-card-meta {
-          font-size: 12px; color: #8e8e93; white-space: nowrap;
-          overflow: hidden; text-overflow: ellipsis; font-weight: 400;
-        }
-        .pp-card-meta .bday-soon { color: #ff9500; font-weight: 500; }
-        .pp-card-meta .sep { margin: 0 4px; opacity: .45; }
-
-        .pp-card-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-        .pp-note-btn {
-          width: 30px; height: 30px; border-radius: 9px;
-          background: #f2f2f7; border: none;
+        /* ── Avatar ── */
+        .hd-avatar {
+          width: 42px; height: 42px; border-radius: 13px;
           display: flex; align-items: center; justify-content: center;
-          cursor: pointer; transition: background .12s;
-        }
-        .pp-note-btn:active { background: #e5e5ea; }
-        .pp-note-btn svg { width: 14px; height: 14px; color: #8e8e93; }
-        .pp-chevron { color: #c7c7cc; display: flex; align-items: center; }
-        .pp-chevron svg { width: 13px; height: 13px; }
-
-        /* ── INLINE AI CHIP ── */
-        .pp-mid-chip {
-          margin: 4px 0;
-          background: rgba(0,122,255,.06);
-          border-radius: 14px;
-          padding: 10px 14px;
-          display: flex; align-items: flex-start; gap: 8px;
+          font-size: 14px; font-weight: 600; flex-shrink: 0;
+          letter-spacing: .4px;
         }
 
-        /* ── EMPTY ── */
-        .pp-empty { text-align: center; padding: 60px 28px; }
-        .pp-empty-icon { font-size: 44px; margin-bottom: 14px; opacity: .35; }
-        .pp-empty-title { font-size: 17px; font-weight: 600; color: #000; margin-bottom: 6px; }
-        .pp-empty-sub { font-size: 14px; color: #8e8e93; line-height: 1.6; }
+        /* ── Card body ── */
+        .hd-card-body { flex: 1; min-width: 0; }
+        .hd-card-name {
+          font-size: 16px; font-weight: 590; color: #000;
+          margin-bottom: 2px; letter-spacing: -.2px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .hd-card-meta {
+          font-size: 13px; color: #8e8e93; font-weight: 400;
+          letter-spacing: -.1px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .hd-card-meta .bsoon { color: #ff9500; font-weight: 500; }
+        .hd-card-meta .sep   { margin: 0 3px; opacity: .38; font-size: 11px; }
 
-        /* ── MODAL ── */
-        .pp-overlay {
+        /* ── Card actions — only Insight + Edit ── */
+        .hd-card-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+        .hd-icon-btn {
+          width: 32px; height: 32px; border-radius: 9px;
+          background: rgba(118,118,128,.1); border: none;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; transition: background .1s; flex-shrink: 0;
+          min-width: 32px;
+        }
+        .hd-icon-btn:active { background: rgba(118,118,128,.22); }
+        .hd-icon-btn svg { width: 14px; height: 14px; color: #8e8e93; }
+
+        /* ✦ Insight button — slightly highlighted */
+        .hd-insight-btn {
+          width: 32px; height: 32px; border-radius: 9px;
+          background: rgba(0,122,255,.09); border: none;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; transition: background .1s; flex-shrink: 0;
+          font-size: 12px; color: #007aff;
+          min-width: 32px;
+        }
+        .hd-insight-btn:active { background: rgba(0,122,255,.18); }
+        .hd-insight-btn-loading { opacity: .5; pointer-events: none; }
+
+        /* ── Loading / Empty ── */
+        .hd-loading { text-align: center; padding: 48px 28px; color: #aeaeb2; font-size: 14px; }
+        .hd-empty { text-align: center; padding: 72px 28px; }
+        .hd-empty-glyph { font-size: 38px; margin-bottom: 14px; opacity: .25; }
+        .hd-empty-title { font-size: 17px; font-weight: 600; color: #000; margin-bottom: 6px; letter-spacing: -.2px; }
+        .hd-empty-sub { font-size: 15px; color: #8e8e93; line-height: 1.5; }
+
+        /* ══════════════════════════════════════
+           AI INSIGHT SHEET
+        ══════════════════════════════════════ */
+
+        .hd-sheet-overlay {
           position: fixed; inset: 0;
-          background: rgba(0,0,0,.45);
+          background: rgba(0,0,0,.38);
+          display: flex; align-items: flex-end; justify-content: center;
+          z-index: 400;
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          animation: hdFadeIn .18s ease;
+        }
+        @keyframes hdFadeIn  { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes hdSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        .hd-sheet {
+          background: #f2f2f7;
+          border-radius: 20px 20px 0 0;
+          width: 100%; max-width: 480px;
+          padding-bottom: calc(24px + env(safe-area-inset-bottom));
+          animation: hdSlideUp .3s cubic-bezier(.32,.72,0,1);
+          max-height: 88svh;
+          overflow-y: auto;
+        }
+        .hd-sheet-handle {
+          width: 36px; height: 5px; border-radius: 3px;
+          background: rgba(60,60,67,.22);
+          margin: 10px auto 0;
+        }
+
+        .hd-sheet-hdr {
+          padding: 16px 16px 12px;
+          display: flex; align-items: center; gap: 12px;
+        }
+        .hd-sheet-avatar {
+          width: 46px; height: 46px; border-radius: 14px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 16px; font-weight: 600; flex-shrink: 0; letter-spacing: .4px;
+        }
+        .hd-sheet-person { flex: 1; min-width: 0; }
+        .hd-sheet-name { font-size: 18px; font-weight: 700; color: #000; letter-spacing: -.3px; }
+        .hd-sheet-rel  { font-size: 13px; color: #8e8e93; margin-top: 1px; }
+        .hd-sheet-close {
+          width: 28px; height: 28px; border-radius: 50%;
+          background: rgba(118,118,128,.18); border: none; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          color: #636366; font-size: 12px; flex-shrink: 0;
+          font-family: -apple-system, sans-serif;
+        }
+
+        .hd-sheet-divider { height: .5px; background: rgba(60,60,67,.14); margin: 0 16px; }
+
+        /* Warm AI content area */
+        .hd-sheet-ai-section { padding: 16px 16px 4px; }
+        .hd-sheet-ai-label {
+          font-size: 12px; font-weight: 600; color: #8e8e93;
+          text-transform: uppercase; letter-spacing: .07em;
+          margin-bottom: 12px;
+          display: flex; align-items: center; gap: 5px;
+        }
+
+        /* Each warm observation bubble */
+        .hd-sheet-bubble {
+          background: #fff;
+          border-radius: 14px;
+          padding: 12px 14px;
+          font-size: 15px;
+          color: #1c1c1e;
+          line-height: 1.5;
+          margin-bottom: 8px;
+          font-weight: 400;
+          letter-spacing: -.1px;
+        }
+        .hd-sheet-bubble-soft {
+          color: #8e8e93;
+          font-size: 13px;
+        }
+
+        .hd-sheet-footer { padding: 12px 16px 0; }
+        .hd-sheet-cta {
+          width: 100%; border: none; background: rgba(118,118,128,.12);
+          border-radius: 14px; padding: 14px;
+          font-size: 16px; font-weight: 500; color: #3c3c43;
+          cursor: pointer; font-family: -apple-system, sans-serif;
+          transition: background .1s;
+        }
+        .hd-sheet-cta:active { background: rgba(118,118,128,.2); }
+
+        /* ══════════════════════════════════════
+           ADD / EDIT MODAL SHEET
+        ══════════════════════════════════════ */
+
+        .hd-modal-overlay {
+          position: fixed; inset: 0;
+          background: rgba(0,0,0,.38);
           display: flex; align-items: flex-end; justify-content: center;
           z-index: 300;
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          animation: ppFadeIn .18s ease;
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          animation: hdFadeIn .18s ease;
         }
-        @keyframes ppFadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes ppSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-        .pp-modal {
-          background: #fff;
-          border-radius: 24px 24px 0 0;
-          padding: 8px 20px 44px;
+        .hd-modal {
+          background: #f2f2f7;
+          border-radius: 20px 20px 0 0;
           width: 100%; max-width: 480px;
-          animation: ppSlideUp .3s cubic-bezier(.32,.72,0,1);
+          padding-bottom: calc(20px + env(safe-area-inset-bottom));
+          animation: hdSlideUp .3s cubic-bezier(.32,.72,0,1);
         }
-        .pp-modal-handle {
-          width: 36px; height: 4px; border-radius: 2px;
-          background: #d1d1d6; margin: 10px auto 20px;
+        .hd-modal-handle {
+          width: 36px; height: 5px; border-radius: 3px;
+          background: rgba(60,60,67,.22); margin: 10px auto 0;
         }
-        .pp-modal-title {
-          font-size: 18px; font-weight: 700; color: #000;
-          margin-bottom: 20px; letter-spacing: -.2px;
+        .hd-modal-hdr {
+          padding: 14px 16px 12px;
+          display: flex; align-items: center; justify-content: space-between;
         }
+        .hd-modal-title {
+          font-size: 17px; font-weight: 600; color: #000; letter-spacing: -.2px;
+        }
+        .hd-modal-close {
+          width: 28px; height: 28px; border-radius: 50%;
+          background: rgba(118,118,128,.18); border: none; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          color: #636366; font-size: 12px;
+          font-family: -apple-system, sans-serif;
+        }
+        .hd-modal-body { padding: 0 16px; }
 
-        .pp-field { margin-bottom: 14px; }
-        .pp-label {
-          font-size: 11px; font-weight: 600; color: #8e8e93;
-          text-transform: uppercase; letter-spacing: .07em;
-          margin-bottom: 7px; display: block;
+        .hd-field { margin-bottom: 12px; }
+        .hd-label {
+          font-size: 12px; font-weight: 600; color: #8e8e93;
+          text-transform: uppercase; letter-spacing: .06em;
+          margin-bottom: 6px; display: block; padding-left: 2px;
         }
-        .pp-input {
+        .hd-input {
           width: 100%; border: none; border-radius: 12px;
-          padding: 13px 14px; font-size: 15px;
+          padding: 13px 15px; font-size: 16px;
           font-family: -apple-system, sans-serif; color: #000;
-          background: #f2f2f7; outline: none;
-          transition: background .15s; box-sizing: border-box;
+          background: #fff; outline: none; box-sizing: border-box;
+          transition: box-shadow .15s; letter-spacing: -.1px;
         }
-        .pp-input:focus { background: #e5e5ea; }
+        .hd-input:focus { box-shadow: 0 0 0 3px rgba(0,122,255,.15); }
 
-        .pp-rel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .pp-rel-btn {
-          border: none; border-radius: 12px; background: #f2f2f7;
+        .hd-rel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .hd-rel-btn {
+          border: none; border-radius: 12px; background: #fff;
           padding: 12px 8px; text-align: center; cursor: pointer;
-          transition: background .15s; font-family: -apple-system, sans-serif;
+          transition: all .12s; font-family: -apple-system, sans-serif;
+          min-height: 68px;
         }
-        .pp-rel-btn.on { background: #e8f0fe; }
-        .pp-rel-av {
+        .hd-rel-btn.on { background: #e0edff; box-shadow: 0 0 0 2px rgba(0,122,255,.4) inset; }
+        .hd-rel-av {
           width: 30px; height: 30px; border-radius: 10px;
           display: flex; align-items: center; justify-content: center;
-          font-size: 11px; font-weight: 600; margin: 0 auto 6px; letter-spacing: .3px;
+          font-size: 11px; font-weight: 600; margin: 0 auto 6px;
         }
-        .pp-rel-label { font-size: 11px; font-weight: 500; color: #6c6c70; }
-        .pp-rel-btn.on .pp-rel-label { color: #1a4a9e; }
+        .hd-rel-label { font-size: 11px; font-weight: 500; color: #636366; }
+        .hd-rel-btn.on .hd-rel-label { color: #007aff; font-weight: 600; }
 
-        .pp-modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-        .pp-btn-cancel {
-          flex: 1; border: none; background: #f2f2f7; border-radius: 14px;
-          padding: 14px; font-size: 15px; font-weight: 500; color: #6c6c70;
-          cursor: pointer; font-family: -apple-system, sans-serif;
+        .hd-modal-actions { display: flex; gap: 10px; margin: 14px 16px 0; }
+        .hd-btn-cancel {
+          flex: 1; border: none; background: #fff; border-radius: 14px;
+          padding: 14px; font-size: 16px; font-weight: 500; color: #007aff;
+          cursor: pointer; font-family: -apple-system, sans-serif; letter-spacing: -.1px;
         }
-        .pp-btn-save {
+        .hd-btn-save {
           flex: 2; border: none; background: #007aff; border-radius: 14px;
-          padding: 14px; font-size: 15px; font-weight: 600; color: #fff;
+          padding: 14px; font-size: 16px; font-weight: 600; color: #fff;
           cursor: pointer; font-family: -apple-system, sans-serif;
-          transition: opacity .15s;
+          box-shadow: 0 4px 12px rgba(0,122,255,.28);
+          transition: opacity .12s; letter-spacing: -.1px;
         }
-        .pp-btn-save:disabled { opacity: .4; cursor: not-allowed; }
-        .pp-btn-save:active:not(:disabled) { opacity: .85; }
+        .hd-btn-save:disabled { opacity: .36; box-shadow: none; cursor: not-allowed; }
+        .hd-btn-save:active:not(:disabled) { opacity: .8; }
 
-        .pp-btn-del {
-          width: 100%; border: none; background: #fff0f0; border-radius: 14px;
-          padding: 13px; font-size: 15px; font-weight: 500; color: #ff3b30;
-          cursor: pointer; font-family: -apple-system, sans-serif; margin-top: 10px;
-          transition: background .15s;
+        .hd-btn-del {
+          display: block; width: calc(100% - 32px); margin: 10px 16px 0;
+          border: none; background: #fff; border-radius: 14px;
+          padding: 14px; font-size: 16px; font-weight: 500; color: #ff3b30;
+          cursor: pointer; font-family: -apple-system, sans-serif;
+          transition: background .1s; letter-spacing: -.1px; text-align: center;
         }
-        .pp-btn-del:active { background: #ffe0de; }
+        .hd-btn-del:active { background: #fff0ef; }
 
-        .pp-del-confirm {
-          margin-top: 12px; padding: 14px;
-          background: #fff5f5; border-radius: 14px;
+        .hd-del-confirm {
+          margin: 10px 16px 0; padding: 14px;
+          background: #fff; border-radius: 14px;
         }
-        .pp-del-text {
-          font-size: 13px; color: #c0392b; margin-bottom: 12px; line-height: 1.5;
+        .hd-del-text {
+          font-size: 14px; color: #ff3b30; margin-bottom: 12px;
+          line-height: 1.5; font-weight: 400;
         }
-        .pp-del-btns { display: flex; gap: 8px; }
-        .pp-del-no {
-          flex: 1; border: none; background: #f2f2f7; border-radius: 12px;
-          padding: 11px; font-size: 13px; font-weight: 500; color: #6c6c70;
+        .hd-del-btns { display: flex; gap: 8px; }
+        .hd-del-no {
+          flex: 1; border: none; background: rgba(118,118,128,.12);
+          border-radius: 12px; padding: 12px;
+          font-size: 15px; font-weight: 500; color: #3c3c43;
           cursor: pointer; font-family: -apple-system, sans-serif;
         }
-        .pp-del-yes {
+        .hd-del-yes {
           flex: 1; border: none; background: #ff3b30; border-radius: 12px;
-          padding: 11px; font-size: 13px; font-weight: 600; color: #fff;
+          padding: 12px; font-size: 15px; font-weight: 600; color: #fff;
           cursor: pointer; font-family: -apple-system, sans-serif;
+          transition: opacity .1s;
         }
-        .pp-del-yes:disabled { opacity: .55; }
+        .hd-del-yes:disabled { opacity: .5; }
       `}</style>
 
-      <div className="pp">
+      <div className="hd-page">
 
         {/* ── HEADER ── */}
-        <div className="pp-hdr">
-          <div>
-            <h1 className="pp-title">Osoby</h1>
-            <p className="pp-count">{people.length} {people.length === 1 ? "osoba" : people.length < 5 ? "osoby" : "osób"}</p>
+        <div className="hd-header">
+          <div className="hd-header-left">
+            <h1>Osoby</h1>
+            <p>
+              {people.length === 0
+                ? "brak osób"
+                : `${people.length} ${people.length === 1 ? "zapisana osoba" : people.length < 5 ? "zapisane osoby" : "zapisanych osób"}`
+              }
+            </p>
           </div>
-          <button className="pp-add-btn" onClick={openAdd} aria-label="Dodaj osobę">
+          <button className="hd-add-btn" onClick={openAdd} aria-label="Dodaj osobę">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
             </svg>
@@ -430,7 +825,7 @@ export default function PeoplePage() {
         </div>
 
         {/* ── SEARCH ── */}
-        <div className="pp-search">
+        <div className="hd-search">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
             <circle cx="8.5" cy="8.5" r="5.5"/><line x1="12.5" y1="12.5" x2="17" y2="17"/>
           </svg>
@@ -440,16 +835,16 @@ export default function PeoplePage() {
             onChange={e => setSearch(e.target.value)}
           />
           {search && (
-            <button className="pp-search-clear" onClick={() => setSearch("")} aria-label="Wyczyść">✕</button>
+            <button className="hd-search-clear" onClick={() => setSearch("")} aria-label="Wyczyść">✕</button>
           )}
         </div>
 
-        {/* ── TABS ── */}
-        <div className="pp-tabs">
+        {/* ── FILTER TABS ── */}
+        <div className="hd-tabs">
           {TABS.map(t => (
             <button
               key={t.value}
-              className={`pp-tab ${filterRel === t.value ? "on" : ""}`}
+              className={`hd-tab ${filterRel === t.value ? "on" : ""}`}
               onClick={() => setFilterRel(t.value)}
             >
               {t.label}
@@ -459,9 +854,9 @@ export default function PeoplePage() {
 
         {/* ── TOP AI CHIP ── */}
         {firstUpcoming && !search && (
-          <div className="pp-ai-chip">
-            <span className="pp-ai-glyph">✦</span>
-            <span className="pp-ai-text">
+          <div className="hd-ai-chip">
+            <span className="hd-ai-glyph">✦</span>
+            <span className="hd-ai-text">
               <strong>{firstUpcoming.name}</strong>{" "}
               {getDaysUntilBirthday(firstUpcoming.birthday) === 0
                 ? "ma dziś urodziny 🎉"
@@ -472,92 +867,82 @@ export default function PeoplePage() {
         )}
 
         {/* ── PEOPLE LIST ── */}
-        <div className="pp-list">
+        <div className="hd-list">
           {loading && (
-            <div style={{ textAlign: "center", padding: 44, color: "#8e8e93", fontSize: 14 }}>
-              Ładowanie...
-            </div>
+            <div className="hd-loading">Ładowanie...</div>
           )}
 
           {!loading && filtered.length === 0 && (
-            <div className="pp-empty">
-              <div className="pp-empty-icon">👤</div>
-              <div className="pp-empty-title">
+            <div className="hd-empty">
+              <div className="hd-empty-glyph">👤</div>
+              <div className="hd-empty-title">
                 {search ? "Brak wyników" : "Dodaj pierwszą osobę"}
               </div>
-              <div className="pp-empty-sub">
+              <div className="hd-empty-sub">
                 {search
-                  ? `Nic nie pasuje do "${search}"`
+                  ? `Nic nie pasuje do „${search}"`
                   : "Zapisuj notatki, daty i wspomnienia o bliskich."}
               </div>
             </div>
           )}
 
-          {filtered.map((person, idx) => {
-            const rel    = getRelation(person.relation);
-            const days   = getDaysUntilBirthday(person.birthday);
-            const lastNote = formatLastNote(person.last_note_at);
-            const noteCount = person.notes_count ?? 0;
+          {filtered.map((person) => {
+            const rel        = getRelation(person.relation);
+            const days       = getDaysUntilBirthday(person.birthday);
+            const ins        = insights[person.id];
+            const noteCount  = ins?.noteCount ?? 0;
+            const lastNote   = formatRelativeDate(ins?.lastNoteAt);
 
-            // Build compact metadata line
+            // Metadata line
             const metaParts: React.ReactNode[] = [
-              <span key="rel">{rel.label}</span>
+              <span key="rel">{rel.label}</span>,
             ];
             if (days !== null) {
-              metaParts.push(<span key="sep1" className="sep">·</span>);
+              metaParts.push(<span key="s1" className="sep">·</span>);
               if (days === 0) {
-                metaParts.push(<span key="bday" className="bday-soon">urodziny dziś 🎉</span>);
+                metaParts.push(<span key="bd" className="bsoon">urodziny dziś 🎉</span>);
               } else if (days <= 14) {
-                metaParts.push(<span key="bday" className="bday-soon">ur. za {days} dni</span>);
+                metaParts.push(<span key="bd" className="bsoon">ur. za {days} dni</span>);
               } else {
-                metaParts.push(<span key="bday">ur. za {days} dni</span>);
+                metaParts.push(<span key="bd">ur. za {days} dni</span>);
               }
             } else if (noteCount > 0) {
-              metaParts.push(<span key="sep2" className="sep">·</span>);
-              metaParts.push(<span key="notes">{noteCount} {noteCount === 1 ? "notatka" : noteCount < 5 ? "notatki" : "notatek"}</span>);
+              metaParts.push(<span key="s2" className="sep">·</span>);
+              metaParts.push(
+                <span key="nc">{noteCount} {noteCount === 1 ? "notatka" : noteCount < 5 ? "notatki" : "notatek"}</span>
+              );
               if (lastNote) {
-                metaParts.push(<span key="sep3" className="sep">·</span>);
-                metaParts.push(<span key="last">{lastNote}</span>);
+                metaParts.push(<span key="s3" className="sep">·</span>);
+                metaParts.push(<span key="ln">{lastNote}</span>);
               }
             }
 
-            // Insert a subtle AI chip every AI_CHIP_INTERVAL items (only first occurrence)
-            const showChip = idx === AI_CHIP_INTERVAL && filtered.length > AI_CHIP_INTERVAL && !search;
-            const chipPerson = filtered[0];
-
             return (
-              <div key={person.id}>
-                {showChip && chipPerson && (
-                  <div className="pp-mid-chip">
-                    <span className="pp-ai-glyph">✦</span>
-                    <span className="pp-ai-text">
-                      <strong>{chipPerson.name}</strong> często pojawia się w Twoich notatkach.
-                    </span>
-                  </div>
-                )}
-
-                <div className="pp-card" onClick={() => router.push(`/person/${person.id}`)}>
+              <div key={person.id} className="hd-item">
+                <div
+                  className="hd-card"
+                  onClick={() => router.push(`/person/${person.id}`)}
+                >
                   <Avatar name={person.name} relation={person.relation} />
 
-                  <div className="pp-card-body">
-                    <div className="pp-card-name">{person.name}</div>
-                    <div className="pp-card-meta">{metaParts}</div>
+                  <div className="hd-card-body">
+                    <div className="hd-card-name">{person.name}</div>
+                    <div className="hd-card-meta">{metaParts}</div>
                   </div>
 
-                  <div className="pp-card-actions">
+                  <div className="hd-card-actions">
+                    {/* ✦ Insight — AI analysis sheet */}
                     <button
-                      className="pp-note-btn"
-                      onClick={e => { e.stopPropagation(); router.push(`/person/${person.id}?tab=notes`); }}
-                      aria-label="Notatki"
+                      className={`hd-insight-btn${loadingInsight === person.id ? " hd-insight-btn-loading" : ""}`}
+                      onClick={e => { e.stopPropagation(); openInsight(person); }}
+                      aria-label="AI Insight"
                     >
-                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-                        <path d="M3 3h10v8l-2 2H3V3z"/>
-                        <line x1="5" y1="6" x2="11" y2="6"/>
-                        <line x1="5" y1="9" x2="8" y2="9"/>
-                      </svg>
+                      ✦
                     </button>
+
+                    {/* Edit */}
                     <button
-                      className="pp-note-btn"
+                      className="hd-icon-btn"
                       onClick={e => { e.stopPropagation(); openEdit(person); }}
                       aria-label="Edytuj"
                     >
@@ -565,11 +950,6 @@ export default function PeoplePage() {
                         <path d="M11 2l3 3-8 8H3v-3l8-8z"/>
                       </svg>
                     </button>
-                    <span className="pp-chevron">
-                      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="4,2 8,6 4,10"/>
-                      </svg>
-                    </span>
                   </div>
                 </div>
               </div>
@@ -578,58 +958,74 @@ export default function PeoplePage() {
         </div>
       </div>
 
-      {/* ── MODAL ── */}
+      {/* ── AI INSIGHT SHEET ── */}
+      {insightSheet && (
+        <AiInsightSheet
+          data={insightSheet}
+          onClose={() => setInsightSheet(null)}
+        />
+      )}
+
+      {/* ── ADD / EDIT MODAL ── */}
       {showModal && (
-        <div className="pp-overlay" onClick={e => { if (e.target === e.currentTarget) closeModal(); }}>
-          <div className="pp-modal">
-            <div className="pp-modal-handle" />
-            <div className="pp-modal-title">
-              {modalMode === "add" ? "Nowa osoba" : "Edytuj osobę"}
+        <div
+          className="hd-modal-overlay"
+          onClick={e => { if (e.target === e.currentTarget) closeModal(); }}
+        >
+          <div className="hd-modal">
+            <div className="hd-modal-handle" />
+            <div className="hd-modal-hdr">
+              <div className="hd-modal-title">
+                {modalMode === "add" ? "Nowa osoba" : "Edytuj osobę"}
+              </div>
+              <button className="hd-modal-close" onClick={closeModal} aria-label="Zamknij">✕</button>
             </div>
 
-            <div className="pp-field">
-              <label className="pp-label">Imię i nazwisko</label>
-              <input
-                className="pp-input"
-                placeholder="np. Anna Kowalska"
-                value={formName}
-                onChange={e => setFormName(e.target.value)}
-                autoFocus
-              />
-            </div>
+            <div className="hd-modal-body">
+              <div className="hd-field">
+                <label className="hd-label">Imię i nazwisko</label>
+                <input
+                  className="hd-input"
+                  placeholder="np. Anna Kowalska"
+                  value={formName}
+                  onChange={e => setFormName(e.target.value)}
+                  autoFocus
+                />
+              </div>
 
-            <div className="pp-field">
-              <label className="pp-label">Data urodzin</label>
-              <input
-                className="pp-input"
-                type="date"
-                value={formBirthday}
-                onChange={e => setFormBirthday(e.target.value)}
-              />
-            </div>
+              <div className="hd-field">
+                <label className="hd-label">Data urodzin (opcjonalnie)</label>
+                <input
+                  className="hd-input"
+                  type="date"
+                  value={formBirthday}
+                  onChange={e => setFormBirthday(e.target.value)}
+                />
+              </div>
 
-            <div className="pp-field">
-              <label className="pp-label">Relacja</label>
-              <div className="pp-rel-grid">
-                {RELATIONS.map(r => (
-                  <button
-                    key={r.value}
-                    className={`pp-rel-btn ${formRelation === r.value ? "on" : ""}`}
-                    onClick={() => setFormRelation(r.value)}
-                  >
-                    <div className="pp-rel-av" style={{ background: r.bg, color: r.text }}>
-                      {r.label.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="pp-rel-label">{r.label}</div>
-                  </button>
-                ))}
+              <div className="hd-field">
+                <label className="hd-label">Relacja</label>
+                <div className="hd-rel-grid">
+                  {RELATIONS.map(r => (
+                    <button
+                      key={r.value}
+                      className={`hd-rel-btn ${formRelation === r.value ? "on" : ""}`}
+                      onClick={() => setFormRelation(r.value)}
+                    >
+                      <div className="hd-rel-av" style={{ background: r.bg, color: r.text }}>
+                        {r.label.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="hd-rel-label">{r.label}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <div className="pp-modal-actions">
-              <button className="pp-btn-cancel" onClick={closeModal}>Anuluj</button>
+            <div className="hd-modal-actions">
+              <button className="hd-btn-cancel" onClick={closeModal}>Anuluj</button>
               <button
-                className="pp-btn-save"
+                className="hd-btn-save"
                 onClick={savePerson}
                 disabled={!formName.trim() || saving}
               >
@@ -639,16 +1035,18 @@ export default function PeoplePage() {
 
             {modalMode === "edit" && editingId && (
               deleteConfirm !== editingId ? (
-                <button className="pp-btn-del" onClick={() => setDeleteConfirm(editingId)}>
+                <button className="hd-btn-del" onClick={() => setDeleteConfirm(editingId)}>
                   Usuń osobę
                 </button>
               ) : (
-                <div className="pp-del-confirm">
-                  <div className="pp-del-text">Usunąć {formName}? Tej operacji nie można cofnąć.</div>
-                  <div className="pp-del-btns">
-                    <button className="pp-del-no" onClick={() => setDeleteConfirm(null)}>Anuluj</button>
+                <div className="hd-del-confirm">
+                  <div className="hd-del-text">
+                    Usunąć {formName}? Tej operacji nie można cofnąć.
+                  </div>
+                  <div className="hd-del-btns">
+                    <button className="hd-del-no" onClick={() => setDeleteConfirm(null)}>Anuluj</button>
                     <button
-                      className="pp-del-yes"
+                      className="hd-del-yes"
                       disabled={deleting === editingId}
                       onClick={() => deletePerson(editingId!)}
                     >

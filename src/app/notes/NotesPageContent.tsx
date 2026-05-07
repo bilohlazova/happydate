@@ -3,7 +3,9 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
-/* ═══════════════════ TYPES ═══════════════════ */
+// ─────────────────────────────────────────────
+// TYPES — match real Supabase memories schema
+// ─────────────────────────────────────────────
 
 type Person = {
   id: string;
@@ -17,71 +19,88 @@ type Memory = {
   created_at: string;
   person_id: string | null;
   images: string[] | null;
+  ai_tags: string[] | null;
+  ai_summary: string | null;
 };
 
-/* ═══════════════════ HELPERS ═══════════════════ */
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("pl-PL", {
-    day: "numeric", month: "short", year: "numeric",
-  });
+function formatRelativeDate(iso: string): string {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (diff === 0) return "dziś";
+  if (diff === 1) return "wczoraj";
+  if (diff < 7)  return `${diff} dni temu`;
+  if (diff < 30) return `${Math.floor(diff / 7)} tyg. temu`;
+  return new Date(iso).toLocaleDateString("pl-PL", { day: "numeric", month: "short" });
 }
 
-function getInitials(name: string) {
+function getInitials(name: string): string {
   return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
-/* ═══════════════════ MAIN COMPONENT ═══════════════════ */
+const RELATION_COLORS: Record<string, { bg: string; text: string }> = {
+  family:  { bg: "#e8f0fe", text: "#1a4a9e" },
+  friend:  { bg: "#e8f5ed", text: "#1a6644" },
+  partner: { bg: "#fce8ed", text: "#8a1a38" },
+  work:    { bg: "#fdf6e8", text: "#7a5c1a" },
+  other:   { bg: "#f0ede8", text: "#5a5550" },
+};
+
+function getRelColor(relation: string | null) {
+  return RELATION_COLORS[relation ?? "other"] ?? RELATION_COLORS.other;
+}
+
+// ─────────────────────────────────────────────
+// MAIN COMPONENT
+// ─────────────────────────────────────────────
 
 export default function NotesPageContent() {
   const [memories,       setMemories]       = useState<Memory[]>([]);
   const [people,         setPeople]         = useState<Person[]>([]);
   const [loading,        setLoading]        = useState(true);
-  const [showModal,      setShowModal]      = useState(false);
-  const [saving,         setSaving]         = useState(false);
-  const [editingMemory,  setEditingMemory]  = useState<Memory | null>(null);
   const [filterPersonId, setFilterPersonId] = useState<string>("all");
 
-  // Lightbox
-  const [lightboxUrl,  setLightboxUrl]  = useState<string | null>(null);
-  const [lightboxAll,  setLightboxAll]  = useState<string[]>([]);
-  const [lightboxIdx,  setLightboxIdx]  = useState(0);
+  // 3-dot context menu
+  const [menuOpenId,     setMenuOpenId]     = useState<string | null>(null);
 
-  // Form
+  // Lightbox
+  const [lightboxUrls,   setLightboxUrls]   = useState<string[]>([]);
+  const [lightboxIdx,    setLightboxIdx]    = useState(0);
+
+  // Modal (bottom sheet)
+  const [showModal,      setShowModal]      = useState(false);
+  const [editingMemory,  setEditingMemory]  = useState<Memory | null>(null);
+  const [saving,         setSaving]         = useState(false);
+  const [uploading,      setUploading]      = useState(false);
+
+  // Form state
   const [noteText,       setNoteText]       = useState("");
-  const [selectedPerson, setSelectedPerson] = useState<string>("");
+  const [selectedPerson, setSelectedPerson] = useState("");
   const [photoFiles,     setPhotoFiles]     = useState<File[]>([]);
   const [photoPreviews,  setPhotoPreviews]  = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
-  const [uploadProgress, setUploadProgress] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /* ── Lightbox ── */
-  function openLightbox(urls: string[], idx: number) {
-    setLightboxAll(urls);
-    setLightboxIdx(idx);
-    setLightboxUrl(urls[idx]);
-  }
-  function closeLightbox() { setLightboxUrl(null); }
-  function lightboxPrev() {
-    const i = (lightboxIdx - 1 + lightboxAll.length) % lightboxAll.length;
-    setLightboxIdx(i); setLightboxUrl(lightboxAll[i]);
-  }
-  function lightboxNext() {
-    const i = (lightboxIdx + 1) % lightboxAll.length;
-    setLightboxIdx(i); setLightboxUrl(lightboxAll[i]);
-  }
+  // ── Search ──
+  const [search, setSearch] = useState("");
 
-  /* ── Load ── */
+  // ── Load ──
   const loadPeople = useCallback(async () => {
-    const { data } = await supabase.from("people").select("id, name, relation").order("name");
+    const { data } = await supabase
+      .from("people").select("id, name, relation").order("name");
     setPeople(data ?? []);
   }, []);
 
   const loadMemories = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
     const { data } = await supabase
-      .from("memories").select("*")
+      .from("memories")
+      .select("id, content_text, created_at, person_id, images, ai_tags, ai_summary")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
     setMemories(data ?? []);
   }, []);
@@ -94,7 +113,51 @@ export default function NotesPageContent() {
     })();
   }, [loadPeople, loadMemories]);
 
-  /* ── Photo ── */
+  // ── Filter + Search ──
+  // Search matches: note text, person name, ai_tags
+  const q = search.trim().toLowerCase();
+  const byPerson =
+    filterPersonId === "all"  ? memories :
+    filterPersonId === "none" ? memories.filter(m => !m.person_id) :
+    memories.filter(m => m.person_id === filterPersonId);
+
+  const filtered = q === "" ? byPerson : byPerson.filter(m => {
+    if (m.content_text?.toLowerCase().includes(q)) return true;
+    if ((m.ai_tags ?? []).some(t => t.toLowerCase().includes(q))) return true;
+    const person = people.find(p => p.id === m.person_id);
+    if (person?.name.toLowerCase().includes(q)) return true;
+    return false;
+  });
+
+  // ── AI Insights — computed from real data, no hallucinations ──
+  // Only show when not searching and not filtering by person
+  const showAiSection = !q && filterPersonId === "all" && memories.length >= 2;
+
+  // Top person by memory count
+  const personMemCounts: Record<string, number> = {};
+  for (const m of memories) {
+    if (m.person_id) personMemCounts[m.person_id] = (personMemCounts[m.person_id] ?? 0) + 1;
+  }
+  const topPersonId = Object.entries(personMemCounts).sort((a,b) => b[1]-a[1])[0]?.[0] ?? null;
+  const topPerson   = people.find(p => p.id === topPersonId);
+
+  // Most frequent tag across all memories
+  const tagFreq: Record<string, number> = {};
+  for (const m of memories) {
+    for (const t of (m.ai_tags ?? [])) {
+      tagFreq[t.toLowerCase()] = (tagFreq[t.toLowerCase()] ?? 0) + 1;
+    }
+  }
+  const topTags = Object.entries(tagFreq).sort((a,b) => b[1]-a[1]).slice(0, 3).map(([t]) => t);
+
+  // Count gift-related tags
+  const giftKeywords = ["prezent","gift","podarunek","upominek"];
+  const giftCount = memories.filter(m =>
+    (m.ai_tags ?? []).some(t => giftKeywords.includes(t.toLowerCase())) ||
+    giftKeywords.some(k => m.content_text?.toLowerCase().includes(k))
+  ).length;
+
+  // ── Photo helpers ──
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
@@ -106,18 +169,9 @@ export default function NotesPageContent() {
     });
   }
 
-  function removePhoto(idx: number) {
-    setPhotoFiles(prev => prev.filter((_, i) => i !== idx));
-    setPhotoPreviews(prev => prev.filter((_, i) => i !== idx));
-  }
-
-  function removeExistingPhoto(url: string) {
-    setExistingImages(prev => prev.filter(u => u !== url));
-  }
-
   async function uploadPhotos(userId: string): Promise<string[]> {
     if (!photoFiles.length) return [];
-    setUploadProgress(true);
+    setUploading(true);
     const urls: string[] = [];
     for (const file of photoFiles) {
       const ext  = file.name.split(".").pop();
@@ -128,11 +182,11 @@ export default function NotesPageContent() {
         urls.push(data.publicUrl);
       }
     }
-    setUploadProgress(false);
+    setUploading(false);
     return urls;
   }
 
-  /* ── Modal ── */
+  // ── Modal ──
   function openNew() {
     setEditingMemory(null);
     setNoteText(""); setSelectedPerson("");
@@ -146,15 +200,12 @@ export default function NotesPageContent() {
     setSelectedPerson(m.person_id ?? "");
     setPhotoFiles([]); setPhotoPreviews([]);
     setExistingImages(m.images ?? []);
+    setMenuOpenId(null);
     setShowModal(true);
   }
 
-  function closeModal() {
-    setShowModal(false);
-    setEditingMemory(null);
-  }
+  function closeModal() { setShowModal(false); setEditingMemory(null); }
 
-  /* ── Save ── */
   async function saveMemory() {
     if (!noteText.trim()) return;
     setSaving(true);
@@ -176,297 +227,768 @@ export default function NotesPageContent() {
       await supabase.from("memories").insert({ ...payload, user_id: auth.user.id });
     }
 
-    setSaving(false);
-    closeModal();
-    loadMemories();
+    setSaving(false); closeModal(); loadMemories();
   }
 
-  /* ── Delete ── */
+  // ── Delete ──
   async function deleteMemory(id: string) {
-    if (!confirm("Usunąć notatkę?")) return;
+    setMenuOpenId(null);
     await supabase.from("memories").delete().eq("id", id);
     loadMemories();
   }
 
-  /* ── Filter ── */
-  const filtered = filterPersonId === "all"
-    ? memories
-    : filterPersonId === "none"
-      ? memories.filter(m => !m.person_id)
-      : memories.filter(m => m.person_id === filterPersonId);
+  // ── Lightbox ──
+  const lightboxOpen  = lightboxUrls.length > 0;
+  function openLightbox(urls: string[], idx: number) { setLightboxUrls(urls); setLightboxIdx(idx); }
+  function closeLightbox() { setLightboxUrls([]); }
+  function lbPrev() { setLightboxIdx(i => (i - 1 + lightboxUrls.length) % lightboxUrls.length); }
+  function lbNext() { setLightboxIdx(i => (i + 1) % lightboxUrls.length); }
 
-  /* ═══════════════════ RENDER ═══════════════════ */
+  // ─────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────
+
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        /* ══════════════════════════════════════
+           HAPPYDATE NOTES — same design system as People page
+        ══════════════════════════════════════ */
 
-        .np-root { font-family:'Plus Jakarta Sans',sans-serif; min-height:100svh; background:#f8f7ff; padding-bottom:100px; }
+        .hd-page {
+          font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+          min-height: 100svh;
+          background: #f2f2f7;
+          padding-top: env(safe-area-inset-top);
+          padding-bottom: calc(96px + env(safe-area-inset-bottom));
+          color: #000;
+          -webkit-font-smoothing: antialiased;
+        }
 
-        .np-header { padding:20px 16px 0; }
-        .np-header-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:4px; }
-        .np-title { font-size:26px; font-weight:800; color:#1a1040; letter-spacing:-0.5px; }
-        .np-count-pill { background:linear-gradient(135deg,#a78bfa,#ec4899); color:#fff; font-size:13px; font-weight:700; padding:4px 14px; border-radius:20px; box-shadow:0 2px 8px rgba(167,139,250,.35); }
-        .np-subtitle { font-size:13px; color:#7c6f9f; margin-bottom:16px; }
-        .np-add-btn { display:flex; align-items:center; gap:6px; background:linear-gradient(135deg,#7c3aed,#ec4899); color:#fff; border:none; cursor:pointer; padding:10px 18px; border-radius:14px; font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; font-weight:700; box-shadow:0 4px 14px rgba(124,58,237,.35); transition:transform .15s; white-space:nowrap; flex-shrink:0; }
-        .np-add-btn:active { transform:scale(.96); }
+        /* ── Header ── */
+        .hd-header {
+          padding: 16px 20px 8px;
+          display: flex; align-items: flex-end;
+          justify-content: space-between; gap: 12px;
+        }
+        .hd-header-left h1 {
+          font-size: 32px; font-weight: 700; color: #000;
+          letter-spacing: -.7px; line-height: 1; margin: 0 0 3px;
+        }
+        .hd-header-left p { font-size: 13px; color: #aeaeb2; font-weight: 400; margin: 0; }
 
-        .np-filters { display:flex; gap:8px; padding:0 16px 14px; overflow-x:auto; scrollbar-width:none; }
-        .np-filters::-webkit-scrollbar { display:none; }
-        .np-filter-chip { flex-shrink:0; border:1.5px solid #e8e3f5; background:#fff; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:600; color:#7c6f9f; cursor:pointer; transition:all .15s; font-family:'Plus Jakarta Sans',sans-serif; white-space:nowrap; }
-        .np-filter-chip.active { background:#7c3aed; border-color:#7c3aed; color:#fff; box-shadow:0 2px 8px rgba(124,58,237,.3); }
+        .hd-add-btn {
+          width: 36px; height: 36px; border-radius: 50%;
+          background: #007aff;
+          display: flex; align-items: center; justify-content: center;
+          border: none; cursor: pointer;
+          box-shadow: 0 4px 12px rgba(0,122,255,.32);
+          transition: transform .14s cubic-bezier(.34,1.56,.64,1), box-shadow .14s;
+          flex-shrink: 0; margin-bottom: 1px;
+        }
+        .hd-add-btn:active { transform: scale(.88); box-shadow: 0 2px 6px rgba(0,122,255,.2); }
+        .hd-add-btn svg { width: 15px; height: 15px; color: #fff; }
 
-        .np-list { padding:0 16px; display:flex; flex-direction:column; gap:12px; }
+        /* ── Filters ── */
+        .hd-tabs {
+          display: flex; gap: 7px; padding: 2px 16px 14px;
+          overflow-x: auto; scrollbar-width: none;
+        }
+        .hd-tabs::-webkit-scrollbar { display: none; }
+        .hd-tab {
+          flex-shrink: 0; background: rgba(118,118,128,.12);
+          border-radius: 20px; padding: 6px 15px;
+          font-size: 13px; font-weight: 500; color: #3c3c43;
+          border: none; cursor: pointer;
+          font-family: -apple-system, sans-serif;
+          transition: background .12s, color .12s, box-shadow .12s;
+          letter-spacing: -.1px; min-height: 32px; white-space: nowrap;
+        }
+        .hd-tab.on {
+          background: #007aff; color: #fff;
+          box-shadow: 0 2px 8px rgba(0,122,255,.28);
+        }
 
-        .np-card { background:#fff; border-radius:20px; border:1.5px solid #ede9f8; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.04); }
-        .np-card-body { padding:14px 16px; }
-        .np-card-top { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-        .np-card-avatar { width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#7c3aed; background:linear-gradient(135deg,#ede9fe,#fce7f3); flex-shrink:0; }
-        .np-card-person { font-size:13px; font-weight:600; color:#7c3aed; }
-        .np-card-date { font-size:11px; color:#b0a8cc; margin-left:auto; }
-        .np-card-text { font-size:14px; color:#1a1040; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+        /* ── Notes feed — clean, no interruptions ── */
+        .hd-feed { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
 
-        .np-photo-grid { display:grid; gap:2px; margin-top:10px; border-radius:12px; overflow:hidden; }
-        .np-photo-grid.g1 { grid-template-columns:1fr; }
-        .np-photo-grid.g2 { grid-template-columns:1fr 1fr; }
-        .np-photo-grid.g3 { grid-template-columns:1fr 1fr 1fr; }
-        .np-photo-grid img { width:100%; height:160px; object-fit:cover; display:block; cursor:pointer; transition:opacity .15s; }
-        .np-photo-grid img:active { opacity:.85; }
-        .np-photo-grid.g1 img { height:220px; }
+        /* ── Memory card ── */
+        .hd-card {
+          background: #fff;
+          border-radius: 18px;
+          overflow: hidden;
+          cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
+          transition: transform .08s;
+        }
+        .hd-card:active { transform: scale(.99); }
 
-        .np-card-actions { display:flex; gap:8px; padding:10px 16px 14px; border-top:1px solid #f5f3ff; }
-        .np-card-action-btn { flex:1; border:none; background:transparent; border-radius:10px; padding:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; transition:all .15s; }
-        .np-card-action-edit { color:#7c3aed; background:#f5f3ff; }
-        .np-card-action-edit:active { background:#ede9fe; }
-        .np-card-action-delete { color:#e53e3e; background:#fff5f5; }
-        .np-card-action-delete:active { background:#ffe4e4; }
+        .hd-card-body { padding: 14px 16px 12px; }
 
-        .np-empty { text-align:center; padding:48px 24px; }
-        .np-empty-icon { font-size:52px; margin-bottom:12px; }
-        .np-empty-title { font-size:16px; font-weight:700; color:#1a1040; margin-bottom:6px; }
-        .np-empty-sub { font-size:13px; color:#7c6f9f; line-height:1.5; }
+        /* Person row */
+        .hd-card-top {
+          display: flex; align-items: center; gap: 9px; margin-bottom: 9px;
+        }
+        .hd-card-avatar {
+          width: 28px; height: 28px; border-radius: 9px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 10px; font-weight: 700; flex-shrink: 0; letter-spacing: .3px;
+        }
+        .hd-card-person { font-size: 13px; font-weight: 600; color: #000; letter-spacing: -.1px; }
+        .hd-card-date   { font-size: 12px; color: #aeaeb2; margin-left: auto; font-weight: 400; }
 
-        /* Lightbox */
-        .np-lightbox { position:fixed; inset:0; z-index:500; background:rgba(0,0,0,.93); display:flex; align-items:center; justify-content:center; animation:npFadeIn .2s ease; }
-        .np-lightbox-img { max-width:100%; max-height:80svh; object-fit:contain; border-radius:4px; user-select:none; }
-        .np-lightbox-close { position:absolute; top:calc(env(safe-area-inset-top) + 16px); right:16px; width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,.25); border:1.5px solid rgba(255,255,255,.3); cursor:pointer; color:#fff; font-size:22px; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
-        .np-lightbox-close:active { background:rgba(255,255,255,.4); }
-        .np-lightbox-nav { position:absolute; top:50%; transform:translateY(-50%); width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,.2); border:1.5px solid rgba(255,255,255,.3); cursor:pointer; color:#fff; font-size:26px; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
-        .np-lightbox-nav:active { background:rgba(255,255,255,.35); }
-        .np-lightbox-prev { left:12px; }
-        .np-lightbox-next { right:12px; }
-        .np-lightbox-bottom { position:absolute; bottom:calc(env(safe-area-inset-bottom) + 20px); left:50%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:6px; }
-        .np-lightbox-counter { color:rgba(255,255,255,.7); font-size:13px; font-weight:600; font-family:'Plus Jakarta Sans',sans-serif; }
-        .np-lightbox-hint { color:rgba(255,255,255,.4); font-size:11px; font-family:'Plus Jakarta Sans',sans-serif; }
+        /* Memory text */
+        .hd-card-text {
+          font-size: 15px; color: #1c1c1e; line-height: 1.55;
+          white-space: pre-wrap; word-break: break-word; letter-spacing: -.1px;
+          margin-bottom: 10px;
+        }
+        .hd-card-text-only { margin-bottom: 0; }
 
-        /* Modal */
-        .np-overlay { position:fixed; inset:0; background:rgba(10,5,30,.6); display:flex; align-items:flex-start; justify-content:center; padding:60px 16px 40px; z-index:200; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); animation:npFadeIn .2s ease; overflow-y:auto; -webkit-overflow-scrolling:touch; }
-        @keyframes npFadeIn { from{opacity:0} to{opacity:1} }
-        .np-modal { background:#fff; border-radius:24px; padding:24px 20px 28px; width:100%; max-width:480px; animation:npPop .25s cubic-bezier(.34,1.3,.64,1); position:relative; flex-shrink:0; }
-        @keyframes npPop { from{opacity:0;transform:scale(.92) translateY(-10px)} to{opacity:1;transform:scale(1) translateY(0)} }
-        .np-modal-close { position:absolute; top:16px; right:16px; width:32px; height:32px; border-radius:50%; background:#f1eeff; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; color:#7c6f9f; }
-        .np-modal-title { font-size:20px; font-weight:800; color:#1a1040; margin-bottom:18px; padding-right:40px; }
+        /* AI tags */
+        .hd-card-tags {
+          display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px;
+        }
+        .hd-tag {
+          font-size: 11px; font-weight: 500; color: #8e8e93;
+          background: rgba(118,118,128,.1);
+          padding: 3px 9px; border-radius: 20px; letter-spacing: -.05px;
+        }
 
-        .np-field { margin-bottom:14px; }
-        .np-label { font-size:12px; font-weight:700; color:#7c6f9f; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; display:block; }
-        .np-textarea { width:100%; border:1.5px solid #e8e3f5; border-radius:14px; padding:12px 14px; font-size:15px; font-family:'Plus Jakarta Sans',sans-serif; color:#1a1040; background:#f8f7ff; outline:none; resize:none; min-height:100px; max-height:200px; overflow-y:auto; transition:border-color .15s; box-sizing:border-box; }
-        .np-textarea:focus { border-color:#7c3aed; background:#fff; }
+        /* 3-dot menu */
+        .hd-card-menu-wrap { position: relative; margin-left: auto; flex-shrink: 0; }
+        .hd-card-menu-btn {
+          width: 28px; height: 28px; border-radius: 8px;
+          background: transparent; border: none; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          color: #c7c7cc; font-size: 18px; line-height: 1;
+          transition: background .1s; font-family: -apple-system, sans-serif;
+        }
+        .hd-card-menu-btn:active { background: rgba(118,118,128,.12); }
+        .hd-card-menu-popup {
+          position: absolute; right: 0; top: 32px;
+          background: #fff;
+          border-radius: 14px;
+          box-shadow: 0 8px 28px rgba(0,0,0,.14);
+          overflow: hidden; z-index: 50; min-width: 150px;
+          animation: hdPopIn .15s cubic-bezier(.34,1.3,.64,1);
+        }
+        @keyframes hdPopIn { from { opacity:0; transform: scale(.92) translateY(-4px); } to { opacity:1; transform: scale(1) translateY(0); } }
+        .hd-card-menu-item {
+          display: flex; align-items: center; gap: 10px;
+          padding: 12px 16px; font-size: 15px; font-weight: 400;
+          color: #000; cursor: pointer; border: none; background: transparent;
+          font-family: -apple-system, sans-serif; width: 100%; text-align: left;
+          border-bottom: .5px solid rgba(60,60,67,.1); letter-spacing: -.1px;
+        }
+        .hd-card-menu-item:last-child { border-bottom: none; }
+        .hd-card-menu-item:active { background: #f2f2f7; }
+        .hd-card-menu-item.danger { color: #ff3b30; }
 
-        .np-photo-upload-btn { display:flex; align-items:center; gap:8px; border:1.5px dashed #c4b5f8; background:#f8f7ff; border-radius:12px; padding:10px 14px; font-size:13px; font-weight:600; color:#7c3aed; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; transition:all .15s; width:100%; justify-content:center; box-sizing:border-box; }
-        .np-photo-upload-btn:active { background:#ede9fe; }
+        /* ── Photo layouts ── */
+        .hd-photos { overflow: hidden; border-radius: 0 0 18px 18px; }
+        .hd-photos-with-padding { margin: 0 12px 12px; border-radius: 14px; overflow: hidden; }
+        .hd-photo-1 img { width: 100%; height: 240px; object-fit: cover; display: block; cursor: pointer; }
+        .hd-photo-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+        .hd-photo-2 img { width: 100%; height: 180px; object-fit: cover; display: block; cursor: pointer; }
+        .hd-photo-3 { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; height: 200px; }
+        .hd-photo-3 img:first-child { grid-row: 1 / 3; height: 200px; width: 100%; object-fit: cover; display: block; cursor: pointer; }
+        .hd-photo-3 img:not(:first-child) { height: 99px; width: 100%; object-fit: cover; display: block; cursor: pointer; }
+        .hd-photo-tap { transition: opacity .1s; }
+        .hd-photo-tap:active { opacity: .85; }
 
-        .np-preview-grid { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
-        .np-preview-item { position:relative; width:72px; height:72px; border-radius:10px; overflow:hidden; flex-shrink:0; }
-        .np-preview-item img { width:100%; height:100%; object-fit:cover; display:block; }
-        .np-preview-remove { position:absolute; top:2px; right:2px; width:18px; height:18px; border-radius:50%; background:rgba(0,0,0,.6); color:#fff; border:none; cursor:pointer; font-size:10px; display:flex; align-items:center; justify-content:center; line-height:1; padding:0; }
+        /* ── Loading / Empty ── */
+        .hd-loading { text-align: center; padding: 52px 28px; color: #aeaeb2; font-size: 14px; }
+        .hd-empty { text-align: center; padding: 72px 28px; }
+        .hd-empty-glyph { font-size: 38px; margin-bottom: 14px; opacity: .25; }
+        .hd-empty-title { font-size: 17px; font-weight: 600; color: #000; margin-bottom: 6px; letter-spacing: -.2px; }
+        .hd-empty-sub { font-size: 15px; color: #8e8e93; line-height: 1.5; }
 
-        .np-select { width:100%; border:1.5px solid #e8e3f5; border-radius:14px; padding:12px 14px; font-size:15px; font-family:'Plus Jakarta Sans',sans-serif; color:#1a1040; background:#f8f7ff; outline:none; appearance:none; box-sizing:border-box; }
-        .np-select:focus { border-color:#7c3aed; }
+        /* ══════════════════════════════════════
+           LIGHTBOX
+        ══════════════════════════════════════ */
 
-        .np-modal-actions { display:flex; gap:10px; margin-top:20px; }
-        .np-btn-cancel { flex:1; border:1.5px solid #e8e3f5; background:#f8f7ff; border-radius:14px; padding:13px; font-size:15px; font-weight:700; color:#7c6f9f; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; }
-        .np-btn-save { flex:2; border:none; background:linear-gradient(135deg,#7c3aed,#ec4899); border-radius:14px; padding:13px; font-size:15px; font-weight:700; color:#fff; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; box-shadow:0 4px 14px rgba(124,58,237,.3); transition:all .15s; }
-        .np-btn-save:disabled { opacity:.6; cursor:not-allowed; }
-        .np-btn-save:active:not(:disabled) { transform:scale(.97); }
+        .hd-lightbox {
+          position: fixed; inset: 0; z-index: 600;
+          background: rgba(0,0,0,.92);
+          display: flex; align-items: center; justify-content: center;
+          animation: hdFadeIn .18s ease;
+        }
+        @keyframes hdFadeIn  { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes hdSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        .hd-lightbox-img {
+          max-width: 100%; max-height: 80svh; object-fit: contain;
+          border-radius: 6px; user-select: none;
+        }
+        .hd-lightbox-close {
+          position: absolute;
+          top: calc(env(safe-area-inset-top) + 16px); right: 16px;
+          width: 36px; height: 36px; border-radius: 50%;
+          background: rgba(255,255,255,.2); border: none; cursor: pointer;
+          color: #fff; font-size: 16px;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .hd-lightbox-nav {
+          position: absolute; top: 50%; transform: translateY(-50%);
+          width: 44px; height: 44px; border-radius: 50%;
+          background: rgba(255,255,255,.15); border: none; cursor: pointer;
+          color: #fff; font-size: 22px;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .hd-lightbox-nav:active { background: rgba(255,255,255,.28); }
+        .hd-lb-prev { left: 12px; }
+        .hd-lb-next { right: 12px; }
+        .hd-lightbox-counter {
+          position: absolute;
+          bottom: calc(env(safe-area-inset-bottom) + 20px);
+          left: 50%; transform: translateX(-50%);
+          color: rgba(255,255,255,.6); font-size: 13px; font-weight: 500;
+          font-family: -apple-system, sans-serif;
+        }
+
+        /* ══════════════════════════════════════
+           ADD / EDIT BOTTOM SHEET
+        ══════════════════════════════════════ */
+
+        .hd-modal-overlay {
+          position: fixed; inset: 0;
+          background: rgba(0,0,0,.38);
+          display: flex; align-items: flex-end; justify-content: center;
+          z-index: 300;
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          animation: hdFadeIn .18s ease;
+        }
+        .hd-modal {
+          background: #f2f2f7;
+          border-radius: 20px 20px 0 0;
+          width: 100%; max-width: 480px;
+          padding-bottom: calc(20px + env(safe-area-inset-bottom));
+          animation: hdSlideUp .3s cubic-bezier(.32,.72,0,1);
+          max-height: 92svh; overflow-y: auto;
+        }
+        .hd-modal-handle {
+          width: 36px; height: 5px; border-radius: 3px;
+          background: rgba(60,60,67,.22); margin: 10px auto 0;
+        }
+        .hd-modal-hdr {
+          padding: 14px 16px 12px;
+          display: flex; align-items: center; justify-content: space-between;
+          position: sticky; top: 0; background: #f2f2f7; z-index: 1;
+        }
+        .hd-modal-title { font-size: 17px; font-weight: 600; color: #000; letter-spacing: -.2px; }
+        .hd-modal-close {
+          width: 28px; height: 28px; border-radius: 50%;
+          background: rgba(118,118,128,.18); border: none; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          color: #636366; font-size: 12px;
+          font-family: -apple-system, sans-serif;
+        }
+        .hd-modal-body { padding: 0 16px; }
+
+        .hd-field { margin-bottom: 12px; }
+        .hd-label {
+          font-size: 12px; font-weight: 600; color: #8e8e93;
+          text-transform: uppercase; letter-spacing: .06em;
+          margin-bottom: 6px; display: block; padding-left: 2px;
+        }
+        .hd-textarea {
+          width: 100%; border: none; border-radius: 12px;
+          padding: 13px 15px; font-size: 16px;
+          font-family: -apple-system, sans-serif; color: #000;
+          background: #fff; outline: none; resize: none;
+          min-height: 110px; max-height: 220px; overflow-y: auto;
+          box-sizing: border-box; letter-spacing: -.1px; line-height: 1.55;
+          transition: box-shadow .15s;
+        }
+        .hd-textarea:focus { box-shadow: 0 0 0 3px rgba(0,122,255,.15); }
+
+        .hd-select {
+          width: 100%; border: none; border-radius: 12px;
+          padding: 13px 15px; font-size: 16px;
+          font-family: -apple-system, sans-serif; color: #000;
+          background: #fff; outline: none;
+          appearance: none; box-sizing: border-box; letter-spacing: -.1px;
+          transition: box-shadow .15s;
+        }
+        .hd-select:focus { box-shadow: 0 0 0 3px rgba(0,122,255,.15); }
+
+        /* Photo upload */
+        .hd-photo-upload {
+          width: 100%; border: none; border-radius: 12px;
+          padding: 12px 15px; font-size: 15px;
+          font-family: -apple-system, sans-serif; color: #007aff;
+          background: #fff; cursor: pointer;
+          display: flex; align-items: center; justify-content: center; gap: 7px;
+          box-sizing: border-box; font-weight: 500;
+          transition: background .1s;
+        }
+        .hd-photo-upload:active { background: #f2f2f7; }
+
+        .hd-previews { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+        .hd-preview-item {
+          position: relative; width: 72px; height: 72px;
+          border-radius: 10px; overflow: hidden; flex-shrink: 0;
+        }
+        .hd-preview-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .hd-preview-remove {
+          position: absolute; top: 3px; right: 3px;
+          width: 18px; height: 18px; border-radius: 50%;
+          background: rgba(0,0,0,.55); color: #fff; border: none; cursor: pointer;
+          font-size: 9px; display: flex; align-items: center; justify-content: center;
+          font-family: -apple-system, sans-serif;
+        }
+
+        .hd-modal-actions { display: flex; gap: 10px; margin: 14px 16px 0; }
+        .hd-btn-cancel {
+          flex: 1; border: none; background: #fff; border-radius: 14px;
+          padding: 14px; font-size: 16px; font-weight: 500; color: #007aff;
+          cursor: pointer; font-family: -apple-system, sans-serif; letter-spacing: -.1px;
+        }
+        .hd-btn-save {
+          flex: 2; border: none; background: #007aff; border-radius: 14px;
+          padding: 14px; font-size: 16px; font-weight: 600; color: #fff;
+          cursor: pointer; font-family: -apple-system, sans-serif;
+          box-shadow: 0 4px 12px rgba(0,122,255,.28);
+          transition: opacity .12s; letter-spacing: -.1px;
+        }
+        .hd-btn-save:disabled { opacity: .36; box-shadow: none; cursor: not-allowed; }
+        .hd-btn-save:active:not(:disabled) { opacity: .8; }
+
+        /* ── Search bar ── */
+        .hd-search {
+          margin: 0 16px 10px;
+          background: rgba(118,118,128,.12);
+          border-radius: 12px;
+          display: flex; align-items: center; gap: 7px;
+          padding: 0 12px;
+        }
+        .hd-search svg { width: 14px; height: 14px; color: #8e8e93; flex-shrink: 0; }
+        .hd-search input {
+          flex: 1; border: none; background: transparent;
+          padding: 10px 0; font-size: 15px;
+          font-family: -apple-system, sans-serif; color: #000; outline: none;
+        }
+        .hd-search input::placeholder { color: #8e8e93; }
+        .hd-search-clear {
+          width: 16px; height: 16px; border-radius: 50%;
+          background: rgba(60,60,67,.22); border: none; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          color: #fff; font-size: 9px; flex-shrink: 0;
+          font-family: -apple-system, sans-serif;
+        }
+
+        /* ── AI Insights section ── */
+        .hd-ai-section {
+          margin: 0 16px 14px;
+          background: rgba(0,122,255,.06);
+          border-radius: 14px;
+          padding: 12px 14px;
+        }
+        .hd-ai-section-label {
+          font-size: 11px; font-weight: 600; color: #007aff;
+          letter-spacing: .06em; text-transform: uppercase;
+          margin-bottom: 8px;
+          display: flex; align-items: center; gap: 5px;
+        }
+        .hd-ai-rows { display: flex; flex-direction: column; gap: 5px; }
+        .hd-ai-row {
+          font-size: 13px; color: #3c3c43; line-height: 1.4;
+          display: flex; align-items: flex-start; gap: 6px;
+        }
+        .hd-ai-row::before {
+          content: '·'; color: #007aff; font-weight: 700;
+          flex-shrink: 0; margin-top: 0;
+        }
+        .hd-ai-row strong { color: #000; font-weight: 600; }
+
+        /* ── Search result hint ── */
+        .hd-search-hint {
+          padding: 0 20px 10px;
+          font-size: 13px; color: #8e8e93; font-weight: 400;
+        }
+        .hd-search-hint strong { color: #000; font-weight: 600; }
       `}</style>
 
-      <div className="np-root">
+      {/* Close menu on outside tap */}
+      {menuOpenId && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 40 }}
+          onClick={() => setMenuOpenId(null)}
+        />
+      )}
 
-        {/* Header */}
-        <div className="np-header">
-          <div className="np-header-top">
-            <div>
-              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:2 }}>
-                <h1 className="np-title">📝 Notatki</h1>
-                <span className="np-count-pill">{memories.length}</span>
-              </div>
-              <p className="np-subtitle">Wspomnienia i myśli w jednym miejscu</p>
-            </div>
-            <button className="np-add-btn" onClick={openNew}>＋ Dodaj</button>
+      <div className="hd-page">
+
+        {/* ── HEADER ── */}
+        <div className="hd-header">
+          <div className="hd-header-left">
+            <h1>Notatki</h1>
+            <p>
+              {memories.length === 0
+                ? "brak wspomnień"
+                : `${memories.length} ${memories.length === 1 ? "wspomnienie" : memories.length < 5 ? "wspomnienia" : "wspomnień"}`
+              }
+            </p>
           </div>
+          <button className="hd-add-btn" onClick={openNew} aria-label="Dodaj notatkę">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
+            </svg>
+          </button>
         </div>
 
-        {/* Filters */}
-        <div className="np-filters">
-          <button className={`np-filter-chip ${filterPersonId==="all"?"active":""}`} onClick={() => setFilterPersonId("all")}>Wszystkie</button>
-          <button className={`np-filter-chip ${filterPersonId==="none"?"active":""}`} onClick={() => setFilterPersonId("none")}>📓 Moje</button>
+        {/* ── SEARCH ── */}
+        <div className="hd-search">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+            <circle cx="8.5" cy="8.5" r="5.5"/><line x1="12.5" y1="12.5" x2="17" y2="17"/>
+          </svg>
+          <input
+            placeholder="Szukaj wspomnień, osób, tagów…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <button className="hd-search-clear" onClick={() => setSearch("")} aria-label="Wyczyść">✕</button>
+          )}
+        </div>
+
+        {/* ── FILTER TABS ── */}
+        <div className="hd-tabs">
+          <button
+            className={`hd-tab ${filterPersonId === "all" ? "on" : ""}`}
+            onClick={() => setFilterPersonId("all")}
+          >
+            Wszystkie
+          </button>
+          <button
+            className={`hd-tab ${filterPersonId === "none" ? "on" : ""}`}
+            onClick={() => setFilterPersonId("none")}
+          >
+            Moje
+          </button>
           {people.map(p => (
-            <button key={p.id} className={`np-filter-chip ${filterPersonId===p.id?"active":""}`} onClick={() => setFilterPersonId(p.id)}>
-              {p.name}
+            <button
+              key={p.id}
+              className={`hd-tab ${filterPersonId === p.id ? "on" : ""}`}
+              onClick={() => setFilterPersonId(p.id)}
+            >
+              {p.name.split(" ")[0]}
             </button>
           ))}
         </div>
 
-        {/* List */}
-        <div className="np-list">
-          {loading && <div style={{ textAlign:"center", padding:40, color:"#b0a8cc", fontSize:14 }}>Ładowanie...</div>}
+        {/* ── AI INSIGHTS — only when not searching, based on real data ── */}
+        {showAiSection && (topPerson || topTags.length > 0 || giftCount > 0) && (
+          <div className="hd-ai-section">
+            <div className="hd-ai-section-label">
+              <span>✦</span> AI zauważyło
+            </div>
+            <div className="hd-ai-rows">
+              {topPerson && personMemCounts[topPerson.id] >= 2 && (
+                <div className="hd-ai-row">
+                  <strong>{topPerson.name}</strong>{" "}
+                  pojawia się najczęściej — {personMemCounts[topPerson.id]} wspomnień
+                </div>
+              )}
+              {topTags.length > 0 && (
+                <div className="hd-ai-row">
+                  Powtarzające się tematy:{" "}
+                  <strong>{topTags.join(" · ")}</strong>
+                </div>
+              )}
+              {giftCount > 0 && (
+                <div className="hd-ai-row">
+                  Masz <strong>{giftCount} {giftCount === 1 ? "pomysł" : giftCount < 5 ? "pomysły" : "pomysłów"}</strong>{" "}
+                  na prezenty zapisanych w notatkach
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── SEARCH HINT ── */}
+        {q && (
+          <div className="hd-search-hint">
+  {filtered.length === 0 ? (
+    <>Brak wyników dla &quot;{search}&quot;</>
+  ) : (
+    <>
+      <strong>{filtered.length}</strong>{" "}
+      {filtered.length === 1 ? "wynik" : "wyników"} dla{" "}
+      &quot;{search}&quot;
+    </>
+  )}
+</div>
+        )}
+
+        {/* ── NOTES FEED — clean, no AI chips inside ── */}
+        <div className="hd-feed">
+          {loading && <div className="hd-loading">Ładowanie wspomnień...</div>}
 
           {!loading && filtered.length === 0 && (
-            <div className="np-empty">
-              <div className="np-empty-icon">📝</div>
-              <div className="np-empty-title">Brak notatek</div>
-              <div className="np-empty-sub">Dodaj pierwszą notatkę — tekstem lub zdjęciem ✨</div>
+            <div className="hd-empty">
+              <div className="hd-empty-glyph">🕊️</div>
+              <div className="hd-empty-title">
+                {q ? "Brak wyników" : filterPersonId !== "all" ? "Brak wspomnień" : "Zacznij od pierwszego wspomnienia"}
+              </div>
+              <div className="hd-empty-sub">
+                {q
+                  ? `Nic nie pasuje do „${search}". Spróbuj inaczej.`
+                  : filterPersonId !== "all"
+                    ? "Dodaj notatkę dotyczącą tej osoby."
+                    : "Zapisuj chwile, rozmowy i ważne detale."}
+              </div>
             </div>
           )}
 
           {filtered.map(memory => {
             const person = people.find(p => p.id === memory.person_id);
             const imgs   = memory.images ?? [];
-            const show   = imgs.slice(0, 3);
-            const gc     = show.length === 1 ? "g1" : show.length === 2 ? "g2" : "g3";
+            const imgCount = imgs.length;
+            const tags   = memory.ai_tags ?? [];
+            const hasText = !!memory.content_text?.trim();
+            const isMenuOpen = menuOpenId === memory.id;
 
             return (
-              <div key={memory.id} className="np-card">
-                <div className="np-card-body">
-                  <div className="np-card-top">
-                    {person ? (
+              <div
+                key={memory.id}
+                className="hd-card"
+                onClick={() => { if (!isMenuOpen) setMenuOpenId(null); }}
+              >
+                <div className="hd-card-body">
+                  {/* Top row: person + date + 3-dot menu */}
+                  <div className="hd-card-top">
+                    {person ? (() => {
+                      const rc = getRelColor(person.relation);
+                      return (
+                        <>
+                          <div
+                            className="hd-card-avatar"
+                            style={{ background: rc.bg, color: rc.text }}
+                          >
+                            {getInitials(person.name)}
+                          </div>
+                          <span className="hd-card-person">{person.name}</span>
+                        </>
+                      );
+                    })() : (
                       <>
-                        <div className="np-card-avatar">{getInitials(person.name)}</div>
-                        <span className="np-card-person">{person.name}</span>
-                      </>
-                    ) : (
-                      <>
-                        <div className="np-card-avatar" style={{ fontSize:16 }}>📓</div>
-                        <span className="np-card-person" style={{ color:"#7c6f9f" }}>Moja notatka</span>
+                        <div
+                          className="hd-card-avatar"
+                          style={{ background: "#f0ede8", color: "#5a5550" }}
+                        >
+                          JA
+                        </div>
+                        <span className="hd-card-person" style={{ color: "#636366" }}>Moja notatka</span>
                       </>
                     )}
-                    <span className="np-card-date">{formatDate(memory.created_at)}</span>
+                    <span className="hd-card-date">{formatRelativeDate(memory.created_at)}</span>
+
+                    {/* 3-dot context menu */}
+                    <div className="hd-card-menu-wrap" onClick={e => e.stopPropagation()}>
+                      <button
+                        className="hd-card-menu-btn"
+                        onClick={() => setMenuOpenId(isMenuOpen ? null : memory.id)}
+                        aria-label="Opcje"
+                      >
+                        •••
+                      </button>
+                      {isMenuOpen && (
+                        <div className="hd-card-menu-popup">
+                          <button className="hd-card-menu-item" onClick={() => openEdit(memory)}>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 2l3 3-8 8H3v-3l8-8z"/>
+                            </svg>
+                            Edytuj
+                          </button>
+                          <button className="hd-card-menu-item danger" onClick={() => deleteMemory(memory.id)}>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="2,4 14,4"/><path d="M5 4V2h6v2M6 7v5M10 7v5"/><path d="M3 4l1 9h8l1-9"/>
+                            </svg>
+                            Usuń
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  {memory.content_text && (
-                    <div className="np-card-text">{memory.content_text}</div>
+                  {/* Memory text */}
+                  {hasText && (
+                    <div className={`hd-card-text${imgCount === 0 && tags.length === 0 ? " hd-card-text-only" : ""}`}>
+                      {memory.content_text}
+                    </div>
                   )}
 
-                  {show.length > 0 && (
-                    <div className={`np-photo-grid ${gc}`}>
-                      {show.map((url, i) => (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img key={i} src={url} alt="" loading="lazy" onClick={() => openLightbox(imgs, i)} />
+                  {/* AI tags */}
+                  {tags.length > 0 && (
+                    <div className="hd-card-tags">
+                      {tags.slice(0, 5).map(tag => (
+                        <span key={tag} className="hd-tag">{tag}</span>
                       ))}
                     </div>
                   )}
                 </div>
 
-                <div className="np-card-actions">
-                  <button className="np-card-action-btn np-card-action-edit" onClick={() => openEdit(memory)}>✏️ Edytuj</button>
-                  <button className="np-card-action-btn np-card-action-delete" onClick={() => deleteMemory(memory.id)}>🗑️ Usuń</button>
-                </div>
+                {/* Photos — outside card-body for edge-to-edge on single image */}
+                {imgCount > 0 && (() => {
+                  const show = imgs.slice(0, 3);
+                  if (imgCount === 1) return (
+                    <div className="hd-photos hd-photo-1">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={show[0]} alt="" className="hd-photo-tap" loading="lazy"
+                        onClick={e => { e.stopPropagation(); openLightbox(imgs, 0); }} />
+                    </div>
+                  );
+                  if (imgCount === 2) return (
+                    <div className="hd-photos-with-padding hd-photo-2">
+                      {show.map((url, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={i} src={url} alt="" className="hd-photo-tap" loading="lazy"
+                          onClick={e => { e.stopPropagation(); openLightbox(imgs, i); }} />
+                      ))}
+                    </div>
+                  );
+                  return (
+                    <div className="hd-photos-with-padding hd-photo-3">
+                      {show.map((url, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={i} src={url} alt="" className="hd-photo-tap" loading="lazy"
+                          onClick={e => { e.stopPropagation(); openLightbox(imgs, i); }} />
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Lightbox */}
-      {lightboxUrl && (
-        <div className="np-lightbox" onClick={closeLightbox}>
+      {/* ── LIGHTBOX ── */}
+      {lightboxOpen && (
+        <div className="hd-lightbox" onClick={closeLightbox}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="np-lightbox-img" src={lightboxUrl} alt="" onClick={e => e.stopPropagation()} />
-          <button className="np-lightbox-close" onClick={closeLightbox}>✕</button>
-          {lightboxAll.length > 1 && (
+          <img
+            className="hd-lightbox-img"
+            src={lightboxUrls[lightboxIdx]}
+            alt=""
+            onClick={e => e.stopPropagation()}
+          />
+          <button className="hd-lightbox-close" onClick={closeLightbox}>✕</button>
+          {lightboxUrls.length > 1 && (
             <>
-              <button className="np-lightbox-nav np-lightbox-prev" onClick={e => { e.stopPropagation(); lightboxPrev(); }}>‹</button>
-              <button className="np-lightbox-nav np-lightbox-next" onClick={e => { e.stopPropagation(); lightboxNext(); }}>›</button>
-              <div className="np-lightbox-bottom">
-                <div className="np-lightbox-counter">{lightboxIdx + 1} / {lightboxAll.length}</div>
-                <div className="np-lightbox-hint">dotknij tło, aby zamknąć</div>
-              </div>
+              <button className="hd-lightbox-nav hd-lb-prev" onClick={e => { e.stopPropagation(); lbPrev(); }}>‹</button>
+              <button className="hd-lightbox-nav hd-lb-next" onClick={e => { e.stopPropagation(); lbNext(); }}>›</button>
+              <div className="hd-lightbox-counter">{lightboxIdx + 1} / {lightboxUrls.length}</div>
             </>
           )}
         </div>
       )}
 
-      {/* Modal */}
+      {/* ── ADD / EDIT BOTTOM SHEET ── */}
       {showModal && (
-        <div className="np-overlay" onClick={e => { if (e.target===e.currentTarget) closeModal(); }}>
-          <div className="np-modal">
-            <button className="np-modal-close" onClick={closeModal}>✕</button>
-            <div className="np-modal-title">
-              {editingMemory ? "Edytuj notatkę ✏️" : "Nowa notatka ✨"}
+        <div
+          className="hd-modal-overlay"
+          onClick={e => { if (e.target === e.currentTarget) closeModal(); }}
+        >
+          <div className="hd-modal">
+            <div className="hd-modal-handle" />
+            <div className="hd-modal-hdr">
+              <div className="hd-modal-title">
+                {editingMemory ? "Edytuj wspomnienie" : "Nowe wspomnienie"}
+              </div>
+              <button className="hd-modal-close" onClick={closeModal} aria-label="Zamknij">✕</button>
             </div>
 
-            <div className="np-field">
-              <label className="np-label">Treść notatki</label>
-              <textarea
-                className="np-textarea"
-                placeholder="Co chcesz zapamiętać?"
-                value={noteText}
-                onChange={e => setNoteText(e.target.value)}
-                autoFocus
-              />
-            </div>
+            <div className="hd-modal-body">
+              <div className="hd-field">
+                <label className="hd-label">Treść</label>
+                <textarea
+                  className="hd-textarea"
+                  placeholder="Co chcesz zapamiętać?"
+                  value={noteText}
+                  onChange={e => setNoteText(e.target.value)}
+                  autoFocus
+                />
+              </div>
 
-            <div className="np-field">
-              <label className="np-label">Zdjęcia (opcjonalnie)</label>
-
-              {existingImages.length > 0 && (
-                <div className="np-preview-grid">
-                  {existingImages.map((url, i) => (
-                    <div key={i} className="np-preview-item">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt="" />
-                      <button className="np-preview-remove" onClick={() => removeExistingPhoto(url)}>✕</button>
-                    </div>
+              <div className="hd-field">
+                <label className="hd-label">Osoba (opcjonalnie)</label>
+                <select
+                  className="hd-select"
+                  value={selectedPerson}
+                  onChange={e => setSelectedPerson(e.target.value)}
+                >
+                  <option value="">Moja notatka</option>
+                  {people.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
-                </div>
-              )}
+                </select>
+              </div>
 
-              {photoPreviews.length > 0 && (
-                <div className="np-preview-grid">
-                  {photoPreviews.map((src, i) => (
-                    <div key={i} className="np-preview-item">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt="" />
-                      <button className="np-preview-remove" onClick={() => removePhoto(i)}>✕</button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="hd-field">
+                <label className="hd-label">Zdjęcia</label>
 
-              <button className="np-photo-upload-btn" onClick={() => fileInputRef.current?.click()}>
-                📷 Dodaj zdjęcie
-              </button>
-              <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display:"none" }} onChange={handlePhotoChange} />
+                {/* Existing images */}
+                {existingImages.length > 0 && (
+                  <div className="hd-previews" style={{ marginBottom: 8 }}>
+                    {existingImages.map((url, i) => (
+                      <div key={i} className="hd-preview-item">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="" />
+                        <button className="hd-preview-remove"
+                          onClick={() => setExistingImages(prev => prev.filter(u => u !== url))}>
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* New previews */}
+                {photoPreviews.length > 0 && (
+                  <div className="hd-previews" style={{ marginBottom: 8 }}>
+                    {photoPreviews.map((src, i) => (
+                      <div key={i} className="hd-preview-item">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="" />
+                        <button className="hd-preview-remove"
+                          onClick={() => {
+                            setPhotoFiles(prev => prev.filter((_, j) => j !== i));
+                            setPhotoPreviews(prev => prev.filter((_, j) => j !== i));
+                          }}>
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <button className="hd-photo-upload" onClick={() => fileInputRef.current?.click()}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                    <rect x="1" y="3" width="14" height="11" rx="2"/><circle cx="10.5" cy="8.5" r="1.5"/><path d="M1 10l3-3 2 2 3-3 3 3"/>
+                  </svg>
+                  Dodaj zdjęcie
+                </button>
+                <input
+                  ref={fileInputRef} type="file" accept="image/*" multiple
+                  style={{ display: "none" }} onChange={handlePhotoChange}
+                />
+              </div>
             </div>
 
-            <div className="np-field">
-              <label className="np-label">Dotyczy osoby (opcjonalnie)</label>
-              <select className="np-select" value={selectedPerson} onChange={e => setSelectedPerson(e.target.value)}>
-                <option value="">📓 Moja notatka (bez osoby)</option>
-                {people.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="np-modal-actions">
-              <button className="np-btn-cancel" onClick={closeModal}>Anuluj</button>
+            <div className="hd-modal-actions">
+              <button className="hd-btn-cancel" onClick={closeModal}>Anuluj</button>
               <button
-                className="np-btn-save"
+                className="hd-btn-save"
                 onClick={saveMemory}
-                disabled={!noteText.trim() || saving || uploadProgress}
+                disabled={!noteText.trim() || saving || uploading}
               >
-                {saving || uploadProgress ? "Zapisywanie..." : editingMemory ? "Zapisz zmiany →" : "Dodaj notatkę →"}
+                {saving || uploading
+                  ? "Zapisuję..."
+                  : editingMemory ? "Zapisz" : "Dodaj"}
               </button>
             </div>
           </div>

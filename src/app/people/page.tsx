@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 
 // ─────────────────────────────────────────────
-// TYPES
+// TYPES — match real Supabase schema
 // ─────────────────────────────────────────────
 
 type Person = {
@@ -13,22 +13,27 @@ type Person = {
   name: string;
   birthday: string | null;
   relation: string | null;
+  notes: string | null;       // short bio field on people table
   created_at: string;
 };
 
-type Note = {
+// Matches public.memories table
+type Memory = {
   id: string;
-  content: string;
-  created_at: string;
   person_id: string;
+  content_text: string | null;
+  ai_tags: string[] | null;
+  ai_summary: string | null;
+  created_at: string;
 };
 
 type PersonInsight = {
   personId: string;
-  noteCount: number;
-  lastNoteAt: string | null;
+  memoryCount: number;
+  lastMemoryAt: string | null;
   topKeywords: string[];
-  recentNote: string | null;
+  recentText: string | null;
+  aiTags: string[];
 };
 
 type InsightSheetData = {
@@ -57,13 +62,13 @@ const TABS = [
   { value: "partner", label: "Partner"     },
 ];
 
-// Stop-words to skip when extracting keywords from notes
+// Polish stop-words for keyword extraction
 const STOP_WORDS = new Set([
   "i","w","z","na","do","że","się","to","jest","nie","tak","ale","jak","co","po",
   "już","też","by","go","jej","jego","ich","nam","nas","pan","pani","ten","ta",
-  "te","tego","tej","ale","czy","dla","gdy","jak","lub","ma","mi","my","no",
-  "o","od","ok","on","ona","one","oni","po","pod","przy","są","się","też","u",
-  "we","za","ze","być","być","który","która","które",
+  "te","tego","tej","czy","dla","gdy","lub","ma","mi","my","no","o","od","on",
+  "ona","one","oni","po","pod","przy","są","u","we","za","ze","być","który",
+  "która","które","tego","które","przez","oraz","jako","sobie","tego","będzie",
 ]);
 
 // ─────────────────────────────────────────────
@@ -116,11 +121,24 @@ function getZodiacSign(birthday: string | null): string | null {
   return "Ryby ♓";
 }
 
-/** Extract top N keywords from an array of note contents (real data only) */
-function extractTopKeywords(notes: Note[], topN = 5): string[] {
+/** Extract top N keywords from memories (content_text + ai_tags) */
+function extractKeywords(memories: Memory[], topN = 5): string[] {
   const freq: Record<string, number> = {};
-  for (const note of notes) {
-    const words = note.content
+
+  // First: use ai_tags if available (already processed by AI)
+  for (const m of memories) {
+    if (m.ai_tags) {
+      for (const tag of m.ai_tags) {
+        const t = tag.toLowerCase().trim();
+        if (t.length > 2) freq[t] = (freq[t] ?? 0) + 2; // weight tags higher
+      }
+    }
+  }
+
+  // Second: extract from content_text
+  for (const m of memories) {
+    if (!m.content_text) continue;
+    const words = m.content_text
       .toLowerCase()
       .replace(/[^a-ząćęłńóśźżа-я\s]/gi, " ")
       .split(/\s+/)
@@ -129,6 +147,7 @@ function extractTopKeywords(notes: Note[], topN = 5): string[] {
       freq[w] = (freq[w] ?? 0) + 1;
     }
   }
+
   return Object.entries(freq)
     .sort((a, b) => b[1] - a[1])
     .slice(0, topN)
@@ -156,30 +175,41 @@ function AiInsightSheet({
   onClose: () => void;
 }) {
   const { person, insight } = data;
-  const days = getDaysUntilBirthday(person.birthday);
+  const days   = getDaysUntilBirthday(person.birthday);
   const zodiac = getZodiacSign(person.birthday);
-  const rel = getRelation(person.relation);
+  const rel    = getRelation(person.relation);
+
+  const hasContent =
+    days !== null ||
+    insight.topKeywords.length > 0 ||
+    insight.recentText ||
+    insight.memoryCount > 0;
 
   return (
-    <div className="hd-sheet-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <div
+      className="hd-sheet-overlay"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="hd-sheet">
         <div className="hd-sheet-handle" />
 
-        {/* Header */}
+        {/* Person header */}
         <div className="hd-sheet-hdr">
           <div className="hd-sheet-avatar" style={{ background: rel.bg, color: rel.text }}>
             {getInitials(person.name)}
           </div>
           <div className="hd-sheet-person">
             <div className="hd-sheet-name">{person.name}</div>
-            <div className="hd-sheet-rel">{rel.label}{zodiac ? ` · ${zodiac}` : ""}</div>
+            <div className="hd-sheet-rel">
+              {rel.label}{zodiac ? ` · ${zodiac}` : ""}
+            </div>
           </div>
           <button className="hd-sheet-close" onClick={onClose} aria-label="Zamknij">✕</button>
         </div>
 
         <div className="hd-sheet-divider" />
 
-        {/* Warm AI observations */}
+        {/* AI observations — warm bubbles */}
         <div className="hd-sheet-ai-section">
           <div className="hd-sheet-ai-label">
             <span className="hd-ai-glyph">✦</span> AI zauważyło
@@ -197,45 +227,49 @@ function AiInsightSheet({
             </div>
           )}
 
-          {/* Keywords from real notes */}
+          {/* Top keywords from real memories + ai_tags */}
           {insight.topKeywords.length > 0 && (
             <div className="hd-sheet-bubble">
               Najczęściej pojawiają się:{" "}
-              {insight.topKeywords.join(" · ")}
+              <strong>{insight.topKeywords.join(" · ")}</strong>
             </div>
           )}
 
-          {/* Most recent note snippet */}
-          {insight.recentNote && (
+          {/* Most recent memory snippet */}
+          {insight.recentText && (
             <div className="hd-sheet-bubble">
-              Ostatnio wspomniała: &ldquo;{insight.recentNote.slice(0, 80)}{insight.recentNote.length > 80 ? "…" : ""}&rdquo;
+              Ostatnio: &ldquo;{insight.recentText.slice(0, 100)}
+              {insight.recentText.length > 100 ? "…" : ""}&rdquo;
             </div>
           )}
 
-          {/* Note activity */}
-          {insight.noteCount > 0 && (
+          {/* Activity summary */}
+          {insight.memoryCount > 0 && (
             <div className="hd-sheet-bubble hd-sheet-bubble-soft">
-              {insight.noteCount === 1 ? "1 notatka" : `${insight.noteCount} notatek`}
-              {insight.lastNoteAt ? ` · ostatnia ${formatRelativeDate(insight.lastNoteAt)}` : ""}
+              {insight.memoryCount === 1 ? "1 wspomnienie" : `${insight.memoryCount} wspomnień`}
+              {insight.lastMemoryAt
+                ? ` · ostatnie ${formatRelativeDate(insight.lastMemoryAt)}`
+                : ""}
+            </div>
+          )}
+
+          {/* Notes field from people table */}
+          {person.notes && (
+            <div className="hd-sheet-bubble hd-sheet-bubble-soft">
+              {person.notes}
             </div>
           )}
 
           {/* Empty state */}
-          {insight.noteCount === 0 && days === null && (
+          {!hasContent && (
             <div className="hd-sheet-bubble hd-sheet-bubble-soft">
-              Dodaj pierwsze notatki, żeby AI mogło lepiej zapamiętać tę osobę.
+              Dodaj pierwsze wspomnienia, żeby AI mogło lepiej zapamiętać tę osobę.
             </div>
           )}
         </div>
 
-        {/* Footer CTA */}
         <div className="hd-sheet-footer">
-          <button
-            className="hd-sheet-cta"
-            onClick={onClose}
-          >
-            Zamknij
-          </button>
+          <button className="hd-sheet-cta" onClick={onClose}>Zamknij</button>
         </div>
       </div>
     </div>
@@ -249,20 +283,13 @@ function AiInsightSheet({
 export default function PeoplePage() {
   const router = useRouter();
 
-  // Core state
   const [people,        setPeople]        = useState<Person[]>([]);
   const [loading,       setLoading]       = useState(true);
   const [search,        setSearch]        = useState("");
   const [filterRel,     setFilterRel]     = useState("all");
-
-  // Insights state — keyed by person_id
-  const [insights, setInsights] = useState<Record<string, PersonInsight>>({});
-
-  // Insight sheet
-  const [insightSheet, setInsightSheet] = useState<InsightSheetData | null>(null);
-  const [loadingInsight, setLoadingInsight] = useState<string | null>(null);
-
-  // Add/edit modal
+  const [insights,      setInsights]      = useState<Record<string, PersonInsight>>({});
+  const [insightSheet,  setInsightSheet]  = useState<InsightSheetData | null>(null);
+  const [loadingInsight,setLoadingInsight]= useState<string | null>(null);
   const [showModal,     setShowModal]     = useState(false);
   const [modalMode,     setModalMode]     = useState<ModalMode>("add");
   const [editingId,     setEditingId]     = useState<string | null>(null);
@@ -278,46 +305,49 @@ export default function PeoplePage() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/auth/login"); return; }
+
     const { data, error } = await supabase
       .from("people")
       .select("*")
       .eq("user_id", user.id)
       .order("name", { ascending: true });
+
     if (!error && data) {
       setPeople(data);
       loadInsightsMeta(data);
     }
     setLoading(false);
   }, [router]); 
-
-  // ── Load lightweight insight metadata for all people at once ──
+  // ── Load lightweight insight metadata for ALL people in one query ──
   async function loadInsightsMeta(personList: Person[]) {
     if (personList.length === 0) return;
     const ids = personList.map(p => p.id);
 
-    const { data: notes } = await supabase
-      .from("notes")
-      .select("id, person_id, content, created_at")
+    const { data: memories } = await supabase
+      .from("memories")
+      .select("id, person_id, content_text, ai_tags, ai_summary, created_at")
       .in("person_id", ids)
       .order("created_at", { ascending: false });
 
-    if (!notes) return;
+    if (!memories) return;
 
-    const grouped: Record<string, Note[]> = {};
-    for (const n of notes) {
-      if (!grouped[n.person_id]) grouped[n.person_id] = [];
-      grouped[n.person_id].push(n);
+    // Group by person_id
+    const grouped: Record<string, Memory[]> = {};
+    for (const m of memories) {
+      if (!grouped[m.person_id]) grouped[m.person_id] = [];
+      grouped[m.person_id].push(m);
     }
 
     const result: Record<string, PersonInsight> = {};
     for (const person of personList) {
-      const pNotes = grouped[person.id] ?? [];
+      const pMems = grouped[person.id] ?? [];
       result[person.id] = {
-        personId:    person.id,
-        noteCount:   pNotes.length,
-        lastNoteAt:  pNotes[0]?.created_at ?? null,
-        topKeywords: extractTopKeywords(pNotes, 4),
-        recentNote:  pNotes[0]?.content ?? null,
+        personId:     person.id,
+        memoryCount:  pMems.length,
+        lastMemoryAt: pMems[0]?.created_at ?? null,
+        topKeywords:  extractKeywords(pMems, 4),
+        recentText:   pMems[0]?.ai_summary ?? pMems[0]?.content_text ?? null,
+        aiTags:       pMems.flatMap(m => m.ai_tags ?? []).slice(0, 8),
       };
     }
     setInsights(result);
@@ -325,24 +355,24 @@ export default function PeoplePage() {
 
   useEffect(() => { loadPeople(); }, [loadPeople]);
 
-  // ── Open AI insight sheet (loads full notes if not cached) ──
+  // ── Open Insight sheet — fetch full memories for this person ──
   async function openInsight(person: Person) {
     setLoadingInsight(person.id);
 
-    // Always fetch full notes for this person when opening sheet
-    const { data: notes } = await supabase
-      .from("notes")
-      .select("id, person_id, content, created_at")
+    const { data: memories } = await supabase
+      .from("memories")
+      .select("id, person_id, content_text, ai_tags, ai_summary, created_at")
       .eq("person_id", person.id)
       .order("created_at", { ascending: false });
 
-    const pNotes: Note[] = notes ?? [];
+    const pMems: Memory[] = memories ?? [];
     const fullInsight: PersonInsight = {
-      personId:    person.id,
-      noteCount:   pNotes.length,
-      lastNoteAt:  pNotes[0]?.created_at ?? null,
-      topKeywords: extractTopKeywords(pNotes, 6),
-      recentNote:  pNotes[0]?.content ?? null,
+      personId:     person.id,
+      memoryCount:  pMems.length,
+      lastMemoryAt: pMems[0]?.created_at ?? null,
+      topKeywords:  extractKeywords(pMems, 6),
+      recentText:   pMems[0]?.ai_summary ?? pMems[0]?.content_text ?? null,
+      aiTags:       pMems.flatMap(m => m.ai_tags ?? []).slice(0, 10),
     };
 
     setInsights(prev => ({ ...prev, [person.id]: fullInsight }));
@@ -372,12 +402,16 @@ export default function PeoplePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setSaving(false); return; }
       await supabase.from("people").insert({
-        user_id: user.id, name: formName.trim(),
-        birthday: formBirthday || null, relation: formRelation,
+        user_id:  user.id,
+        name:     formName.trim(),
+        birthday: formBirthday || null,
+        relation: formRelation,
       });
     } else {
       await supabase.from("people").update({
-        name: formName.trim(), birthday: formBirthday || null, relation: formRelation,
+        name:     formName.trim(),
+        birthday: formBirthday || null,
+        relation: formRelation,
       }).eq("id", editingId!);
     }
     setSaving(false); closeModal(); loadPeople();
@@ -389,7 +423,7 @@ export default function PeoplePage() {
     setDeleting(null); setDeleteConfirm(null); closeModal(); loadPeople();
   }
 
-  // ── Derived data ──
+  // ── Derived ──
   const filtered = people
     .filter(p => filterRel === "all" || p.relation === filterRel)
     .filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
@@ -406,11 +440,10 @@ export default function PeoplePage() {
     <>
       <style>{`
         /* ══════════════════════════════════════
-           HAPPYDATE — DESIGN TOKENS
-           Used across People, Notes, Person Detail
+           HAPPYDATE DESIGN SYSTEM
+           Reusable across all pages
         ══════════════════════════════════════ */
 
-        /* Root */
         .hd-page {
           font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
           min-height: 100svh;
@@ -424,28 +457,18 @@ export default function PeoplePage() {
         /* ── Header ── */
         .hd-header {
           padding: 16px 20px 8px;
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
-          gap: 12px;
+          display: flex; align-items: flex-end;
+          justify-content: space-between; gap: 12px;
         }
         .hd-header-left h1 {
-          font-size: 32px;
-          font-weight: 700;
-          color: #000;
-          letter-spacing: -.7px;
-          line-height: 1;
-          margin: 0 0 3px;
+          font-size: 32px; font-weight: 700; color: #000;
+          letter-spacing: -.7px; line-height: 1; margin: 0 0 3px;
         }
         .hd-header-left p {
-          font-size: 13px;
-          color: #aeaeb2;
-          font-weight: 400;
-          margin: 0;
+          font-size: 13px; color: #aeaeb2; font-weight: 400; margin: 0;
         }
         .hd-add-btn {
-          width: 36px; height: 36px;
-          border-radius: 50%;
+          width: 36px; height: 36px; border-radius: 50%;
           background: #007aff;
           display: flex; align-items: center; justify-content: center;
           border: none; cursor: pointer;
@@ -468,8 +491,7 @@ export default function PeoplePage() {
         .hd-search input {
           flex: 1; border: none; background: transparent;
           padding: 10px 0; font-size: 15px;
-          font-family: -apple-system, sans-serif;
-          color: #000; outline: none;
+          font-family: -apple-system, sans-serif; color: #000; outline: none;
         }
         .hd-search input::placeholder { color: #8e8e93; }
         .hd-search-clear {
@@ -480,61 +502,52 @@ export default function PeoplePage() {
           font-family: -apple-system, sans-serif;
         }
 
-        /* ── Filter tabs ── */
+        /* ── Tabs ── */
         .hd-tabs {
-          display: flex; gap: 7px;
-          padding: 2px 16px 14px;
+          display: flex; gap: 7px; padding: 2px 16px 14px;
           overflow-x: auto; scrollbar-width: none;
         }
         .hd-tabs::-webkit-scrollbar { display: none; }
         .hd-tab {
-          flex-shrink: 0;
-          background: rgba(118,118,128,.12);
-          border-radius: 20px;
-          padding: 6px 15px;
-          font-size: 13px; font-weight: 500;
-          color: #3c3c43; border: none; cursor: pointer;
+          flex-shrink: 0; background: rgba(118,118,128,.12);
+          border-radius: 20px; padding: 6px 15px;
+          font-size: 13px; font-weight: 500; color: #3c3c43;
+          border: none; cursor: pointer;
           font-family: -apple-system, sans-serif;
           transition: background .12s, color .12s, box-shadow .12s;
-          letter-spacing: -.1px;
-          min-height: 32px;
+          letter-spacing: -.1px; min-height: 32px;
         }
         .hd-tab.on {
           background: #007aff; color: #fff;
           box-shadow: 0 2px 8px rgba(0,122,255,.28);
         }
 
-        /* ── AI chip (top) ── */
+        /* ── Top AI chip ── */
         .hd-ai-chip {
           margin: 0 16px 12px;
           background: rgba(0,122,255,.07);
-          border-radius: 12px;
-          padding: 9px 13px;
+          border-radius: 12px; padding: 9px 13px;
           display: flex; align-items: center; gap: 8px;
         }
         .hd-ai-glyph { font-size: 11px; color: #007aff; flex-shrink: 0; }
         .hd-ai-text { font-size: 13px; color: #3c3c43; line-height: 1.4; }
         .hd-ai-text strong { color: #000; font-weight: 600; }
 
-        /* ── People list ── */
-        .hd-list {
-          padding: 0 16px;
-          display: flex; flex-direction: column;
-        }
+        /* ── People list — clean, no interruptions ── */
+        .hd-list { padding: 0 16px; display: flex; flex-direction: column; }
 
-        /* ── Grouped card borders (Apple Reminders style) ── */
-        .hd-item:first-child .hd-card            { border-radius: 14px 14px 0 0; }
-        .hd-item:last-child .hd-card             { border-radius: 0 0 14px 14px; border-top: .5px solid rgba(60,60,67,.1); }
-        .hd-item:only-child .hd-card             { border-radius: 14px; border-top: none !important; }
-        .hd-item + .hd-item .hd-card             { border-top: .5px solid rgba(60,60,67,.1); border-radius: 0; }
+        /* Grouped card borders (Apple Reminders style) */
+        .hd-item:first-child .hd-card  { border-radius: 14px 14px 0 0; }
+        .hd-item:last-child  .hd-card  { border-radius: 0 0 14px 14px; border-top: .5px solid rgba(60,60,67,.1); }
+        .hd-item:only-child  .hd-card  { border-radius: 14px; border-top: none !important; }
+        .hd-item + .hd-item  .hd-card  { border-top: .5px solid rgba(60,60,67,.1); border-radius: 0; }
 
         /* ── Card ── */
         .hd-card {
           background: #fff;
           padding: 11px 12px 11px 16px;
           display: flex; align-items: center; gap: 13px;
-          cursor: pointer; position: relative;
-          transition: background .08s;
+          cursor: pointer; transition: background .08s;
           -webkit-tap-highlight-color: transparent;
           min-height: 64px;
         }
@@ -544,8 +557,7 @@ export default function PeoplePage() {
         .hd-avatar {
           width: 42px; height: 42px; border-radius: 13px;
           display: flex; align-items: center; justify-content: center;
-          font-size: 14px; font-weight: 600; flex-shrink: 0;
-          letter-spacing: .4px;
+          font-size: 14px; font-weight: 600; flex-shrink: 0; letter-spacing: .4px;
         }
 
         /* ── Card body ── */
@@ -563,30 +575,28 @@ export default function PeoplePage() {
         .hd-card-meta .bsoon { color: #ff9500; font-weight: 500; }
         .hd-card-meta .sep   { margin: 0 3px; opacity: .38; font-size: 11px; }
 
-        /* ── Card actions — only Insight + Edit ── */
+        /* ── Card actions ── */
         .hd-card-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
         .hd-icon-btn {
           width: 32px; height: 32px; border-radius: 9px;
           background: rgba(118,118,128,.1); border: none;
           display: flex; align-items: center; justify-content: center;
-          cursor: pointer; transition: background .1s; flex-shrink: 0;
-          min-width: 32px;
+          cursor: pointer; transition: background .1s; flex-shrink: 0; min-width: 32px;
         }
         .hd-icon-btn:active { background: rgba(118,118,128,.22); }
         .hd-icon-btn svg { width: 14px; height: 14px; color: #8e8e93; }
 
-        /* ✦ Insight button — slightly highlighted */
         .hd-insight-btn {
           width: 32px; height: 32px; border-radius: 9px;
           background: rgba(0,122,255,.09); border: none;
           display: flex; align-items: center; justify-content: center;
-          cursor: pointer; transition: background .1s; flex-shrink: 0;
+          cursor: pointer; transition: background .1s;
+          flex-shrink: 0; min-width: 32px;
           font-size: 12px; color: #007aff;
-          min-width: 32px;
         }
         .hd-insight-btn:active { background: rgba(0,122,255,.18); }
-        .hd-insight-btn-loading { opacity: .5; pointer-events: none; }
+        .hd-insight-btn-loading { opacity: .45; pointer-events: none; }
 
         /* ── Loading / Empty ── */
         .hd-loading { text-align: center; padding: 48px 28px; color: #aeaeb2; font-size: 14px; }
@@ -596,7 +606,7 @@ export default function PeoplePage() {
         .hd-empty-sub { font-size: 15px; color: #8e8e93; line-height: 1.5; }
 
         /* ══════════════════════════════════════
-           AI INSIGHT SHEET
+           AI INSIGHT SHEET — position: fixed
         ══════════════════════════════════════ */
 
         .hd-sheet-overlay {
@@ -608,7 +618,7 @@ export default function PeoplePage() {
           -webkit-backdrop-filter: blur(14px);
           animation: hdFadeIn .18s ease;
         }
-        @keyframes hdFadeIn  { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes hdFadeIn  { from { opacity: 0; }               to { opacity: 1; }              }
         @keyframes hdSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
         .hd-sheet {
@@ -617,15 +627,12 @@ export default function PeoplePage() {
           width: 100%; max-width: 480px;
           padding-bottom: calc(24px + env(safe-area-inset-bottom));
           animation: hdSlideUp .3s cubic-bezier(.32,.72,0,1);
-          max-height: 88svh;
-          overflow-y: auto;
+          max-height: 88svh; overflow-y: auto;
         }
         .hd-sheet-handle {
           width: 36px; height: 5px; border-radius: 3px;
-          background: rgba(60,60,67,.22);
-          margin: 10px auto 0;
+          background: rgba(60,60,67,.22); margin: 10px auto 0;
         }
-
         .hd-sheet-hdr {
           padding: 16px 16px 12px;
           display: flex; align-items: center; gap: 12px;
@@ -645,38 +652,29 @@ export default function PeoplePage() {
           color: #636366; font-size: 12px; flex-shrink: 0;
           font-family: -apple-system, sans-serif;
         }
-
         .hd-sheet-divider { height: .5px; background: rgba(60,60,67,.14); margin: 0 16px; }
 
-        /* Warm AI content area */
-        .hd-sheet-ai-section { padding: 16px 16px 4px; }
+        /* Warm AI content */
+        .hd-sheet-ai-section { padding: 16px 16px 8px; }
         .hd-sheet-ai-label {
           font-size: 12px; font-weight: 600; color: #8e8e93;
           text-transform: uppercase; letter-spacing: .07em;
           margin-bottom: 12px;
           display: flex; align-items: center; gap: 5px;
         }
-
-        /* Each warm observation bubble */
         .hd-sheet-bubble {
-          background: #fff;
-          border-radius: 14px;
-          padding: 12px 14px;
-          font-size: 15px;
-          color: #1c1c1e;
-          line-height: 1.5;
-          margin-bottom: 8px;
-          font-weight: 400;
-          letter-spacing: -.1px;
+          background: #fff; border-radius: 14px;
+          padding: 12px 14px; font-size: 15px;
+          color: #1c1c1e; line-height: 1.5;
+          margin-bottom: 8px; font-weight: 400; letter-spacing: -.1px;
         }
-        .hd-sheet-bubble-soft {
-          color: #8e8e93;
-          font-size: 13px;
-        }
+        .hd-sheet-bubble strong { color: #000; font-weight: 600; }
+        .hd-sheet-bubble-soft { color: #8e8e93; font-size: 13px; }
 
-        .hd-sheet-footer { padding: 12px 16px 0; }
+        .hd-sheet-footer { padding: 10px 16px 0; }
         .hd-sheet-cta {
-          width: 100%; border: none; background: rgba(118,118,128,.12);
+          width: 100%; border: none;
+          background: rgba(118,118,128,.12);
           border-radius: 14px; padding: 14px;
           font-size: 16px; font-weight: 500; color: #3c3c43;
           cursor: pointer; font-family: -apple-system, sans-serif;
@@ -712,9 +710,7 @@ export default function PeoplePage() {
           padding: 14px 16px 12px;
           display: flex; align-items: center; justify-content: space-between;
         }
-        .hd-modal-title {
-          font-size: 17px; font-weight: 600; color: #000; letter-spacing: -.2px;
-        }
+        .hd-modal-title { font-size: 17px; font-weight: 600; color: #000; letter-spacing: -.2px; }
         .hd-modal-close {
           width: 28px; height: 28px; border-radius: 50%;
           background: rgba(118,118,128,.18); border: none; cursor: pointer;
@@ -780,14 +776,8 @@ export default function PeoplePage() {
         }
         .hd-btn-del:active { background: #fff0ef; }
 
-        .hd-del-confirm {
-          margin: 10px 16px 0; padding: 14px;
-          background: #fff; border-radius: 14px;
-        }
-        .hd-del-text {
-          font-size: 14px; color: #ff3b30; margin-bottom: 12px;
-          line-height: 1.5; font-weight: 400;
-        }
+        .hd-del-confirm { margin: 10px 16px 0; padding: 14px; background: #fff; border-radius: 14px; }
+        .hd-del-text { font-size: 14px; color: #ff3b30; margin-bottom: 12px; line-height: 1.5; }
         .hd-del-btns { display: flex; gap: 8px; }
         .hd-del-no {
           flex: 1; border: none; background: rgba(118,118,128,.12);
@@ -798,8 +788,7 @@ export default function PeoplePage() {
         .hd-del-yes {
           flex: 1; border: none; background: #ff3b30; border-radius: 12px;
           padding: 12px; font-size: 15px; font-weight: 600; color: #fff;
-          cursor: pointer; font-family: -apple-system, sans-serif;
-          transition: opacity .1s;
+          cursor: pointer; font-family: -apple-system, sans-serif; transition: opacity .1s;
         }
         .hd-del-yes:disabled { opacity: .5; }
       `}</style>
@@ -852,7 +841,7 @@ export default function PeoplePage() {
           ))}
         </div>
 
-        {/* ── TOP AI CHIP ── */}
+        {/* ── TOP AI CHIP — only if upcoming birthday ── */}
         {firstUpcoming && !search && (
           <div className="hd-ai-chip">
             <span className="hd-ai-glyph">✦</span>
@@ -866,7 +855,7 @@ export default function PeoplePage() {
           </div>
         )}
 
-        {/* ── PEOPLE LIST ── */}
+        {/* ── PEOPLE LIST — clean, no AI chips inside ── */}
         <div className="hd-list">
           {loading && (
             <div className="hd-loading">Ładowanie...</div>
@@ -881,19 +870,19 @@ export default function PeoplePage() {
               <div className="hd-empty-sub">
                 {search
                   ? `Nic nie pasuje do „${search}"`
-                  : "Zapisuj notatki, daty i wspomnienia o bliskich."}
+                  : "Zapisuj wspomnienia i ważne chwile o bliskich."}
               </div>
             </div>
           )}
 
-          {filtered.map((person) => {
-            const rel        = getRelation(person.relation);
-            const days       = getDaysUntilBirthday(person.birthday);
-            const ins        = insights[person.id];
-            const noteCount  = ins?.noteCount ?? 0;
-            const lastNote   = formatRelativeDate(ins?.lastNoteAt);
+          {filtered.map(person => {
+            const rel         = getRelation(person.relation);
+            const days        = getDaysUntilBirthday(person.birthday);
+            const ins         = insights[person.id];
+            const memCount    = ins?.memoryCount ?? 0;
+            const lastMem     = formatRelativeDate(ins?.lastMemoryAt);
 
-            // Metadata line
+            // Metadata line — relation · birthday or memories
             const metaParts: React.ReactNode[] = [
               <span key="rel">{rel.label}</span>,
             ];
@@ -906,14 +895,16 @@ export default function PeoplePage() {
               } else {
                 metaParts.push(<span key="bd">ur. za {days} dni</span>);
               }
-            } else if (noteCount > 0) {
+            } else if (memCount > 0) {
               metaParts.push(<span key="s2" className="sep">·</span>);
               metaParts.push(
-                <span key="nc">{noteCount} {noteCount === 1 ? "notatka" : noteCount < 5 ? "notatki" : "notatek"}</span>
+                <span key="mc">
+                  {memCount} {memCount === 1 ? "wspomnienie" : memCount < 5 ? "wspomnienia" : "wspomnień"}
+                </span>
               );
-              if (lastNote) {
+              if (lastMem) {
                 metaParts.push(<span key="s3" className="sep">·</span>);
-                metaParts.push(<span key="ln">{lastNote}</span>);
+                metaParts.push(<span key="lm">{lastMem}</span>);
               }
             }
 
@@ -931,7 +922,7 @@ export default function PeoplePage() {
                   </div>
 
                   <div className="hd-card-actions">
-                    {/* ✦ Insight — AI analysis sheet */}
+                    {/* ✦ AI Insight */}
                     <button
                       className={`hd-insight-btn${loadingInsight === person.id ? " hd-insight-btn-loading" : ""}`}
                       onClick={e => { e.stopPropagation(); openInsight(person); }}
@@ -939,7 +930,6 @@ export default function PeoplePage() {
                     >
                       ✦
                     </button>
-
                     {/* Edit */}
                     <button
                       className="hd-icon-btn"
@@ -958,7 +948,7 @@ export default function PeoplePage() {
         </div>
       </div>
 
-      {/* ── AI INSIGHT SHEET ── */}
+      {/* ── AI INSIGHT SHEET (fixed overlay) ── */}
       {insightSheet && (
         <AiInsightSheet
           data={insightSheet}

@@ -3,7 +3,7 @@
 // src/components/assistant/SuggestionCard.tsx
 // Легка підказка під асистентом — мінімальна, не нав'язлива
 
-import { AssistantState, AssistantEvent, AssistantProfile } from "./types";
+import { AssistantState, AssistantEvent, AssistantProfile } from "./ types";
 
 interface Props {
   state: AssistantState;

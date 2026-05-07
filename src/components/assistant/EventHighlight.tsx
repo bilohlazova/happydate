@@ -3,7 +3,7 @@
 // src/components/assistant/EventHighlight.tsx
 // Показує найближчу подію всередині картки асистента
 
-import { AssistantEvent, daysUntil } from "./types";
+import { AssistantEvent, daysUntil } from "./ types";
 
 interface Props {
   event: AssistantEvent;

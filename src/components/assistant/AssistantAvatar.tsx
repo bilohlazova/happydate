@@ -4,7 +4,7 @@
 // Центральний візуальний елемент асистента
 // Змінює колір і анімацію залежно від стану
 
-import { AssistantState } from "./types";
+import { AssistantState } from "./ types";
 
 interface Props {
   state: AssistantState;

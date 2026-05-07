@@ -1,6 +1,7 @@
 "use client";
 
 // src/components/assistant/AssistantCard.tsx
+// Єдиний файл — всі типи, хелпери і підкомпоненти всередині
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -39,8 +40,7 @@ export function resolveState(
 ): AssistantState {
   if (!isLoggedIn) return "guest";
   if (!nextEvent) return "calm";
-  const d = daysUntil(nextEvent.date);
-  return d <= 1 ? "urgent" : "active";
+  return daysUntil(nextEvent.date) <= 1 ? "urgent" : "active";
 }
 
 function getGreeting(): string {
@@ -58,22 +58,22 @@ function getDayLabel(dateStr: string): string {
   return `za ${d} dni`;
 }
 
-// ─── SPEECH TEXT ────────────────────────────────────────────
-function buildSpeechText(
+// ─── SPEECH ─────────────────────────────────────────────────
+function buildSpeech(
   state: AssistantState,
   firstName?: string,
   nextEvent?: AssistantEvent | null
 ): string {
   const greet = getGreeting();
-  const name  = firstName ? `, ${firstName}` : "";
+  const n = firstName ? `, ${firstName}` : "";
   switch (state) {
     case "guest":
       return `${greet}! Cieszę się, że jesteś. Pomogę Ci pamiętać o ważnych osobach i chwilach.`;
     case "calm":
-      return `${greet}${name}! Dziś spokojny dzień. Wszystko masz pod kontrolą.`;
+      return `${greet}${n}! Dziś spokojny dzień. Wszystko masz pod kontrolą.`;
     case "active":
-      if (!nextEvent) return `${greet}${name}! Masz nadchodzące wydarzenie.`;
-      return `${greet}${name}! Pamiętam — ${nextEvent.title} ${getDayLabel(nextEvent.date)}. Chcesz, żebym pomógł?`;
+      if (!nextEvent) return `${greet}${n}! Masz nadchodzące wydarzenie.`;
+      return `${greet}${n}! Pamiętam — ${nextEvent.title} ${getDayLabel(nextEvent.date)}. Chcesz, żebym pomógł?`;
     case "urgent":
       return `${firstName ?? "Hej"}, ważne! ${nextEvent?.title ?? "Ważne wydarzenie"} — ${getDayLabel(nextEvent?.date ?? "")}. Mogę pomóc natychmiast.`;
   }
@@ -81,54 +81,39 @@ function buildSpeechText(
 
 // ─── AVATAR ─────────────────────────────────────────────────
 const STATE_COLOR: Record<AssistantState, string> = {
-  calm:   "#3a9bd5",
-  active: "#3a9bd5",
-  urgent: "#e24b4a",
-  guest:  "#8b8fa8",
+  calm: "#3a9bd5", active: "#3a9bd5",
+  urgent: "#e24b4a", guest: "#8b8fa8",
 };
-
 const BAR_H = [3, 8, 5, 11, 4, 9, 3];
 
-function Avatar({
-  state, speaking, onClick,
-}: {
-  state: AssistantState;
-  speaking: boolean;
-  onClick: () => void;
+function Avatar({ state, speaking, onClick }: {
+  state: AssistantState; speaking: boolean; onClick: () => void;
 }) {
-  const color = STATE_COLOR[state];
+  const c = STATE_COLOR[state];
   return (
     <div style={{ position: "relative", width: 64, height: 64, flexShrink: 0 }}>
       <div style={{
         position: "absolute", inset: -8, borderRadius: "50%",
-        border: `1px solid ${color}33`,
-        animation: "hdRing 3s ease-in-out infinite",
-        pointerEvents: "none",
+        border: `1px solid ${c}33`,
+        animation: "hdRing 3s ease-in-out infinite", pointerEvents: "none",
       }} />
       {speaking && (
         <div style={{
           position: "absolute", inset: -4, borderRadius: "50%",
-          border: `1.5px solid ${color}55`,
-          animation: "hdRingFast 1s ease-in-out infinite",
-          pointerEvents: "none",
+          border: `1.5px solid ${c}55`,
+          animation: "hdRingFast 1s ease-in-out infinite", pointerEvents: "none",
         }} />
       )}
-      <button
-        onClick={onClick}
-        aria-label="Porozmawiaj ze mną"
-        style={{
-          width: 64, height: 64, borderRadius: "50%",
-          background: `linear-gradient(145deg,${color}cc,${color})`,
-          border: "none", cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          position: "relative", overflow: "hidden",
-          boxShadow: speaking
-            ? `0 0 0 3px ${color}22, 0 4px 20px ${color}44`
-            : `0 3px 14px ${color}33`,
-          transition: "box-shadow 0.3s",
-          animation: "hdBreathe 4s ease-in-out infinite",
-        }}
-      >
+      <button onClick={onClick} aria-label="Porozmawiaj ze mną" style={{
+        width: 64, height: 64, borderRadius: "50%",
+        background: `linear-gradient(145deg,${c}cc,${c})`,
+        border: "none", cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        position: "relative", overflow: "hidden",
+        boxShadow: speaking ? `0 0 0 3px ${c}22,0 4px 20px ${c}44` : `0 3px 14px ${c}33`,
+        transition: "box-shadow 0.3s",
+        animation: "hdBreathe 4s ease-in-out infinite",
+      }}>
         <div style={{
           position: "absolute", top: "-15%", left: "-8%",
           width: "52%", height: "46%", borderRadius: "50%",
@@ -152,41 +137,27 @@ function Avatar({
 }
 
 // ─── MESSAGE ────────────────────────────────────────────────
-function Message({
-  state, firstName, nextEvent,
-}: {
-  state: AssistantState;
-  firstName?: string;
-  nextEvent?: AssistantEvent | null;
+function Message({ state, firstName, nextEvent }: {
+  state: AssistantState; firstName?: string; nextEvent?: AssistantEvent | null;
 }) {
   const greet = getGreeting();
-  const name  = firstName ? `, ${firstName}` : "";
+  const n = firstName ? `, ${firstName}` : "";
 
-  const lines: string[] = (() => {
+  const lines = ((): string[] => {
     switch (state) {
-      case "guest":
-        return [`${greet} 💛`, "Cieszę się, że jesteś.", "Pomogę Ci pamiętać o ważnych osobach i chwilach."];
-      case "calm":
-        return [`${greet}${name} 💛`, "Dziś spokojny dzień.", "Wszystko masz pod kontrolą."];
-      case "active":
-        return [
-          `${greet}${name} 💛`,
-          nextEvent ? `🎂 ${nextEvent.title} — ${getDayLabel(nextEvent.date)}` : "Masz nadchodzące wydarzenie.",
-        ];
-      case "urgent":
-        return [
-          `⚠️ ${firstName ? firstName + ", j" : "J"}utro ważny dzień!`,
-          nextEvent ? `🎂 ${nextEvent.title}` : "",
-        ];
+      case "guest":  return [`${greet} 💛`, "Cieszę się, że jesteś.", "Pomogę Ci pamiętać o ważnych osobach i chwilach."];
+      case "calm":   return [`${greet}${n} 💛`, "Dziś spokojny dzień.", "Wszystko masz pod kontrolą."];
+      case "active": return [`${greet}${n} 💛`, nextEvent ? `🎂 ${nextEvent.title} — ${getDayLabel(nextEvent.date)}` : "Masz nadchodzące wydarzenie."];
+      case "urgent": return [`⚠️ ${firstName ? firstName + ", j" : "J"}utro ważny dzień!`, nextEvent ? `🎂 ${nextEvent.title}` : ""];
     }
   })();
 
-  const cta: string = (() => {
+  const cta = ((): string => {
     switch (state) {
-      case "guest":   return "Zacznij od dodania pierwszej ważnej osoby.";
-      case "calm":    return "Chcesz coś zaplanować lub dodać?";
-      case "active":  return "Chcesz, żebym pomógł z przygotowaniami?";
-      case "urgent":  return "Nie zostawiaj tego na ostatnią chwilę 😉";
+      case "guest":  return "Zacznij od dodania pierwszej ważnej osoby.";
+      case "calm":   return "Chcesz coś zaplanować lub dodać?";
+      case "active": return "Chcesz, żebym pomógł z przygotowaniami?";
+      case "urgent": return "Nie zostawiaj tego na ostatnią chwilę 😉";
     }
   })();
 
@@ -208,8 +179,7 @@ function Message({
       </div>
       {lines.filter(Boolean).map((line, i) => (
         <p key={i} style={{
-          fontSize: i === 0 ? 16 : 13,
-          fontWeight: i === 0 ? 500 : 400,
+          fontSize: i === 0 ? 16 : 13, fontWeight: i === 0 ? 500 : 400,
           color: i === 0 ? "var(--color-text-primary)" : "var(--color-text-secondary)",
           lineHeight: 1.4, margin: "0 0 2px",
         }}>{line}</p>
@@ -227,7 +197,6 @@ function Message({
 function EventHighlight({ event, urgent }: { event: AssistantEvent; urgent: boolean }) {
   const days = daysUntil(event.date);
   const chip = days === 0 ? "Dziś!" : days === 1 ? "Jutro" : `Za ${days} dni`;
-
   if (urgent) {
     return (
       <div style={{
@@ -249,7 +218,6 @@ function EventHighlight({ event, urgent }: { event: AssistantEvent; urgent: bool
       </div>
     );
   }
-
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 10,
@@ -310,36 +278,34 @@ function VoiceButton({ speaking, isGuest, onClick }: {
 
 // ─── ACTIONS ────────────────────────────────────────────────
 function Actions({ state, onSpeak }: { state: AssistantState; onSpeak: () => void }) {
-  type Btn = { icon: string; label: string; href?: string; onClick?: () => void; danger?: boolean; primary?: boolean };
+  type Btn = { icon: string; label: string; href?: string; onClick?: () => void; primary?: boolean; danger?: boolean };
 
-  const btns: Btn[] = (() => {
+  const btns = ((): Btn[] => {
     switch (state) {
-      case "guest":   return [
-        { icon: "🎤", label: "Powiedz coś",  onClick: onSpeak, primary: true },
-        { icon: "👉", label: "Zacznij",      href: "/auth/login" },
+      case "guest":  return [
+        { icon: "🎤", label: "Powiedz coś",          onClick: onSpeak, primary: true },
+        { icon: "👉", label: "Zacznij",               href: "/auth/login" },
       ];
-      case "calm":    return [
-        { icon: "➕", label: "Dodaj wydarzenie", href: "/calendar" },
-        { icon: "👤", label: "Dodaj osobę",      href: "/people"   },
+      case "calm":   return [
+        { icon: "➕", label: "Dodaj wydarzenie",       href: "/calendar" },
+        { icon: "👤", label: "Dodaj osobę",            href: "/people" },
       ];
-      case "active":  return [
-        { icon: "🎁", label: "Pomysł prezentu",  href: "/services" },
-        { icon: "✍️", label: "Napisz wiadomość", href: "/services" },
-        { icon: "📦", label: "Zamów prezent",    href: "/services" },
+      case "active": return [
+        { icon: "🎁", label: "Pomysł prezentu",        href: "/services" },
+        { icon: "✍️", label: "Napisz wiadomość",       href: "/services" },
+        { icon: "📦", label: "Zamów prezent",          href: "/services" },
       ];
-      case "urgent":  return [
-        { icon: "🔥", label: "Szybkie rozwiązanie",  href: "/services", danger: true },
+      case "urgent": return [
+        { icon: "🔥", label: "Szybkie rozwiązanie",    href: "/services", danger: true },
         { icon: "✍️", label: "Napisz wiadomość teraz", href: "/services" },
       ];
     }
   })();
 
   const cols = btns.length === 3 ? "1fr 1fr 1fr" : "1fr 1fr";
-
   const base: React.CSSProperties = {
     display: "flex", flexDirection: "column", alignItems: "center",
-    gap: 6, padding: "12px 6px",
-    borderRadius: "var(--border-radius-md)",
+    gap: 6, padding: "12px 6px", borderRadius: "var(--border-radius-md)",
     cursor: "pointer", textDecoration: "none",
     border: "0.5px solid var(--color-border-tertiary)",
     background: "var(--color-background-secondary)",
@@ -350,12 +316,11 @@ function Actions({ state, onSpeak }: { state: AssistantState; onSpeak: () => voi
       {btns.map((b) => {
         const s: React.CSSProperties = {
           ...base,
-          background: b.primary ? "#3a9bd5" : b.danger ? "#e24b4a" : base.background,
-          border: b.primary || b.danger ? "none" : base.border,
+          background: b.primary ? "#3a9bd5" : b.danger ? "#e24b4a" : base.background as string,
+          border: b.primary || b.danger ? "none" : base.border as string,
         };
         const lbl: React.CSSProperties = {
-          fontSize: 10, fontWeight: 500, lineHeight: 1.25,
-          textAlign: "center",
+          fontSize: 10, fontWeight: 500, lineHeight: 1.25, textAlign: "center",
           color: b.primary || b.danger ? "#fff" : "var(--color-text-secondary)",
         };
         const inner = (
@@ -372,10 +337,10 @@ function Actions({ state, onSpeak }: { state: AssistantState; onSpeak: () => voi
 }
 
 // ─── SUGGESTION ─────────────────────────────────────────────
-function Suggestion({ state, firstName, nextEvent }: {
-  state: AssistantState; firstName?: string; nextEvent?: AssistantEvent | null;
+function Suggestion({ state, nextEvent }: {
+  state: AssistantState; nextEvent?: AssistantEvent | null;
 }) {
-  const text: string = (() => {
+  const text = ((): string => {
     switch (state) {
       case "guest":  return "💡 Dodaj pierwszą osobę, a będę Ci przypominał o wszystkim, co ważne.";
       case "calm":   return "💡 Wskazówka: Dodaj preferencje osoby, a podpowiem idealny prezent 🎁";
@@ -390,8 +355,7 @@ function Suggestion({ state, firstName, nextEvent }: {
       padding: "10px 13px",
       background: "var(--color-background-secondary)",
       border: "0.5px solid var(--color-border-tertiary)",
-      borderRadius: "var(--border-radius-md)",
-      marginBottom: 10,
+      borderRadius: "var(--border-radius-md)", marginBottom: 10,
     }}>
       <div style={{
         width: 6, height: 6, borderRadius: "50%",
@@ -404,15 +368,14 @@ function Suggestion({ state, firstName, nextEvent }: {
   );
 }
 
-// ─── MAIN EXPORT ────────────────────────────────────────────
+// ─── MAIN ────────────────────────────────────────────────────
 interface Props {
   state: AssistantState;
   profile?: AssistantProfile;
   nextEvent?: AssistantEvent | null;
-  daysUntilEvent?: number;
 }
 
-export default function AssistantCard({ state, profile, nextEvent, daysUntilEvent = 0 }: Props) {
+export default function AssistantCard({ state, profile, nextEvent }: Props) {
   const [speaking, setSpeaking] = useState(false);
 
   useEffect(() => {
@@ -427,7 +390,7 @@ export default function AssistantCard({ state, profile, nextEvent, daysUntilEven
   const handleVoice = useCallback(() => {
     if (!("speechSynthesis" in window)) return;
     if (speaking) { window.speechSynthesis.cancel(); setSpeaking(false); return; }
-    const u = new SpeechSynthesisUtterance(buildSpeechText(state, profile?.firstName, nextEvent));
+    const u = new SpeechSynthesisUtterance(buildSpeech(state, profile?.firstName, nextEvent));
     u.lang = "pl-PL"; u.rate = 0.9; u.pitch = 1.05;
     u.onstart = () => setSpeaking(true);
     u.onend   = () => setSpeaking(false);
@@ -448,24 +411,20 @@ export default function AssistantCard({ state, profile, nextEvent, daysUntilEven
           <Avatar state={state} speaking={speaking} onClick={handleVoice} />
           <Message state={state} firstName={profile?.firstName} nextEvent={nextEvent} />
         </div>
-
         {nextEvent && (state === "active" || state === "urgent") && (
           <EventHighlight event={nextEvent} urgent={state === "urgent"} />
         )}
-
         <VoiceButton speaking={speaking} isGuest={state === "guest"} onClick={handleVoice} />
         <Actions state={state} onSpeak={handleVoice} />
       </div>
-
-      <Suggestion state={state} firstName={profile?.firstName} nextEvent={nextEvent} />
-
+      <Suggestion state={state} nextEvent={nextEvent} />
       <style>{`
-        @keyframes hdBreathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.035)} }
-        @keyframes hdRing    { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:.9;transform:scale(1.05)} }
-        @keyframes hdRingFast{ 0%,100%{opacity:.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.08)} }
-        @keyframes hdBarIdle { 0%,100%{transform:scaleY(1);opacity:.4} 50%{transform:scaleY(1.9);opacity:.9} }
-        @keyframes hdBarSpeak{ 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(4)} }
-        @keyframes hdDot     { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.7)} }
+        @keyframes hdBreathe  { 0%,100%{transform:scale(1)}           50%{transform:scale(1.035)} }
+        @keyframes hdRing     { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:.9;transform:scale(1.05)} }
+        @keyframes hdRingFast { 0%,100%{opacity:.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.08)} }
+        @keyframes hdBarIdle  { 0%,100%{transform:scaleY(1);opacity:.4} 50%{transform:scaleY(1.9);opacity:.9} }
+        @keyframes hdBarSpeak { 0%,100%{transform:scaleY(1)}           50%{transform:scaleY(4)} }
+        @keyframes hdDot      { 0%,100%{opacity:1;transform:scale(1)}  50%{opacity:.3;transform:scale(.7)} }
       `}</style>
     </div>
   );

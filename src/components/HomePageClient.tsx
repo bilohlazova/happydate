@@ -14,7 +14,6 @@ import AssistantCard, {
 import FloatingActions from "@/components/FloatingActions";
 import ChatUIMount from "@/components/ChatUIMount";
 
-// ── Skeleton ────────────────────────────────────────────────
 function AssistantSkeleton() {
   return (
     <div style={{
@@ -34,17 +33,17 @@ function AssistantSkeleton() {
             <div key={i} style={{
               height: i === 1 ? 15 : 10, width: `${w}%`, borderRadius: 6,
               background: "var(--color-background-secondary)",
-              marginBottom: 8, animation: `skPulse 1.4s ease-in-out infinite ${i * 0.1}s`,
+              marginBottom: 8,
+              animation: `skPulse 1.4s ease-in-out infinite ${i * 0.1}s`,
             }} />
           ))}
         </div>
       </div>
-      <style>{`@keyframes skPulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
+      <style>{`@keyframes skPulse { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
     </div>
   );
 }
 
-// ── Guest hero ───────────────────────────────────────────────
 function GuestHero() {
   return (
     <section style={{
@@ -79,7 +78,6 @@ function GuestHero() {
   );
 }
 
-// ── Quick nav ────────────────────────────────────────────────
 function QuickNav() {
   const items = [
     { label: "Osoby",     href: "/people",   emoji: "👥" },
@@ -107,7 +105,6 @@ function QuickNav() {
   );
 }
 
-// ── Cookie consent ───────────────────────────────────────────
 function CookieConsent() {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -132,30 +129,23 @@ function CookieConsent() {
           </Link>.
         </p>
         <button
-          onClick={() => {
-            localStorage.setItem("happydate_cookie_consent", "true");
-            setVisible(false);
-          }}
+          onClick={() => { localStorage.setItem("happydate_cookie_consent", "true"); setVisible(false); }}
           style={{
             background: "#3a9bd5", color: "#fff", border: "none",
             padding: "7px 16px", borderRadius: "var(--border-radius-md)",
             fontSize: 13, fontWeight: 500, cursor: "pointer",
           }}
-        >
-          Akceptuję
-        </button>
+        >Akceptuję</button>
       </div>
     </div>
   );
 }
 
-// ── MAIN ────────────────────────────────────────────────────
 export default function HomePageClient() {
   const [loading,   setLoading]   = useState(true);
   const [authState, setAuthState] = useState<AssistantState>("guest");
   const [profile,   setProfile]   = useState<AssistantProfile>({});
   const [nextEvent, setNextEvent] = useState<AssistantEvent | null>(null);
-  const [daysUntil, setDaysUntil] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -170,7 +160,6 @@ export default function HomePageClient() {
         return;
       }
 
-      // Profile
       const { data: p } = await supabase
         .from("profiles")
         .select("full_name, preferences, avatar_url")
@@ -185,7 +174,6 @@ export default function HomePageClient() {
         });
       }
 
-      // Next event (14 days)
       const today  = new Date().toISOString().split("T")[0];
       const in14   = new Date();
       in14.setDate(in14.getDate() + 14);
@@ -203,19 +191,14 @@ export default function HomePageClient() {
       if (cancelled) return;
 
       const ev = events?.[0] ?? null;
-
       if (ev) {
-        const t = new Date(); t.setHours(0, 0, 0, 0);
-        const d = new Date(ev.date); d.setHours(0, 0, 0, 0);
-        const days = Math.round((d.getTime() - t.getTime()) / 86_400_000);
         const mapped: AssistantEvent = {
           id: ev.id, title: ev.title, date: ev.date,
-          person_name: ev.person_name ?? null,
+          person_name:  ev.person_name  ?? null,
           is_important: ev.is_important ?? false,
-          category: ev.category ?? null,
+          category:     ev.category     ?? null,
         };
         setNextEvent(mapped);
-        setDaysUntil(days);
         setAuthState(resolveState(true, mapped));
       } else {
         setAuthState("calm");
@@ -236,22 +219,15 @@ export default function HomePageClient() {
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "12px 14px 0" }}>
         {loading
           ? <AssistantSkeleton />
-          : <AssistantCard
-              state={authState}
-              profile={profile}
-              nextEvent={nextEvent}
-              daysUntilEvent={daysUntil}
-            />
+          : <AssistantCard state={authState} profile={profile} nextEvent={nextEvent} />
         }
       </div>
-
       {!loading && isGuest  && <GuestHero />}
       {!loading && !isGuest && (
         <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 14px" }}>
           <QuickNav />
         </div>
       )}
-
       <FloatingActions />
       <ChatUIMount />
       <CookieConsent />

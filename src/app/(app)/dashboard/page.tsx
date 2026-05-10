@@ -1,130 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import EventsCalendar, { type EventRow } from "@/components/EventsCalendar";
+import type { EventRow } from "@/components/EventsCalendar";
 import type {
   RealtimeChannel,
   RealtimePostgresChangesPayload,
 } from "@supabase/supabase-js";
 import Link from "next/link";
-
-/* ═══════════════════════════════════════════════════
-   CONSTANTS
-═══════════════════════════════════════════════════ */
-
-const CATEGORIES = [
-  { value: "all",      label: "Wszystkie", emoji: "✨" },
-  { value: "birthday", label: "Urodziny",  emoji: "🎂" },
-  { value: "work",     label: "Praca",     emoji: "💼" },
-  { value: "personal", label: "Osobiste",  emoji: "⭐" },
-] as const;
-
-const BADGE: Record<string, string> = {
-  birthday: "bg-pink-50 text-pink-700 border border-pink-200",
-  work:     "bg-amber-50 text-amber-800 border border-amber-200",
-  personal: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  default:  "bg-slate-50 text-slate-600 border border-slate-200",
-};
-const BADGE_DOT: Record<string, string> = {
-  birthday: "bg-pink-400",
-  work:     "bg-amber-400",
-  personal: "bg-emerald-400",
-  default:  "bg-slate-400",
-};
-
-const CAT_EMOJI: Record<string, string> = {
-  birthday: "🎂",
-  work:     "💼",
-  personal: "⭐",
-  default:  "📌",
-};
-
-/* ═══════════════════════════════════════════════════
-   HELPERS
-═══════════════════════════════════════════════════ */
-
-const labelKat = (cat?: string | null) =>
-  cat === "birthday" ? "Urodziny"
-  : cat === "work"   ? "Praca"
-  : cat === "personal" ? "Osobiste"
-  : "Inne";
-
-const formatPL = (ymd: string) =>
-  new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" }).format(
-    new Date(ymd + "T00:00:00")
-  );
-
-const formatPLShort = (ymd: string) =>
-  new Intl.DateTimeFormat("pl-PL", { day: "numeric", month: "short" }).format(
-    new Date(ymd + "T00:00:00")
-  );
-
-const monthShortPL = new Intl.DateTimeFormat("pl-PL", { month: "short" });
-function dayBadgeParts(ymd: string) {
-  const d = new Date(ymd + "T00:00:00");
-  return {
-    day: d.getDate().toString().padStart(2, "0"),
-    mon: monthShortPL.format(d).toUpperCase(),
-  };
-}
-
-function daysLeft(ymd: string): number {
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const dt    = new Date(ymd + "T00:00:00");
-  return Math.round((dt.getTime() - today.getTime()) / 86400000);
-}
-
-function daysLeftLabel(ymd: string) {
-  const diff = daysLeft(ymd);
-  if (diff === 0) return "Dziś 🎉";
-  if (diff === 1) return "Jutro";
-  if (diff < 0)  return `${Math.abs(diff)} dni temu`;
-  return `Za ${diff} dni`;
-}
-
-function urgencyColor(ymd: string) {
-  const diff = daysLeft(ymd);
-  if (diff <= 0)  return "text-rose-600 bg-rose-50 border-rose-200";
-  if (diff <= 3)  return "text-orange-600 bg-orange-50 border-orange-200";
-  if (diff <= 7)  return "text-amber-700 bg-amber-50 border-amber-200";
-  if (diff <= 14) return "text-sky-600 bg-sky-50 border-sky-200";
-  return "text-slate-500 bg-slate-50 border-slate-200";
-}
-
-function getInitials(name: string) {
-  return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-}
-
-const AVATAR_COLORS = [
-  "bg-pink-100 text-pink-700",
-  "bg-violet-100 text-violet-700",
-  "bg-sky-100 text-sky-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-amber-100 text-amber-700",
-  "bg-rose-100 text-rose-700",
-];
-
-function avatarColor(name: string) {
-  const idx = name.charCodeAt(0) % AVATAR_COLORS.length;
-  return AVATAR_COLORS[idx];
-}
-
-/* ICS helpers */
-function toUTCStamp(d: Date) {
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}T${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}Z`;
-}
-function addOneDay(dt: string) {
-  const d = new Date(Date.UTC(+dt.slice(0,4), +dt.slice(4,6)-1, +dt.slice(6,8)));
-  d.setUTCDate(d.getUTCDate() + 1);
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}`;
-}
-function escICS(s: string) {
-  return s.replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n");
-}
 
 /* ═══════════════════════════════════════════════════
    TYPES
@@ -137,40 +21,153 @@ type PersonRow = {
   notes?: string | null;
 };
 
-type AIInsight = {
-  id: string;
-  eventId: string;
-  text: string;
-  type: "gift" | "note" | "memory" | "countdown";
+/* ═══════════════════════════════════════════════════
+   CONSTANTS
+═══════════════════════════════════════════════════ */
+
+const CAT_COLOR: Record<string, { dot: string; pill: string; text: string }> = {
+  birthday: { dot: "bg-pink-400",    pill: "bg-pink-50 border-pink-200",    text: "text-pink-700" },
+  work:     { dot: "bg-blue-400",    pill: "bg-blue-50 border-blue-200",    text: "text-blue-700" },
+  personal: { dot: "bg-emerald-400", pill: "bg-emerald-50 border-emerald-200", text: "text-emerald-700" },
+  default:  { dot: "bg-slate-400",   pill: "bg-slate-50 border-slate-200",  text: "text-slate-600" },
 };
+
+const CAT_EMOJI: Record<string, string> = {
+  birthday: "🎂",
+  work:     "💼",
+  personal: "⭐",
+  default:  "📌",
+};
+
+const MONTHS_PL = [
+  "Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec",
+  "Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień",
+];
+const DAYS_PL_SHORT = ["Pn","Wt","Śr","Cz","Pt","Sb","Nd"];
+
+const AI_TOPICS: Array<[RegExp, string]> = [
+  [/kawa|coffee/i,           "☕ lubi kawę"],
+  [/podróż|travel|wyjazd/i,  "✈️ lubi podróże"],
+  [/książk|czyta/i,          "📚 lubi czytać"],
+  [/zegar|watch/i,           "⌚ kolekcjonuje zegarki"],
+  [/foto|aparat|fuji/i,      "📷 pasjonuje się fotografią"],
+  [/muzyk|gitara|piano/i,    "🎵 lubi muzykę"],
+  [/sport|siłown|bieg/i,     "🏃 jest aktywny sportowo"],
+  [/wellness|spa|relaks/i,   "🧘 ceni chwile relaksu"],
+  [/gier|gaming|game/i,      "🎮 gra w gry"],
+  [/gotow|kulinarn/i,        "👨‍🍳 lubi gotować"],
+];
+
+/* ═══════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════ */
+
+function ymd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function todayYMD(): string {
+  return ymd(new Date());
+}
+
+function daysLeft(dateYMD: string): number {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dt    = new Date(dateYMD + "T00:00:00");
+  return Math.round((dt.getTime() - today.getTime()) / 86400000);
+}
+
+function daysLabel(dateYMD: string): string {
+  const d = daysLeft(dateYMD);
+  if (d === 0) return "Dziś 🎉";
+  if (d === 1) return "Jutro";
+  if (d < 0)  return `${Math.abs(d)} dni temu`;
+  return `Za ${d} dni`;
+}
+
+function urgencyBadge(dateYMD: string): string {
+  const d = daysLeft(dateYMD);
+  if (d <= 0)  return "bg-rose-50 text-rose-600 border-rose-200";
+  if (d <= 3)  return "bg-orange-50 text-orange-600 border-orange-200";
+  if (d <= 7)  return "bg-amber-50 text-amber-700 border-amber-200";
+  if (d <= 14) return "bg-sky-50 text-sky-600 border-sky-200";
+  return "bg-slate-50 text-slate-500 border-slate-200";
+}
+
+function formatDateShort(dateYMD: string): string {
+  return new Intl.DateTimeFormat("pl-PL", {
+    day: "numeric", month: "short",
+  }).format(new Date(dateYMD + "T00:00:00"));
+}
+
+function getInitials(name: string): string {
+  return name.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
+}
+
+const AVATAR_PALETTE = [
+  "bg-pink-100 text-pink-700",
+  "bg-violet-100 text-violet-700",
+  "bg-sky-100 text-sky-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-amber-100 text-amber-700",
+  "bg-rose-100 text-rose-700",
+  "bg-teal-100 text-teal-700",
+];
+
+function avatarClass(name: string): string {
+  return AVATAR_PALETTE[(name.charCodeAt(0) ?? 0) % AVATAR_PALETTE.length];
+}
+
+function getAIInsight(person: PersonRow): string | null {
+  if (!person.notes) return null;
+  for (const [re, label] of AI_TOPICS) {
+    if (re.test(person.notes)) return label;
+  }
+  return null;
+}
+
+/* ICS */
+function toUTCStamp(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}T${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}Z`;
+}
+function addOneDayICS(dt: string): string {
+  const d = new Date(Date.UTC(+dt.slice(0,4), +dt.slice(4,6)-1, +dt.slice(6,8)));
+  d.setUTCDate(d.getUTCDate() + 1);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}`;
+}
+function escICS(s: string): string {
+  return s.replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n");
+}
 
 /* ═══════════════════════════════════════════════════
    TOAST
 ═══════════════════════════════════════════════════ */
-type Toast = { id: number; type: "success" | "error"; msg: string };
+type Toast = { id: number; type: "success"|"error"; msg: string };
 
 function useToasts() {
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const push = useCallback((t: Omit<Toast, "id">) => {
+  const push = useCallback((t: Omit<Toast,"id">) => {
     const id = Date.now() + Math.random();
     setToasts(p => [...p, { id, ...t }]);
-    setTimeout(() => setToasts(p => p.filter(x => x.id !== id)), 3500);
+    setTimeout(() => setToasts(p => p.filter(x => x.id !== id)), 3200);
   }, []);
   return { toasts, push };
 }
 
 function ToastStack({ items }: { items: Toast[] }) {
+  if (!items.length) return null;
   return (
-    <div className="fixed top-5 right-4 z-[400] flex flex-col gap-2 pointer-events-none">
+    <div className="fixed top-safe-top top-4 right-4 z-[500] flex flex-col gap-2 pointer-events-none">
       {items.map(t => (
         <div
           key={t.id}
-          className={`flex items-center gap-2 px-4 py-3 rounded-2xl shadow-xl border text-sm font-medium backdrop-blur-sm pointer-events-auto transition-all ${
+          className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-sm font-medium shadow-lg border pointer-events-auto backdrop-blur-xl ${
             t.type === "success"
-              ? "bg-emerald-50/95 border-emerald-200 text-emerald-800"
-              : "bg-red-50/95 border-red-200 text-red-800"
+              ? "bg-white/90 border-emerald-200 text-emerald-800"
+              : "bg-white/90 border-red-200 text-red-700"
           }`}
-          style={{ animation: "slideInRight .25s cubic-bezier(.34,1.56,.64,1) both" }}
+          style={{ animation: "toastIn .25s cubic-bezier(.34,1.56,.64,1) both" }}
         >
           <span>{t.type === "success" ? "✅" : "❌"}</span>
           {t.msg}
@@ -184,18 +181,17 @@ function ToastStack({ items }: { items: Toast[] }) {
    FOCUS TRAP
 ═══════════════════════════════════════════════════ */
 function useFocusTrap(active: boolean) {
-  const ref = useRef<HTMLDivElement | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!active || !ref.current) return;
     const el = ref.current;
-    const foc = () =>
-      Array.from(el.querySelectorAll<HTMLElement>(
-        'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'
-      )).filter(n => !n.hasAttribute("disabled"));
-    foc()[0]?.focus();
+    const sel = () => Array.from(el.querySelectorAll<HTMLElement>(
+      'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'
+    )).filter(n => !n.hasAttribute("disabled"));
+    sel()[0]?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Tab") return;
-      const nodes = foc();
+      const nodes = sel();
       const idx = nodes.indexOf(document.activeElement as HTMLElement);
       if (e.shiftKey ? idx <= 0 : idx === nodes.length - 1) {
         e.preventDefault();
@@ -213,18 +209,11 @@ function useFocusTrap(active: boolean) {
 ═══════════════════════════════════════════════════ */
 type ConfirmState =
   | { open: false }
-  | {
-      open: true;
-      type: "delete" | "update";
-      title: string;
-      description?: string;
-      confirmText?: string;
-      onConfirm: () => Promise<void> | void;
-    };
+  | { open: true; type: "delete"|"update"; title: string; description?: string; confirmText?: string; onConfirm: () => Promise<void>|void };
 
 function ConfirmDialog({ state, onClose }: { state: ConfirmState; onClose: () => void }) {
   const [busy, setBusy] = useState(false);
-  const trapRef = useFocusTrap(state.open);
+  const ref = useFocusTrap(state.open);
   if (!state.open) return null;
   const { title, description, confirmText = "Potwierdź", onConfirm, type } = state;
   const danger = type === "delete";
@@ -236,35 +225,33 @@ function ConfirmDialog({ state, onClose }: { state: ConfirmState; onClose: () =>
 
   return (
     <div
-      className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4"
-      role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle"
+      className="fixed inset-0 z-[400] flex items-end sm:items-center justify-center p-4"
+      role="alertdialog" aria-modal="true"
       onKeyDown={e => e.key === "Escape" && onClose()}
     >
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/35 backdrop-blur-[3px]" onClick={onClose} />
       <div
-        ref={trapRef}
-        className="relative bg-white/95 backdrop-blur-xl w-full max-w-sm rounded-3xl shadow-2xl p-6 border border-white/60"
-        style={{ animation: "popIn .22s cubic-bezier(.34,1.56,.64,1) both" }}
+        ref={ref}
+        className="relative bg-white/96 backdrop-blur-2xl w-full max-w-sm rounded-3xl shadow-2xl p-6 border border-white/50"
+        style={{ animation: "sheetUp .28s cubic-bezier(.34,1.56,.64,1) both" }}
       >
         <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-4 ${danger ? "bg-red-100" : "bg-emerald-100"}`}>
           <span className="text-xl">{danger ? "🗑️" : "💾"}</span>
         </div>
-        <h3 id="confirmTitle" className="text-base font-bold text-slate-900 mb-1">{title}</h3>
-        {description && <p className="text-sm text-slate-500 mb-5">{description}</p>}
+        <p className="font-bold text-slate-900 text-base mb-1">{title}</p>
+        {description && <p className="text-sm text-slate-500 mb-4 leading-relaxed">{description}</p>}
         <div className="flex gap-2 mt-5">
           <button
-            className="flex-1 border border-slate-200 rounded-2xl h-11 text-sm font-medium hover:bg-slate-50 transition-colors"
             onClick={onClose} disabled={busy}
+            className="flex-1 h-11 rounded-2xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
           >
             Anuluj
           </button>
           <button
-            className={`flex-1 h-11 rounded-2xl text-sm font-bold transition-all active:scale-[.98] ${
-              danger
-                ? "bg-red-500 hover:bg-red-600 text-white"
-                : "bg-emerald-500 hover:bg-emerald-600 text-white"
-            }`}
             onClick={handleOk} disabled={busy}
+            className={`flex-1 h-11 rounded-2xl text-sm font-bold transition-all active:scale-[.98] ${
+              danger ? "bg-red-500 hover:bg-red-600 text-white" : "bg-emerald-500 hover:bg-emerald-600 text-white"
+            }`}
           >
             {confirmText}
           </button>
@@ -275,29 +262,33 @@ function ConfirmDialog({ state, onClose }: { state: ConfirmState; onClose: () =>
 }
 
 /* ═══════════════════════════════════════════════════
-   ADD / EDIT MODAL
+   ADD / EDIT SHEET
 ═══════════════════════════════════════════════════ */
-function AddEditModal({
+const CATEGORIES_ADD = [
+  { value: "birthday", label: "Urodziny", emoji: "🎂" },
+  { value: "work",     label: "Praca",    emoji: "💼" },
+  { value: "personal", label: "Osobiste", emoji: "⭐" },
+] as const;
+
+function AddEditSheet({
   mode, date, title, notes, category,
   setDate, setTitle, setNotes, setCategory,
   onCancel, onSubmit, onDelete,
 }: {
-  mode: "add" | "edit";
+  mode: "add"|"edit";
   date: string; title: string; notes: string; category: string;
   setDate: (v: string) => void; setTitle: (v: string) => void;
   setNotes: (v: string) => void; setCategory: (v: string) => void;
   onCancel: () => void; onSubmit: () => void; onDelete?: () => void;
 }) {
-  const trapRef = useFocusTrap(true);
-  const titleRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { setTimeout(() => titleRef.current?.focus(), 50); }, []);
-
-  const cats = CATEGORIES.filter(c => c.value !== "all");
+  const ref = useFocusTrap(true);
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 60); }, []);
 
   return (
     <div
-      role="dialog" aria-modal="true" aria-labelledby="ae-title"
-      className="fixed inset-0 z-[220] flex items-end sm:items-center justify-center"
+      role="dialog" aria-modal="true"
+      className="fixed inset-0 z-[350] flex items-end justify-center"
       onKeyDown={e => {
         if (e.key === "Escape") onCancel();
         if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
@@ -305,225 +296,246 @@ function AddEditModal({
         }
       }}
     >
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" onClick={onCancel} />
+      <div className="absolute inset-0 bg-black/35 backdrop-blur-[3px]" onClick={onCancel} />
       <div
-        ref={trapRef}
-        className="relative bg-white/95 backdrop-blur-xl w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl border border-white/60 overflow-hidden"
-        style={{ animation: "slideUp .3s cubic-bezier(.34,1.56,.64,1) both" }}
+        ref={ref}
+        className="relative bg-white w-full max-w-lg rounded-t-[2rem] shadow-2xl overflow-hidden border-t border-white/40"
+        style={{ animation: "sheetUp .3s cubic-bezier(.34,1.56,.64,1) both" }}
       >
-        {/* Drag handle (mobile) */}
-        <div className="flex justify-center pt-3 sm:hidden">
-          <div className="w-10 h-1 rounded-full bg-slate-200" />
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-9 h-[3px] rounded-full bg-slate-200" />
         </div>
 
         {/* Header */}
-        <div className={`px-6 pt-5 pb-4 ${
-          mode === "add"
-            ? "bg-gradient-to-r from-sky-50 via-cyan-50 to-teal-50"
-            : "bg-gradient-to-r from-violet-50 via-purple-50 to-fuchsia-50"
-        }`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg shadow-sm ${
-                mode === "add" ? "bg-sky-100" : "bg-violet-100"
-              }`}>
-                {mode === "add" ? "✨" : "✏️"}
-              </div>
-              <div>
-                <h3 id="ae-title" className="font-bold text-slate-900 text-base leading-tight">
-                  {mode === "add" ? "Nowe wydarzenie" : "Edytuj wydarzenie"}
-                </h3>
-                {date && (
-                  <p className="text-xs text-slate-500 mt-0.5">{formatPL(date)}</p>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={onCancel}
-              className="w-8 h-8 rounded-full bg-white/70 hover:bg-white flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all text-sm font-bold"
-              aria-label="Zamknij"
-            >
-              ✕
-            </button>
-          </div>
+        <div className="flex items-center justify-between px-5 pt-2 pb-4 border-b border-slate-100">
+          <button onClick={onCancel} className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors px-1">
+            Anuluj
+          </button>
+          <p className="text-sm font-bold text-slate-800">
+            {mode === "add" ? "Nowe wydarzenie" : "Edytuj wydarzenie"}
+          </p>
+          <button
+            onClick={onSubmit}
+            disabled={!title || !date}
+            className="text-sm font-bold text-sky-500 hover:text-sky-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors px-1"
+          >
+            {mode === "add" ? "Dodaj" : "Zapisz"}
+          </button>
         </div>
 
-        {/* Body */}
-        <div className="px-6 py-5 space-y-4">
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">
-              Tytuł *
-            </label>
+        {/* Fields */}
+        <div className="px-5 py-4 space-y-4">
+          {/* Title */}
+          <div className="flex items-center gap-3 py-2 border-b border-slate-100">
+            <span className="text-slate-300 text-lg select-none">✏️</span>
             <input
-              ref={titleRef}
+              ref={inputRef}
               type="text"
-              placeholder="np. Urodziny Mamy"
+              placeholder="Tytuł wydarzenia"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              className="w-full border border-slate-200 rounded-2xl px-4 h-11 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-transparent transition-shadow bg-slate-50/50"
+              className="flex-1 text-base text-slate-900 placeholder-slate-300 outline-none bg-transparent font-medium"
             />
           </div>
 
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">
-              Data *
-            </label>
+          {/* Date */}
+          <div className="flex items-center gap-3 py-2 border-b border-slate-100">
+            <span className="text-slate-300 text-lg select-none">📅</span>
             <input
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
-              className="w-full border border-slate-200 rounded-2xl px-4 h-11 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-300 transition-shadow bg-slate-50/50"
+              className="flex-1 text-sm text-slate-700 outline-none bg-transparent"
             />
           </div>
 
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">
-              Kategoria
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {cats.map(c => (
+          {/* Category */}
+          <div className="flex items-center gap-3 py-2 border-b border-slate-100">
+            <span className="text-slate-300 text-lg select-none">🏷️</span>
+            <div className="flex gap-2 flex-1">
+              {CATEGORIES_ADD.map(c => (
                 <button
                   key={c.value}
                   type="button"
                   onClick={() => setCategory(c.value)}
-                  className={`h-10 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all active:scale-[.97] ${
+                  className={`h-8 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all active:scale-[.97] ${
                     category === c.value
-                      ? BADGE[c.value] + " shadow-sm scale-[1.02]"
-                      : "border-slate-200 text-slate-400 hover:border-slate-300 hover:bg-slate-50"
+                      ? CAT_COLOR[c.value].pill + " " + CAT_COLOR[c.value].text + " shadow-sm"
+                      : "border-slate-200 text-slate-400 bg-white"
                   }`}
                 >
-                  <span className="text-base">{c.emoji}</span>
-                  <span>{c.label}</span>
+                  <span>{c.emoji}</span> {c.label}
                 </button>
               ))}
             </div>
           </div>
 
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">
-              Notatka
-            </label>
+          {/* Notes */}
+          <div className="flex items-center gap-3 py-2">
+            <span className="text-slate-300 text-lg select-none">📝</span>
             <input
               type="text"
-              placeholder="Opcjonalnie…"
+              placeholder="Notatka (opcjonalnie)"
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              className="w-full border border-slate-200 rounded-2xl px-4 h-11 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 transition-shadow bg-slate-50/50"
+              className="flex-1 text-sm text-slate-700 placeholder-slate-300 outline-none bg-transparent"
             />
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 pb-6 flex items-center justify-between gap-3">
-          {mode === "edit" && onDelete ? (
+        {/* Delete */}
+        {mode === "edit" && onDelete && (
+          <div className="px-5 pb-6 border-t border-slate-100 pt-4">
             <button
               onClick={onDelete}
-              className="h-11 px-4 rounded-2xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors flex items-center gap-1.5"
+              className="w-full h-11 rounded-2xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
             >
-              🗑️ Usuń
-            </button>
-          ) : <span />}
-          <div className="flex gap-2">
-            <button
-              onClick={onCancel}
-              className="h-11 px-5 rounded-2xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
-            >
-              Anuluj
-            </button>
-            <button
-              onClick={onSubmit}
-              disabled={!title || !date}
-              className="h-11 px-6 rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-600 hover:to-cyan-600 text-white text-sm font-bold shadow-md shadow-sky-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[.98]"
-            >
-              {mode === "add" ? "Dodaj ✨" : "Zapisz ✅"}
+              🗑️ Usuń wydarzenie
             </button>
           </div>
-        </div>
+        )}
+
+        {!mode || mode === "add" ? <div className="h-6" /> : null}
       </div>
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════
-   DAY PREVIEW SHEET (compact tap → sheet → modal flow)
+   DAY DETAIL SHEET
 ═══════════════════════════════════════════════════ */
-function DayPreviewSheet({
-  date,
+function DayDetailSheet({
+  dateYMD,
   events,
+  insights,
   onClose,
-  onAddEvent,
-  onOpenEvent,
+  onAdd,
+  onEdit,
 }: {
-  date: string;
+  dateYMD: string;
   events: EventRow[];
+  insights: Map<string, string>;
   onClose: () => void;
-  onAddEvent: (ymd: string) => void;
-  onOpenEvent: (id: string) => void;
+  onAdd: (ymd: string) => void;
+  onEdit: (id: string) => void;
 }) {
-  const trapRef = useFocusTrap(true);
+  const ref = useFocusTrap(true);
+  const today = todayYMD();
+  const isToday = dateYMD === today;
 
   return (
     <div
-      className="fixed inset-0 z-[210] flex items-end justify-center"
+      className="fixed inset-0 z-[300] flex items-end justify-center"
       onKeyDown={e => e.key === "Escape" && onClose()}
     >
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/25 backdrop-blur-[2px]" onClick={onClose} />
       <div
-        ref={trapRef}
-        className="relative bg-white/95 backdrop-blur-xl w-full max-w-lg rounded-t-[2rem] shadow-2xl border border-white/60 overflow-hidden"
-        style={{ animation: "slideUp .3s cubic-bezier(.34,1.56,.64,1) both" }}
+        ref={ref}
+        className="relative bg-white w-full max-w-lg rounded-t-[2rem] shadow-2xl border-t border-white/40"
+        style={{ animation: "sheetUp .28s cubic-bezier(.34,1.56,.64,1) both" }}
       >
-        {/* Drag handle */}
+        {/* Handle */}
         <div className="flex justify-center pt-3">
-          <div className="w-10 h-1 rounded-full bg-slate-200" />
+          <div className="w-9 h-[3px] rounded-full bg-slate-200" />
         </div>
 
-        <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+        {/* Date header */}
+        <div className="px-5 pt-3 pb-3 flex items-end justify-between">
           <div>
             <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
-              {new Intl.DateTimeFormat("pl-PL", { weekday: "long" }).format(new Date(date + "T00:00:00"))}
+              {new Intl.DateTimeFormat("pl-PL", { weekday: "long" }).format(new Date(dateYMD + "T00:00:00"))}
             </p>
-            <h3 className="text-lg font-extrabold text-slate-900">{formatPL(date)}</h3>
+            <h3 className="text-xl font-extrabold text-slate-900 leading-tight flex items-center gap-2">
+              {new Intl.DateTimeFormat("pl-PL", { day: "numeric", month: "long" }).format(new Date(dateYMD + "T00:00:00"))}
+              {isToday && (
+                <span className="text-xs font-bold bg-sky-500 text-white px-2 py-0.5 rounded-full">Dziś</span>
+              )}
+            </h3>
           </div>
           <button
-            onClick={() => onAddEvent(date)}
-            className="h-9 px-3.5 rounded-2xl bg-sky-50 border border-sky-200 text-sky-600 text-xs font-bold hover:bg-sky-100 transition-colors"
+            onClick={() => onAdd(dateYMD)}
+            className="h-9 px-4 rounded-2xl bg-sky-500 text-white text-xs font-bold hover:bg-sky-600 transition-colors shadow-sm shadow-sky-200 flex items-center gap-1.5"
           >
-            + Dodaj
+            <span className="text-base leading-none">＋</span> Dodaj
           </button>
         </div>
 
-        <div className="px-5 pb-6 pt-2 max-h-80 overflow-y-auto">
+        {/* Events */}
+        <div className="px-4 pb-8 max-h-[55vh] overflow-y-auto">
           {events.length === 0 ? (
-            <div className="text-center py-6">
-              <p className="text-3xl mb-2">🌸</p>
-              <p className="text-sm text-slate-400">Brak wydarzeń w tym dniu</p>
+            <div className="text-center py-8">
+              <p className="text-3xl mb-2">🌙</p>
+              <p className="text-sm text-slate-400">Brak wydarzeń</p>
+              <button
+                onClick={() => onAdd(dateYMD)}
+                className="mt-3 text-xs text-sky-500 font-semibold hover:text-sky-700 transition-colors"
+              >
+                + Dodaj pierwsze
+              </button>
             </div>
           ) : (
             <ul className="space-y-2">
               {events.map(ev => {
                 const isBirthday = ev.id.startsWith("birthday-");
+                const cat = ev.category ?? "default";
+                const colors = CAT_COLOR[cat] ?? CAT_COLOR.default;
+                const insight = insights.get(ev.id);
+                const cleanTitle = ev.title.replace(/^🎂\s*/, "");
+
                 return (
                   <li
                     key={ev.id}
-                    className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group"
-                    onClick={() => !isBirthday && onOpenEvent(ev.id)}
+                    className={`rounded-2xl border p-3.5 transition-all ${
+                      !isBirthday ? "cursor-pointer hover:shadow-sm active:scale-[.99]" : ""
+                    } ${colors.pill}`}
+                    onClick={() => !isBirthday && onEdit(ev.id)}
                   >
-                    <span className="text-xl">{CAT_EMOJI[ev.category ?? "default"] ?? "📌"}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{ev.title}</p>
-                      {ev.notes && (
-                        <p className="text-xs text-slate-400 truncate mt-0.5">{ev.notes}</p>
+                    <div className="flex items-start gap-3">
+                      {/* Avatar */}
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${
+                        isBirthday ? "bg-pink-100 text-pink-600" : avatarClass(cleanTitle)
+                      }`}>
+                        {isBirthday ? "🎂" : getInitials(cleanTitle)}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 justify-between">
+                          <p className={`font-bold text-sm leading-tight ${colors.text}`}>
+                            {cleanTitle}
+                          </p>
+                          {isBirthday && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-500 border border-purple-200 font-bold shrink-0">
+                              auto
+                            </span>
+                          )}
+                        </div>
+
+                        {ev.notes && !isBirthday && (
+                          <p className="text-xs text-slate-400 mt-0.5 leading-snug">{ev.notes}</p>
+                        )}
+
+                        {/* AI insight */}
+                        {insight && (
+                          <p className="text-[11px] text-violet-500 mt-1.5 font-medium flex items-center gap-1">
+                            <span>✨</span> {insight}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Gift link */}
+                      {!isBirthday && (
+                        <Link
+                          href={`/gift/start?eventId=${ev.id}&date=${encodeURIComponent(ev.date)}&title=${encodeURIComponent(ev.title)}`}
+                          onClick={e => e.stopPropagation()}
+                          className="w-8 h-8 rounded-xl bg-white/70 border border-white flex items-center justify-center text-sm hover:bg-white transition-colors shrink-0"
+                          title="Pomysł na prezent"
+                        >
+                          🎁
+                        </Link>
                       )}
                     </div>
-                    {!isBirthday && (
-                      <span className="text-xs text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">✏️</span>
-                    )}
-                    {isBirthday && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-500 border border-purple-200 font-semibold shrink-0">
-                        auto
-                      </span>
-                    )}
                   </li>
                 );
               })}
@@ -536,447 +548,316 @@ function DayPreviewSheet({
 }
 
 /* ═══════════════════════════════════════════════════
-   AI INSIGHT CARD (lightweight + contextual)
+   UPCOMING STRIP — horizontal scroll pills
 ═══════════════════════════════════════════════════ */
-function AIInsightCard({ insights }: { insights: AIInsight[] }) {
-  const [idx, setIdx] = useState(0);
-  const displayed = insights.slice(0, 3);
-
-  useEffect(() => {
-    if (displayed.length <= 1) return;
-    const t = setInterval(() => setIdx(i => (i + 1) % displayed.length), 5000);
-    return () => clearInterval(t);
-  }, [displayed.length]);
-
-  if (!displayed.length) return null;
-  const current = displayed[idx];
-
-  return (
-    <div
-      className="relative overflow-hidden rounded-3xl border border-violet-100 bg-gradient-to-br from-violet-50 to-fuchsia-50 px-5 py-4"
-      style={{ animation: "fadeIn .4s ease both" }}
-    >
-      {/* Decorative orb */}
-      <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-violet-100/60 blur-xl pointer-events-none" />
-
-      <div className="flex items-start gap-3">
-        <div className="w-8 h-8 rounded-2xl bg-violet-100 border border-violet-200 flex items-center justify-center shrink-0 text-base">
-          ✨
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-bold text-violet-400 uppercase tracking-widest mb-0.5">
-            AI sugestia
-          </p>
-          <p
-            key={idx}
-            className="text-sm font-medium text-violet-900 leading-snug"
-            style={{ animation: "fadeIn .35s ease both" }}
-          >
-            {current.text}
-          </p>
-        </div>
-      </div>
-
-      {displayed.length > 1 && (
-        <div className="flex items-center gap-1 mt-3 pl-11">
-          {displayed.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setIdx(i)}
-              className={`h-1 rounded-full transition-all ${
-                i === idx ? "w-5 bg-violet-400" : "w-1.5 bg-violet-200"
-              }`}
-              aria-label={`Wskazówka ${i + 1}`}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════
-   HERO EVENT CARD
-═══════════════════════════════════════════════════ */
-function HeroEventCard({
-  event,
-  insight,
-  onEdit,
-}: {
-  event: EventRow;
-  insight?: string;
-  onEdit: () => void;
-}) {
-  const diff = daysLeft(event.date);
-
-  return (
-    <div
-      className="relative overflow-hidden rounded-3xl text-white"
-      style={{
-        background: "linear-gradient(135deg, #ec4899 0%, #f43f5e 40%, #fb923c 100%)",
-        animation: "slideDown .4s cubic-bezier(.34,1.56,.64,1) both",
-      }}
-    >
-      {/* Pattern overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-10"
-        style={{
-          backgroundImage: "radial-gradient(circle at 80% 20%, white 1px, transparent 1px), radial-gradient(circle at 20% 80%, white 1px, transparent 1px)",
-          backgroundSize: "20px 20px, 32px 32px",
-        }}
-      />
-      {/* Blurred blob */}
-      <div className="absolute -right-8 -bottom-8 w-36 h-36 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-
-      <div className="relative px-5 pt-5 pb-4">
-        <div className="flex items-start gap-3">
-          {/* Avatar / emoji */}
-          <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl shrink-0 border border-white/30">
-            {event.id.startsWith("birthday-") ? "🎂" : CAT_EMOJI[event.category ?? "default"] ?? "📌"}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest opacity-75 mb-0.5">
-              Najbliższe wydarzenie
-            </p>
-            <h2 className="text-xl font-extrabold leading-tight truncate">{event.title}</h2>
-            <p className="text-sm opacity-80 mt-0.5">{formatPLShort(event.date)}</p>
-          </div>
-
-          {/* Countdown badge */}
-          <div className="shrink-0 flex flex-col items-center justify-center bg-white/20 backdrop-blur rounded-2xl px-3 py-2 border border-white/30 min-w-[56px]">
-            {diff === 0 ? (
-              <span className="text-lg">🎉</span>
-            ) : diff > 0 ? (
-              <>
-                <span className="text-2xl font-black leading-none">{diff}</span>
-                <span className="text-[9px] uppercase tracking-wider opacity-80 font-semibold">
-                  {diff === 1 ? "dzień" : "dni"}
-                </span>
-              </>
-            ) : (
-              <span className="text-xs font-bold opacity-80">Minęło</span>
-            )}
-          </div>
-        </div>
-
-        {/* AI insight inside hero */}
-        {insight && (
-          <div className="mt-3 px-3 py-2.5 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20">
-            <p className="text-[11px] opacity-75 font-semibold mb-0.5">✨ AI przypomina:</p>
-            <p className="text-sm font-medium leading-snug">{insight}</p>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-2 mt-4">
-          {!event.id.startsWith("birthday-") && (
-            <button
-              onClick={onEdit}
-              className="flex-1 h-9 rounded-2xl bg-white/15 hover:bg-white/25 backdrop-blur text-sm font-semibold border border-white/20 transition-all active:scale-[.97]"
-            >
-              ✏️ Edytuj
-            </button>
-          )}
-          <Link
-            href={`/gift/start?eventId=${event.id}&date=${encodeURIComponent(event.date)}&title=${encodeURIComponent(event.title)}`}
-            className="flex-1 h-9 rounded-2xl bg-white/25 hover:bg-white/35 backdrop-blur text-sm font-bold border border-white/30 flex items-center justify-center gap-1.5 transition-all active:scale-[.97]"
-          >
-            🎁 Prezent
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════
-   UPCOMING EMOTIONAL FEED
-═══════════════════════════════════════════════════ */
-function UpcomingFeed({
+function UpcomingStrip({
   events,
   insights,
-  onEdit,
+  onTap,
 }: {
   events: EventRow[];
   insights: Map<string, string>;
-  onEdit: (id: string) => void;
+  onTap: (dateYMD: string) => void;
 }) {
   if (!events.length) return null;
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-      <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-        <div>
-          <h2 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-            🎁 Nadchodzące
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">Najbliższe 30 dni</p>
-        </div>
-        <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
-          {events.length}
-        </span>
-      </div>
-
-      <ul className="px-3 pb-4 space-y-2">
+    <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+      <div className="flex gap-2 pb-0.5" style={{ width: "max-content" }}>
         {events.map((ev, i) => {
-          const isBirthday = ev.id.startsWith("birthday-");
+          const cat    = ev.category ?? "default";
+          const colors = CAT_COLOR[cat] ?? CAT_COLOR.default;
+          const diff   = daysLeft(ev.date);
+          const isToday = diff === 0;
+          const cleanName = ev.title.replace(/^🎂\s*/, "");
           const insight = insights.get(ev.id);
-          const title = ev.title.replace(/^🎂\s*/, "");
-          const initials = getInitials(title.split(" ").slice(0, 2).join(" "));
-          const avColor = avatarColor(title);
 
           return (
-            <li
+            <button
               key={ev.id}
-              className="group relative rounded-2xl overflow-hidden border border-slate-100 hover:border-slate-200 transition-all"
-              style={{ animation: `fadeIn .3s ease ${i * 0.05}s both` }}
+              onClick={() => onTap(ev.date)}
+              className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-2xl border text-left transition-all active:scale-[.97] hover:shadow-sm ${
+                isToday
+                  ? "bg-sky-500 border-sky-500 text-white shadow-sm shadow-sky-200"
+                  : colors.pill
+              }`}
+              style={{ animation: `stripIn .3s ease ${i * 0.05}s both` }}
             >
-              <div className="flex items-start gap-3 p-3">
-                {/* Avatar */}
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-bold shrink-0 ${avColor}`}>
-                  {isBirthday ? "🎂" : initials}
-                </div>
-
-                {/* Main info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <p className="text-sm font-bold text-slate-800 leading-tight">
-                      {title}
-                    </p>
-                    {isBirthday && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-500 border border-purple-200 font-bold">
-                        auto
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                    <span className="text-[11px] text-slate-400">{formatPLShort(ev.date)}</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${urgencyColor(ev.date)}`}>
-                      {daysLeftLabel(ev.date)}
-                    </span>
-                  </div>
-
-                  {/* AI insight */}
-                  {insight && (
-                    <div className="mt-2 flex items-start gap-1.5">
-                      <span className="text-violet-400 text-xs shrink-0 mt-px">✨</span>
-                      <p className="text-[11px] text-violet-600 leading-snug font-medium">{insight}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Quick actions */}
-                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity">
-                  {!isBirthday && (
-                    <>
-                      <Link
-                        href={`/gift/start?eventId=${ev.id}&date=${encodeURIComponent(ev.date)}&title=${encodeURIComponent(ev.title)}`}
-                        className="w-7 h-7 rounded-xl flex items-center justify-center bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-sm transition-colors"
-                        title="Pomysł na prezent"
-                      >
-                        🎁
-                      </Link>
-                      <button
-                        onClick={() => onEdit(ev.id)}
-                        className="w-7 h-7 rounded-xl flex items-center justify-center bg-sky-50 border border-sky-200 hover:bg-sky-100 text-sm transition-colors"
-                        title="Edytuj"
-                      >
-                        ✏️
-                      </button>
-                    </>
-                  )}
-                </div>
+              <span className="text-base leading-none">
+                {CAT_EMOJI[cat] ?? "📌"}
+              </span>
+              <div className="min-w-0">
+                <p className={`text-xs font-bold leading-tight truncate max-w-[100px] ${isToday ? "text-white" : colors.text}`}>
+                  {cleanName}
+                </p>
+                <p className={`text-[10px] font-semibold ${isToday ? "text-white/80" : "text-slate-400"}`}>
+                  {diff === 0 ? "Dziś 🎉" : diff === 1 ? "Jutro" : `Za ${diff} dni`}
+                </p>
+                {insight && !isToday && (
+                  <p className="text-[9px] text-violet-400 mt-0.5 font-medium">✨ {insight.slice(0, 20)}</p>
+                )}
               </div>
-            </li>
+            </button>
           );
         })}
-      </ul>
+      </div>
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════
-   EVENTS LIST
+   MINI CALENDAR GRID
 ═══════════════════════════════════════════════════ */
-function EventsList({
+function CalendarGrid({
+  year, month,
   events,
-  loading,
-  onEdit,
-  onDelete,
-  onClearFilters,
+  selectedDate,
+  onSelectDate,
 }: {
+  year: number;
+  month: number;
   events: EventRow[];
-  loading: boolean;
-  onEdit: (id: string) => void;
-  onDelete: (ev: EventRow) => void;
-  onClearFilters: () => void;
+  selectedDate: string | null;
+  onSelectDate: (ymd: string) => void;
 }) {
-  const [showAll, setShowAll] = useState(false);
-  const MAX = 5;
-  const visible = showAll ? events : events.slice(0, MAX);
+  const today = todayYMD();
+
+  const firstDay = new Date(year, month, 1);
+  /* Monday-first: getDay() returns 0=Sun…6=Sat, remap */
+  const startDow = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  /* Map date → events */
+  const eventMap = useMemo(() => {
+    const m = new Map<string, EventRow[]>();
+    events.forEach(ev => {
+      const key = ev.date.slice(0, 7);
+      const ym = `${year}-${String(month+1).padStart(2,"0")}`;
+      if (key !== ym) return;
+      const prev = m.get(ev.date) ?? [];
+      m.set(ev.date, [...prev, ev]);
+    });
+    return m;
+  }, [events, year, month]);
+
+  const cells: (number | null)[] = [
+    ...Array(startDow).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-      <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-        <h2 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-          📋 Wszystkie wydarzenia
-        </h2>
-        <span className="text-xs text-slate-400 font-medium">{events.length} łącznie</span>
+    <div className="w-full">
+      {/* Weekday headers */}
+      <div className="grid grid-cols-7 mb-1">
+        {DAYS_PL_SHORT.map(d => (
+          <div key={d} className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider py-2">
+            {d}
+          </div>
+        ))}
       </div>
 
-      {loading ? (
-        <div className="px-5 pb-5 space-y-3">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-16 rounded-2xl bg-slate-100 animate-pulse" />
-          ))}
+      {/* Day cells */}
+      <div className="grid grid-cols-7 gap-y-0.5">
+        {cells.map((day, idx) => {
+          if (!day) return <div key={`e-${idx}`} />;
+
+          const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+          const isToday    = dateStr === today;
+          const isSelected = dateStr === selectedDate;
+          const dayEvents  = eventMap.get(dateStr) ?? [];
+
+          /* Collect up to 3 unique category dots */
+          const dots = [...new Set(dayEvents.map(e => e.category ?? "default"))].slice(0, 3);
+
+          return (
+            <button
+              key={dateStr}
+              onClick={() => onSelectDate(dateStr)}
+              className={`relative flex flex-col items-center justify-start py-1.5 rounded-xl transition-all active:scale-[.92] min-h-[52px] ${
+                isSelected
+                  ? "bg-sky-500 shadow-md shadow-sky-200"
+                  : isToday
+                  ? "bg-sky-50 ring-1 ring-sky-200"
+                  : "hover:bg-slate-50"
+              }`}
+            >
+              <span className={`text-sm font-bold leading-none ${
+                isSelected
+                  ? "text-white"
+                  : isToday
+                  ? "text-sky-600"
+                  : "text-slate-800"
+              }`}>
+                {day}
+              </span>
+
+              {/* Event dots */}
+              {dots.length > 0 && (
+                <div className="flex gap-0.5 mt-1.5 items-center">
+                  {dots.map((cat, di) => (
+                    <span
+                      key={di}
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        isSelected ? "bg-white/80" : (CAT_COLOR[cat]?.dot ?? CAT_COLOR.default.dot)
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   SEARCH OVERLAY
+═══════════════════════════════════════════════════ */
+function SearchOverlay({
+  events,
+  insights,
+  onClose,
+  onEdit,
+}: {
+  events: EventRow[];
+  insights: Map<string, string>;
+  onClose: () => void;
+  onEdit: (id: string) => void;
+}) {
+  const [q, setQ] = useState("");
+  const inputRef  = useRef<HTMLInputElement>(null);
+  const ref       = useFocusTrap(true);
+
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 50); }, []);
+
+  const results = useMemo(() => {
+    const lower = q.trim().toLowerCase();
+    if (!lower) return [];
+    return events.filter(ev =>
+      `${ev.title} ${ev.notes ?? ""}`.toLowerCase().includes(lower)
+    ).slice(0, 20);
+  }, [events, q]);
+
+  return (
+    <div
+      ref={ref}
+      className="fixed inset-0 z-[400] flex flex-col bg-white"
+      style={{ animation: "fadeInFull .2s ease both" }}
+      onKeyDown={e => e.key === "Escape" && onClose()}
+    >
+      {/* Search bar */}
+      <div className="flex items-center gap-3 px-4 pt-14 pb-3 border-b border-slate-100">
+        <div className="flex-1 flex items-center gap-2 bg-slate-100 rounded-2xl px-3 h-10">
+          <span className="text-slate-400 text-sm">🔍</span>
+          <input
+            ref={inputRef}
+            type="search"
+            placeholder="Szukaj wydarzeń, osób, notatek…"
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            className="flex-1 text-sm text-slate-900 bg-transparent outline-none placeholder-slate-400"
+          />
+          {q && (
+            <button onClick={() => setQ("")} className="text-slate-400 text-xs font-bold hover:text-slate-600">✕</button>
+          )}
         </div>
-      ) : events.length === 0 ? (
-        <div className="px-5 pb-8 text-center">
-          <p className="text-4xl mb-2">🌸</p>
-          <p className="text-slate-500 text-sm">Brak wyników dla wybranych filtrów.</p>
-          <button
-            onClick={onClearFilters}
-            className="mt-3 text-xs text-sky-500 hover:text-sky-700 font-medium transition-colors"
-          >
-            Wyczyść filtry
-          </button>
-        </div>
-      ) : (
-        <>
-          <ul className="divide-y divide-slate-50">
-            {visible.map((ev, i) => {
-              const { day, mon } = dayBadgeParts(ev.date);
+        <button onClick={onClose} className="text-sm font-medium text-sky-500 hover:text-sky-700 transition-colors whitespace-nowrap">
+          Anuluj
+        </button>
+      </div>
+
+      {/* Results */}
+      <div className="flex-1 overflow-y-auto px-4 py-3">
+        {!q.trim() ? (
+          <div className="text-center py-16">
+            <p className="text-4xl mb-3">🔍</p>
+            <p className="text-sm text-slate-400">Zacznij pisać, aby szukać</p>
+          </div>
+        ) : results.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-4xl mb-3">🌸</p>
+            <p className="text-sm text-slate-400">Brak wyników dla &bdquo;{q}&ldquo;</p>
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {results.map(ev => {
               const isBirthday = ev.id.startsWith("birthday-");
+              const cat    = ev.category ?? "default";
+              const colors = CAT_COLOR[cat] ?? CAT_COLOR.default;
+              const cleanTitle = ev.title.replace(/^🎂\s*/, "");
+              const insight = insights.get(ev.id);
+
               return (
                 <li
                   key={ev.id}
-                  className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/60 transition-colors group"
-                  style={{ animation: `fadeIn .25s ease ${i * 0.04}s both` }}
+                  className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
+                  onClick={() => { if (!isBirthday) { onEdit(ev.id); onClose(); } }}
                 >
-                  {/* Date badge */}
-                  <div className="flex flex-col items-center justify-center w-11 h-11 rounded-2xl bg-slate-50 border border-slate-100 shrink-0 group-hover:border-slate-200 transition-colors">
-                    <span className="text-[8px] font-bold uppercase text-slate-400 tracking-wider leading-none">{mon}</span>
-                    <span className="text-lg font-extrabold text-slate-800 leading-none">{day}</span>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm shrink-0 ${colors.pill} ${colors.text} font-bold border`}>
+                    {CAT_EMOJI[cat] ?? "📌"}
                   </div>
-
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold text-slate-800 text-sm truncate">{ev.title}</p>
-                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 ${BADGE[ev.category ?? "default"] ?? BADGE.default}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${BADGE_DOT[ev.category ?? "default"] ?? BADGE_DOT.default}`} />
-                        {labelKat(ev.category)}
+                    <p className="font-semibold text-slate-800 text-sm leading-tight">{cleanTitle}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[11px] text-slate-400">{formatDateShort(ev.date)}</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${urgencyBadge(ev.date)}`}>
+                        {daysLabel(ev.date)}
                       </span>
-                      {isBirthday && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-500 border border-purple-200 font-bold">
-                          auto
-                        </span>
-                      )}
                     </div>
+                    {insight && (
+                      <p className="text-[11px] text-violet-500 mt-1">✨ {insight}</p>
+                    )}
                     {ev.notes && !isBirthday && (
                       <p className="text-xs text-slate-400 mt-0.5 truncate">{ev.notes}</p>
                     )}
                   </div>
-
-                  {/* Actions */}
-                  {!isBirthday && (
-                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity">
-                      <Link
-                        href={`/gift/start?eventId=${ev.id}&date=${encodeURIComponent(ev.date)}&title=${encodeURIComponent(ev.title)}`}
-                        className="w-7 h-7 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 flex items-center justify-center text-xs transition-colors"
-                        title="Pomysł na prezent"
-                      >
-                        🎁
-                      </Link>
-                      <button
-                        onClick={() => onEdit(ev.id)}
-                        className="w-7 h-7 rounded-xl border border-sky-200 bg-sky-50 hover:bg-sky-100 flex items-center justify-center text-xs transition-colors"
-                        title="Edytuj"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => onDelete(ev)}
-                        className="w-7 h-7 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 flex items-center justify-center text-xs transition-colors"
-                        title="Usuń"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  )}
                 </li>
               );
             })}
           </ul>
-
-          {events.length > MAX && (
-            <div className="px-5 py-3 border-t border-slate-50">
-              <button
-                onClick={() => setShowAll(v => !v)}
-                className="w-full h-10 rounded-2xl border border-slate-200 text-sm text-slate-500 hover:bg-slate-50 transition-colors font-medium"
-              >
-                {showAll
-                  ? "Pokaż mniej ↑"
-                  : `Pokaż wszystkie (${events.length - MAX} więcej) ↓`}
-              </button>
-            </div>
-          )}
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════
-   MAIN PAGE
+   MAIN — CALENDAR PAGE
 ═══════════════════════════════════════════════════ */
-export default function DashboardPage() {
-  const router  = useRouter();
-  const [email,   setEmail]   = useState<string | null>(null);
+export default function CalendarPage() {
+  const router = useRouter();
+
+  /* ── State ── */
   const [events,  setEvents]  = useState<EventRow[]>([]);
   const [people,  setPeople]  = useState<PersonRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [query,     setQuery]     = useState("");
-  const [filterCat, setFilterCat] = useState("all");
+  const currentYear = useRef(new Date().getFullYear()).current;
+  const [viewYear,  setViewYear]  = useState(currentYear);
+  const [viewMonth, setViewMonth] = useState(new Date().getMonth());
 
-  /* Add modal */
-  const [addOpen, setAddOpen] = useState(false);
-  const [mDate,   setMDate]   = useState("");
-  const [mTitle,  setMTitle]  = useState("");
-  const [mNotes,  setMNotes]  = useState("");
-  const [mCat,    setMCat]    = useState("personal");
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [showSearch,   setShowSearch]   = useState(false);
 
-  /* Edit modal */
+  /* Add / edit */
+  const [addOpen, setAddOpen]   = useState(false);
+  const [mDate,   setMDate]     = useState("");
+  const [mTitle,  setMTitle]    = useState("");
+  const [mNotes,  setMNotes]    = useState("");
+  const [mCat,    setMCat]      = useState("personal");
+
   const [editOpen, setEditOpen] = useState(false);
-  const [eId,    setEId]    = useState("");
-  const [eTitle, setETitle] = useState("");
-  const [eDate,  setEDate]  = useState("");
-  const [eNotes, setENotes] = useState("");
-  const [eCat,   setECat]   = useState("personal");
-
-  /* Calendar compact */
-  const [calExpanded, setCalExpanded] = useState(false);
-
-  /* Day preview sheet */
-  const [daySheet, setDaySheet] = useState<string | null>(null);
+  const [eId,   setEId]         = useState("");
+  const [eTitle, setETitle]     = useState("");
+  const [eDate,  setEDate]      = useState("");
+  const [eNotes, setENotes]     = useState("");
+  const [eCat,   setECat]       = useState("personal");
 
   const [confirm, setConfirm] = useState<ConfirmState>({ open: false });
   const { toasts, push } = useToasts();
   const fileRef = useRef<HTMLInputElement>(null);
-
-  /* Remember last category */
-  useEffect(() => {
-    try {
-      const l = localStorage.getItem("hd:lastCat");
-      if (l) { setMCat(l); setECat(l); }
-    } catch {}
-  }, []);
-  useEffect(() => {
-    try { localStorage.setItem("hd:lastCat", mCat); } catch {}
-  }, [mCat]);
 
   /* ── Init + realtime ── */
   useEffect(() => {
@@ -984,17 +865,14 @@ export default function DashboardPage() {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace("/auth/login"); return; }
-      setEmail(user.email ?? null);
 
       const [{ data: evData, error: evErr }, { data: peopleData }] = await Promise.all([
-        supabase
-          .from("events")
+        supabase.from("events")
           .select("id,user_id,title,date,notes,category")
           .eq("user_id", user.id)
           .order("date", { ascending: true }),
-        supabase
-          .from("people")
-          .select("id, name, birthday, notes")
+        supabase.from("people")
+          .select("id,name,birthday,notes")
           .eq("user_id", user.id)
           .not("birthday", "is", null),
       ]);
@@ -1002,16 +880,13 @@ export default function DashboardPage() {
       if (evErr) push({ type: "error", msg: "Nie udało się pobrać wydarzeń." });
       if (!evErr && evData) setEvents(evData as EventRow[]);
       if (peopleData) setPeople(peopleData as PersonRow[]);
-
       setLoading(false);
 
-      ch = supabase.channel("ev-ch")
-        .on(
-          "postgres_changes",
+      ch = supabase.channel("cal-ch")
+        .on("postgres_changes",
           { event: "*", schema: "public", table: "events", filter: `user_id=eq.${user.id}` },
           (payload: RealtimePostgresChangesPayload<EventRow>) => {
-            const sort = (arr: EventRow[]) =>
-              [...arr].sort((a, b) => a.date.localeCompare(b.date));
+            const sort = (arr: EventRow[]) => [...arr].sort((a,b) => a.date.localeCompare(b.date));
             if (payload.eventType === "INSERT")
               setEvents(p => sort([...p, payload.new as EventRow]));
             if (payload.eventType === "UPDATE")
@@ -1019,171 +894,93 @@ export default function DashboardPage() {
             if (payload.eventType === "DELETE")
               setEvents(p => p.filter(e => e.id !== (payload.old as EventRow).id));
           }
-        )
-        .subscribe();
+        ).subscribe();
     };
     init();
     return () => { if (ch) supabase.removeChannel(ch); };
   }, [router, push]);
 
-  /* ── Birthday events from people ── */
+  /* ── Birthday events ── */
   const birthdayEvents = useMemo<EventRow[]>(() => {
-    const year = new Date().getFullYear();
     return people
       .filter(p => !!p.birthday)
       .map(p => {
-        const bday = new Date(p.birthday! + "T00:00:00");
-        const month = String(bday.getMonth() + 1).padStart(2, "0");
-        const day   = String(bday.getDate()).padStart(2, "0");
+        const bd  = new Date(p.birthday! + "T00:00:00");
+        const mon = String(bd.getMonth()+1).padStart(2,"0");
+        const day = String(bd.getDate()).padStart(2,"0");
         return {
           id:       `birthday-${p.id}`,
           title:    `🎂 ${p.name}`,
-          date:     `${year}-${month}-${day}`,
-          notes:    "Urodziny",
+          date:     `${currentYear}-${mon}-${day}`,
+          notes:    null,
           category: "birthday",
         };
       });
-  }, [people]);
+  }, [people, currentYear]);
 
-  /* ── All events ── */
+  /* ── All events merged ── */
   const allEvents = useMemo<EventRow[]>(() => {
     const existingIds = new Set(events.map(e => e.id));
-    const uniqueBirthdays = birthdayEvents.filter(b => !existingIds.has(b.id));
-    return [...events, ...uniqueBirthdays].sort((a, b) => a.date.localeCompare(b.date));
+    const unique = birthdayEvents.filter(b => !existingIds.has(b.id));
+    return [...events, ...unique].sort((a,b) => a.date.localeCompare(b.date));
   }, [events, birthdayEvents]);
 
-  /* ── AI Insights (derived from notes + people data) ── */
+  /* ── AI Insights ── */
   const aiInsights = useMemo<Map<string, string>>(() => {
     const map = new Map<string, string>();
-
-    // For birthday events tied to a person with notes
     people.forEach(p => {
-      if (!p.birthday || !p.notes) return;
-      const id = `birthday-${p.id}`;
-      const notesLow = p.notes.toLowerCase();
-
-      const hints: string[] = [];
-      if (notesLow.includes("kawa") || notesLow.includes("coffee")) {
-        hints.push(`${p.name} często wspomina o kawie ☕`);
-      }
-      if (notesLow.includes("podróż") || notesLow.includes("travel") || notesLow.includes("wyjazd")) {
-        hints.push(`${p.name} lubi podróże ✈️`);
-      }
-      if (notesLow.includes("książk") || notesLow.includes("czyta")) {
-        hints.push(`${p.name} lubi czytać 📚`);
-      }
-      if (notesLow.includes("zegar") || notesLow.includes("watch")) {
-        hints.push(`${p.name} interesuje się zegarkami ⌚`);
-      }
-      if (notesLow.includes("foto") || notesLow.includes("aparat") || notesLow.includes("fuji")) {
-        hints.push(`${p.name} jest pasjonatem fotografii 📷`);
-      }
-      if (notesLow.includes("muzyk") || notesLow.includes("gitara") || notesLow.includes("piano")) {
-        hints.push(`${p.name} lubi muzykę 🎵`);
-      }
-      if (notesLow.includes("sport") || notesLow.includes("siłown") || notesLow.includes("bieg")) {
-        hints.push(`${p.name} jest aktywny sportowo 🏃`);
-      }
-      if (notesLow.includes("wellness") || notesLow.includes("spa") || notesLow.includes("relaks")) {
-        hints.push(`${p.name} ceni chwile relaksu 🧘`);
-      }
-
-      if (hints.length > 0) map.set(id, hints[0]);
+      const insight = getAIInsight(p);
+      if (insight) map.set(`birthday-${p.id}`, `${p.name} ${insight}`);
     });
-
-    // For regular events with notes
     events.forEach(ev => {
-      if (ev.notes && ev.notes.length > 10) {
-        const diff = daysLeft(ev.date);
-        if (diff > 0 && diff <= 14) {
-          map.set(ev.id, `Masz notatkę: „${ev.notes.slice(0, 60)}${ev.notes.length > 60 ? "…" : ""}"`);
-        }
+      if (ev.notes && ev.notes.length > 8) {
+        const d = daysLeft(ev.date);
+        if (d > 0 && d <= 14)
+          map.set(ev.id, `Notatka: ${ev.notes.slice(0, 45)}${ev.notes.length > 45 ? "…" : ""}`);
       }
     });
-
     return map;
   }, [people, events]);
 
-  /* ── Global AI insight cards ── */
-  const globalInsights = useMemo<AIInsight[]>(() => {
-    const list: AIInsight[] = [];
-
-    // Upcoming birthdays with no gift note
-    allEvents
-      .filter(e => e.category === "birthday")
-      .forEach(e => {
-        const diff = daysLeft(e.date);
-        if (diff > 0 && diff <= 14) {
-          const name = e.title.replace(/^🎂\s*/, "");
-          list.push({
-            id: `insight-bday-${e.id}`,
-            eventId: e.id,
-            type: "countdown",
-            text: `Za ${diff} ${diff === 1 ? "dzień" : "dni"} urodziny ${name} — czas na prezent! 🎁`,
-          });
-        }
-      });
-
-    // People with insight notes
-    people.forEach(p => {
-      const id = `birthday-${p.id}`;
-      const insight = aiInsights.get(id);
-      if (insight) {
-        list.push({ id: `insight-person-${p.id}`, eventId: id, type: "memory", text: insight });
-      }
-    });
-
-    // Events added recently
-    events.slice(-2).forEach(e => {
-      if (e.notes && e.notes.length > 5) {
-        list.push({
-          id: `insight-note-${e.id}`,
-          eventId: e.id,
-          type: "note",
-          text: `Masz notatkę do wydarzenia „${e.title}": ${e.notes.slice(0, 50)}`,
-        });
-      }
-    });
-
-    return list.slice(0, 5);
-  }, [allEvents, people, aiInsights, events]);
-
-  /* ── Upcoming (next 30 days) ── */
+  /* ── Upcoming 30 days ── */
   const upcoming = useMemo(() => {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const in30  = new Date(today); in30.setDate(today.getDate() + 30);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const in30  = new Date(today); in30.setDate(today.getDate()+30);
     return allEvents
-      .filter(e => {
-        const d = new Date(e.date + "T00:00:00");
-        return d >= today && d <= in30;
-      })
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(0, 8);
+      .filter(e => { const d = new Date(e.date+"T00:00:00"); return d >= today && d <= in30; })
+      .slice(0, 12);
   }, [allEvents]);
 
-  /* ── Filtered events ── */
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return allEvents.filter(e => {
-      const okCat = filterCat === "all" || (e.category ?? "default") === filterCat;
-      const okQ   = !q || `${e.title} ${e.notes ?? ""}`.toLowerCase().includes(q);
-      return okCat && okQ;
-    });
-  }, [allEvents, query, filterCat]);
+  /* ── Events for selected date ── */
+  const selectedDateEvents = useMemo(() => {
+    if (!selectedDate) return [];
+    return allEvents.filter(e => e.date === selectedDate);
+  }, [allEvents, selectedDate]);
 
-  /* ── Events for day sheet ── */
-  const daySheetEvents = useMemo(() => {
-    if (!daySheet) return [];
-    return allEvents.filter(e => e.date === daySheet);
-  }, [allEvents, daySheet]);
+  /* ── Navigation ── */
+  const prevMonth = useCallback(() => {
+    setViewMonth(m => {
+      if (m === 0) { setViewYear(y => y-1); return 11; }
+      return m - 1;
+    });
+  }, []);
+  const nextMonth = useCallback(() => {
+    setViewMonth(m => {
+      if (m === 11) { setViewYear(y => y+1); return 0; }
+      return m + 1;
+    });
+  }, []);
+  const goToday = useCallback(() => {
+    const t = new Date();
+    setViewYear(t.getFullYear());
+    setViewMonth(t.getMonth());
+    setSelectedDate(todayYMD());
+  }, []);
 
   /* ── Handlers ── */
-  const openAdd = useCallback((ymd?: string) => {
-    const d = ymd ?? (() => {
-      const t = new Date();
-      return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;
-    })();
-    setMDate(d); setMTitle(""); setMNotes(""); setAddOpen(true);
+  const openAdd = useCallback((ymd_?: string) => {
+    const d = ymd_ ?? todayYMD();
+    setMDate(d); setMTitle(""); setMNotes(""); setMCat("personal"); setAddOpen(true);
   }, []);
 
   const createEvent = async () => {
@@ -1191,7 +988,7 @@ export default function DashboardPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.replace("/auth/login"); return; }
     const { error } = await supabase.from("events").insert([
-      { user_id: user.id, title: mTitle.trim(), date: mDate, notes: mNotes.trim() || null, category: mCat }
+      { user_id: user.id, title: mTitle.trim(), date: mDate, notes: mNotes.trim()||null, category: mCat }
     ]);
     if (error) push({ type: "error", msg: "Nie udało się dodać." });
     else push({ type: "success", msg: "Dodano wydarzenie 🎉" });
@@ -1208,12 +1005,12 @@ export default function DashboardPage() {
   }, [events]);
 
   const saveEdit = async () => {
-    const snap = { id: eId, title: eTitle.trim(), date: eDate, notes: eNotes.trim() || null, category: eCat || null };
-    if (!snap.title || !snap.date) { push({ type: "error", msg: "Tytuł i data są wymagane." }); return; }
+    const snap = { id: eId, title: eTitle.trim(), date: eDate, notes: eNotes.trim()||null, category: eCat||null };
+    if (!snap.title || !snap.date) { push({ type: "error", msg: "Uzupełnij tytuł i datę." }); return; }
     setConfirm({
       open: true, type: "update",
       title: "Zapisać zmiany?",
-      description: `„${snap.title}" — ${formatPL(snap.date)}`,
+      description: `„${snap.title}" — ${formatDateShort(snap.date)}`,
       confirmText: "Zapisz",
       onConfirm: async () => {
         const { error } = await supabase.from("events").update(snap).eq("id", snap.id);
@@ -1229,7 +1026,7 @@ export default function DashboardPage() {
     setConfirm({
       open: true, type: "delete",
       title: "Usunąć wydarzenie?",
-      description: `„${ev.title}" — ${formatPL(ev.date)}`,
+      description: `„${ev.title}"`,
       confirmText: "Usuń",
       onConfirm: async () => {
         const { error } = await supabase.from("events").delete().eq("id", ev.id);
@@ -1239,22 +1036,21 @@ export default function DashboardPage() {
     });
   }, [push]);
 
-  /* ── Calendar day click — show preview sheet first ── */
-  const handleDayClick = useCallback((dateYMD: string) => {
-    setDaySheet(dateYMD);
+  const handleSelectDate = useCallback((dateYMD: string) => {
+    setSelectedDate(prev => prev === dateYMD ? null : dateYMD);
   }, []);
 
-  /* ── Export / Import ── */
+  /* Export ICS */
   const exportICS = () => {
     const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//HappyDate//PL","CALSCALE:GREGORIAN"];
-    filtered.forEach(e => {
+    allEvents.forEach(e => {
       const dt = e.date.replaceAll("-","");
       lines.push("BEGIN:VEVENT",`UID:${e.id}@happydate`,`DTSTAMP:${toUTCStamp(new Date())}`,
-        `DTSTART;VALUE=DATE:${dt}`,`DTEND;VALUE=DATE:${addOneDay(dt)}`,
+        `DTSTART;VALUE=DATE:${dt}`,`DTEND;VALUE=DATE:${addOneDayICS(dt)}`,
         `SUMMARY:${escICS(e.title)}`,e.notes ? `DESCRIPTION:${escICS(e.notes)}` : "","END:VEVENT");
     });
     lines.push("END:VCALENDAR");
-    const blob = new Blob([lines.filter(Boolean).join("\r\n")+"\r\n"], { type: "text/calendar;charset=utf-8" });
+    const blob = new Blob([lines.filter(Boolean).join("\r\n")+"\r\n"], { type:"text/calendar;charset=utf-8" });
     const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: "happydate.ics" });
     a.click(); URL.revokeObjectURL(a.href);
   };
@@ -1286,359 +1082,205 @@ export default function DashboardPage() {
   ═══════════════════════════════════════════ */
   return (
     <>
-      {/* Global animations */}
       <style>{`
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
-        @keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
-        @keyframes slideInRight { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+        @keyframes sheetUp   { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:none; } }
+        @keyframes fadeInFull{ from { opacity:0; } to { opacity:1; } }
+        @keyframes stripIn   { from { opacity:0; transform:translateX(8px); } to { opacity:1; transform:none; } }
+        @keyframes toastIn   { from { opacity:0; transform:translateX(12px); } to { opacity:1; transform:none; } }
+        .scrollbar-hide::-webkit-scrollbar { display:none; }
+        .scrollbar-hide { -ms-overflow-style:none; scrollbar-width:none; }
       `}</style>
 
-      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-rose-50">
+      <div className="min-h-screen bg-white flex flex-col max-w-lg mx-auto">
         <ToastStack items={toasts} />
 
-        {/* ──────────── PAGE HEADER ──────────── */}
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-2">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                🗓️ Moje wydarzenia
-              </h1>
-              <p className="mt-0.5 text-sm text-slate-400">Twój osobisty kalendarz relacji ✨</p>
-              {email && <p className="text-xs text-slate-300 mt-0.5">{email}</p>}
-            </div>
+        {/* ── TOP BAR ── */}
+        <div className="flex items-center justify-between px-4 pt-12 pb-2">
+          <button
+            onClick={() => setShowSearch(true)}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors text-lg"
+            aria-label="Szukaj"
+          >
+            🔍
+          </button>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={() => openAdd()}
-                className="inline-flex items-center gap-1.5 h-10 px-4 rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-600 hover:to-cyan-600 text-white text-sm font-bold shadow-md shadow-sky-200 transition-all active:scale-[.97]"
-              >
-                <span>＋</span>
-                <span className="hidden sm:inline">Dodaj</span>
-              </button>
-              <input
-                ref={fileRef} type="file" accept=".ics,text/calendar" className="hidden"
-                onChange={e => { const f = e.target.files?.[0]; if (f) importICS(f); e.currentTarget.value = ""; }}
-              />
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="hidden sm:inline-flex items-center gap-1.5 h-10 px-3 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-medium transition-colors"
-              >
-                📥
-              </button>
-              <button
-                onClick={exportICS}
-                className="hidden sm:inline-flex items-center gap-1.5 h-10 px-3 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-medium transition-colors"
-              >
-                📤
-              </button>
-            </div>
+          {/* Month / year — tappable to go today */}
+          <button onClick={goToday} className="flex items-center gap-1.5 group">
+            <span className="text-base font-extrabold text-slate-900 group-hover:text-sky-600 transition-colors">
+              {MONTHS_PL[viewMonth]}
+            </span>
+            <span className="text-base font-extrabold text-slate-400 group-hover:text-sky-500 transition-colors">
+              {viewYear}
+            </span>
+          </button>
+
+          <div className="flex items-center gap-1">
+            {/* Import/Export hidden inputs */}
+            <input
+              ref={fileRef} type="file" accept=".ics,text/calendar" className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; if(f) importICS(f); e.currentTarget.value=""; }}
+            />
+            <button
+              onClick={() => openAdd()}
+              className="w-9 h-9 rounded-xl flex items-center justify-center bg-sky-500 hover:bg-sky-600 text-white font-bold text-lg shadow-sm shadow-sky-200 transition-all active:scale-[.93]"
+              aria-label="Dodaj wydarzenie"
+            >
+              ＋
+            </button>
           </div>
         </div>
 
-        {/* ──────────── BIRTHDAY SYNC BANNER ──────────── */}
-        {people.length > 0 && (
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-3">
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-pink-50 border border-pink-200 rounded-2xl text-xs text-pink-700 font-medium">
-              <span>🎂</span>
-              <span>
-                Zsynchronizowano <strong>{people.length}</strong> {people.length === 1 ? "urodziny" : "urodzin"} z listy osób
-              </span>
-            </div>
-          </div>
-        )}
+        {/* ── MONTH NAVIGATION ── */}
+        <div className="flex items-center justify-between px-4 pb-2">
+          <button
+            onClick={prevMonth}
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors text-sm font-bold"
+            aria-label="Poprzedni miesiąc"
+          >
+            ‹
+          </button>
 
-        {/* ──────────── MAIN GRID ──────────── */}
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-24 pt-4">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="flex-1" />
 
-            {/* ─── LEFT COLUMN ─── */}
-            <div className="lg:col-span-8 space-y-5">
-
-              {/* 1. HERO EVENT CARD */}
-              {!loading && upcoming.length > 0 && (
-                <HeroEventCard
-                  event={upcoming[0]}
-                  insight={aiInsights.get(upcoming[0].id)}
-                  onEdit={() => openEdit(upcoming[0].id)}
-                />
-              )}
-
-              {/* 2. AI INSIGHT CARD */}
-              {!loading && globalInsights.length > 0 && (
-                <AIInsightCard insights={globalInsights} />
-              )}
-
-              {/* 3. UPCOMING EMOTIONAL FEED */}
-              {!loading && upcoming.length > 1 && (
-                <UpcomingFeed
-                  events={upcoming.slice(1)}
-                  insights={aiInsights}
-                  onEdit={openEdit}
-                />
-              )}
-
-              {/* 4. SEARCH & FILTERS */}
-              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-sm select-none">🔎</span>
-                    <input
-                      type="search"
-                      placeholder="Szukaj wydarzeń, notatek, osób…"
-                      value={query}
-                      onChange={e => setQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 h-11 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-300 transition-shadow"
-                    />
-                  </div>
-                  <div className="flex gap-1.5 overflow-x-auto pb-0.5 sm:pb-0 scrollbar-hide">
-                    {CATEGORIES.map(c => (
-                      <button
-                        key={c.value}
-                        type="button"
-                        onClick={() => setFilterCat(c.value)}
-                        className={`flex-shrink-0 h-11 px-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 border active:scale-[.97] ${
-                          filterCat === c.value
-                            ? "bg-sky-500 text-white border-sky-500 shadow-sm"
-                            : "bg-white text-slate-400 border-slate-200 hover:border-slate-300"
-                        }`}
-                      >
-                        <span className="text-sm">{c.emoji}</span>
-                        <span className="hidden sm:inline">{c.label}</span>
-                      </button>
-                    ))}
-                    {(query || filterCat !== "all") && (
-                      <button
-                        onClick={() => { setQuery(""); setFilterCat("all"); }}
-                        className="flex-shrink-0 h-11 px-3 rounded-2xl text-xs text-slate-400 hover:text-slate-600 border border-slate-200 hover:border-slate-300 transition-colors"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                </div>
-                {filtered.length > 0 && (query || filterCat !== "all") && (
-                  <p className="text-xs text-slate-400 mt-2.5 pl-1">
-                    {filtered.length} {filtered.length === 1 ? "wynik" : "wyniki"}
-                  </p>
-                )}
-              </div>
-
-              {/* 5. EVENTS LIST */}
-              <EventsList
-                events={filtered}
-                loading={loading}
-                onEdit={openEdit}
-                onDelete={doDelete}
-                onClearFilters={() => { setQuery(""); setFilterCat("all"); }}
-              />
-
-              {/* 6. CALENDAR — compact/expanded */}
-              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-                  <h2 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-                    📅 Kalendarz
-                  </h2>
-                  <button
-                    onClick={() => setCalExpanded(v => !v)}
-                    className="text-xs text-sky-500 hover:text-sky-700 font-semibold transition-colors flex items-center gap-1"
-                  >
-                    {calExpanded ? "Zwiń ↑" : "Rozwiń ↓"}
-                  </button>
-                </div>
-
-                {loading ? (
-                  <div className="px-5 pb-5">
-                    <div className="h-48 rounded-2xl bg-slate-100 animate-pulse" />
-                  </div>
-                ) : (
-                  <div
-                    className="px-4 pb-5 overflow-hidden transition-all duration-500"
-                    style={{ maxHeight: calExpanded ? "700px" : "320px" }}
-                  >
-                    <EventsCalendar
-                      items={filtered}
-                      onDayClick={handleDayClick}
-                      onEventClick={openEdit}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* 7. IMPORT / EXPORT (utility, de-emphasized) */}
-              <div className="flex gap-2 sm:hidden">
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  className="flex-1 h-10 rounded-2xl border border-slate-200 bg-white text-slate-500 text-xs font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  📥 Import .ics
-                </button>
-                <button
-                  onClick={exportICS}
-                  className="flex-1 h-10 rounded-2xl border border-slate-200 bg-white text-slate-500 text-xs font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  📤 Export .ics
-                </button>
-              </div>
-            </div>
-
-            {/* ─── RIGHT SIDEBAR ─── */}
-            <aside className="lg:col-span-4 space-y-5">
-              {/* Add button */}
-              <button
-                onClick={() => openAdd()}
-                className="hidden lg:flex w-full h-12 items-center justify-center gap-2 rounded-3xl bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-600 hover:to-cyan-600 text-white font-bold shadow-md shadow-sky-200 transition-all active:scale-[.98]"
-              >
-                ＋ Dodaj wydarzenie
-              </button>
-
-              {/* Stat cards */}
-              {!loading && (
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: "Wszystkich", value: allEvents.length, emoji: "📋", color: "bg-sky-50 border-sky-100" },
-                    { label: "Nadchodzące", value: upcoming.length, emoji: "🎁", color: "bg-rose-50 border-rose-100" },
-                  ].map(s => (
-                    <div key={s.label} className={`rounded-2xl border p-3.5 ${s.color}`}>
-                      <p className="text-xl">{s.emoji}</p>
-                      <p className="text-2xl font-extrabold text-slate-800 mt-1">{s.value}</p>
-                      <p className="text-xs text-slate-400 font-medium">{s.label}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* AI insight card (sidebar) */}
-              {!loading && globalInsights.length > 0 && (
-                <div className="hidden lg:block">
-                  <AIInsightCard insights={globalInsights} />
-                </div>
-              )}
-
-              {/* Upcoming sidebar (desktop, first hero already shown) */}
-              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-                  <div>
-                    <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                      ⏳ Nadchodzące
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Najbliższe 30 dni</p>
-                  </div>
-                  <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
-                    {upcoming.length}
-                  </span>
-                </div>
-
-                {upcoming.length === 0 ? (
-                  <div className="px-5 pb-6 text-center">
-                    <p className="text-3xl mb-1.5">🌙</p>
-                    <p className="text-xs text-slate-400">Brak wydarzeń w najbliższym czasie.</p>
-                  </div>
-                ) : (
-                  <ul className="px-3 pb-4 space-y-2">
-                    {upcoming.slice(0, 5).map(ev => {
-                      const isBirthday = ev.id.startsWith("birthday-");
-                      const insight = aiInsights.get(ev.id);
-                      return (
-                        <li key={ev.id} className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 hover:bg-slate-100/80 transition-colors group">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0 ${avatarColor(ev.title.replace(/^🎂\s*/, ""))}`}>
-                            {isBirthday ? "🎂" : CAT_EMOJI[ev.category ?? "default"] ?? "📌"}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-slate-800 truncate leading-tight">
-                              {ev.title.replace(/^🎂\s*/, "")}
-                            </p>
-                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                              <span className="text-[10px] text-slate-400">{formatPLShort(ev.date)}</span>
-                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${urgencyColor(ev.date)}`}>
-                                {daysLeftLabel(ev.date)}
-                              </span>
-                            </div>
-                            {insight && (
-                              <p className="text-[10px] text-violet-500 mt-1 leading-snug">✨ {insight}</p>
-                            )}
-                          </div>
-                          {!isBirthday && (
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                              <Link
-                                href={`/gift/start?eventId=${ev.id}&date=${encodeURIComponent(ev.date)}&title=${encodeURIComponent(ev.title)}`}
-                                className="w-6 h-6 rounded-lg flex items-center justify-center bg-white border border-emerald-200 hover:bg-emerald-50 text-[10px] transition-colors"
-                              >
-                                🎁
-                              </Link>
-                              <button
-                                onClick={() => openEdit(ev.id)}
-                                className="w-6 h-6 rounded-lg flex items-center justify-center bg-white border border-sky-200 hover:bg-sky-50 text-[10px] transition-colors"
-                              >
-                                ✏️
-                              </button>
-                            </div>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-
-              {/* Import/Export (desktop sidebar) */}
-              <div className="hidden lg:block bg-white/70 rounded-3xl border border-slate-100 shadow-sm p-4 space-y-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
-                  Importuj / Eksportuj
-                </p>
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  className="w-full h-10 rounded-2xl border border-slate-200 text-xs font-medium text-slate-500 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
-                >
-                  📥 Import .ics
-                </button>
-                <button
-                  onClick={exportICS}
-                  className="w-full h-10 rounded-2xl border border-slate-200 text-xs font-medium text-slate-500 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
-                >
-                  📤 Export .ics
-                </button>
-              </div>
-            </aside>
-          </div>
+          <button
+            onClick={nextMonth}
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors text-sm font-bold"
+            aria-label="Następny miesiąc"
+          >
+            ›
+          </button>
         </div>
 
-        {/* ──────────── MODALS ──────────── */}
-        {addOpen && (
-          <AddEditModal
-            mode="add"
-            date={mDate} title={mTitle} notes={mNotes} category={mCat}
-            setDate={setMDate} setTitle={setMTitle} setNotes={setMNotes} setCategory={setMCat}
-            onCancel={() => setAddOpen(false)} onSubmit={createEvent}
-          />
-        )}
-        {editOpen && (
-          <AddEditModal
-            mode="edit"
-            date={eDate} title={eTitle} notes={eNotes} category={eCat}
-            setDate={setEDate} setTitle={setETitle} setNotes={setENotes} setCategory={setECat}
-            onCancel={() => setEditOpen(false)} onSubmit={saveEdit}
-            onDelete={() => {
-              doDelete({ id: eId, title: eTitle, date: eDate, notes: eNotes, category: eCat });
-              setEditOpen(false);
-            }}
-          />
+        {/* ── CALENDAR GRID ── */}
+        <div className="px-3 flex-shrink-0">
+          {loading ? (
+            <div className="h-64 rounded-2xl bg-slate-100 animate-pulse mx-1" />
+          ) : (
+            <CalendarGrid
+              year={viewYear}
+              month={viewMonth}
+              events={allEvents}
+              selectedDate={selectedDate}
+              onSelectDate={handleSelectDate}
+            />
+          )}
+        </div>
+
+        {/* ── DIVIDER ── */}
+        <div className="mx-4 my-3 border-t border-slate-100" />
+
+        {/* ── UPCOMING STRIP ── */}
+        {!loading && upcoming.length > 0 && (
+          <div className="px-4 mb-3">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+              Nadchodzące · 30 dni
+            </p>
+            <UpcomingStrip
+              events={upcoming}
+              insights={aiInsights}
+              onTap={dateYMD => {
+                /* Navigate to that month and open day sheet */
+                const d = new Date(dateYMD + "T00:00:00");
+                setViewYear(d.getFullYear());
+                setViewMonth(d.getMonth());
+                setSelectedDate(dateYMD);
+              }}
+            />
+          </div>
         )}
 
-        {/* Day preview sheet */}
-        {daySheet && (
-          <DayPreviewSheet
-            date={daySheet}
-            events={daySheetEvents}
-            onClose={() => setDaySheet(null)}
-            onAddEvent={ymd => { setDaySheet(null); openAdd(ymd); }}
-            onOpenEvent={id => { setDaySheet(null); openEdit(id); }}
-          />
+        {/* ── EMPTY STATE ── */}
+        {!loading && allEvents.length === 0 && (
+          <div className="flex-1 flex flex-col items-center justify-center px-8 pb-20">
+            <p className="text-5xl mb-4">🌸</p>
+            <p className="text-base font-bold text-slate-700 text-center">Brak wydarzeń</p>
+            <p className="text-sm text-slate-400 text-center mt-1 leading-relaxed">
+              Dodaj pierwsze wydarzenie, aby zobaczyć je w kalendarzu.
+            </p>
+            <button
+              onClick={() => openAdd()}
+              className="mt-5 h-11 px-6 rounded-2xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm shadow-md shadow-sky-200 transition-all active:scale-[.97]"
+            >
+              ＋ Dodaj wydarzenie
+            </button>
+          </div>
         )}
 
-        <ConfirmDialog state={confirm} onClose={() => setConfirm({ open: false })} />
+        {/* ── BOTTOM UTILS (slim) ── */}
+        {!loading && (
+          <div className="flex items-center justify-center gap-4 px-4 pb-4 mt-auto">
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="text-xs text-slate-400 hover:text-slate-600 transition-colors font-medium flex items-center gap-1"
+            >
+              📥 Import
+            </button>
+            <span className="text-slate-200">·</span>
+            <button
+              onClick={exportICS}
+              className="text-xs text-slate-400 hover:text-slate-600 transition-colors font-medium flex items-center gap-1"
+            >
+              📤 Export .ics
+            </button>
+            {people.length > 0 && (
+              <>
+                <span className="text-slate-200">·</span>
+                <span className="text-xs text-pink-400 font-medium flex items-center gap-1">
+                  🎂 {people.length} {people.length === 1 ? "urodziny" : "urodzin"}
+                </span>
+              </>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* ── DAY DETAIL SHEET ── */}
+      {selectedDate && !addOpen && !editOpen && (
+        <DayDetailSheet
+          dateYMD={selectedDate}
+          events={selectedDateEvents}
+          insights={aiInsights}
+          onClose={() => setSelectedDate(null)}
+          onAdd={ymd_ => { setSelectedDate(null); openAdd(ymd_); }}
+          onEdit={id => { setSelectedDate(null); openEdit(id); }}
+        />
+      )}
+
+      {/* ── ADD SHEET ── */}
+      {addOpen && (
+        <AddEditSheet
+          mode="add"
+          date={mDate} title={mTitle} notes={mNotes} category={mCat}
+          setDate={setMDate} setTitle={setMTitle} setNotes={setMNotes} setCategory={setMCat}
+          onCancel={() => setAddOpen(false)} onSubmit={createEvent}
+        />
+      )}
+
+      {/* ── EDIT SHEET ── */}
+      {editOpen && (
+        <AddEditSheet
+          mode="edit"
+          date={eDate} title={eTitle} notes={eNotes} category={eCat}
+          setDate={setEDate} setTitle={setETitle} setNotes={setENotes} setCategory={setECat}
+          onCancel={() => setEditOpen(false)} onSubmit={saveEdit}
+          onDelete={() => {
+            doDelete({ id: eId, title: eTitle, date: eDate, notes: eNotes, category: eCat });
+            setEditOpen(false);
+          }}
+        />
+      )}
+
+      {/* ── SEARCH OVERLAY ── */}
+      {showSearch && (
+        <SearchOverlay
+          events={allEvents}
+          insights={aiInsights}
+          onClose={() => setShowSearch(false)}
+          onEdit={id => { setShowSearch(false); openEdit(id); }}
+        />
+      )}
+
+      <ConfirmDialog state={confirm} onClose={() => setConfirm({ open: false })} />
     </>
   );
 }

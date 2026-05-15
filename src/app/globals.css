@@ -501,78 +501,88 @@ label[for], summary {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   PROFILE PAGE — VISUAL REDESIGN
+   PROFILE PAGE — ACCOUNT CENTER
    ─────────────────────────────────────────────────────────
-   Додається в кінець globals.css після REDUCED MOTION блоку.
+   Додати в кінець globals.css після REDUCED MOTION блоку.
 
-   ДИЗАЙН-ФІЛОСОФІЯ:
-   Emotional lifestyle product — не SaaS dashboard.
-   Apple Journal softness × HappyDate warmth.
-   Floating cards, generous air, pastel depth.
+   UX STRUCTURE:
+   Hero → Care status → Personal data → Settings → Security → Logout
 
-   ТЕХНІЧНІ ПРАВИЛА (збережені):
-   • safe-area, bottom navbar clearance — без змін
-   • font-size: 16px на inputs — iOS zoom prevention
-   • appearance: none на date — Safari viewport fix
-   • min-width: 0, box-sizing: border-box — overflow prevention
-   • Жодних inline styles, жодних <style> тегів
+   DESIGN DIRECTION:
+   Apple Journal × HappyDate warmth. Floating glass cards,
+   generous spacing, sky/cyan/peach palette, emotional warmth.
+   Premium account center — not SaaS dashboard.
+
+   IOS FIXES PRESERVED:
+   • font-size: 16px on inputs — no Safari auto-zoom
+   • -webkit-appearance: none — no viewport stretch on date
+   • box-sizing: border-box, min-width: 0 — no overflow
+   • padding-bottom: calc(110px + safe-area-inset-bottom)
 ═══════════════════════════════════════════════════════════ */
 
 /* ── Shell ── */
 .pr-shell {
-  /* safe-container gives env(safe-area-inset-top/bottom) */
   min-height: 100dvh;
-  padding-left: 20px;
-  padding-right: 20px;
-  /*
-    padding-bottom: контент ніколи не заходить під bottom navbar.
-    110px — висота navbar + comfortable buffer.
-  */
+  padding-left: 18px;
+  padding-right: 18px;
   padding-bottom: calc(110px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  /* Soft warm background — matches HappyDate homepage feel */
+  gap: 14px;
+  /* Sky-blue ambient atmosphere — HappyDate brand palette */
   background:
-    radial-gradient(600px 400px at 110% -60px, rgba(255,199,164,.13), transparent 65%),
-    radial-gradient(500px 350px at -5% 50%, rgba(146,231,255,.11), transparent 60%),
+    radial-gradient(700px 500px at 100% -80px, rgba(186,230,255,.22), transparent 60%),
+    radial-gradient(500px 400px at -8%  60%,   rgba(255,199,164,.14), transparent 55%),
     var(--background);
 }
 
 /* ══════════════════════════════════════════
-   HERO — особистий простір у HappyDate
+   HERO
 ══════════════════════════════════════════ */
 .pr-hero {
   position: relative;
-  margin-top: 12px;
-  border-radius: 28px;
-  /* Layered glass — warm, floating, premium */
-  background:
-    linear-gradient(150deg, rgba(255,255,255,.95) 0%, rgba(255,252,248,.88) 100%);
-  border: 1px solid rgba(255,255,255,.9);
+  margin-top: 10px;
+  border-radius: 30px;
+  background: linear-gradient(160deg, rgba(255,255,255,.97) 0%, rgba(240,249,255,.92) 100%);
+  border: 1px solid rgba(186,230,255,.45);
   box-shadow:
-    0 2px 0 rgba(255,255,255,.8) inset,
-    0 20px 48px rgba(15,23,42,.07),
-    0 4px 12px rgba(15,23,42,.04);
-  padding: 24px 20px 20px;
+    0 1px 0 rgba(255,255,255,.9) inset,
+    0 20px 52px rgba(14,165,233,.07),
+    0 4px 14px rgba(15,23,42,.04);
+  padding: 26px 20px 20px;
   overflow: hidden;
 }
 
-/* Atmospheric glow — subtle warm radiance like HappyDate homepage */
+/* Warm peach glow top-right */
 .pr-hero__glow {
   position: absolute;
-  top: -40px;
-  right: -40px;
-  width: 200px;
-  height: 200px;
+  top: -50px;
+  right: -50px;
+  width: 220px;
+  height: 220px;
   border-radius: 50%;
   background: radial-gradient(circle,
-    rgba(255,199,164,.35) 0%,
-    rgba(251,146,60,.08) 50%,
+    rgba(251,191,36,.22) 0%,
+    rgba(255,199,164,.10) 45%,
     transparent 70%
   );
   pointer-events: none;
-  filter: blur(24px);
+  filter: blur(28px);
+}
+
+/* Sky blue glow bottom-left */
+.pr-hero__glow--blue {
+  top: auto;
+  right: auto;
+  bottom: -40px;
+  left: -40px;
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle,
+    rgba(56,189,248,.18) 0%,
+    rgba(186,230,255,.08) 50%,
+    transparent 70%
+  );
 }
 
 .pr-hero__inner {
@@ -591,74 +601,69 @@ label[for], summary {
 }
 
 .pr-avatar-img {
-  width: 80px;
-  height: 80px;
-  border-radius: 26px;
+  width: 84px;
+  height: 84px;
+  border-radius: 28px;
   object-fit: cover;
   display: block;
-  /* Soft warm border — not harsh gray */
-  border: 2px solid rgba(255,220,180,.4);
-  box-shadow: 0 8px 24px rgba(15,23,42,.10);
+  border: 2px solid rgba(186,230,255,.5);
+  box-shadow: 0 8px 28px rgba(14,165,233,.12), 0 2px 6px rgba(15,23,42,.06);
 }
 
 .pr-avatar-placeholder {
-  width: 80px;
-  height: 80px;
-  border-radius: 26px;
-  /* Warm gradient matching HappyDate brand */
-  background: linear-gradient(135deg, #fce7f3 0%, #ede9fe 50%, #dbeafe 100%);
+  width: 84px;
+  height: 84px;
+  border-radius: 28px;
+  /* Sky → cyan → peach — HappyDate sky palette */
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 40%, #fce7f3 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 800;
-  color: #7c3aed;
-  box-shadow: 0 8px 24px rgba(124,58,237,.12);
+  color: #0369a1;
+  box-shadow: 0 8px 28px rgba(14,165,233,.14);
   user-select: none;
-  border: 2px solid rgba(255,255,255,.8);
+  border: 2px solid rgba(255,255,255,.85);
 }
 
 .pr-avatar-edit {
   position: absolute;
-  bottom: -6px;
-  right: -6px;
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  min-height: 28px;
+  bottom: -5px;
+  right: -5px;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
   background: #fff;
-  border: 1.5px solid rgba(229,231,235,.8);
+  border: 1.5px solid rgba(186,230,255,.6);
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
   cursor: pointer;
-  box-shadow: 0 3px 10px rgba(15,23,42,.10);
-  transition: transform .15s ease, box-shadow .15s ease;
+  box-shadow: 0 3px 10px rgba(14,165,233,.12);
+  transition: transform .15s ease;
+  touch-action: manipulation;
 }
-.pr-avatar-edit:active {
-  transform: scale(.93);
-}
+.pr-avatar-edit:active { transform: scale(.91); }
 
-.pr-avatar-input {
-  display: none;
-}
+.pr-avatar-input { display: none; }
 
 /* Identity */
 .pr-hero__identity {
   flex: 1;
   min-width: 0;
-  padding-top: 4px;
+  padding-top: 6px;
 }
 
 .pr-hero__name {
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 800;
-  /* Warm dark navy — not harsh black */
-  color: #0f1a2e;
-  letter-spacing: -.3px;
-  line-height: 1.2;
+  color: #0c1a2e;
+  letter-spacing: -.35px;
+  line-height: 1.15;
   margin: 0 0 5px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -669,7 +674,7 @@ label[for], summary {
   font-size: 12.5px;
   font-weight: 500;
   color: #64748b;
-  margin: 0 0 5px;
+  margin: 0 0 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -680,7 +685,6 @@ label[for], summary {
   font-weight: 500;
   color: #94a3b8;
   margin: 0;
-  letter-spacing: .01em;
 }
 
 /* Badges */
@@ -705,110 +709,304 @@ label[for], summary {
   letter-spacing: .01em;
   transition: transform .12s ease;
 }
-.pr-badge:active { transform: scale(.95); }
+.pr-badge:active { transform: scale(.94); }
 
 .pr-badge--points {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  color: #78350f;
-  box-shadow: 0 2px 8px rgba(251,191,36,.2);
+  background: linear-gradient(135deg, #fef9c3, #fde68a);
+  color: #713f12;
+  box-shadow: 0 2px 8px rgba(234,179,8,.18);
 }
 .pr-badge--care {
   background: linear-gradient(135deg, #fce7f3, #fbcfe8);
   color: #9d174d;
-  box-shadow: 0 2px 8px rgba(236,72,153,.12);
+  box-shadow: 0 2px 8px rgba(236,72,153,.10);
 }
 .pr-badge--done {
   background: linear-gradient(135deg, #dcfce7, #bbf7d0);
   color: #14532d;
-  box-shadow: 0 2px 8px rgba(34,197,94,.12);
 }
 .pr-badge--cta {
-  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
-  color: #5b21b6;
-  box-shadow: 0 2px 8px rgba(124,58,237,.12);
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+  color: #0369a1;
+  box-shadow: 0 2px 8px rgba(14,165,233,.14);
 }
 
 /* ══════════════════════════════════════════
-   CARE BANNER
+   CARE — ACTIVE STATE
 ══════════════════════════════════════════ */
-.pr-care-banner {
-  border-radius: 24px;
-  /* Warm brand gradient — consistent with HappyDate marketing */
-  background: linear-gradient(135deg, #f472b6 0%, #a78bfa 50%, #60a5fa 100%);
-  padding: 18px 20px;
+.pr-care-active {
+  position: relative;
+  border-radius: 26px;
+  /* Warm gold-teal glass */
+  background: linear-gradient(135deg,
+    rgba(254,249,195,.9) 0%,
+    rgba(240,253,244,.85) 100%
+  );
+  border: 1px solid rgba(253,224,71,.35);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.8) inset,
+    0 12px 32px rgba(234,179,8,.08),
+    0 3px 8px rgba(15,23,42,.04);
+  padding: 18px 20px 16px;
+  overflow: hidden;
+}
+
+.pr-care-active__glow {
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(253,224,71,.3) 0%, transparent 70%);
+  pointer-events: none;
+  filter: blur(20px);
+}
+
+.pr-care-active__row {
   display: flex;
   align-items: center;
   gap: 14px;
-  box-shadow: 0 12px 32px rgba(167,139,250,.25), 0 4px 12px rgba(244,114,182,.15);
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 1;
 }
 
-.pr-care-banner__text {
-  flex: 1;
-  min-width: 0;
+.pr-care-active__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fef9c3, #fde68a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(234,179,8,.18);
+  border: 1px solid rgba(253,224,71,.4);
 }
 
-.pr-care-banner__title {
+.pr-care-active__title {
   font-size: 14px;
   font-weight: 800;
-  color: #fff;
+  color: #713f12;
   margin: 0 0 3px;
   letter-spacing: -.1px;
 }
 
-.pr-care-banner__body {
+.pr-care-active__sub {
   font-size: 12px;
-  line-height: 1.5;
-  color: rgba(255,255,255,.85);
+  color: #92400e;
+  opacity: .8;
   margin: 0;
+  line-height: 1.4;
 }
 
-.pr-care-banner__cta {
+.pr-care-active__manage {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
-  flex-shrink: 0;
-  background: rgba(255,255,255,.22);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,.35);
-  border-radius: 14px;
-  padding: 9px 14px;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0369a1;
   text-decoration: none;
-  min-height: 38px;
-  white-space: nowrap;
+  background: rgba(255,255,255,.6);
+  border: 1px solid rgba(186,230,255,.5);
+  border-radius: 12px;
+  padding: 7px 14px;
+  min-height: 34px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   transition: background .15s ease;
 }
-.pr-care-banner__cta:active {
-  background: rgba(255,255,255,.32);
-}
+.pr-care-active__manage:active { background: rgba(255,255,255,.85); }
 
 /* ══════════════════════════════════════════
-   CARDS — floating, breathing, premium
+   CARE — UPSELL STATE
+══════════════════════════════════════════ */
+.pr-care-upsell {
+  position: relative;
+  border-radius: 26px;
+  /* Sky blue → soft cyan gradient — brand palette */
+  background: linear-gradient(140deg, #0ea5e9 0%, #38bdf8 50%, #7dd3fc 100%);
+  padding: 22px 20px;
+  overflow: hidden;
+  box-shadow:
+    0 16px 40px rgba(14,165,233,.28),
+    0 4px 12px rgba(14,165,233,.16);
+}
+
+.pr-care-upsell__glow {
+  position: absolute;
+  top: -40px; right: -20px;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.22) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.pr-care-upsell__content { position: relative; z-index: 1; }
+
+.pr-care-upsell__label {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.7);
+  margin: 0 0 6px;
+}
+
+.pr-care-upsell__title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -.25px;
+  margin: 0 0 14px;
+  line-height: 1.2;
+}
+
+.pr-care-upsell__perks {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pr-care-upsell__perks li {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,.92);
+  line-height: 1.4;
+}
+
+.pr-care-upsell__cta {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255,255,255,.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(255,255,255,.4);
+  color: #fff;
+  border-radius: 14px;
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  min-height: 44px;
+  letter-spacing: -.1px;
+  transition: background .15s ease;
+  touch-action: manipulation;
+}
+.pr-care-upsell__cta:active { background: rgba(255,255,255,.32); }
+
+/* ══════════════════════════════════════════
+   CARDS — floating glass
 ══════════════════════════════════════════ */
 .pr-card {
   border-radius: 26px;
-  background: rgba(255,255,255,.82);
-  backdrop-filter: saturate(1.08) blur(14px);
-  -webkit-backdrop-filter: saturate(1.08) blur(14px);
-  /* Layered shadows for depth — not flat */
-  border: 1px solid rgba(255,255,255,.75);
+  background: rgba(255,255,255,.84);
+  backdrop-filter: saturate(1.1) blur(16px);
+  -webkit-backdrop-filter: saturate(1.1) blur(16px);
+  border: 1px solid rgba(255,255,255,.78);
   box-shadow:
     0 1px 0 rgba(255,255,255,.9) inset,
-    0 16px 40px rgba(15,23,42,.06),
-    0 4px 10px rgba(15,23,42,.03);
-  padding: 22px 20px 20px;
+    0 14px 36px rgba(15,23,42,.055),
+    0 3px 8px rgba(15,23,42,.03);
+  padding: 20px;
 }
 
-/* Section eyebrow — small, calm, confident */
-.pr-card__eyebrow {
-  font-size: 11px;
+.pr-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.pr-card__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border: 1px solid rgba(186,230,255,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.pr-card__title {
+  font-size: 14px;
   font-weight: 800;
-  letter-spacing: .07em;
-  text-transform: uppercase;
+  color: #0c1a2e;
+  letter-spacing: -.1px;
+  margin: 0;
+}
+
+/* ══════════════════════════════════════════
+   SETTINGS ROWS — iOS native style
+══════════════════════════════════════════ */
+.pr-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pr-rows li {
+  border-bottom: 1px solid rgba(226,232,240,.5);
+}
+.pr-rows li:last-child { border-bottom: none; }
+
+.pr-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 2px;
+  text-decoration: none;
+  transition: background .12s ease;
+  border-radius: 12px;
+  /* min tap target */
+  min-height: 48px;
+}
+.pr-row:active { background: rgba(14,165,233,.05); }
+
+.pr-row__icon {
+  font-size: 17px;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.pr-row__label {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  letter-spacing: -.05px;
+}
+
+.pr-row__value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.pr-row__arrow {
+  font-size: 18px;
   color: #cbd5e1;
-  margin: 0 0 16px;
+  font-weight: 400;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+/* Danger row — delete account */
+.pr-row--danger .pr-row__label {
+  color: #dc2626;
+}
+.pr-row--danger .pr-row__icon {
+  filter: grayscale(0);
 }
 
 /* ══════════════════════════════════════════
@@ -830,16 +1028,15 @@ label[for], summary {
   font-size: 12px;
   font-weight: 600;
   color: #94a3b8;
-  letter-spacing: .02em;
+  letter-spacing: .025em;
   padding-left: 2px;
 }
 
 /*
-  CRITICAL iOS fixes preserved:
-  • font-size: 16px — prevents Safari auto-zoom on focus
-  • -webkit-appearance: none — prevents viewport stretching on date input
-  • box-sizing: border-box — no width overflow
-  • min-width: 0 — safe on date input
+  iOS safety:
+  • font-size: 16px — no Safari auto-zoom
+  • -webkit-appearance: none — no date input viewport stretch
+  • box-sizing: border-box — no overflow
 */
 .pr-input {
   width: 100%;
@@ -849,11 +1046,9 @@ label[for], summary {
   font-size: 16px;
   font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
   font-weight: 500;
-  /* Warm dark — not harsh black */
-  color: #0f1a2e;
-  /* Soft glass surface */
-  background: rgba(248,250,252,.6);
-  border: 1.5px solid rgba(226,232,240,.7);
+  color: #0c1a2e;
+  background: rgba(240,249,255,.5);
+  border: 1.5px solid rgba(186,230,255,.6);
   border-radius: 16px;
   outline: none;
   transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
@@ -862,10 +1057,9 @@ label[for], summary {
 }
 
 .pr-input:focus {
-  border-color: rgba(167,139,250,.6);
+  border-color: rgba(14,165,233,.5);
   background: rgba(255,255,255,.95);
-  /* Soft violet glow — brand-consistent, not harsh */
-  box-shadow: 0 0 0 3px rgba(167,139,250,.12), 0 4px 12px rgba(15,23,42,.05);
+  box-shadow: 0 0 0 3px rgba(14,165,233,.10), 0 4px 12px rgba(15,23,42,.04);
 }
 
 .pr-input::placeholder {
@@ -875,26 +1069,26 @@ label[for], summary {
 
 .pr-input--date {
   min-width: 0;
-  color: #0f1a2e;
+  color: #0c1a2e;
 }
 
-/* Feedback */
 .pr-feedback {
   margin: 10px 0 0;
   font-size: 13px;
   font-weight: 500;
-  color: #64748b;
-  background: rgba(241,245,249,.7);
+  color: #0369a1;
+  background: rgba(224,242,254,.7);
   border-radius: 12px;
   padding: 10px 14px;
   line-height: 1.4;
+  border: 1px solid rgba(186,230,255,.4);
 }
 
 /* ══════════════════════════════════════════
    BUTTONS
 ══════════════════════════════════════════ */
 
-/* Primary — warm, tactile, premium */
+/* Primary — sky blue brand */
 .pr-btn-primary {
   display: flex;
   align-items: center;
@@ -909,37 +1103,37 @@ label[for], summary {
   font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
   letter-spacing: -.1px;
   cursor: pointer;
-  /* Warm golden gradient — HappyDate brand primary */
-  background: linear-gradient(135deg, #fbbf24 0%, #fb923c 60%, #f97316 100%);
-  color: #431407;
-  /* Tactile shadow glow */
+  /* Sky blue → cyan — HappyDate primary palette */
+  background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 60%, #7dd3fc 100%);
+  color: #fff;
   box-shadow:
-    0 1px 0 rgba(255,255,255,.25) inset,
-    0 10px 28px rgba(251,146,60,.30),
-    0 4px 10px rgba(251,146,60,.15);
+    0 1px 0 rgba(255,255,255,.2) inset,
+    0 10px 28px rgba(14,165,233,.32),
+    0 4px 10px rgba(14,165,233,.16);
   transition: opacity .15s ease, transform .1s ease, box-shadow .15s ease;
   touch-action: manipulation;
 }
 .pr-btn-primary:hover {
   box-shadow:
-    0 1px 0 rgba(255,255,255,.25) inset,
-    0 14px 36px rgba(251,146,60,.38),
-    0 4px 10px rgba(251,146,60,.20);
+    0 1px 0 rgba(255,255,255,.2) inset,
+    0 14px 36px rgba(14,165,233,.40),
+    0 4px 10px rgba(14,165,233,.20);
 }
 .pr-btn-primary:active {
   transform: scale(.97);
-  opacity: .92;
+  opacity: .9;
 }
 .pr-btn-primary:disabled {
-  opacity: .55;
+  opacity: .5;
   cursor: not-allowed;
 }
 
-/* Ghost — translucent glass, elegant */
+/* Ghost — glass */
 .pr-btn-ghost {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   width: 100%;
   height: 52px;
   border: 1.5px solid rgba(226,232,240,.8);
@@ -959,116 +1153,26 @@ label[for], summary {
 }
 .pr-btn-ghost:active {
   transform: scale(.97);
-  background: rgba(255,255,255,.85);
+  background: rgba(255,255,255,.88);
 }
 
-/* ══════════════════════════════════════════
-   EVENTS LIST
-══════════════════════════════════════════ */
-.pr-events {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.pr-event {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 4px;
-  border-bottom: 1px solid rgba(241,245,249,.8);
-  animation: hd-pop .25s ease both;
-}
-.pr-event:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-/* Urgent events get a warm tint */
-.pr-event--urgent .pr-event__icon {
-  background: linear-gradient(135deg, #fff1f2, #fce7f3);
-  box-shadow: 0 2px 8px rgba(244,114,182,.12);
-}
-
-.pr-event__icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-  border: 1px solid rgba(226,232,240,.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(15,23,42,.05);
-}
-
-.pr-event__info {
-  flex: 1;
-  min-width: 0;
-}
-
-.pr-event__title {
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #0f1a2e;
-  margin: 0 0 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  letter-spacing: -.1px;
-}
-
-.pr-event__meta {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: #94a3b8;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.pr-event__pill {
-  font-size: 10.5px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 20px;
-  background: rgba(241,245,249,.9);
-  color: #64748b;
-  border: 1px solid rgba(226,232,240,.6);
-  white-space: nowrap;
-  letter-spacing: .01em;
-}
-
-/* Urgent pill — warm amber */
-.pr-event__pill--urgent {
-  background: linear-gradient(135deg, #fff7ed, #fef3c7);
-  color: #92400e;
-  border-color: rgba(251,191,36,.25);
-}
-
-/* ── Logout section ── */
+/* ── Logout ── */
 .pr-logout {
   padding-bottom: 8px;
 }
 
 /* ══════════════════════════════════════════
-   REDUCED MOTION overrides for profile
+   REDUCED MOTION
 ══════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
-  .pr-event {
-    animation: none !important;
-  }
   .pr-btn-primary,
   .pr-btn-ghost,
   .pr-badge,
   .pr-avatar-edit,
-  .pr-input {
+  .pr-input,
+  .pr-row,
+  .pr-care-upsell__cta,
+  .pr-care-active__manage {
     transition: none !important;
   }
 }

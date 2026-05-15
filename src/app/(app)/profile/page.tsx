@@ -7,39 +7,20 @@ import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { useAvatar } from "@/hooks/useAvatar";
 
-/* ─────────────────────────────────────────
-   TYPES
-───────────────────────────────────────── */
-type EventRow = {
-  id: string;
-  title: string;
-  date: string;
-  category: string | null;
-};
+/* ═══════════════════════════════════════════════════════════
+   PROFILE PAGE — Account Center
+   ─────────────────────────────────────────────────────────
+   Structure:
+   1. ProfileHero        — avatar, name, email, badges
+   2. CareCard           — subscription status (active or upsell)
+   3. PersonalDataCard   — name edit + save
+   4. SettingsCard       — notifications, reminders, AI prefs
+   5. SecurityCard       — password, privacy, data export
+   6. LogoutButton
 
-/* ─────────────────────────────────────────
-   HELPERS
-───────────────────────────────────────── */
-function daysLabel(dateStr: string): string {
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const dt    = new Date(dateStr + "T00:00:00");
-  const diff  = Math.round((dt.getTime() - today.getTime()) / 86_400_000);
-  if (diff === 0) return "Dziś 🎉";
-  if (diff === 1) return "Jutro";
-  if (diff < 0)  return `${Math.abs(diff)} dni temu`;
-  return `Za ${diff} dni`;
-}
-
-function formatDate(dateStr: string): string {
-  return new Intl.DateTimeFormat("pl-PL", { day: "numeric", month: "short" })
-    .format(new Date(dateStr + "T00:00:00"));
-}
-
-const CAT_EMOJI: Record<string, string> = {
-  birthday: "🎂",
-  work:     "💼",
-  personal: "⭐",
-};
+   Removed: UpcomingEventsCard, AddEventCard
+   Events belong to Calendar page — not account center.
+═══════════════════════════════════════════════════════════ */
 
 /* ─────────────────────────────────────────
    SUB-COMPONENTS
@@ -68,38 +49,29 @@ function ProfileHero({
 }) {
   return (
     <section className="pr-hero">
-      {/* Atmospheric background layer */}
       <div className="pr-hero__glow" aria-hidden="true" />
+      <div className="pr-hero__glow pr-hero__glow--blue" aria-hidden="true" />
 
       <div className="pr-hero__inner">
-        {/* Avatar */}
         <div className="pr-avatar-wrap">
           {avatarUrl ? (
             <Image
               src={avatarUrl}
-              alt="avatar"
-              width={80}
-              height={80}
+              alt="Zdjęcie profilowe"
+              width={84}
+              height={84}
               className="pr-avatar-img"
               unoptimized
             />
           ) : (
-            <div className="pr-avatar-placeholder">
-              {avatarFallback}
-            </div>
+            <div className="pr-avatar-placeholder">{avatarFallback}</div>
           )}
-          <label className="pr-avatar-edit" aria-label="Zmień zdjęcie profilowe">
+          <label className="pr-avatar-edit" aria-label="Zmień zdjęcie">
             <span aria-hidden="true">✏️</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={onAvatarChange}
-              className="pr-avatar-input"
-            />
+            <input type="file" accept="image/*" onChange={onAvatarChange} className="pr-avatar-input" />
           </label>
         </div>
 
-        {/* Identity */}
         <div className="pr-hero__identity">
           <h1 className="pr-hero__name">{fullName || "Twoje imię"}</h1>
           {email && <p className="pr-hero__email">{email}</p>}
@@ -111,56 +83,66 @@ function ProfileHero({
         </div>
       </div>
 
-      {/* Badges */}
       <div className="pr-badges">
         <span className="pr-badge pr-badge--points">⭐ {points} pkt</span>
-        {hasCare && (
-          <span className="pr-badge pr-badge--care">💛 Care aktywne</span>
-        )}
+        {hasCare && <span className="pr-badge pr-badge--care">💛 Care</span>}
         {surveyCompleted ? (
           <span className="pr-badge pr-badge--done">✅ Ankieta</span>
         ) : (
-          <Link href="/survey" className="pr-badge pr-badge--cta">
-            +100 pkt za ankietę →
-          </Link>
+          <Link href="/survey" className="pr-badge pr-badge--cta">+100 pkt →</Link>
         )}
       </div>
     </section>
   );
 }
 
-function CareBanner() {
+/* ── Care — active or upsell ── */
+function CareCard({ hasCare }: { hasCare: boolean }) {
+  if (hasCare) {
+    return (
+      <section className="pr-care-active">
+        <div className="pr-care-active__glow" aria-hidden="true" />
+        <div className="pr-care-active__row">
+          <div className="pr-care-active__icon">💛</div>
+          <div>
+            <p className="pr-care-active__title">HappyDate Care — aktywne</p>
+            <p className="pr-care-active__sub">Wszystkie przypomnienia i AI podpowiedzi włączone</p>
+          </div>
+        </div>
+        <Link href="/care/manage" className="pr-care-active__manage">Zarządzaj subskrypcją →</Link>
+      </section>
+    );
+  }
   return (
-    <section className="pr-care-banner">
-      <div className="pr-care-banner__text">
-        <p className="pr-care-banner__title">💛 HappyDate Care</p>
-        <p className="pr-care-banner__body">
-          Pamiętamy za Ciebie — przypomnienia, AI podpowiedzi i więcej.
-        </p>
+    <section className="pr-care-upsell">
+      <div className="pr-care-upsell__glow" aria-hidden="true" />
+      <div className="pr-care-upsell__content">
+        <p className="pr-care-upsell__label">HappyDate Care</p>
+        <p className="pr-care-upsell__title">Ktoś pamięta za Ciebie 💛</p>
+        <ul className="pr-care-upsell__perks">
+          <li>✨ Inteligentne przypomnienia</li>
+          <li>🎁 Podpowiedzi prezentów AI</li>
+          <li>📅 Priorytetowe powiadomienia</li>
+        </ul>
+        <Link href="/care" className="pr-care-upsell__cta">Wypróbuj od 29 zł/mies →</Link>
       </div>
-      <Link href="/care" className="pr-care-banner__cta">
-        Od 29 zł/mies →
-      </Link>
     </section>
   );
 }
 
-function EditProfileCard({
-  fullName,
-  saving,
-  message,
-  onChange,
-  onSubmit,
+/* ── Personal data ── */
+function PersonalDataCard({
+  fullName, saving, message, onChange, onSubmit,
 }: {
-  fullName: string;
-  saving: boolean;
-  message: string | null;
-  onChange: (v: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
+  fullName: string; saving: boolean; message: string | null;
+  onChange: (v: string) => void; onSubmit: (e: React.FormEvent) => void;
 }) {
   return (
     <section className="pr-card">
-      <p className="pr-card__eyebrow">Twój profil</p>
+      <div className="pr-card__header">
+        <span className="pr-card__icon">👤</span>
+        <p className="pr-card__title">Dane osobowe</p>
+      </div>
       <form onSubmit={onSubmit} className="pr-form">
         <div className="pr-field">
           <label className="pr-field__label" htmlFor="pr-name">Imię i nazwisko</label>
@@ -171,6 +153,7 @@ function EditProfileCard({
             placeholder="Jak masz na imię?"
             value={fullName}
             onChange={e => onChange(e.target.value)}
+            /* font-size: 16px via .pr-input — prevents iOS Safari zoom */
           />
         </div>
         <button className="pr-btn-primary" type="submit" disabled={saving}>
@@ -182,90 +165,84 @@ function EditProfileCard({
   );
 }
 
-function AddEventCard({
-  newTitle,
-  newDate,
-  onTitleChange,
-  onDateChange,
-  onSubmit,
-}: {
-  newTitle: string;
-  newDate: string;
-  onTitleChange: (v: string) => void;
-  onDateChange: (v: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-}) {
-  return (
-    <section className="pr-card">
-      <p className="pr-card__eyebrow">Nowe wydarzenie</p>
-      <form onSubmit={onSubmit} className="pr-form">
-        <div className="pr-field">
-          <label className="pr-field__label" htmlFor="pr-event-title">Tytuł</label>
-          <input
-            id="pr-event-title"
-            className="pr-input"
-            type="text"
-            placeholder="Co chcesz zapamiętać?"
-            value={newTitle}
-            onChange={e => onTitleChange(e.target.value)}
-          />
-        </div>
-        <div className="pr-field">
-          <label className="pr-field__label" htmlFor="pr-event-date">Data</label>
-          <input
-            id="pr-event-date"
-            className="pr-input pr-input--date"
-            type="date"
-            value={newDate}
-            onChange={e => onDateChange(e.target.value)}
-          />
-        </div>
-        <button className="pr-btn-primary" type="submit">
-          Dodaj wydarzenie
-        </button>
-      </form>
-    </section>
-  );
-}
+/* ── Settings rows ── */
+type SettingRow = {
+  icon: string;
+  label: string;
+  value?: string;
+  href?: string;
+};
 
-function UpcomingEventsCard({ events }: { events: EventRow[] }) {
-  if (!events.length) return null;
+function SettingsCard() {
+  const rows: SettingRow[] = [
+    { icon: "🔔", label: "Powiadomienia push",     value: "Włączone",    href: "/settings/notifications" },
+    { icon: "⏰", label: "Przypomnienia",           value: "3 dni przed", href: "/settings/reminders" },
+    { icon: "✨", label: "Podpowiedzi AI",          value: "Aktywne",     href: "/settings/ai" },
+    { icon: "🌍", label: "Język aplikacji",         value: "Polski",      href: "/settings/language" },
+  ];
+
   return (
     <section className="pr-card">
-      <p className="pr-card__eyebrow">Nadchodzące</p>
-      <ul className="pr-events">
-        {events.map((ev, i) => {
-          const emoji = CAT_EMOJI[ev.category ?? ""] ?? "📅";
-          const diff  = Math.round(
-            (new Date(ev.date + "T00:00:00").getTime() - new Date().setHours(0,0,0,0)) / 86_400_000
-          );
-          const urgent = diff >= 0 && diff <= 3;
-          return (
-            <li key={ev.id} className={`pr-event${urgent ? " pr-event--urgent" : ""}`}
-              style={{ animationDelay: `${i * 0.06}s` }}>
-              <div className="pr-event__icon">{emoji}</div>
-              <div className="pr-event__info">
-                <p className="pr-event__title">{ev.title}</p>
-                <p className="pr-event__meta">
-                  <span>{formatDate(ev.date)}</span>
-                  <span className={`pr-event__pill${urgent ? " pr-event__pill--urgent" : ""}`}>
-                    {daysLabel(ev.date)}
-                  </span>
-                </p>
-              </div>
-            </li>
-          );
-        })}
+      <div className="pr-card__header">
+        <span className="pr-card__icon">⚙️</span>
+        <p className="pr-card__title">Preferencje</p>
+      </div>
+      <ul className="pr-rows">
+        {rows.map(row => (
+          <li key={row.label}>
+            <Link href={row.href ?? "#"} className="pr-row">
+              <span className="pr-row__icon">{row.icon}</span>
+              <span className="pr-row__label">{row.label}</span>
+              <span className="pr-row__value">{row.value}</span>
+              <span className="pr-row__arrow" aria-hidden="true">›</span>
+            </Link>
+          </li>
+        ))}
       </ul>
     </section>
   );
 }
 
+/* ── Security & privacy ── */
+function SecurityCard() {
+  const rows: SettingRow[] = [
+    { icon: "🔑", label: "Zmień hasło",           href: "/settings/password" },
+    { icon: "📱", label: "Aktywne sesje",          href: "/settings/sessions" },
+    { icon: "🔒", label: "Polityka prywatności",   href: "/privacy" },
+    { icon: "📦", label: "Eksportuj dane",         href: "/settings/export" },
+    { icon: "🗑️", label: "Usuń konto",            href: "/settings/delete" },
+  ];
+
+  return (
+    <section className="pr-card">
+      <div className="pr-card__header">
+        <span className="pr-card__icon">🔐</span>
+        <p className="pr-card__title">Bezpieczeństwo i prywatność</p>
+      </div>
+      <ul className="pr-rows">
+        {rows.map(row => (
+          <li key={row.label}>
+            <Link
+              href={row.href ?? "#"}
+              className={`pr-row${row.label === "Usuń konto" ? " pr-row--danger" : ""}`}
+            >
+              <span className="pr-row__icon">{row.icon}</span>
+              <span className="pr-row__label">{row.label}</span>
+              <span className="pr-row__arrow" aria-hidden="true">›</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/* ── Logout ── */
 function LogoutButton({ onLogout }: { onLogout: () => void }) {
   return (
     <div className="pr-logout">
       <button className="pr-btn-ghost" onClick={onLogout}>
-        Wyloguj się
+        🚪 Wyloguj się
       </button>
     </div>
   );
@@ -288,13 +265,9 @@ export default function ProfilePage() {
   const [saving,  setSaving]  = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const [events,          setEvents]          = useState<EventRow[]>([]);
   const [points,          setPoints]          = useState(0);
   const [surveyCompleted, setSurveyCompleted] = useState(false);
   const [hasCare,         setHasCare]         = useState(false);
-
-  const [newTitle, setNewTitle] = useState("");
-  const [newDate,  setNewDate]  = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -324,18 +297,9 @@ export default function ProfilePage() {
       setPoints(bal?.balance ?? 0);
       setSurveyCompleted(Boolean(survey?.is_completed));
       setHasCare(!!sub);
-
-      await refreshEvents(user.id);
     };
     load();
   }, [router]);
-
-  const refreshEvents = async (uid: string) => {
-    const { data } = await supabase
-      .from("events").select("id,title,date,category")
-      .eq("user_id", uid).order("date", { ascending: true }).limit(5);
-    setEvents(data ?? []);
-  };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -360,16 +324,6 @@ export default function ProfilePage() {
     setMessage("Zdjęcie przesłane ✅ Kliknij Zapisz.");
   };
 
-  const addEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userId || !newTitle || !newDate) return;
-    const { error } = await supabase.from("events")
-      .insert({ user_id: userId, title: newTitle, date: newDate });
-    if (error) { setMessage(error.message); return; }
-    setNewTitle(""); setNewDate("");
-    await refreshEvents(userId);
-  };
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.replace("/");
@@ -391,9 +345,9 @@ export default function ProfilePage() {
         onAvatarChange={onAvatarChange}
       />
 
-      {!hasCare && <CareBanner />}
+      <CareCard hasCare={hasCare} />
 
-      <EditProfileCard
+      <PersonalDataCard
         fullName={fullName}
         saving={saving}
         message={message}
@@ -401,15 +355,9 @@ export default function ProfilePage() {
         onSubmit={save}
       />
 
-      <AddEventCard
-        newTitle={newTitle}
-        newDate={newDate}
-        onTitleChange={setNewTitle}
-        onDateChange={setNewDate}
-        onSubmit={addEvent}
-      />
+      <SettingsCard />
 
-      <UpcomingEventsCard events={events} />
+      <SecurityCard />
 
       <LogoutButton onLogout={handleLogout} />
     </main>

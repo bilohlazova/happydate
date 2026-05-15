@@ -2,7 +2,7 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════
-   БАЗА
+   DESIGN TOKENS
 ═══════════════════════════════════════════════════════════ */
 :root {
   --background: #ffffff;
@@ -13,16 +13,31 @@
   :root { --background: #0a0a0a; --foreground: #ededed; }
 }
 
-/*
-  html height: 100% — потрібно щоб dvh-одиниці коректно
-  резолвилися в Safari. overflow-x: hidden блокує горизонтальний
-  rubber-band bounce у WKWebView.
-  -webkit-text-size-adjust: 100% — запобігає автозбільшенню
-  шрифтів при повороті екрана у iOS Safari.
-*/
+/* ═══════════════════════════════════════════════════════════
+   APP SHELL — VIEWPORT STABILIZATION
+   ─────────────────────────────────────────────────────────
+   Системний фікс для:
+   • sideways drag при навігації calendar → gift → back
+   • "wide screen" bug при відкритті modal / keyboard
+   • compositing overflow від blur/gradient decorations
+   • viewport stretching у WKWebView / iOS Safari
+
+   КЛЮЧОВІ ЗМІНИ:
+   html  → contain: layout style  — ізолює layout-recalc
+   body  → contain: paint size    — ізолює compositing boundary;
+           width + max-width: 100% — фізично блокує overflow
+   #__next / App Router wrapper → overflow-x: hidden + isolation
+═══════════════════════════════════════════════════════════ */
+
 html {
   height: 100%;
   overflow-x: hidden;
+  /*
+    contain: layout style — браузер не перераховує layout поза html
+    при будь-яких навігаційних переходах чи відкритті keyboard.
+  */
+  contain: layout style;
+  position: relative;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -35,28 +50,64 @@ body {
   color: var(--foreground);
   font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
   min-height: 100dvh;
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
   overscroll-behavior-y: none;
-  height: 100%;
-  /* Прибирає сірий flash при тапі на iOS — не впливає на кольори дизайн-системи */
+  position: relative;
+  /*
+    contain: paint size — тіло стає compositing boundary.
+    Декоративні gradients/blur/pseudo-elements не можуть
+    розширити rendering viewport назовні.
+    "paint" — не малює за межами box.
+    "size" — не залежить від розміру нащадків.
+  */
+  contain: paint size;
   -webkit-tap-highlight-color: transparent;
 }
 
+/*
+  ЗАМІНЕНО body.modal-open { position: fixed } — це була головна
+  причина viewport jump, "wide screen" bug та scroll position loss.
+
+  НОВА СТРАТЕГІЯ: scroll lock повністю в JS-хуку useBodyScrollLock
+  (position: fixed + top: -scrollY + відновлення при закритті).
+  CSS-рівень більше не відповідає за locking.
+
+  overflow: hidden залишений як safety net для non-iOS browsers,
+  width: 100% запобігає layout shift від зникнення scrollbar.
+*/
 body.modal-open {
   overflow: hidden;
-  position: fixed;
   width: 100%;
 }
 
+/*
+  Next.js root wrappers — мають бути суворо в межах viewport.
+  #__next        — Pages Router
+  data-nextjs-*  — App Router scroll wrapper
+
+  isolation: isolate — новий stacking context, блокує z-index
+  bleeding між сторінками при навігаційних переходах.
+*/
+#__next,
+[data-nextjs-scroll-focus-boundary] {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  isolation: isolate;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INTERACTIVE ELEMENTS
+═══════════════════════════════════════════════════════════ */
 button, [role="button"], a[href],
 input[type="button"], input[type="submit"], input[type="reset"],
 input[type="checkbox"], input[type="radio"],
 label[for], summary {
   cursor: pointer;
-  /*
-    touch-action: manipulation прибирає 300ms затримку кліку на iOS
-    без відключення pinch-zoom на решті сторінки.
-  */
+  /* Прибирає 300ms click delay на iOS без відключення pinch-zoom */
   touch-action: manipulation;
 }
 
@@ -68,6 +119,7 @@ label[for], summary {
 
 /* ═══════════════════════════════════════════════════════════
    REACT-BIG-CALENDAR
+   Без змін — mobile fixes не торкаються RBC.
 ═══════════════════════════════════════════════════════════ */
 
 .rbc-calendar,
@@ -78,7 +130,6 @@ label[for], summary {
   width: 100%;
   font-family: inherit;
 }
-
 .rbc-header {
   border-bottom: 1px solid #f1f5f9 !important;
   border-left: none !important;
@@ -91,17 +142,14 @@ label[for], summary {
   background: transparent !important;
 }
 .rbc-header + .rbc-header { border-left: none !important; }
-
 .rbc-month-row {
   border-top: 1px solid #f1f5f9 !important;
   min-height: 52px !important;
 }
 .rbc-month-row + .rbc-month-row { border-top: 1px solid #f1f5f9 !important; }
-
 .rbc-day-bg { border-left: none !important; transition: background .12s ease; }
 .rbc-day-bg + .rbc-day-bg { border-left: 1px solid #f1f5f9 !important; }
 .rbc-day-bg:hover { background: rgba(14,165,233,.04) !important; }
-
 .rbc-date-cell {
   padding: 4px 6px 2px !important;
   text-align: center !important;
@@ -110,11 +158,8 @@ label[for], summary {
   font-size: 12px !important;
   font-weight: 600 !important;
   color: #475569 !important;
-  width: 26px;
-  height: 26px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  width: 26px; height: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
   border-radius: 50%;
   transition: background .12s, color .12s;
 }
@@ -122,7 +167,6 @@ label[for], summary {
   background: rgba(14,165,233,.12);
   color: #0ea5e9 !important;
 }
-
 .rbc-today { background: rgba(14,165,233,.06) !important; }
 .hd-today .rbc-button-link,
 .rbc-today .rbc-date-cell .rbc-button-link {
@@ -133,15 +177,10 @@ label[for], summary {
   border-radius: 50% !important;
 }
 .hd-today .rbc-button-link::after { display: none !important; }
-
 .rbc-off-range-bg { background: transparent !important; }
 .rbc-off-range .rbc-button-link { color: #cbd5e1 !important; opacity: 1 !important; }
-
 .rbc-month-row .rbc-date-cell:nth-child(6),
-.rbc-month-row .rbc-date-cell:nth-child(7) {
-  background: rgba(2,132,199,.03);
-}
-
+.rbc-month-row .rbc-date-cell:nth-child(7) { background: rgba(2,132,199,.03); }
 .rbc-event {
   padding: 0 !important;
   border-radius: 999px !important;
@@ -151,59 +190,44 @@ label[for], summary {
 }
 .rbc-event:focus { outline: none !important; box-shadow: none !important; }
 .rbc-event-content {
-  display: flex;
-  align-items: center;
-  font-size: 11px;
-  font-weight: 600;
+  display: flex; align-items: center;
+  font-size: 11px; font-weight: 600;
   padding: 2px 7px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-
 .rbc-show-more {
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  color: #0ea5e9 !important;
-  background: transparent !important;
+  font-size: 10px !important; font-weight: 700 !important;
+  color: #0ea5e9 !important; background: transparent !important;
   padding: 0 6px !important;
 }
-
 .rbc-overlay {
   border-radius: 14px !important;
   border: 1px solid #e2e8f0 !important;
   box-shadow: 0 12px 32px rgba(15,23,42,.12) !important;
-  overflow: hidden;
-  padding: 8px !important;
+  overflow: hidden; padding: 8px !important;
 }
 .rbc-overlay-header {
-  font-size: 12px !important;
-  font-weight: 700 !important;
+  font-size: 12px !important; font-weight: 700 !important;
   color: #475569 !important;
   border-bottom: 1px solid #f1f5f9 !important;
-  padding: 6px 8px !important;
-  margin-bottom: 4px !important;
+  padding: 6px 8px !important; margin-bottom: 4px !important;
 }
-
 .rbc-toolbar { margin-bottom: 0 !important; padding: 0 !important; }
 .rbc-toolbar button { display: none !important; }
-
 .rbc-event, .rbc-show-more, .rbc-day-bg { cursor: pointer; }
 
 /* ═══════════════════════════════════════════════════════════
-   iOS SAFE AREA
+   iOS SAFE AREA — утиліти (без змін, без дублювань)
 ═══════════════════════════════════════════════════════════ */
 .pt-safe  { padding-top:    env(safe-area-inset-top); }
 .pb-safe  { padding-bottom: env(safe-area-inset-bottom); }
-
 .hd-safe-header {
   padding-top: max(env(safe-area-inset-top), 12px);
 }
 .hd-safe-header-sticky {
   padding-top: max(env(safe-area-inset-top), 12px);
   min-height: calc(56px + env(safe-area-inset-top));
-  display: flex;
-  align-items: center;
+  display: flex; align-items: center;
 }
 .safe-container {
   padding-top:    env(safe-area-inset-top);
@@ -211,16 +235,11 @@ label[for], summary {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   CALENDAR MOBILE / IOS FIXES
-   Scoped до .calendar-sheet та .calendar-overlay щоб не
-   впливати на інші форми, модали та дизайн-систему сайту.
+   CALENDAR MODAL / IOS SHEET SYSTEM
+   Scoped до .calendar-sheet — не ламає інші форми та модали.
 ═══════════════════════════════════════════════════════════ */
 
-/*
-  .calendar-sheet — основна панель bottom sheet (AddEditSheet,
-  DayDetailSheet). Визначає безпечну висоту, скрол тільки
-  всередині шиту та clearance для home indicator.
-*/
+/* Bottom sheet panel — internal scroll only, safe-area clearance */
 .calendar-sheet {
   max-height: 92dvh;
   overflow-y: auto;
@@ -229,40 +248,119 @@ label[for], summary {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/*
-  .calendar-sheet-content — внутрішній контейнер контенту шиту.
-  transform: translateZ(0) створює новий compositor layer,
-  що запобігає viewport jump коли iOS клавіатура відкривається.
-  will-change: transform підказує Safari завчасно виділити шар.
-*/
+/* GPU compositor layer — стабілізує layout при keyboard open */
 .calendar-sheet-content {
   transform: translateZ(0);
   will-change: transform;
 }
 
-/*
-  Scoped iOS input zoom fix — тільки всередині .calendar-sheet.
-  iOS Safari авто-зумить будь-який input < 16px font-size.
-  НЕ застосовується глобально щоб не збільшити форми інших сторінок.
-*/
+/* iOS input zoom fix — ТІЛЬКИ всередині calendar sheet */
 .calendar-sheet input,
 .calendar-sheet textarea,
 .calendar-sheet select {
   font-size: 16px;
 }
 
-/*
-  .calendar-overlay — backdrop поверх сторінки.
-  touch-action: none блокує scroll events що проходять крізь backdrop.
-  overscroll-behavior: none зупиняє iOS rubber-band на самому оверлеї.
-*/
+/* Backdrop — блокує scroll events що проходять крізь overlay */
 .calendar-overlay {
   touch-action: none;
   overscroll-behavior: none;
 }
 
 /* ═══════════════════════════════════════════════════════════
-   КОМПОНЕНТИ / УТИЛІТИ
+   COMPOSITING AUDIT — ДЕКОРАТИВНІ ЕЛЕМЕНТИ
+   ─────────────────────────────────────────────────────────
+   ПРОБЛЕМА: великі blur(), radial-gradient та animated
+   pseudo-elements можуть розширювати rendering viewport
+   у Safari → sideways drag, "wide screen" effect.
+
+   РІШЕННЯ: contain: paint на секціях + overflow: hidden/clip
+   на конкретних компонентах з overflow-prone decorations.
+   Візуали НЕ змінюються — тільки compositing containment.
+═══════════════════════════════════════════════════════════ */
+
+/*
+  Всі секції з декораціями — contain: paint.
+  overflow: hidden вже був. contain доповнює його:
+  декорації не можуть розширити viewport за межі секції
+  у rendering tree навіть якщо виходять за box у DOM.
+*/
+.hd-section {
+  position: relative;
+  overflow: hidden;
+  contain: paint;
+}
+
+/*
+  .hd-aurora — overflow: hidden ізолює ::after gradient
+  від viewport. Без цього 1200px radial-gradient у ::after
+  розширював rendering viewport у WKWebView.
+*/
+.hd-aurora {
+  background: linear-gradient(90deg, #ffdbe9 0%, #fff0d4 48%, #e6fff0 100%);
+  position: relative;
+  overflow: hidden;
+}
+.hd-aurora::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(1200px 600px at -10% 20%, rgba(255,255,255,.20), transparent 60%),
+    radial-gradient(900px 520px at 110% 15%, rgba(255,255,255,.18), transparent 55%);
+}
+
+/*
+  .hd-spot — overflow: clip ізолює blur(28px) pseudo-element.
+  clip замість hidden: не створює scroll container (важливо),
+  але так само відрізає overflow.
+*/
+.hd-spot {
+  overflow: clip;
+}
+.hd-spot::before {
+  content: ""; position: absolute; inset: 0; margin: auto;
+  width: min(560px, 80vw); height: 260px; transform: translateY(-10px);
+  background: radial-gradient(closest-side, rgba(255,255,255,.8), rgba(255,255,255,0));
+  filter: blur(28px); z-index: -1;
+}
+
+/*
+  .hd-bubble-line — animated layers.
+  contain: layout style — анімація не тригерить layout recalc
+  у зовнішніх елементах. will-change вже є.
+*/
+.hd-bubble-line {
+  position: absolute; inset: 0; opacity: 0;
+  transform: translateY(6px);
+  animation: hdBubbleCycle 12s infinite;
+  will-change: opacity, transform;
+  contain: layout style;
+}
+.hd-bubble-line:nth-child(1) { animation-delay: 0s; }
+.hd-bubble-line:nth-child(2) { animation-delay: 4s; }
+.hd-bubble-line:nth-child(3) { animation-delay: 8s; }
+
+/* ═══════════════════════════════════════════════════════════
+   FLOATING ELEMENTS — VIEWPORT CONTAINMENT
+═══════════════════════════════════════════════════════════ */
+
+/*
+  .fab-add — FAB завжди всередині viewport.
+  НОВЕ: safe-area bottom clearance + max-width guard.
+*/
+@media (max-width: 768px) {
+  .fab-add {
+    position: fixed;
+    right: 16px;
+    /* max() забезпечує мінімум 16px І враховує home indicator */
+    bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 60;
+    /* Запобігає FAB ширшому за viewport при нестандартних розмірах */
+    max-width: calc(100% - 32px);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   КОМПОНЕНТИ / УТИЛІТИ (без змін у візуалах)
 ═══════════════════════════════════════════════════════════ */
 .hd-card {
   background: rgba(255,255,255,.7);
@@ -314,8 +412,6 @@ label[for], summary {
 
 .hd-event-card { transition: background .15s ease, transform .12s ease, box-shadow .2s ease; border-radius: 14px; }
 .hd-event-card:hover { background: rgba(241,245,249,.55); transform: translateY(-1px); box-shadow: 0 10px 28px rgba(2,132,199,.10); }
-
-@media (max-width: 768px) { .fab-add { position: fixed; right: 16px; bottom: 16px; z-index: 60; } }
 
 /* ═══════════════════════════════════════════════════════════
    АНІМАЦІЇ
@@ -373,15 +469,6 @@ label[for], summary {
   animation: hd-floatY 6s ease-in-out infinite;
   filter: drop-shadow(0 6px 18px rgba(16,24,40,.08));
 }
-.hd-bubble-line {
-  position: absolute; inset: 0; opacity: 0;
-  transform: translateY(6px);
-  animation: hdBubbleCycle 12s infinite;
-  will-change: opacity, transform;
-}
-.hd-bubble-line:nth-child(1) { animation-delay: 0s; }
-.hd-bubble-line:nth-child(2) { animation-delay: 4s; }
-.hd-bubble-line:nth-child(3) { animation-delay: 8s; }
 
 @keyframes hdBubbleCycle {
   0%   { opacity: 0; transform: translateY(6px); }
@@ -392,26 +479,8 @@ label[for], summary {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   HERO / СЕКЦІЙНІ СМУГИ
+   HERO / СЕКЦІЙНІ СМУГИ (візуали без змін)
 ═══════════════════════════════════════════════════════════ */
-.hd-aurora {
-  background: linear-gradient(90deg, #ffdbe9 0%, #fff0d4 48%, #e6fff0 100%);
-  position: relative;
-}
-.hd-aurora::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background:
-    radial-gradient(1200px 600px at -10% 20%, rgba(255,255,255,.20), transparent 60%),
-    radial-gradient(900px 520px at 110% 15%, rgba(255,255,255,.18), transparent 55%);
-}
-.hd-spot::before {
-  content: ""; position: absolute; inset: 0; margin: auto;
-  width: min(560px,80vw); height: 260px; transform: translateY(-10px);
-  background: radial-gradient(closest-side, rgba(255,255,255,.8), rgba(255,255,255,0));
-  filter: blur(28px); z-index: -1;
-}
-
-.hd-section { position: relative; overflow: hidden; }
 .hd-fade-top::before, .hd-fade-bot::after {
   content: ""; position: absolute; left: 0; right: 0; height: 56px; pointer-events: none;
 }
@@ -451,6 +520,9 @@ label[for], summary {
   box-shadow: 0 18px 45px rgba(0,0,0,.18);
 }
 
+/* ═══════════════════════════════════════════════════════════
+   REDUCED MOTION
+═══════════════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
   .hd-sparkle .hd-star,
   .animate-fadeIn,

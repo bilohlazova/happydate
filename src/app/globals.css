@@ -16,28 +16,22 @@
 /* ═══════════════════════════════════════════════════════════
    APP SHELL — VIEWPORT STABILIZATION
    ─────────────────────────────────────────────────────────
-   Системний фікс для:
-   • sideways drag при навігації calendar → gift → back
-   • "wide screen" bug при відкритті modal / keyboard
-   • compositing overflow від blur/gradient decorations
-   • viewport stretching у WKWebView / iOS Safari
+   Фіксує горизонтальний overflow та viewport instability
+   БЕЗ contain на html/body — WKWebView нестабільно обробляє
+   contain: layout/size/paint на root-level елементах, що
+   призводить до floating fixed nav, safe-area drift та
+   random viewport stretching.
 
-   КЛЮЧОВІ ЗМІНИ:
-   html  → contain: layout style  — ізолює layout-recalc
-   body  → contain: paint size    — ізолює compositing boundary;
-           width + max-width: 100% — фізично блокує overflow
-   #__next / App Router wrapper → overflow-x: hidden + isolation
+   ПРАВИЛО: contain застосовується ТІЛЬКИ на ізольованих
+   декоративних контейнерах (.hd-section, .hd-aurora тощо),
+   ніколи на html, body або root wrappers.
 ═══════════════════════════════════════════════════════════ */
 
 html {
+  /* height: 100% — необхідно для коректного dvh у Safari */
   height: 100%;
   overflow-x: hidden;
-  /*
-    contain: layout style — браузер не перераховує layout поза html
-    при будь-яких навігаційних переходах чи відкритті keyboard.
-  */
-  contain: layout style;
-  position: relative;
+  /* ПРИБРАНО: contain: layout style — ламало fixed navbar у WKWebView */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -49,34 +43,28 @@ body {
     var(--background);
   color: var(--foreground);
   font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
-  min-height: 100dvh;
+  /*
+    min-height: 100% замість 100dvh на body рівні.
+    100dvh на body конфліктує з iOS Safari dynamic toolbar —
+    при ховання/появі toolbar body recalculates height і
+    штовхає fixed bottom nav. 100% успадковує від html { height:100% }
+    і є стабільним.
+  */
+  min-height: 100%;
   height: 100%;
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
   overscroll-behavior-y: none;
-  position: relative;
-  /*
-    contain: paint size — тіло стає compositing boundary.
-    Декоративні gradients/blur/pseudo-elements не можуть
-    розширити rendering viewport назовні.
-    "paint" — не малює за межами box.
-    "size" — не залежить від розміру нащадків.
-  */
-  contain: paint size;
+  /* ПРИБРАНО: contain: paint size — ламало safe-area та fixed positioning */
   -webkit-tap-highlight-color: transparent;
 }
 
 /*
-  ЗАМІНЕНО body.modal-open { position: fixed } — це була головна
-  причина viewport jump, "wide screen" bug та scroll position loss.
-
-  НОВА СТРАТЕГІЯ: scroll lock повністю в JS-хуку useBodyScrollLock
-  (position: fixed + top: -scrollY + відновлення при закритті).
-  CSS-рівень більше не відповідає за locking.
-
-  overflow: hidden залишений як safety net для non-iOS browsers,
-  width: 100% запобігає layout shift від зникнення scrollbar.
+  body.modal-open — БЕЗ position: fixed.
+  position: fixed на body викликав viewport jump та "wide screen" bug.
+  Scroll lock реалізовано в JS через useBodyScrollLock хук
+  (position: fixed + збереження/відновлення scrollY).
 */
 body.modal-open {
   overflow: hidden;
@@ -84,12 +72,13 @@ body.modal-open {
 }
 
 /*
-  Next.js root wrappers — мають бути суворо в межах viewport.
-  #__next        — Pages Router
-  data-nextjs-*  — App Router scroll wrapper
+  Next.js root wrappers — overflow-x: hidden запобігає
+  горизонтальному скролу від будь-яких дочірніх елементів.
+  isolation: isolate — новий stacking context між page transitions.
 
-  isolation: isolate — новий stacking context, блокує z-index
-  bleeding між сторінками при навігаційних переходах.
+  ВАЖЛИВО: contain тут НЕ використовується — ці елементи є
+  ancestors для fixed navbar і contain: paint/layout зламав би
+  fixed positioning нащадків.
 */
 #__next,
 [data-nextjs-scroll-focus-boundary] {
@@ -119,9 +108,7 @@ label[for], summary {
 
 /* ═══════════════════════════════════════════════════════════
    REACT-BIG-CALENDAR
-   Без змін — mobile fixes не торкаються RBC.
 ═══════════════════════════════════════════════════════════ */
-
 .rbc-calendar,
 .rbc-month-view,
 .rbc-time-view {
@@ -217,7 +204,7 @@ label[for], summary {
 .rbc-event, .rbc-show-more, .rbc-day-bg { cursor: pointer; }
 
 /* ═══════════════════════════════════════════════════════════
-   iOS SAFE AREA — утиліти (без змін, без дублювань)
+   iOS SAFE AREA — утиліти
 ═══════════════════════════════════════════════════════════ */
 .pt-safe  { padding-top:    env(safe-area-inset-top); }
 .pb-safe  { padding-bottom: env(safe-area-inset-bottom); }
@@ -236,10 +223,7 @@ label[for], summary {
 
 /* ═══════════════════════════════════════════════════════════
    CALENDAR MODAL / IOS SHEET SYSTEM
-   Scoped до .calendar-sheet — не ламає інші форми та модали.
 ═══════════════════════════════════════════════════════════ */
-
-/* Bottom sheet panel — internal scroll only, safe-area clearance */
 .calendar-sheet {
   max-height: 92dvh;
   overflow-y: auto;
@@ -247,21 +231,15 @@ label[for], summary {
   -webkit-overflow-scrolling: touch;
   padding-bottom: env(safe-area-inset-bottom);
 }
-
-/* GPU compositor layer — стабілізує layout при keyboard open */
 .calendar-sheet-content {
   transform: translateZ(0);
   will-change: transform;
 }
-
-/* iOS input zoom fix — ТІЛЬКИ всередині calendar sheet */
 .calendar-sheet input,
 .calendar-sheet textarea,
 .calendar-sheet select {
   font-size: 16px;
 }
-
-/* Backdrop — блокує scroll events що проходять крізь overlay */
 .calendar-overlay {
   touch-action: none;
   overscroll-behavior: none;
@@ -270,20 +248,17 @@ label[for], summary {
 /* ═══════════════════════════════════════════════════════════
    COMPOSITING AUDIT — ДЕКОРАТИВНІ ЕЛЕМЕНТИ
    ─────────────────────────────────────────────────────────
-   ПРОБЛЕМА: великі blur(), radial-gradient та animated
-   pseudo-elements можуть розширювати rendering viewport
-   у Safari → sideways drag, "wide screen" effect.
-
-   РІШЕННЯ: contain: paint на секціях + overflow: hidden/clip
-   на конкретних компонентах з overflow-prone decorations.
-   Візуали НЕ змінюються — тільки compositing containment.
+   contain застосовується ТІЛЬКИ тут — на ізольованих
+   декоративних секціях, які НЕ є ancestors для будь-яких
+   fixed або absolute positioned елементів (navbar, FAB,
+   modals). Це безпечно бо ці контейнери є leaf-sections,
+   а не root wrappers.
 ═══════════════════════════════════════════════════════════ */
 
 /*
-  Всі секції з декораціями — contain: paint.
-  overflow: hidden вже був. contain доповнює його:
-  декорації не можуть розширити viewport за межі секції
-  у rendering tree навіть якщо виходять за box у DOM.
+  contain: paint — декорації всередині секції не виходять за
+  її rendering boundary. Безпечно тут бо .hd-section не є
+  ancestor для fixed navbar чи будь-яких fixed елементів.
 */
 .hd-section {
   position: relative;
@@ -292,9 +267,8 @@ label[for], summary {
 }
 
 /*
-  .hd-aurora — overflow: hidden ізолює ::after gradient
-  від viewport. Без цього 1200px radial-gradient у ::after
-  розширював rendering viewport у WKWebView.
+  overflow: hidden на .hd-aurora ізолює великий 1200px
+  radial-gradient у ::after від viewport rendering tree.
 */
 .hd-aurora {
   background: linear-gradient(90deg, #ffdbe9 0%, #fff0d4 48%, #e6fff0 100%);
@@ -309,9 +283,8 @@ label[for], summary {
 }
 
 /*
-  .hd-spot — overflow: clip ізолює blur(28px) pseudo-element.
-  clip замість hidden: не створює scroll container (важливо),
-  але так само відрізає overflow.
+  overflow: clip (не hidden) на .hd-spot — відрізає blur(28px)
+  pseudo-element без створення scroll container.
 */
 .hd-spot {
   overflow: clip;
@@ -324,9 +297,10 @@ label[for], summary {
 }
 
 /*
-  .hd-bubble-line — animated layers.
-  contain: layout style — анімація не тригерить layout recalc
-  у зовнішніх елементах. will-change вже є.
+  contain: layout style на .hd-bubble-line — анімація не
+  тригерить layout recalc у зовнішніх елементах. Безпечно:
+  bubble-line є absolute positioned decorative element,
+  не ancestor для fixed елементів.
 */
 .hd-bubble-line {
   position: absolute; inset: 0; opacity: 0;
@@ -340,27 +314,20 @@ label[for], summary {
 .hd-bubble-line:nth-child(3) { animation-delay: 8s; }
 
 /* ═══════════════════════════════════════════════════════════
-   FLOATING ELEMENTS — VIEWPORT CONTAINMENT
+   FLOATING ELEMENTS
 ═══════════════════════════════════════════════════════════ */
-
-/*
-  .fab-add — FAB завжди всередині viewport.
-  НОВЕ: safe-area bottom clearance + max-width guard.
-*/
 @media (max-width: 768px) {
   .fab-add {
     position: fixed;
     right: 16px;
-    /* max() забезпечує мінімум 16px І враховує home indicator */
     bottom: max(16px, env(safe-area-inset-bottom));
     z-index: 60;
-    /* Запобігає FAB ширшому за viewport при нестандартних розмірах */
     max-width: calc(100% - 32px);
   }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   КОМПОНЕНТИ / УТИЛІТИ (без змін у візуалах)
+   КОМПОНЕНТИ / УТИЛІТИ
 ═══════════════════════════════════════════════════════════ */
 .hd-card {
   background: rgba(255,255,255,.7);
@@ -479,7 +446,7 @@ label[for], summary {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   HERO / СЕКЦІЙНІ СМУГИ (візуали без змін)
+   HERO / СЕКЦІЙНІ СМУГИ
 ═══════════════════════════════════════════════════════════ */
 .hd-fade-top::before, .hd-fade-bot::after {
   content: ""; position: absolute; left: 0; right: 0; height: 56px; pointer-events: none;

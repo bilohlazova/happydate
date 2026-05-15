@@ -13,6 +13,20 @@
   :root { --background: #0a0a0a; --foreground: #ededed; }
 }
 
+/*
+  html height: 100% — потрібно щоб dvh-одиниці коректно
+  резолвилися в Safari. overflow-x: hidden блокує горизонтальний
+  rubber-band bounce у WKWebView.
+  -webkit-text-size-adjust: 100% — запобігає автозбільшенню
+  шрифтів при повороті екрана у iOS Safari.
+*/
+html {
+  height: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   background:
     radial-gradient(1200px 600px at 80% -100px, rgba(255,199,164,.18), transparent 60%),
@@ -21,8 +35,11 @@ body {
   color: var(--foreground);
   font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
   min-height: 100dvh;
+  overflow-x: hidden;
   overscroll-behavior-y: none;
   height: 100%;
+  /* Прибирає сірий flash при тапі на iOS — не впливає на кольори дизайн-системи */
+  -webkit-tap-highlight-color: transparent;
 }
 
 body.modal-open {
@@ -34,7 +51,14 @@ body.modal-open {
 button, [role="button"], a[href],
 input[type="button"], input[type="submit"], input[type="reset"],
 input[type="checkbox"], input[type="radio"],
-label[for], summary { cursor: pointer; }
+label[for], summary {
+  cursor: pointer;
+  /*
+    touch-action: manipulation прибирає 300ms затримку кліку на iOS
+    без відключення pinch-zoom на решті сторінки.
+  */
+  touch-action: manipulation;
+}
 
 :where(button, .btn, .icon-btn, a, .hd-event-card):focus-visible {
   outline: 0;
@@ -184,6 +208,57 @@ label[for], summary { cursor: pointer; }
 .safe-container {
   padding-top:    env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CALENDAR MOBILE / IOS FIXES
+   Scoped до .calendar-sheet та .calendar-overlay щоб не
+   впливати на інші форми, модали та дизайн-систему сайту.
+═══════════════════════════════════════════════════════════ */
+
+/*
+  .calendar-sheet — основна панель bottom sheet (AddEditSheet,
+  DayDetailSheet). Визначає безпечну висоту, скрол тільки
+  всередині шиту та clearance для home indicator.
+*/
+.calendar-sheet {
+  max-height: 92dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/*
+  .calendar-sheet-content — внутрішній контейнер контенту шиту.
+  transform: translateZ(0) створює новий compositor layer,
+  що запобігає viewport jump коли iOS клавіатура відкривається.
+  will-change: transform підказує Safari завчасно виділити шар.
+*/
+.calendar-sheet-content {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/*
+  Scoped iOS input zoom fix — тільки всередині .calendar-sheet.
+  iOS Safari авто-зумить будь-який input < 16px font-size.
+  НЕ застосовується глобально щоб не збільшити форми інших сторінок.
+*/
+.calendar-sheet input,
+.calendar-sheet textarea,
+.calendar-sheet select {
+  font-size: 16px;
+}
+
+/*
+  .calendar-overlay — backdrop поверх сторінки.
+  touch-action: none блокує scroll events що проходять крізь backdrop.
+  overscroll-behavior: none зупиняє iOS rubber-band на самому оверлеї.
+*/
+.calendar-overlay {
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 /* ═══════════════════════════════════════════════════════════

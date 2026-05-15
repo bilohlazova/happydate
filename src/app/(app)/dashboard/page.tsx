@@ -26,10 +26,10 @@ type PersonRow = {
 ═══════════════════════════════════════════════════ */
 
 const CAT_COLOR: Record<string, { dot: string; pill: string; text: string }> = {
-  birthday: { dot: "bg-pink-400",    pill: "bg-pink-50 border-pink-200",    text: "text-pink-700" },
-  work:     { dot: "bg-blue-400",    pill: "bg-blue-50 border-blue-200",    text: "text-blue-700" },
+  birthday: { dot: "bg-pink-400",    pill: "bg-pink-50 border-pink-200",       text: "text-pink-700" },
+  work:     { dot: "bg-blue-400",    pill: "bg-blue-50 border-blue-200",       text: "text-blue-700" },
   personal: { dot: "bg-emerald-400", pill: "bg-emerald-50 border-emerald-200", text: "text-emerald-700" },
-  default:  { dot: "bg-slate-400",   pill: "bg-slate-50 border-slate-200",  text: "text-slate-600" },
+  default:  { dot: "bg-slate-400",   pill: "bg-slate-50 border-slate-200",     text: "text-slate-600" },
 };
 
 const CAT_EMOJI: Record<string, string> = {
@@ -141,6 +141,45 @@ function escICS(s: string): string {
 }
 
 /* ═══════════════════════════════════════════════════
+   BODY SCROLL LOCK
+   Prevents background scroll while a modal is open.
+   Uses a counter so nested modals work correctly.
+═══════════════════════════════════════════════════ */
+let scrollLockCount = 0;
+
+function lockBodyScroll() {
+  scrollLockCount++;
+  if (scrollLockCount === 1) {
+    const scrollY = window.scrollY;
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top      = `-${scrollY}px`;
+    document.body.style.width    = "100%";
+  }
+}
+
+function unlockBodyScroll() {
+  scrollLockCount = Math.max(0, scrollLockCount - 1);
+  if (scrollLockCount === 0) {
+    const scrollY = document.body.style.top;
+    document.body.style.overflow = "";
+    document.body.style.position = "";
+    document.body.style.top      = "";
+    document.body.style.width    = "";
+    // Restore scroll position after un-fixing
+    window.scrollTo(0, -parseInt(scrollY || "0", 10));
+  }
+}
+
+function useBodyScrollLock(active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+    lockBodyScroll();
+    return () => unlockBodyScroll();
+  }, [active]);
+}
+
+/* ═══════════════════════════════════════════════════
    TOAST
 ═══════════════════════════════════════════════════ */
 type Toast = { id: number; type: "success"|"error"; msg: string };
@@ -214,6 +253,7 @@ type ConfirmState =
 function ConfirmDialog({ state, onClose }: { state: ConfirmState; onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const ref = useFocusTrap(state.open);
+  useBodyScrollLock(state.open);
   if (!state.open) return null;
   const { title, description, confirmText = "Potwierdź", onConfirm, type } = state;
   const danger = type === "delete";
@@ -263,6 +303,12 @@ function ConfirmDialog({ state, onClose }: { state: ConfirmState; onClose: () =>
 
 /* ═══════════════════════════════════════════════════
    ADD / EDIT SHEET
+   iOS fixes applied:
+   • Body scroll locked while open
+   • max-h-[92dvh] + overflow-y-auto + overscroll-contain
+   • pb-[env(safe-area-inset-bottom)] for home indicator
+   • font-size ≥ 16px on all inputs (prevents Safari auto-zoom)
+   • items-end → bottom sheet on mobile, sm:items-center → centered on desktop
 ═══════════════════════════════════════════════════ */
 const CATEGORIES_ADD = [
   { value: "birthday", label: "Urodziny", emoji: "🎂" },
@@ -283,12 +329,18 @@ function AddEditSheet({
 }) {
   const ref = useFocusTrap(true);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Lock background scroll while sheet is open
+  useBodyScrollLock(true);
+
   useEffect(() => { setTimeout(() => inputRef.current?.focus(), 60); }, []);
 
   return (
     <div
-      role="dialog" aria-modal="true"
-      className="fixed inset-0 z-[350] flex items-end justify-center"
+      role="dialog"
+      aria-modal="true"
+      // FIX 3: items-end = bottom sheet on mobile, sm:items-center = centered modal on desktop
+      className="fixed inset-0 z-[350] flex items-end sm:items-center justify-center"
       onKeyDown={e => {
         if (e.key === "Escape") onCancel();
         if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
@@ -296,20 +348,45 @@ function AddEditSheet({
         }
       }}
     >
+      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/35 backdrop-blur-[3px]" onClick={onCancel} />
+
+      {/*
+        FIX 2: Sheet panel
+        • max-h-[92dvh]          — never taller than 92% of dynamic viewport height
+        • overflow-y-auto        — sheet itself scrolls, not the page behind it
+        • overscroll-contain     — stops scroll chaining to body (no bounce-through)
+        • pb-[env(safe-area-inset-bottom)] — clears iPhone home indicator
+        • sm:rounded-[2rem]      — full rounded on desktop (not just top)
+        • sm:mb-0                — no bottom gap on desktop
+      */}
       <div
         ref={ref}
-        className="relative bg-white w-full max-w-lg rounded-t-[2rem] shadow-2xl overflow-hidden border-t border-white/40"
+        className="
+          relative
+          bg-white
+          w-full max-w-lg
+          rounded-t-[2rem] sm:rounded-[2rem]
+          shadow-2xl
+          border-t sm:border border-white/40
+          max-h-[92dvh]
+          overflow-y-auto
+          overscroll-contain
+          pb-[env(safe-area-inset-bottom)]
+        "
         style={{ animation: "sheetUp .3s cubic-bezier(.34,1.56,.64,1) both" }}
       >
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1">
+        {/* Drag handle — visual affordance */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden">
           <div className="w-9 h-[3px] rounded-full bg-slate-200" />
         </div>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-2 pb-4 border-b border-slate-100">
-          <button onClick={onCancel} className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors px-1">
+          <button
+            onClick={onCancel}
+            className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors px-1 min-h-[44px] flex items-center"
+          >
             Anuluj
           </button>
           <p className="text-sm font-bold text-slate-800">
@@ -318,7 +395,7 @@ function AddEditSheet({
           <button
             onClick={onSubmit}
             disabled={!title || !date}
-            className="text-sm font-bold text-sky-500 hover:text-sky-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors px-1"
+            className="text-sm font-bold text-sky-500 hover:text-sky-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors px-1 min-h-[44px] flex items-center"
           >
             {mode === "add" ? "Dodaj" : "Zapisz"}
           </button>
@@ -326,7 +403,7 @@ function AddEditSheet({
 
         {/* Fields */}
         <div className="px-5 py-4 space-y-4">
-          {/* Title */}
+          {/* Title — FIX 5: text-[16px] prevents Safari auto-zoom */}
           <div className="flex items-center gap-3 py-2 border-b border-slate-100">
             <span className="text-slate-300 text-lg select-none">✏️</span>
             <input
@@ -335,31 +412,34 @@ function AddEditSheet({
               placeholder="Tytuł wydarzenia"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              className="flex-1 text-base text-slate-900 placeholder-slate-300 outline-none bg-transparent font-medium"
+              className="flex-1 placeholder-slate-300 outline-none bg-transparent font-medium text-slate-900"
+              // FIX 5: minimum 16px to suppress Safari zoom
+              style={{ fontSize: "16px" }}
             />
           </div>
 
-          {/* Date */}
+          {/* Date — FIX 5 */}
           <div className="flex items-center gap-3 py-2 border-b border-slate-100">
             <span className="text-slate-300 text-lg select-none">📅</span>
             <input
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
-              className="flex-1 text-sm text-slate-700 outline-none bg-transparent"
+              className="flex-1 text-slate-700 outline-none bg-transparent"
+              style={{ fontSize: "16px" }}
             />
           </div>
 
           {/* Category */}
           <div className="flex items-center gap-3 py-2 border-b border-slate-100">
             <span className="text-slate-300 text-lg select-none">🏷️</span>
-            <div className="flex gap-2 flex-1">
+            <div className="flex gap-2 flex-1 flex-wrap">
               {CATEGORIES_ADD.map(c => (
                 <button
                   key={c.value}
                   type="button"
                   onClick={() => setCategory(c.value)}
-                  className={`h-8 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all active:scale-[.97] ${
+                  className={`h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all active:scale-[.97] ${
                     category === c.value
                       ? CAT_COLOR[c.value].pill + " " + CAT_COLOR[c.value].text + " shadow-sm"
                       : "border-slate-200 text-slate-400 bg-white"
@@ -371,7 +451,7 @@ function AddEditSheet({
             </div>
           </div>
 
-          {/* Notes */}
+          {/* Notes — FIX 5 */}
           <div className="flex items-center gap-3 py-2">
             <span className="text-slate-300 text-lg select-none">📝</span>
             <input
@@ -379,7 +459,8 @@ function AddEditSheet({
               placeholder="Notatka (opcjonalnie)"
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              className="flex-1 text-sm text-slate-700 placeholder-slate-300 outline-none bg-transparent"
+              className="flex-1 text-slate-700 placeholder-slate-300 outline-none bg-transparent"
+              style={{ fontSize: "16px" }}
             />
           </div>
         </div>
@@ -389,14 +470,15 @@ function AddEditSheet({
           <div className="px-5 pb-6 border-t border-slate-100 pt-4">
             <button
               onClick={onDelete}
-              className="w-full h-11 rounded-2xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
+              className="w-full h-12 rounded-2xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
             >
               🗑️ Usuń wydarzenie
             </button>
           </div>
         )}
 
-        {!mode || mode === "add" ? <div className="h-6" /> : null}
+        {/* Bottom breathing room for add mode (above safe-area pb) */}
+        {mode === "add" && <div className="h-6" />}
       </div>
     </div>
   );
@@ -404,6 +486,7 @@ function AddEditSheet({
 
 /* ═══════════════════════════════════════════════════
    DAY DETAIL SHEET
+   Same iOS fixes: scroll lock, max-h-[92dvh], safe-area, 16px inputs
 ═══════════════════════════════════════════════════ */
 function DayDetailSheet({
   dateYMD,
@@ -424,24 +507,33 @@ function DayDetailSheet({
   const today = todayYMD();
   const isToday = dateYMD === today;
 
+  useBodyScrollLock(true);
+
   return (
     <div
-      className="fixed inset-0 z-[300] flex items-end justify-center"
+      className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center"
       onKeyDown={e => e.key === "Escape" && onClose()}
     >
       <div className="absolute inset-0 bg-black/25 backdrop-blur-[2px]" onClick={onClose} />
       <div
         ref={ref}
-        className="relative bg-white w-full max-w-lg rounded-t-[2rem] shadow-2xl border-t border-white/40"
+        className="
+          relative bg-white w-full max-w-lg
+          rounded-t-[2rem] sm:rounded-[2rem]
+          shadow-2xl border-t sm:border border-white/40
+          max-h-[92dvh]
+          flex flex-col
+          pb-[env(safe-area-inset-bottom)]
+        "
         style={{ animation: "sheetUp .28s cubic-bezier(.34,1.56,.64,1) both" }}
       >
-        {/* Handle */}
-        <div className="flex justify-center pt-3">
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 flex-shrink-0 sm:hidden">
           <div className="w-9 h-[3px] rounded-full bg-slate-200" />
         </div>
 
-        {/* Date header */}
-        <div className="px-5 pt-3 pb-3 flex items-end justify-between">
+        {/* Date header — flex-shrink-0 so it never scrolls away */}
+        <div className="px-5 pt-3 pb-3 flex items-end justify-between flex-shrink-0">
           <div>
             <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
               {new Intl.DateTimeFormat("pl-PL", { weekday: "long" }).format(new Date(dateYMD + "T00:00:00"))}
@@ -461,8 +553,8 @@ function DayDetailSheet({
           </button>
         </div>
 
-        {/* Events */}
-        <div className="px-4 pb-8 max-h-[55vh] overflow-y-auto">
+        {/* Events — scrollable, overscroll-contain stops bounce-through */}
+        <div className="px-4 pb-6 overflow-y-auto overscroll-contain flex-1">
           {events.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-3xl mb-2">🌙</p>
@@ -492,39 +584,29 @@ function DayDetailSheet({
                     onClick={() => !isBirthday && onEdit(ev.id)}
                   >
                     <div className="flex items-start gap-3">
-                      {/* Avatar */}
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${
                         isBirthday ? "bg-pink-100 text-pink-600" : avatarClass(cleanTitle)
                       }`}>
                         {isBirthday ? "🎂" : getInitials(cleanTitle)}
                       </div>
-
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 justify-between">
-                          <p className={`font-bold text-sm leading-tight ${colors.text}`}>
-                            {cleanTitle}
-                          </p>
+                          <p className={`font-bold text-sm leading-tight ${colors.text}`}>{cleanTitle}</p>
                           {isBirthday && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-500 border border-purple-200 font-bold shrink-0">
                               auto
                             </span>
                           )}
                         </div>
-
                         {ev.notes && !isBirthday && (
                           <p className="text-xs text-slate-400 mt-0.5 leading-snug">{ev.notes}</p>
                         )}
-
-                        {/* AI insight */}
                         {insight && (
                           <p className="text-[11px] text-violet-500 mt-1.5 font-medium flex items-center gap-1">
                             <span>✨</span> {insight}
                           </p>
                         )}
                       </div>
-
-                      {/* Gift link */}
                       {!isBirthday && (
                         <Link
                           href={`/gift/start?eventId=${ev.id}&date=${encodeURIComponent(ev.date)}&title=${encodeURIComponent(ev.title)}`}
@@ -583,9 +665,7 @@ function UpcomingStrip({
               }`}
               style={{ animation: `stripIn .3s ease ${i * 0.05}s both` }}
             >
-              <span className="text-base leading-none">
-                {CAT_EMOJI[cat] ?? "📌"}
-              </span>
+              <span className="text-base leading-none">{CAT_EMOJI[cat] ?? "📌"}</span>
               <div className="min-w-0">
                 <p className={`text-xs font-bold leading-tight truncate max-w-[100px] ${isToday ? "text-white" : colors.text}`}>
                   {cleanName}
@@ -623,11 +703,9 @@ function CalendarGrid({
   const today = todayYMD();
 
   const firstDay = new Date(year, month, 1);
-  /* Monday-first: getDay() returns 0=Sun…6=Sat, remap */
   const startDow = (firstDay.getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  /* Map date → events */
   const eventMap = useMemo(() => {
     const m = new Map<string, EventRow[]>();
     events.forEach(ev => {
@@ -647,7 +725,6 @@ function CalendarGrid({
 
   return (
     <div className="w-full">
-      {/* Weekday headers */}
       <div className="grid grid-cols-7 mb-1">
         {DAYS_PL_SHORT.map(d => (
           <div key={d} className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider py-2">
@@ -655,8 +732,6 @@ function CalendarGrid({
           </div>
         ))}
       </div>
-
-      {/* Day cells */}
       <div className="grid grid-cols-7 gap-y-0.5">
         {cells.map((day, idx) => {
           if (!day) return <div key={`e-${idx}`} />;
@@ -665,8 +740,6 @@ function CalendarGrid({
           const isToday    = dateStr === today;
           const isSelected = dateStr === selectedDate;
           const dayEvents  = eventMap.get(dateStr) ?? [];
-
-          /* Collect up to 3 unique category dots */
           const dots = [...new Set(dayEvents.map(e => e.category ?? "default"))].slice(0, 3);
 
           return (
@@ -682,16 +755,10 @@ function CalendarGrid({
               }`}
             >
               <span className={`text-sm font-bold leading-none ${
-                isSelected
-                  ? "text-white"
-                  : isToday
-                  ? "text-sky-600"
-                  : "text-slate-800"
+                isSelected ? "text-white" : isToday ? "text-sky-600" : "text-slate-800"
               }`}>
                 {day}
               </span>
-
-              {/* Event dots */}
               {dots.length > 0 && (
                 <div className="flex gap-0.5 mt-1.5 items-center">
                   {dots.map((cat, di) => (
@@ -714,6 +781,7 @@ function CalendarGrid({
 
 /* ═══════════════════════════════════════════════════
    SEARCH OVERLAY
+   iOS fixes: scroll lock, safe-area, 16px input
 ═══════════════════════════════════════════════════ */
 function SearchOverlay({
   events,
@@ -730,6 +798,8 @@ function SearchOverlay({
   const inputRef  = useRef<HTMLInputElement>(null);
   const ref       = useFocusTrap(true);
 
+  useBodyScrollLock(true);
+
   useEffect(() => { setTimeout(() => inputRef.current?.focus(), 50); }, []);
 
   const results = useMemo(() => {
@@ -744,12 +814,16 @@ function SearchOverlay({
     <div
       ref={ref}
       className="fixed inset-0 z-[400] flex flex-col bg-white"
-      style={{ animation: "fadeInFull .2s ease both" }}
+      style={{
+        animation: "fadeInFull .2s ease both",
+        // Push content up when keyboard appears on iOS
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
       onKeyDown={e => e.key === "Escape" && onClose()}
     >
       {/* Search bar */}
-      <div className="flex items-center gap-3 px-4 pt-14 pb-3 border-b border-slate-100">
-        <div className="flex-1 flex items-center gap-2 bg-slate-100 rounded-2xl px-3 h-10">
+      <div className="flex items-center gap-3 px-4 pt-14 pb-3 border-b border-slate-100 flex-shrink-0">
+        <div className="flex-1 flex items-center gap-2 bg-slate-100 rounded-2xl px-3 h-11">
           <span className="text-slate-400 text-sm">🔍</span>
           <input
             ref={inputRef}
@@ -757,7 +831,9 @@ function SearchOverlay({
             placeholder="Szukaj wydarzeń, osób, notatek…"
             value={q}
             onChange={e => setQ(e.target.value)}
-            className="flex-1 text-sm text-slate-900 bg-transparent outline-none placeholder-slate-400"
+            className="flex-1 text-slate-900 bg-transparent outline-none placeholder-slate-400"
+            // FIX 5: 16px prevents Safari zoom on focus
+            style={{ fontSize: "16px" }}
           />
           {q && (
             <button onClick={() => setQ("")} className="text-slate-400 text-xs font-bold hover:text-slate-600">✕</button>
@@ -768,8 +844,8 @@ function SearchOverlay({
         </button>
       </div>
 
-      {/* Results */}
-      <div className="flex-1 overflow-y-auto px-4 py-3">
+      {/* Results — overscroll-contain prevents scroll bleed to body */}
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-3">
         {!q.trim() ? (
           <div className="text-center py-16">
             <p className="text-4xl mb-3">🔍</p>
@@ -829,7 +905,6 @@ function SearchOverlay({
 export default function CalendarPage() {
   const router = useRouter();
 
-  /* ── State ── */
   const [events,  setEvents]  = useState<EventRow[]>([]);
   const [people,  setPeople]  = useState<PersonRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -841,19 +916,18 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showSearch,   setShowSearch]   = useState(false);
 
-  /* Add / edit */
-  const [addOpen, setAddOpen]   = useState(false);
-  const [mDate,   setMDate]     = useState("");
-  const [mTitle,  setMTitle]    = useState("");
-  const [mNotes,  setMNotes]    = useState("");
-  const [mCat,    setMCat]      = useState("personal");
+  const [addOpen, setAddOpen] = useState(false);
+  const [mDate,   setMDate]   = useState("");
+  const [mTitle,  setMTitle]  = useState("");
+  const [mNotes,  setMNotes]  = useState("");
+  const [mCat,    setMCat]    = useState("personal");
 
   const [editOpen, setEditOpen] = useState(false);
-  const [eId,   setEId]         = useState("");
-  const [eTitle, setETitle]     = useState("");
-  const [eDate,  setEDate]      = useState("");
-  const [eNotes, setENotes]     = useState("");
-  const [eCat,   setECat]       = useState("personal");
+  const [eId,      setEId]      = useState("");
+  const [eTitle,   setETitle]   = useState("");
+  const [eDate,    setEDate]    = useState("");
+  const [eNotes,   setENotes]   = useState("");
+  const [eCat,     setECat]     = useState("personal");
 
   const [confirm, setConfirm] = useState<ConfirmState>({ open: false });
   const { toasts, push } = useToasts();
@@ -918,14 +992,12 @@ export default function CalendarPage() {
       });
   }, [people, currentYear]);
 
-  /* ── All events merged ── */
   const allEvents = useMemo<EventRow[]>(() => {
     const existingIds = new Set(events.map(e => e.id));
     const unique = birthdayEvents.filter(b => !existingIds.has(b.id));
     return [...events, ...unique].sort((a,b) => a.date.localeCompare(b.date));
   }, [events, birthdayEvents]);
 
-  /* ── AI Insights ── */
   const aiInsights = useMemo<Map<string, string>>(() => {
     const map = new Map<string, string>();
     people.forEach(p => {
@@ -942,7 +1014,6 @@ export default function CalendarPage() {
     return map;
   }, [people, events]);
 
-  /* ── Upcoming 30 days ── */
   const upcoming = useMemo(() => {
     const today = new Date(); today.setHours(0,0,0,0);
     const in30  = new Date(today); in30.setDate(today.getDate()+30);
@@ -951,7 +1022,6 @@ export default function CalendarPage() {
       .slice(0, 12);
   }, [allEvents]);
 
-  /* ── Events for selected date ── */
   const selectedDateEvents = useMemo(() => {
     if (!selectedDate) return [];
     return allEvents.filter(e => e.date === selectedDate);
@@ -1083,15 +1153,20 @@ export default function CalendarPage() {
   return (
     <>
       <style>{`
-        @keyframes sheetUp   { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:none; } }
-        @keyframes fadeInFull{ from { opacity:0; } to { opacity:1; } }
-        @keyframes stripIn   { from { opacity:0; transform:translateX(8px); } to { opacity:1; transform:none; } }
-        @keyframes toastIn   { from { opacity:0; transform:translateX(12px); } to { opacity:1; transform:none; } }
+        @keyframes sheetUp    { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:none; } }
+        @keyframes fadeInFull { from { opacity:0; } to { opacity:1; } }
+        @keyframes stripIn    { from { opacity:0; transform:translateX(8px); } to { opacity:1; transform:none; } }
+        @keyframes toastIn    { from { opacity:0; transform:translateX(12px); } to { opacity:1; transform:none; } }
         .scrollbar-hide::-webkit-scrollbar { display:none; }
         .scrollbar-hide { -ms-overflow-style:none; scrollbar-width:none; }
       `}</style>
 
-      <div className="min-h-screen bg-white flex flex-col max-w-lg mx-auto">
+      {/*
+        FIX 1: min-h-[100dvh] — dynamic viewport height avoids the iOS Safari
+        address-bar-collapse bug that causes content to overflow or shift.
+        w-full instead of implicit 100% ensures correct width on all breakpoints.
+      */}
+      <div className="min-h-[100dvh] bg-white flex flex-col w-full max-w-lg mx-auto">
         <ToastStack items={toasts} />
 
         {/* ── TOP BAR ── */}
@@ -1104,7 +1179,6 @@ export default function CalendarPage() {
             🔍
           </button>
 
-          {/* Month / year — tappable to go today */}
           <button onClick={goToday} className="flex items-center gap-1.5 group">
             <span className="text-base font-extrabold text-slate-900 group-hover:text-sky-600 transition-colors">
               {MONTHS_PL[viewMonth]}
@@ -1115,7 +1189,6 @@ export default function CalendarPage() {
           </button>
 
           <div className="flex items-center gap-1">
-            {/* Import/Export hidden inputs */}
             <input
               ref={fileRef} type="file" accept=".ics,text/calendar" className="hidden"
               onChange={e => { const f = e.target.files?.[0]; if(f) importICS(f); e.currentTarget.value=""; }}
@@ -1139,9 +1212,7 @@ export default function CalendarPage() {
           >
             ‹
           </button>
-
           <div className="flex-1" />
-
           <button
             onClick={nextMonth}
             className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors text-sm font-bold"
@@ -1179,7 +1250,6 @@ export default function CalendarPage() {
               events={upcoming}
               insights={aiInsights}
               onTap={dateYMD => {
-                /* Navigate to that month and open day sheet */
                 const d = new Date(dateYMD + "T00:00:00");
                 setViewYear(d.getFullYear());
                 setViewMonth(d.getMonth());
@@ -1206,9 +1276,13 @@ export default function CalendarPage() {
           </div>
         )}
 
-        {/* ── BOTTOM UTILS (slim) ── */}
+        {/* ── BOTTOM UTILS ── */}
         {!loading && (
-          <div className="flex items-center justify-center gap-4 px-4 pb-4 mt-auto">
+          <div
+            className="flex items-center justify-center gap-4 px-4 pb-4 mt-auto"
+            // FIX 6: safe-area-inset-bottom clearance for iPhone home indicator
+            style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+          >
             <button
               onClick={() => fileRef.current?.click()}
               className="text-xs text-slate-400 hover:text-slate-600 transition-colors font-medium flex items-center gap-1"

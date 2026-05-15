@@ -501,351 +501,531 @@ label[for], summary {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   PROFILE PAGE
+   PROFILE PAGE — VISUAL REDESIGN
    ─────────────────────────────────────────────────────────
    Додається в кінець globals.css після REDUCED MOTION блоку.
 
-   ПРИНЦИПИ:
-   • Використовує існуючі: hd-card, btn, btn-primary, btn-ghost,
-     safe-container, spacing rhythm
-   • Не створює нову design system — тільки profile-специфічні
-     layout та component класи
-   • font-size: 16px на всіх inputs — iOS Safari zoom prevention
-   • profile-shell з правильним padding-bottom — контент не
-     заходить під bottom navbar
-   • Жодних inline styles, жодних <style> тегів у компоненті
+   ДИЗАЙН-ФІЛОСОФІЯ:
+   Emotional lifestyle product — не SaaS dashboard.
+   Apple Journal softness × HappyDate warmth.
+   Floating cards, generous air, pastel depth.
+
+   ТЕХНІЧНІ ПРАВИЛА (збережені):
+   • safe-area, bottom navbar clearance — без змін
+   • font-size: 16px на inputs — iOS zoom prevention
+   • appearance: none на date — Safari viewport fix
+   • min-width: 0, box-sizing: border-box — overflow prevention
+   • Жодних inline styles, жодних <style> тегів
 ═══════════════════════════════════════════════════════════ */
 
-/* ── App shell ── */
-.profile-shell {
-  /* padding-top/bottom від safe-container (existing utility) */
-  background: var(--background);
+/* ── Shell ── */
+.pr-shell {
+  /* safe-container gives env(safe-area-inset-top/bottom) */
   min-height: 100dvh;
+  padding-left: 20px;
+  padding-right: 20px;
   /*
-    110px — висота bottom navbar + buffer.
-    env(safe-area-inset-bottom) — додатковий iPhone home indicator clearance.
-    Контент НІКОЛИ не заходить під navbar.
+    padding-bottom: контент ніколи не заходить під bottom navbar.
+    110px — висота navbar + comfortable buffer.
   */
   padding-bottom: calc(110px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-left: 16px;
-  padding-right: 16px;
+  gap: 16px;
+  /* Soft warm background — matches HappyDate homepage feel */
+  background:
+    radial-gradient(600px 400px at 110% -60px, rgba(255,199,164,.13), transparent 65%),
+    radial-gradient(500px 350px at -5% 50%, rgba(146,231,255,.11), transparent 60%),
+    var(--background);
 }
 
-/* ── Profile hero — extends hd-card ── */
-.profile-hero {
-  /* hd-card дає background, border, radius, shadow */
-  padding: 18px 16px 14px;
-  margin-top: 8px;
+/* ══════════════════════════════════════════
+   HERO — особистий простір у HappyDate
+══════════════════════════════════════════ */
+.pr-hero {
+  position: relative;
+  margin-top: 12px;
+  border-radius: 28px;
+  /* Layered glass — warm, floating, premium */
+  background:
+    linear-gradient(150deg, rgba(255,255,255,.95) 0%, rgba(255,252,248,.88) 100%);
+  border: 1px solid rgba(255,255,255,.9);
+  box-shadow:
+    0 2px 0 rgba(255,255,255,.8) inset,
+    0 20px 48px rgba(15,23,42,.07),
+    0 4px 12px rgba(15,23,42,.04);
+  padding: 24px 20px 20px;
+  overflow: hidden;
 }
 
-.profile-hero__row {
+/* Atmospheric glow — subtle warm radiance like HappyDate homepage */
+.pr-hero__glow {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(255,199,164,.35) 0%,
+    rgba(251,146,60,.08) 50%,
+    transparent 70%
+  );
+  pointer-events: none;
+  filter: blur(24px);
+}
+
+.pr-hero__inner {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 12px;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 18px;
+  position: relative;
+  z-index: 1;
 }
 
 /* Avatar */
-.profile-avatar-wrap {
+.pr-avatar-wrap {
   position: relative;
   flex-shrink: 0;
 }
 
-.profile-avatar-img {
-  width: 72px;
-  height: 72px;
-  border-radius: 22px;
+.pr-avatar-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 26px;
   object-fit: cover;
-  border: 2px solid rgba(229, 231, 235, .7);
   display: block;
+  /* Soft warm border — not harsh gray */
+  border: 2px solid rgba(255,220,180,.4);
+  box-shadow: 0 8px 24px rgba(15,23,42,.10);
 }
 
-.profile-avatar-placeholder {
-  width: 72px;
-  height: 72px;
-  border-radius: 22px;
-  background: linear-gradient(135deg, #ede9fe, #fce7f3);
+.pr-avatar-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 26px;
+  /* Warm gradient matching HappyDate brand */
+  background: linear-gradient(135deg, #fce7f3 0%, #ede9fe 50%, #dbeafe 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 800;
   color: #7c3aed;
-  /* Prevent text selection on tap */
+  box-shadow: 0 8px 24px rgba(124,58,237,.12);
   user-select: none;
+  border: 2px solid rgba(255,255,255,.8);
 }
 
-.profile-avatar-change {
+.pr-avatar-edit {
   position: absolute;
-  bottom: -4px;
-  right: -4px;
-  width: 24px;
-  height: 24px;
+  bottom: -6px;
+  right: -6px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
   background: #fff;
-  border: 1.5px solid rgba(229, 231, 235, .9);
-  border-radius: 8px;
+  border: 1.5px solid rgba(229,231,235,.8);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, .08);
-  /* Minimum tap target */
-  min-width: 32px;
-  min-height: 32px;
+  box-shadow: 0 3px 10px rgba(15,23,42,.10);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.pr-avatar-edit:active {
+  transform: scale(.93);
 }
 
-/* Hidden file input — do not change display to anything other than none */
-.profile-avatar-input {
+.pr-avatar-input {
   display: none;
 }
 
-/* Identity text */
-.profile-hero__info {
+/* Identity */
+.pr-hero__identity {
+  flex: 1;
+  min-width: 0;
+  padding-top: 4px;
+}
+
+.pr-hero__name {
+  font-size: 20px;
+  font-weight: 800;
+  /* Warm dark navy — not harsh black */
+  color: #0f1a2e;
+  letter-spacing: -.3px;
+  line-height: 1.2;
+  margin: 0 0 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pr-hero__email {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0 0 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pr-hero__since {
+  font-size: 11px;
+  font-weight: 500;
+  color: #94a3b8;
+  margin: 0;
+  letter-spacing: .01em;
+}
+
+/* Badges */
+.pr-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  position: relative;
+  z-index: 1;
+}
+
+.pr-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
+  text-decoration: none;
+  min-height: 30px;
+  letter-spacing: .01em;
+  transition: transform .12s ease;
+}
+.pr-badge:active { transform: scale(.95); }
+
+.pr-badge--points {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #78350f;
+  box-shadow: 0 2px 8px rgba(251,191,36,.2);
+}
+.pr-badge--care {
+  background: linear-gradient(135deg, #fce7f3, #fbcfe8);
+  color: #9d174d;
+  box-shadow: 0 2px 8px rgba(236,72,153,.12);
+}
+.pr-badge--done {
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  color: #14532d;
+  box-shadow: 0 2px 8px rgba(34,197,94,.12);
+}
+.pr-badge--cta {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  color: #5b21b6;
+  box-shadow: 0 2px 8px rgba(124,58,237,.12);
+}
+
+/* ══════════════════════════════════════════
+   CARE BANNER
+══════════════════════════════════════════ */
+.pr-care-banner {
+  border-radius: 24px;
+  /* Warm brand gradient — consistent with HappyDate marketing */
+  background: linear-gradient(135deg, #f472b6 0%, #a78bfa 50%, #60a5fa 100%);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 12px 32px rgba(167,139,250,.25), 0 4px 12px rgba(244,114,182,.15);
+}
+
+.pr-care-banner__text {
   flex: 1;
   min-width: 0;
 }
 
-.profile-hero__name {
-  font-size: 17px;
+.pr-care-banner__title {
+  font-size: 14px;
   font-weight: 800;
-  color: var(--foreground);
+  color: #fff;
   margin: 0 0 3px;
-  /* Prevent name from overflowing on small screens */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  letter-spacing: -.1px;
 }
 
-.profile-hero__email {
+.pr-care-banner__body {
   font-size: 12px;
-  color: #64748b;
-  margin: 0 0 3px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.profile-hero__since {
-  font-size: 11px;
-  color: #94a3b8;
+  line-height: 1.5;
+  color: rgba(255,255,255,.85);
   margin: 0;
 }
 
-/* Badges row */
-.profile-badges {
+.pr-care-banner__cta {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  background: rgba(255,255,255,.22);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.35);
+  border-radius: 14px;
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  min-height: 38px;
+  white-space: nowrap;
+  transition: background .15s ease;
+}
+.pr-care-banner__cta:active {
+  background: rgba(255,255,255,.32);
+}
+
+/* ══════════════════════════════════════════
+   CARDS — floating, breathing, premium
+══════════════════════════════════════════ */
+.pr-card {
+  border-radius: 26px;
+  background: rgba(255,255,255,.82);
+  backdrop-filter: saturate(1.08) blur(14px);
+  -webkit-backdrop-filter: saturate(1.08) blur(14px);
+  /* Layered shadows for depth — not flat */
+  border: 1px solid rgba(255,255,255,.75);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.9) inset,
+    0 16px 40px rgba(15,23,42,.06),
+    0 4px 10px rgba(15,23,42,.03);
+  padding: 22px 20px 20px;
+}
+
+/* Section eyebrow — small, calm, confident */
+.pr-card__eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: #cbd5e1;
+  margin: 0 0 16px;
+}
+
+/* ══════════════════════════════════════════
+   FORM SYSTEM
+══════════════════════════════════════════ */
+.pr-form {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pr-field {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
 }
 
-.profile-badge {
-  display: inline-flex;
-  align-items: center;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 20px;
-  white-space: nowrap;
-  text-decoration: none;
-  /* Minimum tap target height */
-  min-height: 28px;
-}
-
-.profile-badge--points {
-  background: #f1eeff;
-  color: #7c3aed;
-}
-
-.profile-badge--care {
-  background: #fce7f3;
-  color: #be185d;
-}
-
-.profile-badge--survey-done {
-  background: #dcfce7;
-  color: #15803d;
-}
-
-.profile-badge--survey-cta {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-/* ── Care banner ── */
-.profile-care-banner {
-  background: linear-gradient(135deg, #7c3aed, #ec4899);
-  border-radius: 20px;
-  padding: 16px;
-  color: #fff;
-}
-
-.profile-care-banner__title {
-  font-size: 15px;
-  font-weight: 800;
-  margin: 0 0 5px;
-}
-
-.profile-care-banner__body {
+.pr-field__label {
   font-size: 12px;
-  line-height: 1.5;
-  opacity: .9;
-  margin: 0 0 14px;
-}
-
-.profile-care-banner__cta {
-  display: inline-block;
-  background: #fff;
-  color: #7c3aed;
-  border-radius: 12px;
-  padding: 8px 18px;
-  font-size: 13px;
-  font-weight: 800;
-  text-decoration: none;
-  /* Minimum tap target */
-  min-height: 36px;
-  display: inline-flex;
-  align-items: center;
-}
-
-/* ── Shared card wrapper — extends hd-card ── */
-.profile-card {
-  /* hd-card дає: background, blur, border, radius, shadow */
-  padding: 16px;
-}
-
-.profile-card__label {
-  font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  margin: 0 0 12px;
-}
-
-/* ── Forms ── */
-.profile-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  letter-spacing: .02em;
+  padding-left: 2px;
 }
 
 /*
-  .profile-input — mobile-safe compact input.
-  КРИТИЧНО:
-  • font-size: 16px — iOS Safari не зумить inputs ≥ 16px
-  • height: 52px — comfortable tap target
-  • box-sizing: border-box — ширина не виходить за контейнер
+  CRITICAL iOS fixes preserved:
+  • font-size: 16px — prevents Safari auto-zoom on focus
+  • -webkit-appearance: none — prevents viewport stretching on date input
+  • box-sizing: border-box — no width overflow
+  • min-width: 0 — safe on date input
 */
-.profile-input {
+.pr-input {
   width: 100%;
   box-sizing: border-box;
-  height: 52px;
-  padding: 0 14px;
+  height: 54px;
+  padding: 0 16px;
   font-size: 16px;
   font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
   font-weight: 500;
-  color: var(--foreground);
-  background: rgba(248, 250, 252, .7);
-  border: 1.5px solid rgba(229, 231, 235, .8);
-  border-radius: 14px;
+  /* Warm dark — not harsh black */
+  color: #0f1a2e;
+  /* Soft glass surface */
+  background: rgba(248,250,252,.6);
+  border: 1.5px solid rgba(226,232,240,.7);
+  border-radius: 16px;
   outline: none;
-  transition: border-color .15s ease, background .15s ease;
-  /* Prevent iOS viewport stretching on date inputs */
+  transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
   -webkit-appearance: none;
   appearance: none;
 }
 
-.profile-input:focus {
-  border-color: #7c3aed;
-  background: #fff;
+.pr-input:focus {
+  border-color: rgba(167,139,250,.6);
+  background: rgba(255,255,255,.95);
+  /* Soft violet glow — brand-consistent, not harsh */
+  box-shadow: 0 0 0 3px rgba(167,139,250,.12), 0 4px 12px rgba(15,23,42,.05);
 }
 
-.profile-input::placeholder {
-  color: #94a3b8;
+.pr-input::placeholder {
+  color: #c4cdd8;
   font-weight: 400;
 }
 
-/*
-  date input — додатковий фікс для Safari.
-  min-width: 0 + width: 100% запобігає viewport stretching.
-*/
-.profile-input--date {
+.pr-input--date {
   min-width: 0;
-  color: var(--foreground);
+  color: #0f1a2e;
 }
 
-/* Submit button — extends btn btn-primary */
-.profile-form__submit {
+/* Feedback */
+.pr-feedback {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  background: rgba(241,245,249,.7);
+  border-radius: 12px;
+  padding: 10px 14px;
+  line-height: 1.4;
+}
+
+/* ══════════════════════════════════════════
+   BUTTONS
+══════════════════════════════════════════ */
+
+/* Primary — warm, tactile, premium */
+.pr-btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 54px;
+  border: none;
+  border-radius: 16px;
+  padding: 0 20px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+  letter-spacing: -.1px;
+  cursor: pointer;
+  /* Warm golden gradient — HappyDate brand primary */
+  background: linear-gradient(135deg, #fbbf24 0%, #fb923c 60%, #f97316 100%);
+  color: #431407;
+  /* Tactile shadow glow */
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.25) inset,
+    0 10px 28px rgba(251,146,60,.30),
+    0 4px 10px rgba(251,146,60,.15);
+  transition: opacity .15s ease, transform .1s ease, box-shadow .15s ease;
+  touch-action: manipulation;
+}
+.pr-btn-primary:hover {
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.25) inset,
+    0 14px 36px rgba(251,146,60,.38),
+    0 4px 10px rgba(251,146,60,.20);
+}
+.pr-btn-primary:active {
+  transform: scale(.97);
+  opacity: .92;
+}
+.pr-btn-primary:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+/* Ghost — translucent glass, elegant */
+.pr-btn-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   height: 52px;
-  border-radius: 14px;
-  font-size: 15px;
-  justify-content: center;
-}
-
-/* Feedback message */
-.profile-message {
-  margin: 8px 0 0;
-  font-size: 13px;
+  border: 1.5px solid rgba(226,232,240,.8);
+  border-radius: 16px;
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+  cursor: pointer;
+  background: rgba(255,255,255,.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #64748b;
-  background: rgba(248, 250, 252, .8);
-  border-radius: 10px;
-  padding: 8px 12px;
+  box-shadow: 0 2px 8px rgba(15,23,42,.04);
+  transition: background .15s ease, transform .1s ease;
+  touch-action: manipulation;
+}
+.pr-btn-ghost:active {
+  transform: scale(.97);
+  background: rgba(255,255,255,.85);
 }
 
-/* ── Upcoming events list ── */
-.profile-events {
+/* ══════════════════════════════════════════
+   EVENTS LIST
+══════════════════════════════════════════ */
+.pr-events {
   list-style: none;
   margin: 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.profile-event-item {
+.pr-event {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(241, 245, 249, .9);
+  gap: 14px;
+  padding: 12px 4px;
+  border-bottom: 1px solid rgba(241,245,249,.8);
+  animation: hd-pop .25s ease both;
 }
-
-.profile-event-item:last-child {
+.pr-event:last-child {
   border-bottom: none;
   padding-bottom: 0;
 }
 
-.profile-event-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  background: #f1eeff;
+/* Urgent events get a warm tint */
+.pr-event--urgent .pr-event__icon {
+  background: linear-gradient(135deg, #fff1f2, #fce7f3);
+  box-shadow: 0 2px 8px rgba(244,114,182,.12);
+}
+
+.pr-event__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border: 1px solid rgba(226,232,240,.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 18px;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(15,23,42,.05);
 }
 
-.profile-event-info {
+.pr-event__info {
   flex: 1;
   min-width: 0;
 }
 
-.profile-event-title {
-  font-size: 13px;
+.pr-event__title {
+  font-size: 13.5px;
   font-weight: 700;
-  color: var(--foreground);
-  margin: 0 0 3px;
+  color: #0f1a2e;
+  margin: 0 0 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: -.1px;
 }
 
-.profile-event-meta {
-  font-size: 11px;
+.pr-event__meta {
+  font-size: 11.5px;
+  font-weight: 500;
   color: #94a3b8;
   margin: 0;
   display: flex;
@@ -853,27 +1033,42 @@ label[for], summary {
   gap: 6px;
 }
 
-.profile-event-badge {
-  font-size: 10px;
+.pr-event__pill {
+  font-size: 10.5px;
   font-weight: 700;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 20px;
-  background: #f1f5f9;
+  background: rgba(241,245,249,.9);
   color: #64748b;
+  border: 1px solid rgba(226,232,240,.6);
   white-space: nowrap;
+  letter-spacing: .01em;
 }
 
-/* ── Logout ── */
-.profile-logout {
-  padding-bottom: 4px;
+/* Urgent pill — warm amber */
+.pr-event__pill--urgent {
+  background: linear-gradient(135deg, #fff7ed, #fef3c7);
+  color: #92400e;
+  border-color: rgba(251,191,36,.25);
 }
 
-/* extends btn btn-ghost */
-.profile-logout__btn {
-  width: 100%;
-  height: 52px;
-  border-radius: 14px;
-  font-size: 15px;
-  justify-content: center;
-  border: 1.5px solid rgba(229, 231, 235, .8);
+/* ── Logout section ── */
+.pr-logout {
+  padding-bottom: 8px;
+}
+
+/* ══════════════════════════════════════════
+   REDUCED MOTION overrides for profile
+══════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .pr-event {
+    animation: none !important;
+  }
+  .pr-btn-primary,
+  .pr-btn-ghost,
+  .pr-badge,
+  .pr-avatar-edit,
+  .pr-input {
+    transition: none !important;
+  }
 }

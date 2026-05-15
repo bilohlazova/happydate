@@ -67,60 +67,61 @@ function ProfileHero({
   onAvatarChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
   return (
-    <section className="profile-hero hd-card">
-      <div className="profile-hero__row">
+    <section className="pr-hero">
+      {/* Atmospheric background layer */}
+      <div className="pr-hero__glow" aria-hidden="true" />
+
+      <div className="pr-hero__inner">
         {/* Avatar */}
-        <div className="profile-avatar-wrap">
+        <div className="pr-avatar-wrap">
           {avatarUrl ? (
             <Image
               src={avatarUrl}
               alt="avatar"
-              width={72}
-              height={72}
-              className="profile-avatar-img"
+              width={80}
+              height={80}
+              className="pr-avatar-img"
               unoptimized
             />
           ) : (
-            <div className="profile-avatar-placeholder">
+            <div className="pr-avatar-placeholder">
               {avatarFallback}
             </div>
           )}
-          <label className="profile-avatar-change" aria-label="Zmień avatar">
-            ✏️
+          <label className="pr-avatar-edit" aria-label="Zmień zdjęcie profilowe">
+            <span aria-hidden="true">✏️</span>
             <input
               type="file"
               accept="image/*"
               onChange={onAvatarChange}
-              className="profile-avatar-input"
+              className="pr-avatar-input"
             />
           </label>
         </div>
 
         {/* Identity */}
-        <div className="profile-hero__info">
-          <p className="profile-hero__name">{fullName || "Twoje imię"}</p>
-          {email    && <p className="profile-hero__email">{email}</p>}
+        <div className="pr-hero__identity">
+          <h1 className="pr-hero__name">{fullName || "Twoje imię"}</h1>
+          {email && <p className="pr-hero__email">{email}</p>}
           {createdAt && (
-            <p className="profile-hero__since">
-              Konto od {new Date(createdAt).toLocaleDateString("pl-PL")}
+            <p className="pr-hero__since">
+              Z nami od {new Date(createdAt).toLocaleDateString("pl-PL", { month: "long", year: "numeric" })}
             </p>
           )}
         </div>
       </div>
 
       {/* Badges */}
-      <div className="profile-badges">
-        <span className="profile-badge profile-badge--points">⭐ {points} pkt</span>
-
+      <div className="pr-badges">
+        <span className="pr-badge pr-badge--points">⭐ {points} pkt</span>
         {hasCare && (
-          <span className="profile-badge profile-badge--care">💛 Care aktywne</span>
+          <span className="pr-badge pr-badge--care">💛 Care aktywne</span>
         )}
-
         {surveyCompleted ? (
-          <span className="profile-badge profile-badge--survey-done">✅ ankieta</span>
+          <span className="pr-badge pr-badge--done">✅ Ankieta</span>
         ) : (
-          <Link href="/survey" className="profile-badge profile-badge--survey-cta">
-            +100 pkt za ankietę
+          <Link href="/survey" className="pr-badge pr-badge--cta">
+            +100 pkt za ankietę →
           </Link>
         )}
       </div>
@@ -130,13 +131,15 @@ function ProfileHero({
 
 function CareBanner() {
   return (
-    <section className="profile-care-banner">
-      <p className="profile-care-banner__title">💛 Wypróbuj HappyDate Care</p>
-      <p className="profile-care-banner__body">
-        Pamiętamy za Ciebie — przypomnienia, AI podpowiedzi i więcej. Od 29 zł/mies.
-      </p>
-      <Link href="/care" className="profile-care-banner__cta">
-        Zobacz Care →
+    <section className="pr-care-banner">
+      <div className="pr-care-banner__text">
+        <p className="pr-care-banner__title">💛 HappyDate Care</p>
+        <p className="pr-care-banner__body">
+          Pamiętamy za Ciebie — przypomnienia, AI podpowiedzi i więcej.
+        </p>
+      </div>
+      <Link href="/care" className="pr-care-banner__cta">
+        Od 29 zł/mies →
       </Link>
     </section>
   );
@@ -156,28 +159,25 @@ function EditProfileCard({
   onSubmit: (e: React.FormEvent) => void;
 }) {
   return (
-    <section className="hd-card profile-card">
-      <p className="profile-card__label">Edytuj profil</p>
-      <form onSubmit={onSubmit} className="profile-form">
-        <input
-          className="profile-input"
-          type="text"
-          placeholder="Imię i nazwisko"
-          value={fullName}
-          onChange={e => onChange(e.target.value)}
-          /* font-size ≥ 16px applied via .profile-input in CSS — prevents iOS zoom */
-        />
-        <button
-          className="btn btn-primary profile-form__submit"
-          type="submit"
-          disabled={saving}
-        >
+    <section className="pr-card">
+      <p className="pr-card__eyebrow">Twój profil</p>
+      <form onSubmit={onSubmit} className="pr-form">
+        <div className="pr-field">
+          <label className="pr-field__label" htmlFor="pr-name">Imię i nazwisko</label>
+          <input
+            id="pr-name"
+            className="pr-input"
+            type="text"
+            placeholder="Jak masz na imię?"
+            value={fullName}
+            onChange={e => onChange(e.target.value)}
+          />
+        </div>
+        <button className="pr-btn-primary" type="submit" disabled={saving}>
           {saving ? "Zapisywanie…" : "Zapisz zmiany"}
         </button>
       </form>
-      {message && (
-        <p className="profile-message">{message}</p>
-      )}
+      {message && <p className="pr-feedback">{message}</p>}
     </section>
   );
 }
@@ -196,28 +196,31 @@ function AddEventCard({
   onSubmit: (e: React.FormEvent) => void;
 }) {
   return (
-    <section className="hd-card profile-card">
-      <p className="profile-card__label">Dodaj wydarzenie</p>
-      <form onSubmit={onSubmit} className="profile-form">
-        <input
-          className="profile-input"
-          type="text"
-          placeholder="Tytuł"
-          value={newTitle}
-          onChange={e => onTitleChange(e.target.value)}
-        />
-        {/*
-          type="date" iOS fix:
-          • font-size: 16px prevents Safari zoom
-          • applied via .profile-input in CSS
-        */}
-        <input
-          className="profile-input profile-input--date"
-          type="date"
-          value={newDate}
-          onChange={e => onDateChange(e.target.value)}
-        />
-        <button className="btn btn-primary profile-form__submit" type="submit">
+    <section className="pr-card">
+      <p className="pr-card__eyebrow">Nowe wydarzenie</p>
+      <form onSubmit={onSubmit} className="pr-form">
+        <div className="pr-field">
+          <label className="pr-field__label" htmlFor="pr-event-title">Tytuł</label>
+          <input
+            id="pr-event-title"
+            className="pr-input"
+            type="text"
+            placeholder="Co chcesz zapamiętać?"
+            value={newTitle}
+            onChange={e => onTitleChange(e.target.value)}
+          />
+        </div>
+        <div className="pr-field">
+          <label className="pr-field__label" htmlFor="pr-event-date">Data</label>
+          <input
+            id="pr-event-date"
+            className="pr-input pr-input--date"
+            type="date"
+            value={newDate}
+            onChange={e => onDateChange(e.target.value)}
+          />
+        </div>
+        <button className="pr-btn-primary" type="submit">
           Dodaj wydarzenie
         </button>
       </form>
@@ -228,19 +231,26 @@ function AddEventCard({
 function UpcomingEventsCard({ events }: { events: EventRow[] }) {
   if (!events.length) return null;
   return (
-    <section className="hd-card profile-card">
-      <p className="profile-card__label">Najbliższe wydarzenia</p>
-      <ul className="profile-events">
-        {events.map(ev => {
+    <section className="pr-card">
+      <p className="pr-card__eyebrow">Nadchodzące</p>
+      <ul className="pr-events">
+        {events.map((ev, i) => {
           const emoji = CAT_EMOJI[ev.category ?? ""] ?? "📅";
+          const diff  = Math.round(
+            (new Date(ev.date + "T00:00:00").getTime() - new Date().setHours(0,0,0,0)) / 86_400_000
+          );
+          const urgent = diff >= 0 && diff <= 3;
           return (
-            <li key={ev.id} className="profile-event-item">
-              <div className="profile-event-icon" aria-hidden="true">{emoji}</div>
-              <div className="profile-event-info">
-                <p className="profile-event-title">{ev.title}</p>
-                <p className="profile-event-meta">
-                  {formatDate(ev.date)}
-                  <span className="profile-event-badge">{daysLabel(ev.date)}</span>
+            <li key={ev.id} className={`pr-event${urgent ? " pr-event--urgent" : ""}`}
+              style={{ animationDelay: `${i * 0.06}s` }}>
+              <div className="pr-event__icon">{emoji}</div>
+              <div className="pr-event__info">
+                <p className="pr-event__title">{ev.title}</p>
+                <p className="pr-event__meta">
+                  <span>{formatDate(ev.date)}</span>
+                  <span className={`pr-event__pill${urgent ? " pr-event__pill--urgent" : ""}`}>
+                    {daysLabel(ev.date)}
+                  </span>
                 </p>
               </div>
             </li>
@@ -253,9 +263,9 @@ function UpcomingEventsCard({ events }: { events: EventRow[] }) {
 
 function LogoutButton({ onLogout }: { onLogout: () => void }) {
   return (
-    <div className="profile-logout">
-      <button className="btn btn-ghost profile-logout__btn" onClick={onLogout}>
-        🚪 Wyloguj się
+    <div className="pr-logout">
+      <button className="pr-btn-ghost" onClick={onLogout}>
+        Wyloguj się
       </button>
     </div>
   );
@@ -347,7 +357,7 @@ export default function ProfilePage() {
       .upload(filePath, file, { upsert: true, contentType: file.type });
     if (error) { setMessage(error.message); return; }
     setAvatarPath(filePath);
-    setMessage("Avatar przesłany ✅ Kliknij Zapisz.");
+    setMessage("Zdjęcie przesłane ✅ Kliknij Zapisz.");
   };
 
   const addEvent = async (e: React.FormEvent) => {
@@ -368,11 +378,7 @@ export default function ProfilePage() {
   const avatarFallback = fullName?.[0]?.toUpperCase() ?? email?.[0]?.toUpperCase() ?? "?";
 
   return (
-    /*
-      safe-container  — applies env(safe-area-inset-top/bottom) padding
-      profile-shell   — ensures content never slides under bottom navbar
-    */
-    <main className="safe-container profile-shell">
+    <main className="safe-container pr-shell">
       <ProfileHero
         avatarUrl={avatarUrl}
         avatarFallback={avatarFallback}

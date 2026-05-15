@@ -6,36 +6,24 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { useAvatar } from "@/hooks/useAvatar";
+import { useAvatarUpload } from "@/hooks/useAvatarUpload";
 
 /* ═══════════════════════════════════════════════════════════
    PROFILE PAGE — Account Center
    ─────────────────────────────────────────────────────────
-   Structure:
-   1. ProfileHero        — avatar, name, email, badges
-   2. CareCard           — subscription status (active or upsell)
-   3. PersonalDataCard   — name edit + save
-   4. SettingsCard       — notifications, reminders, AI prefs
-   5. SecurityCard       — password, privacy, data export
-   6. LogoutButton
-
-   Removed: UpcomingEventsCard, AddEventCard
-   Events belong to Calendar page — not account center.
+   Avatar upload: Capacitor Camera plugin (stable iOS).
+   <input type="file"> removed — WKWebView unsafe.
+   All other UI, iOS fixes, Supabase logic: unchanged.
 ═══════════════════════════════════════════════════════════ */
 
-/* ─────────────────────────────────────────
-   SUB-COMPONENTS
-───────────────────────────────────────── */
+type SettingRow = { icon: string; label: string; value?: string; href?: string };
 
+/* ─────────────────────────────────────────
+   PROFILE HERO
+───────────────────────────────────────── */
 function ProfileHero({
-  avatarUrl,
-  avatarFallback,
-  fullName,
-  email,
-  createdAt,
-  points,
-  hasCare,
-  surveyCompleted,
-  onAvatarChange,
+  avatarUrl, avatarFallback, fullName, email, createdAt,
+  points, hasCare, surveyCompleted, avatarLoading, onPickAvatar,
 }: {
   avatarUrl: string | null;
   avatarFallback: string;
@@ -45,7 +33,8 @@ function ProfileHero({
   points: number;
   hasCare: boolean;
   surveyCompleted: boolean;
-  onAvatarChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  avatarLoading: boolean;
+  onPickAvatar: () => void;
 }) {
   return (
     <section className="pr-hero">
@@ -60,21 +49,34 @@ function ProfileHero({
               alt="Zdjęcie profilowe"
               width={84}
               height={84}
-              className="pr-avatar-img"
+              className={`pr-avatar-img${avatarLoading ? " pr-avatar-img--loading" : ""}`}
               unoptimized
             />
           ) : (
-            <div className="pr-avatar-placeholder">{avatarFallback}</div>
+            <div className={`pr-avatar-placeholder${avatarLoading ? " pr-avatar-img--loading" : ""}`}>
+              {avatarLoading ? "…" : avatarFallback}
+            </div>
           )}
-          <label className="pr-avatar-edit" aria-label="Zmień zdjęcie">
-            <span aria-hidden="true">✏️</span>
-            <input type="file" accept="image/*" onChange={onAvatarChange} className="pr-avatar-input" />
-          </label>
+
+          {/*
+            REPLACED: <input type="file"> — unreliable in WKWebView / Capacitor iOS.
+            This <button> calls Camera.getPhoto() via the useAvatarUpload hook,
+            which opens the native iOS action sheet (Camera | Library | Files).
+          */}
+          <button
+            type="button"
+            className="pr-avatar-edit"
+            aria-label="Zmień zdjęcie profilowe"
+            onClick={onPickAvatar}
+            disabled={avatarLoading}
+          >
+            <span aria-hidden="true">{avatarLoading ? "⏳" : "✏️"}</span>
+          </button>
         </div>
 
         <div className="pr-hero__identity">
           <h1 className="pr-hero__name">{fullName || "Twoje imię"}</h1>
-          {email && <p className="pr-hero__email">{email}</p>}
+          {email    && <p className="pr-hero__email">{email}</p>}
           {createdAt && (
             <p className="pr-hero__since">
               Z nami od {new Date(createdAt).toLocaleDateString("pl-PL", { month: "long", year: "numeric" })}
@@ -96,7 +98,9 @@ function ProfileHero({
   );
 }
 
-/* ── Care — active or upsell ── */
+/* ─────────────────────────────────────────
+   CARE CARD
+───────────────────────────────────────── */
 function CareCard({ hasCare }: { hasCare: boolean }) {
   if (hasCare) {
     return (
@@ -130,7 +134,9 @@ function CareCard({ hasCare }: { hasCare: boolean }) {
   );
 }
 
-/* ── Personal data ── */
+/* ─────────────────────────────────────────
+   PERSONAL DATA CARD
+───────────────────────────────────────── */
 function PersonalDataCard({
   fullName, saving, message, onChange, onSubmit,
 }: {
@@ -153,7 +159,7 @@ function PersonalDataCard({
             placeholder="Jak masz na imię?"
             value={fullName}
             onChange={e => onChange(e.target.value)}
-            /* font-size: 16px via .pr-input — prevents iOS Safari zoom */
+            /* font-size: 16px via .pr-input CSS — prevents iOS Safari zoom */
           />
         </div>
         <button className="pr-btn-primary" type="submit" disabled={saving}>
@@ -165,22 +171,16 @@ function PersonalDataCard({
   );
 }
 
-/* ── Settings rows ── */
-type SettingRow = {
-  icon: string;
-  label: string;
-  value?: string;
-  href?: string;
-};
-
+/* ─────────────────────────────────────────
+   SETTINGS CARD
+───────────────────────────────────────── */
 function SettingsCard() {
   const rows: SettingRow[] = [
-    { icon: "🔔", label: "Powiadomienia push",     value: "Włączone",    href: "/settings/notifications" },
-    { icon: "⏰", label: "Przypomnienia",           value: "3 dni przed", href: "/settings/reminders" },
-    { icon: "✨", label: "Podpowiedzi AI",          value: "Aktywne",     href: "/settings/ai" },
-    { icon: "🌍", label: "Język aplikacji",         value: "Polski",      href: "/settings/language" },
+    { icon: "🔔", label: "Powiadomienia push",  value: "Włączone",    href: "/settings/notifications" },
+    { icon: "⏰", label: "Przypomnienia",        value: "3 dni przed", href: "/settings/reminders" },
+    { icon: "✨", label: "Podpowiedzi AI",       value: "Aktywne",     href: "/settings/ai" },
+    { icon: "🌍", label: "Język aplikacji",      value: "Polski",      href: "/settings/language" },
   ];
-
   return (
     <section className="pr-card">
       <div className="pr-card__header">
@@ -203,16 +203,17 @@ function SettingsCard() {
   );
 }
 
-/* ── Security & privacy ── */
+/* ─────────────────────────────────────────
+   SECURITY CARD
+───────────────────────────────────────── */
 function SecurityCard() {
   const rows: SettingRow[] = [
-    { icon: "🔑", label: "Zmień hasło",           href: "/settings/password" },
-    { icon: "📱", label: "Aktywne sesje",          href: "/settings/sessions" },
-    { icon: "🔒", label: "Polityka prywatności",   href: "/privacy" },
-    { icon: "📦", label: "Eksportuj dane",         href: "/settings/export" },
-    { icon: "🗑️", label: "Usuń konto",            href: "/settings/delete" },
+    { icon: "🔑", label: "Zmień hasło",          href: "/settings/password" },
+    { icon: "📱", label: "Aktywne sesje",         href: "/settings/sessions" },
+    { icon: "🔒", label: "Polityka prywatności",  href: "/privacy" },
+    { icon: "📦", label: "Eksportuj dane",        href: "/settings/export" },
+    { icon: "🗑️", label: "Usuń konto",           href: "/settings/delete" },
   ];
-
   return (
     <section className="pr-card">
       <div className="pr-card__header">
@@ -237,20 +238,20 @@ function SecurityCard() {
   );
 }
 
-/* ── Logout ── */
+/* ─────────────────────────────────────────
+   LOGOUT
+───────────────────────────────────────── */
 function LogoutButton({ onLogout }: { onLogout: () => void }) {
   return (
     <div className="pr-logout">
-      <button className="pr-btn-ghost" onClick={onLogout}>
-        🚪 Wyloguj się
-      </button>
+      <button className="pr-btn-ghost" onClick={onLogout}>🚪 Wyloguj się</button>
     </div>
   );
 }
 
-/* ─────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════
    PAGE
-───────────────────────────────────────── */
+═══════════════════════════════════════════════════════════ */
 export default function ProfilePage() {
   const router = useRouter();
 
@@ -269,6 +270,26 @@ export default function ProfilePage() {
   const [surveyCompleted, setSurveyCompleted] = useState(false);
   const [hasCare,         setHasCare]         = useState(false);
 
+  /* ── Capacitor Camera upload hook ────────────────────────── */
+  const { state: avatarState, pickAndUpload } = useAvatarUpload({
+    userId: userId ?? "",
+    onSuccess: (filePath) => {
+      setAvatarPath(filePath);
+      // Auto-save avatar_url immediately — no need to click "Zapisz"
+      if (userId) {
+        supabase.from("profiles")
+          .update({ avatar_url: filePath })
+          .eq("id", userId)
+          .then(({ error }) => {
+            setMessage(error ? error.message : "Zdjęcie zaktualizowane ✅");
+            refresh(); // re-fetch signed URL via useAvatar
+          });
+      }
+    },
+    onError: (msg) => setMessage(msg),
+  });
+
+  /* ── Load profile ─────────────────────────────────────────── */
   useEffect(() => {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -301,6 +322,7 @@ export default function ProfilePage() {
     load();
   }, [router]);
 
+  /* ── Save profile name ───────────────────────────────────── */
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userId) return;
@@ -312,24 +334,13 @@ export default function ProfilePage() {
     refresh();
   };
 
-  const onAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!userId) return;
-    const file = e.target.files?.[0]; if (!file) return;
-    const ext      = file.name.split(".").pop();
-    const filePath = `${userId}/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("avatars")
-      .upload(filePath, file, { upsert: true, contentType: file.type });
-    if (error) { setMessage(error.message); return; }
-    setAvatarPath(filePath);
-    setMessage("Zdjęcie przesłane ✅ Kliknij Zapisz.");
-  };
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.replace("/");
   };
 
   const avatarFallback = fullName?.[0]?.toUpperCase() ?? email?.[0]?.toUpperCase() ?? "?";
+  const avatarLoading  = avatarState.status === "loading";
 
   return (
     <main className="safe-container pr-shell">
@@ -342,7 +353,8 @@ export default function ProfilePage() {
         points={points}
         hasCare={hasCare}
         surveyCompleted={surveyCompleted}
-        onAvatarChange={onAvatarChange}
+        avatarLoading={avatarLoading}
+        onPickAvatar={pickAndUpload}
       />
 
       <CareCard hasCare={hasCare} />
@@ -356,9 +368,7 @@ export default function ProfilePage() {
       />
 
       <SettingsCard />
-
       <SecurityCard />
-
       <LogoutButton onLogout={handleLogout} />
     </main>
   );

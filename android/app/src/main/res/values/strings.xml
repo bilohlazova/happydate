@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">HappyDate</string>
+    <string name="title_activity_main">HappyDate</string>
+    <string name="package_name">com.happydate.app</string>
+    <string name="custom_url_scheme">com.happydate.app</string>
+</resources>

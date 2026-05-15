@@ -1,0 +1,1178 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════════════════════ */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --background: #0a0a0a; --foreground: #ededed; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   APP SHELL — VIEWPORT STABILIZATION
+   ─────────────────────────────────────────────────────────
+   Фіксує горизонтальний overflow та viewport instability
+   БЕЗ contain на html/body — WKWebView нестабільно обробляє
+   contain: layout/size/paint на root-level елементах, що
+   призводить до floating fixed nav, safe-area drift та
+   random viewport stretching.
+
+   ПРАВИЛО: contain застосовується ТІЛЬКИ на ізольованих
+   декоративних контейнерах (.hd-section, .hd-aurora тощо),
+   ніколи на html, body або root wrappers.
+═══════════════════════════════════════════════════════════ */
+
+html {
+  /* height: 100% — необхідно для коректного dvh у Safari */
+  height: 100%;
+  overflow-x: hidden;
+  /* ПРИБРАНО: contain: layout style — ламало fixed navbar у WKWebView */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 80% -100px, rgba(255,199,164,.18), transparent 60%),
+    radial-gradient(900px 500px at -10% 30%, rgba(146,231,255,.18), transparent 55%),
+    var(--background);
+  color: var(--foreground);
+  font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+  /*
+    min-height: 100% замість 100dvh на body рівні.
+    100dvh на body конфліктує з iOS Safari dynamic toolbar —
+    при ховання/появі toolbar body recalculates height і
+    штовхає fixed bottom nav. 100% успадковує від html { height:100% }
+    і є стабільним.
+  */
+  min-height: 100%;
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+  /* ПРИБРАНО: contain: paint size — ламало safe-area та fixed positioning */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/*
+  body.modal-open — БЕЗ position: fixed.
+  position: fixed на body викликав viewport jump та "wide screen" bug.
+  Scroll lock реалізовано в JS через useBodyScrollLock хук
+  (position: fixed + збереження/відновлення scrollY).
+*/
+body.modal-open {
+  overflow: hidden;
+  width: 100%;
+}
+
+/*
+  Next.js root wrappers — overflow-x: hidden запобігає
+  горизонтальному скролу від будь-яких дочірніх елементів.
+  isolation: isolate — новий stacking context між page transitions.
+
+  ВАЖЛИВО: contain тут НЕ використовується — ці елементи є
+  ancestors для fixed navbar і contain: paint/layout зламав би
+  fixed positioning нащадків.
+*/
+#__next,
+[data-nextjs-scroll-focus-boundary] {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  isolation: isolate;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INTERACTIVE ELEMENTS
+═══════════════════════════════════════════════════════════ */
+button, [role="button"], a[href],
+input[type="button"], input[type="submit"], input[type="reset"],
+input[type="checkbox"], input[type="radio"],
+label[for], summary {
+  cursor: pointer;
+  /* Прибирає 300ms click delay на iOS без відключення pinch-zoom */
+  touch-action: manipulation;
+}
+
+:where(button, .btn, .icon-btn, a, .hd-event-card):focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(34,211,238,.35), 0 0 0 6px rgba(34,211,238,.15);
+  border-radius: 12px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   REACT-BIG-CALENDAR
+═══════════════════════════════════════════════════════════ */
+.rbc-calendar,
+.rbc-month-view,
+.rbc-time-view {
+  border: 0 !important;
+  border-radius: 0 !important;
+  width: 100%;
+  font-family: inherit;
+}
+.rbc-header {
+  border-bottom: 1px solid #f1f5f9 !important;
+  border-left: none !important;
+  padding: 8px 4px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+  text-align: center !important;
+  letter-spacing: 0.05em;
+  background: transparent !important;
+}
+.rbc-header + .rbc-header { border-left: none !important; }
+.rbc-month-row {
+  border-top: 1px solid #f1f5f9 !important;
+  min-height: 52px !important;
+}
+.rbc-month-row + .rbc-month-row { border-top: 1px solid #f1f5f9 !important; }
+.rbc-day-bg { border-left: none !important; transition: background .12s ease; }
+.rbc-day-bg + .rbc-day-bg { border-left: 1px solid #f1f5f9 !important; }
+.rbc-day-bg:hover { background: rgba(14,165,233,.04) !important; }
+.rbc-date-cell {
+  padding: 4px 6px 2px !important;
+  text-align: center !important;
+}
+.rbc-date-cell .rbc-button-link {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  width: 26px; height: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  transition: background .12s, color .12s;
+}
+.rbc-date-cell .rbc-button-link:hover {
+  background: rgba(14,165,233,.12);
+  color: #0ea5e9 !important;
+}
+.rbc-today { background: rgba(14,165,233,.06) !important; }
+.hd-today .rbc-button-link,
+.rbc-today .rbc-date-cell .rbc-button-link {
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(14,165,233,.4) !important;
+  border: none !important;
+  border-radius: 50% !important;
+}
+.hd-today .rbc-button-link::after { display: none !important; }
+.rbc-off-range-bg { background: transparent !important; }
+.rbc-off-range .rbc-button-link { color: #cbd5e1 !important; opacity: 1 !important; }
+.rbc-month-row .rbc-date-cell:nth-child(6),
+.rbc-month-row .rbc-date-cell:nth-child(7) { background: rgba(2,132,199,.03); }
+.rbc-event {
+  padding: 0 !important;
+  border-radius: 999px !important;
+  overflow: hidden;
+  box-shadow: none !important;
+  outline: none !important;
+}
+.rbc-event:focus { outline: none !important; box-shadow: none !important; }
+.rbc-event-content {
+  display: flex; align-items: center;
+  font-size: 11px; font-weight: 600;
+  padding: 2px 7px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rbc-show-more {
+  font-size: 10px !important; font-weight: 700 !important;
+  color: #0ea5e9 !important; background: transparent !important;
+  padding: 0 6px !important;
+}
+.rbc-overlay {
+  border-radius: 14px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 12px 32px rgba(15,23,42,.12) !important;
+  overflow: hidden; padding: 8px !important;
+}
+.rbc-overlay-header {
+  font-size: 12px !important; font-weight: 700 !important;
+  color: #475569 !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  padding: 6px 8px !important; margin-bottom: 4px !important;
+}
+.rbc-toolbar { margin-bottom: 0 !important; padding: 0 !important; }
+.rbc-toolbar button { display: none !important; }
+.rbc-event, .rbc-show-more, .rbc-day-bg { cursor: pointer; }
+
+/* ═══════════════════════════════════════════════════════════
+   iOS SAFE AREA — утиліти
+═══════════════════════════════════════════════════════════ */
+.pt-safe  { padding-top:    env(safe-area-inset-top); }
+.pb-safe  { padding-bottom: env(safe-area-inset-bottom); }
+.hd-safe-header {
+  padding-top: max(env(safe-area-inset-top), 12px);
+}
+.hd-safe-header-sticky {
+  padding-top: max(env(safe-area-inset-top), 12px);
+  min-height: calc(56px + env(safe-area-inset-top));
+  display: flex; align-items: center;
+}
+.safe-container {
+  padding-top:    env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CALENDAR MODAL / IOS SHEET SYSTEM
+═══════════════════════════════════════════════════════════ */
+.calendar-sheet {
+  max-height: 92dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.calendar-sheet-content {
+  transform: translateZ(0);
+  will-change: transform;
+}
+.calendar-sheet input,
+.calendar-sheet textarea,
+.calendar-sheet select {
+  font-size: 16px;
+}
+.calendar-overlay {
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COMPOSITING AUDIT — ДЕКОРАТИВНІ ЕЛЕМЕНТИ
+   ─────────────────────────────────────────────────────────
+   contain застосовується ТІЛЬКИ тут — на ізольованих
+   декоративних секціях, які НЕ є ancestors для будь-яких
+   fixed або absolute positioned елементів (navbar, FAB,
+   modals). Це безпечно бо ці контейнери є leaf-sections,
+   а не root wrappers.
+═══════════════════════════════════════════════════════════ */
+
+/*
+  contain: paint — декорації всередині секції не виходять за
+  її rendering boundary. Безпечно тут бо .hd-section не є
+  ancestor для fixed navbar чи будь-яких fixed елементів.
+*/
+.hd-section {
+  position: relative;
+  overflow: hidden;
+  contain: paint;
+}
+
+/*
+  overflow: hidden на .hd-aurora ізолює великий 1200px
+  radial-gradient у ::after від viewport rendering tree.
+*/
+.hd-aurora {
+  background: linear-gradient(90deg, #ffdbe9 0%, #fff0d4 48%, #e6fff0 100%);
+  position: relative;
+  overflow: hidden;
+}
+.hd-aurora::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(1200px 600px at -10% 20%, rgba(255,255,255,.20), transparent 60%),
+    radial-gradient(900px 520px at 110% 15%, rgba(255,255,255,.18), transparent 55%);
+}
+
+/*
+  overflow: clip (не hidden) на .hd-spot — відрізає blur(28px)
+  pseudo-element без створення scroll container.
+*/
+.hd-spot {
+  overflow: clip;
+}
+.hd-spot::before {
+  content: ""; position: absolute; inset: 0; margin: auto;
+  width: min(560px, 80vw); height: 260px; transform: translateY(-10px);
+  background: radial-gradient(closest-side, rgba(255,255,255,.8), rgba(255,255,255,0));
+  filter: blur(28px); z-index: -1;
+}
+
+/*
+  contain: layout style на .hd-bubble-line — анімація не
+  тригерить layout recalc у зовнішніх елементах. Безпечно:
+  bubble-line є absolute positioned decorative element,
+  не ancestor для fixed елементів.
+*/
+.hd-bubble-line {
+  position: absolute; inset: 0; opacity: 0;
+  transform: translateY(6px);
+  animation: hdBubbleCycle 12s infinite;
+  will-change: opacity, transform;
+  contain: layout style;
+}
+.hd-bubble-line:nth-child(1) { animation-delay: 0s; }
+.hd-bubble-line:nth-child(2) { animation-delay: 4s; }
+.hd-bubble-line:nth-child(3) { animation-delay: 8s; }
+
+/* ═══════════════════════════════════════════════════════════
+   FLOATING ELEMENTS
+═══════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .fab-add {
+    position: fixed;
+    right: 16px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 60;
+    max-width: calc(100% - 32px);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   КОМПОНЕНТИ / УТИЛІТИ
+═══════════════════════════════════════════════════════════ */
+.hd-card {
+  background: rgba(255,255,255,.7);
+  backdrop-filter: saturate(1.05) blur(10px);
+  -webkit-backdrop-filter: saturate(1.05) blur(10px);
+  border: 1px solid rgba(229,231,235,.7);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(15,23,42,.08);
+}
+.hd-card-hover { transition: transform .15s ease, box-shadow .15s ease; }
+.hd-card-hover:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(15,23,42,.12); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: .5rem; font-weight: 600;
+  border-radius: 9999px; padding: .6rem 1rem; border: 1px solid transparent;
+  transition: transform .06s ease, box-shadow .2s ease, opacity .2s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary {
+  background: linear-gradient(90deg,#fbbf24,#fb923c); color: #111827;
+  border: 1px solid rgba(0,0,0,.06); box-shadow: 0 8px 20px rgba(251,146,60,.35);
+}
+.btn-primary:hover { box-shadow: 0 12px 28px rgba(251,146,60,.45); }
+.btn-ghost { background: rgba(255,255,255,.7); color: #0b1a33; border-color: rgba(0,0,0,.06); }
+.btn-ghost:hover { background: rgba(255,255,255,.9); }
+
+.hd-chip {
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-size: .75rem; font-weight: 600; padding: .25rem .6rem;
+  border-radius: 9999px; border: 1px solid transparent; white-space: nowrap;
+}
+.hd-badge-urodziny { background: #ffe6ef; color: #9c1b54; border-color: #ffc2d7; }
+.hd-badge-praca    { background: #e6f2ff; color: #1d4ed8; border-color: #c7ddff; }
+.hd-badge-osobiste { background: #eafff5; color: #047857; border-color: #c7ffea; }
+.hd-subtle { color: #475569; }
+
+.hd-quick { display: flex; gap: .4rem; }
+.hd-quick .icon-btn {
+  width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+  border-radius: 10px; background: #fff; border: 1px solid #e5e7eb;
+  transition: transform .12s ease, box-shadow .2s ease;
+}
+.hd-quick .icon-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15,23,42,.08); }
+
+.hd-empty {
+  text-align: center; padding: 28px; border-radius: 16px;
+  border: 1px dashed #cbd5e1; color: #64748b; background: rgba(248,250,252,.65);
+}
+
+.hd-event-card { transition: background .15s ease, transform .12s ease, box-shadow .2s ease; border-radius: 14px; }
+.hd-event-card:hover { background: rgba(241,245,249,.55); transform: translateY(-1px); box-shadow: 0 10px 28px rgba(2,132,199,.10); }
+
+/* ═══════════════════════════════════════════════════════════
+   АНІМАЦІЇ
+═══════════════════════════════════════════════════════════ */
+@keyframes hd-pop {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.hd-animate-in { animation: hd-pop .18s ease-out both; }
+
+@keyframes hd-slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hd-sway {
+  0%,100% { transform: rotate3d(0,0,1,-1.5deg) translateZ(0); }
+  50%     { transform: rotate3d(0,0,1, 1.5deg) translateZ(0); }
+}
+.animate-hd-sway { animation: hd-sway 5.6s ease-in-out infinite; animation-delay: .6s; }
+
+@layer utilities {
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fadeIn { animation: fadeIn .25s ease-out forwards; }
+
+  @keyframes pulseRing {
+    0%   { transform: scale(1);    box-shadow: 0 0 0 0   rgba(59,130,246,.5); }
+    70%  { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(59,130,246,0); }
+    100% { transform: scale(1);    box-shadow: 0 0 0 0   rgba(59,130,246,0); }
+  }
+  .animate-pulseRing { animation: pulseRing 1.8s cubic-bezier(.4,0,.6,1) infinite; }
+}
+
+.hd-sparkle { position: relative; display: inline-block; }
+.hd-sparkle .hd-star {
+  position: absolute; left: 1.05em; top: -.25em; width: 14px; height: 14px;
+  opacity: 0; pointer-events: none; transform-origin: center;
+  animation: hd-spark 10s ease-in-out infinite;
+  filter: drop-shadow(0 2px 6px rgba(255,200,80,.35));
+}
+.hd-sparkle .hd-star.b { left: 1.35em; top: -.45em; width: 10px; height: 10px; animation-delay: .12s; }
+
+@keyframes hd-spark {
+  0%,88%  { opacity: 0; transform: scale(.2) rotate(0deg); }
+  89%     { opacity: 1; transform: scale(1) rotate(12deg); }
+  92%     { opacity: .95; transform: scale(.9) rotate(28deg) translateY(-2px); }
+  94%,100%{ opacity: 0; transform: scale(.2) rotate(45deg) translateY(-4px); }
+}
+
+@keyframes hd-floatY { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.hd-bubble {
+  animation: hd-floatY 6s ease-in-out infinite;
+  filter: drop-shadow(0 6px 18px rgba(16,24,40,.08));
+}
+
+@keyframes hdBubbleCycle {
+  0%   { opacity: 0; transform: translateY(6px); }
+  5%   { opacity: 1; transform: translateY(0); }
+  15%  { opacity: 1; transform: translateY(0); }
+  20%  { opacity: 0; transform: translateY(-6px); }
+  100% { opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HERO / СЕКЦІЙНІ СМУГИ
+═══════════════════════════════════════════════════════════ */
+.hd-fade-top::before, .hd-fade-bot::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 56px; pointer-events: none;
+}
+.hd-fade-top::before { top: 0;    background: linear-gradient(180deg,#fff,rgba(255,255,255,0)); }
+.hd-fade-bot::after  { bottom: 0; background: linear-gradient(0deg,#fff,rgba(255,255,255,0)); }
+
+.hd-band-rose { background: linear-gradient(180deg,#fff6fa 0%, #fff 65%); }
+.hd-band-mint { background: linear-gradient(180deg,#f4fffb 0%, #fff 65%); }
+.hd-band-sun  { background: linear-gradient(180deg,#fff9eb 0%, #fff 65%); }
+
+.hd-glass {
+  background: linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.7));
+  border: 1px solid rgba(255,255,255,.7);
+  box-shadow: 0 12px 32px rgba(0,0,0,.06);
+  backdrop-filter: blur(6px);
+}
+.hd-divider { height: 2px; background: linear-gradient(90deg,transparent,#e5e7eb,transparent); }
+
+.hd-bullet {
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 9999px;
+  background: linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.66));
+  border: 1px solid rgba(255,255,255,.8);
+  box-shadow: 0 6px 22px rgba(0,0,0,.06);
+}
+.hd-sec-title { display: inline-block; position: relative; }
+.hd-sec-title::after {
+  content: ""; display: block; height: 3px; width: min(200px,36%);
+  margin: 10px auto 0; border-radius: 999px;
+  background: linear-gradient(90deg,transparent,#d4d4d8,transparent);
+}
+
+.hd-chat-panel {
+  background: rgba(255,255,255,.98);
+  backdrop-filter: saturate(1.05) blur(8px);
+  -webkit-backdrop-filter: saturate(1.05) blur(8px);
+  box-shadow: 0 18px 45px rgba(0,0,0,.18);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   REDUCED MOTION
+═══════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .hd-sparkle .hd-star,
+  .animate-fadeIn,
+  .animate-pulseRing,
+  .animate-hd-sway { animation: none !important; }
+
+  @keyframes hd-pop      { from { opacity:1; transform:none; } to { opacity:1; transform:none; } }
+  @keyframes hd-slide-up { from { opacity:1; transform:none; } to { opacity:1; transform:none; } }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PROFILE PAGE — ACCOUNT CENTER
+   ─────────────────────────────────────────────────────────
+   Додати в кінець globals.css після REDUCED MOTION блоку.
+
+   UX STRUCTURE:
+   Hero → Care status → Personal data → Settings → Security → Logout
+
+   DESIGN DIRECTION:
+   Apple Journal × HappyDate warmth. Floating glass cards,
+   generous spacing, sky/cyan/peach palette, emotional warmth.
+   Premium account center — not SaaS dashboard.
+
+   IOS FIXES PRESERVED:
+   • font-size: 16px on inputs — no Safari auto-zoom
+   • -webkit-appearance: none — no viewport stretch on date
+   • box-sizing: border-box, min-width: 0 — no overflow
+   • padding-bottom: calc(110px + safe-area-inset-bottom)
+═══════════════════════════════════════════════════════════ */
+
+/* ── Shell ── */
+.pr-shell {
+  min-height: 100dvh;
+  padding-left: 18px;
+  padding-right: 18px;
+  padding-bottom: calc(110px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  /* Sky-blue ambient atmosphere — HappyDate brand palette */
+  background:
+    radial-gradient(700px 500px at 100% -80px, rgba(186,230,255,.22), transparent 60%),
+    radial-gradient(500px 400px at -8%  60%,   rgba(255,199,164,.14), transparent 55%),
+    var(--background);
+}
+
+/* ══════════════════════════════════════════
+   HERO
+══════════════════════════════════════════ */
+.pr-hero {
+  position: relative;
+  margin-top: 10px;
+  border-radius: 30px;
+  background: linear-gradient(160deg, rgba(255,255,255,.97) 0%, rgba(240,249,255,.92) 100%);
+  border: 1px solid rgba(186,230,255,.45);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.9) inset,
+    0 20px 52px rgba(14,165,233,.07),
+    0 4px 14px rgba(15,23,42,.04);
+  padding: 26px 20px 20px;
+  overflow: hidden;
+}
+
+/* Warm peach glow top-right */
+.pr-hero__glow {
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(251,191,36,.22) 0%,
+    rgba(255,199,164,.10) 45%,
+    transparent 70%
+  );
+  pointer-events: none;
+  filter: blur(28px);
+}
+
+/* Sky blue glow bottom-left */
+.pr-hero__glow--blue {
+  top: auto;
+  right: auto;
+  bottom: -40px;
+  left: -40px;
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle,
+    rgba(56,189,248,.18) 0%,
+    rgba(186,230,255,.08) 50%,
+    transparent 70%
+  );
+}
+
+.pr-hero__inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Avatar */
+.pr-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.pr-avatar-img {
+  width: 84px;
+  height: 84px;
+  border-radius: 28px;
+  object-fit: cover;
+  display: block;
+  border: 2px solid rgba(186,230,255,.5);
+  box-shadow: 0 8px 28px rgba(14,165,233,.12), 0 2px 6px rgba(15,23,42,.06);
+}
+
+.pr-avatar-placeholder {
+  width: 84px;
+  height: 84px;
+  border-radius: 28px;
+  /* Sky → cyan → peach — HappyDate sky palette */
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 40%, #fce7f3 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: 800;
+  color: #0369a1;
+  box-shadow: 0 8px 28px rgba(14,165,233,.14);
+  user-select: none;
+  border: 2px solid rgba(255,255,255,.85);
+}
+
+.pr-avatar-edit {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  background: #fff;
+  border: 1.5px solid rgba(186,230,255,.6);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(14,165,233,.12);
+  transition: transform .15s ease;
+  touch-action: manipulation;
+}
+.pr-avatar-edit:active { transform: scale(.91); }
+
+.pr-avatar-input { display: none; }
+
+/* Identity */
+.pr-hero__identity {
+  flex: 1;
+  min-width: 0;
+  padding-top: 6px;
+}
+
+.pr-hero__name {
+  font-size: 21px;
+  font-weight: 800;
+  color: #0c1a2e;
+  letter-spacing: -.35px;
+  line-height: 1.15;
+  margin: 0 0 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pr-hero__email {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pr-hero__since {
+  font-size: 11px;
+  font-weight: 500;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* Badges */
+.pr-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  position: relative;
+  z-index: 1;
+}
+
+.pr-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
+  text-decoration: none;
+  min-height: 30px;
+  letter-spacing: .01em;
+  transition: transform .12s ease;
+}
+.pr-badge:active { transform: scale(.94); }
+
+.pr-badge--points {
+  background: linear-gradient(135deg, #fef9c3, #fde68a);
+  color: #713f12;
+  box-shadow: 0 2px 8px rgba(234,179,8,.18);
+}
+.pr-badge--care {
+  background: linear-gradient(135deg, #fce7f3, #fbcfe8);
+  color: #9d174d;
+  box-shadow: 0 2px 8px rgba(236,72,153,.10);
+}
+.pr-badge--done {
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  color: #14532d;
+}
+.pr-badge--cta {
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+  color: #0369a1;
+  box-shadow: 0 2px 8px rgba(14,165,233,.14);
+}
+
+/* ══════════════════════════════════════════
+   CARE — ACTIVE STATE
+══════════════════════════════════════════ */
+.pr-care-active {
+  position: relative;
+  border-radius: 26px;
+  /* Warm gold-teal glass */
+  background: linear-gradient(135deg,
+    rgba(254,249,195,.9) 0%,
+    rgba(240,253,244,.85) 100%
+  );
+  border: 1px solid rgba(253,224,71,.35);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.8) inset,
+    0 12px 32px rgba(234,179,8,.08),
+    0 3px 8px rgba(15,23,42,.04);
+  padding: 18px 20px 16px;
+  overflow: hidden;
+}
+
+.pr-care-active__glow {
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(253,224,71,.3) 0%, transparent 70%);
+  pointer-events: none;
+  filter: blur(20px);
+}
+
+.pr-care-active__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.pr-care-active__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fef9c3, #fde68a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(234,179,8,.18);
+  border: 1px solid rgba(253,224,71,.4);
+}
+
+.pr-care-active__title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #713f12;
+  margin: 0 0 3px;
+  letter-spacing: -.1px;
+}
+
+.pr-care-active__sub {
+  font-size: 12px;
+  color: #92400e;
+  opacity: .8;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.pr-care-active__manage {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0369a1;
+  text-decoration: none;
+  background: rgba(255,255,255,.6);
+  border: 1px solid rgba(186,230,255,.5);
+  border-radius: 12px;
+  padding: 7px 14px;
+  min-height: 34px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: background .15s ease;
+}
+.pr-care-active__manage:active { background: rgba(255,255,255,.85); }
+
+/* ══════════════════════════════════════════
+   CARE — UPSELL STATE
+══════════════════════════════════════════ */
+.pr-care-upsell {
+  position: relative;
+  border-radius: 26px;
+  /* Sky blue → soft cyan gradient — brand palette */
+  background: linear-gradient(140deg, #0ea5e9 0%, #38bdf8 50%, #7dd3fc 100%);
+  padding: 22px 20px;
+  overflow: hidden;
+  box-shadow:
+    0 16px 40px rgba(14,165,233,.28),
+    0 4px 12px rgba(14,165,233,.16);
+}
+
+.pr-care-upsell__glow {
+  position: absolute;
+  top: -40px; right: -20px;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.22) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.pr-care-upsell__content { position: relative; z-index: 1; }
+
+.pr-care-upsell__label {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.7);
+  margin: 0 0 6px;
+}
+
+.pr-care-upsell__title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -.25px;
+  margin: 0 0 14px;
+  line-height: 1.2;
+}
+
+.pr-care-upsell__perks {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pr-care-upsell__perks li {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,.92);
+  line-height: 1.4;
+}
+
+.pr-care-upsell__cta {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255,255,255,.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(255,255,255,.4);
+  color: #fff;
+  border-radius: 14px;
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  min-height: 44px;
+  letter-spacing: -.1px;
+  transition: background .15s ease;
+  touch-action: manipulation;
+}
+.pr-care-upsell__cta:active { background: rgba(255,255,255,.32); }
+
+/* ══════════════════════════════════════════
+   CARDS — floating glass
+══════════════════════════════════════════ */
+.pr-card {
+  border-radius: 26px;
+  background: rgba(255,255,255,.84);
+  backdrop-filter: saturate(1.1) blur(16px);
+  -webkit-backdrop-filter: saturate(1.1) blur(16px);
+  border: 1px solid rgba(255,255,255,.78);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.9) inset,
+    0 14px 36px rgba(15,23,42,.055),
+    0 3px 8px rgba(15,23,42,.03);
+  padding: 20px;
+}
+
+.pr-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.pr-card__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border: 1px solid rgba(186,230,255,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.pr-card__title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0c1a2e;
+  letter-spacing: -.1px;
+  margin: 0;
+}
+
+/* ══════════════════════════════════════════
+   SETTINGS ROWS — iOS native style
+══════════════════════════════════════════ */
+.pr-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pr-rows li {
+  border-bottom: 1px solid rgba(226,232,240,.5);
+}
+.pr-rows li:last-child { border-bottom: none; }
+
+.pr-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 2px;
+  text-decoration: none;
+  transition: background .12s ease;
+  border-radius: 12px;
+  /* min tap target */
+  min-height: 48px;
+}
+.pr-row:active { background: rgba(14,165,233,.05); }
+
+.pr-row__icon {
+  font-size: 17px;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.pr-row__label {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  letter-spacing: -.05px;
+}
+
+.pr-row__value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.pr-row__arrow {
+  font-size: 18px;
+  color: #cbd5e1;
+  font-weight: 400;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+/* Danger row — delete account */
+.pr-row--danger .pr-row__label {
+  color: #dc2626;
+}
+.pr-row--danger .pr-row__icon {
+  filter: grayscale(0);
+}
+
+/* ══════════════════════════════════════════
+   FORM SYSTEM
+══════════════════════════════════════════ */
+.pr-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pr-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pr-field__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: .025em;
+  padding-left: 2px;
+}
+
+/*
+  iOS safety:
+  • font-size: 16px — no Safari auto-zoom
+  • -webkit-appearance: none — no date input viewport stretch
+  • box-sizing: border-box — no overflow
+*/
+.pr-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 54px;
+  padding: 0 16px;
+  font-size: 16px;
+  font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+  font-weight: 500;
+  color: #0c1a2e;
+  background: rgba(240,249,255,.5);
+  border: 1.5px solid rgba(186,230,255,.6);
+  border-radius: 16px;
+  outline: none;
+  transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.pr-input:focus {
+  border-color: rgba(14,165,233,.5);
+  background: rgba(255,255,255,.95);
+  box-shadow: 0 0 0 3px rgba(14,165,233,.10), 0 4px 12px rgba(15,23,42,.04);
+}
+
+.pr-input::placeholder {
+  color: #c4cdd8;
+  font-weight: 400;
+}
+
+.pr-input--date {
+  min-width: 0;
+  color: #0c1a2e;
+}
+
+.pr-feedback {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0369a1;
+  background: rgba(224,242,254,.7);
+  border-radius: 12px;
+  padding: 10px 14px;
+  line-height: 1.4;
+  border: 1px solid rgba(186,230,255,.4);
+}
+
+/* ══════════════════════════════════════════
+   BUTTONS
+══════════════════════════════════════════ */
+
+/* Primary — sky blue brand */
+.pr-btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 54px;
+  border: none;
+  border-radius: 16px;
+  padding: 0 20px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+  letter-spacing: -.1px;
+  cursor: pointer;
+  /* Sky blue → cyan — HappyDate primary palette */
+  background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 60%, #7dd3fc 100%);
+  color: #fff;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.2) inset,
+    0 10px 28px rgba(14,165,233,.32),
+    0 4px 10px rgba(14,165,233,.16);
+  transition: opacity .15s ease, transform .1s ease, box-shadow .15s ease;
+  touch-action: manipulation;
+}
+.pr-btn-primary:hover {
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.2) inset,
+    0 14px 36px rgba(14,165,233,.40),
+    0 4px 10px rgba(14,165,233,.20);
+}
+.pr-btn-primary:active {
+  transform: scale(.97);
+  opacity: .9;
+}
+.pr-btn-primary:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* Ghost — glass */
+.pr-btn-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 52px;
+  border: 1.5px solid rgba(226,232,240,.8);
+  border-radius: 16px;
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+  cursor: pointer;
+  background: rgba(255,255,255,.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #64748b;
+  box-shadow: 0 2px 8px rgba(15,23,42,.04);
+  transition: background .15s ease, transform .1s ease;
+  touch-action: manipulation;
+}
+.pr-btn-ghost:active {
+  transform: scale(.97);
+  background: rgba(255,255,255,.88);
+}
+
+/* ── Logout ── */
+.pr-logout {
+  padding-bottom: 8px;
+}
+
+/* ══════════════════════════════════════════
+   REDUCED MOTION
+══════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .pr-btn-primary,
+  .pr-btn-ghost,
+  .pr-badge,
+  .pr-avatar-edit,
+  .pr-input,
+  .pr-row,
+  .pr-care-upsell__cta,
+  .pr-care-active__manage {
+    transition: none !important;
+  }
+}

@@ -1,0 +1,124 @@
+// src/app/care/page.tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "HappyDate Care – Jesteśmy tu, żeby pomóc",
+  description:
+    "HappyDate Care to przestrzeń wsparcia i troski. Pomagamy z pytaniami, emocjami i codziennym korzystaniem z platformy.",
+  alternates: { canonical: "/care" },
+  openGraph: {
+    title: "HappyDate Care",
+    description:
+      "Nie tylko technologia. HappyDate Care to wsparcie, zrozumienie i ludzka pomoc.",
+    type: "website",
+    url: "https://happydate.pl/care",
+  },
+  twitter: { card: "summary_large_image" },
+};
+
+export default function CarePage() {
+  return (
+    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-rose-50 to-amber-50">
+      {/* HERO */}
+      <section className="text-center py-24 px-6 bg-gradient-to-r from-sky-100 via-pink-100 to-amber-100">
+        <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900">
+          💛 HappyDate Care
+        </h1>
+        <p className="mt-6 text-lg md:text-xl text-slate-700 max-w-3xl mx-auto">
+          Czasem wystarczy, że ktoś po prostu jest.
+          HappyDate Care to miejsce stworzone z myślą o wsparciu, spokoju
+          i ludzkim podejściu — nawet w świecie technologii.
+        </p>
+      </section>
+
+      {/* CZYM JEST CARE */}
+      <section className="py-16 container mx-auto px-6 max-w-5xl">
+        <div className="rounded-3xl bg-white shadow-xl ring-1 ring-black/5 p-8 md:p-10">
+          <h2 className="text-3xl font-extrabold text-slate-900">
+            Czym jest HappyDate Care?
+          </h2>
+          <p className="mt-4 text-slate-700 leading-relaxed">
+            HappyDate Care to nie jest klasyczne „centrum pomocy”.
+            To przestrzeń, w której możesz zadać pytanie, podzielić się
+            wątpliwością lub napisać wtedy, gdy coś jest dla Ciebie niejasne.
+            Dbamy nie tylko o działanie platformy, ale też o komfort osób,
+            które z niej korzystają.
+          </p>
+        </div>
+      </section>
+
+      {/* W CZYM POMAGAMY */}
+      <section className="py-8 container mx-auto px-6 max-w-5xl">
+        <h3 className="text-2xl font-extrabold text-center mb-10">
+          W czym możemy pomóc?
+        </h3>
+        <div className="grid md:grid-cols-3 gap-6">
+          {[
+            {
+              icon: "🗓️",
+              h: "Korzystanie z platformy",
+              p: "Kalendarz wydarzeń, przypomnienia, ustawienia konta.",
+            },
+            {
+              icon: "🎁",
+              h: "Wybór prezentu",
+              p: "Jak działają rekomendacje, sugestie AI i personalizacja.",
+            },
+            {
+              icon: "💬",
+              h: "Pytania i wątpliwości",
+              p: "Jeśli coś jest niejasne lub po prostu chcesz zapytać.",
+            },
+          ].map((v) => (
+            <div
+              key={v.h}
+              className="bg-white rounded-2xl p-6 shadow ring-1 ring-black/5"
+            >
+              <div className="text-3xl">{v.icon}</div>
+              <h4 className="mt-3 font-semibold text-lg">{v.h}</h4>
+              <p className="mt-2 text-slate-600">{v.p}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* FILOZOFIA */}
+      <section className="py-16 container mx-auto px-6 max-w-5xl">
+        <div className="rounded-3xl bg-gradient-to-br from-sky-50 to-pink-50 ring-1 ring-black/5 p-8 md:p-10">
+          <h3 className="text-2xl font-extrabold text-slate-900">
+            Nasze podejście
+          </h3>
+          <p className="mt-4 text-slate-700 leading-relaxed">
+            Nie działamy na zasadzie automatycznych odpowiedzi.
+            Czytamy wiadomości, rozumiemy kontekst i odpowiadamy po ludzku.
+            Technologia jest ważna — ale relacje są ważniejsze.
+          </p>
+        </div>
+      </section>
+
+      {/* KONTAKT */}
+      <section className="py-16 container mx-auto px-6 max-w-4xl">
+        <div className="rounded-3xl bg-white shadow-xl ring-1 ring-black/5 p-8 md:p-10 text-center">
+          <h3 className="text-2xl font-extrabold text-slate-900">
+            Napisz do HappyDate Care
+          </h3>
+          <p className="mt-3 text-slate-700 max-w-xl mx-auto">
+            Jeśli coś Cię martwi, zastanawia lub po prostu potrzebujesz pomocy —
+            jesteśmy tutaj.
+          </p>
+          <div className="mt-6 flex flex-col items-center gap-2">
+            <a
+              href="mailto:hello@happydate.pl"
+              className="inline-block rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 px-8 py-3 font-semibold text-white shadow hover:shadow-lg transition"
+            >
+              hello@happydate.pl
+            </a>
+            <p className="text-xs text-slate-500 mt-2">
+              Odpowiadamy możliwie szybko, z uważnością i szacunkiem.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}

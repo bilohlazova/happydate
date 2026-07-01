@@ -27,7 +27,7 @@
 
 import { useState } from "react";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/brain/supabaseClient";
 
 export type UploadState =
   | { status: "idle" }

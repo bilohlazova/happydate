@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/brain/supabaseClient";
 import { useRouter } from "next/navigation";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useAvatarUpload } from "@/hooks/useAvatarUpload";

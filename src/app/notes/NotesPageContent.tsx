@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/brain/supabaseClient";
 
 // ─────────────────────────────────────────────
 // TYPES — match real Supabase memories schema

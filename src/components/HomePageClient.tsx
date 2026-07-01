@@ -6,7 +6,7 @@
 // Key fixes:
 //   • No auth-loop: onAuthStateChange fires load() but load() is idempotent
 //     and guarded by a ref-based "in-flight" flag so it never stacks.
-//   • Parallel Supabase fetches (profile + events) via Promise.all.
+//   • Parallel Supabase fetches (profile + events + people + notes) via Promise.all.
 //   • Hard timeout (5 s) on every fetch so iOS WebView never freezes.
 //   • isMounted ref guards every async setState call → no memory leaks.
 //   • localStorage access wrapped in try/catch (WKWebView can throw).
@@ -14,8 +14,11 @@
 //   • Emergency fallback: if init takes > 8 s the component forces a "guest"
 //     state so the user always sees something.
 //   • All inline styles kept (no tailwind dependency) to match existing codebase.
+//   • Brain insights (buildInsights + mapInsightToAssistant) drive the
+//     assistant card when available, with the original events-only logic kept
+//     as a fallback when there are no insights.
 // ─────────────────────────────────────────────────────────────────────────────
-
+import InsightCard from "./assistant/InsightCard";
 import {
   useEffect,
   useRef,
@@ -26,6 +29,11 @@ import {
 } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { buildInsights } from "@/lib/brain/buildInsights";
+import {
+  mapInsightToAssistant,
+  type AssistantCardData,
+} from "@/lib/brain/mapInsightToAssistant";
 import AssistantCard, {
   type AssistantState,
   type AssistantEvent,
@@ -313,7 +321,8 @@ export default function HomePageClient() {
   const [authState, setAuthState] = useState<AssistantState>("guest");
   const [profile,   setProfile]   = useState<AssistantProfile>({});
   const [nextEvent, setNextEvent] = useState<AssistantEvent | null>(null);
-
+  const [assistantCard, setAssistantCard] =
+    useState<AssistantCardData | null>(null);
   // ── Refs used for safety guards ──────────────────────────────────────────
   const isMounted   = useRef(false);
   const isLoading   = useRef(false);  // in-flight guard – prevents stacked calls
@@ -346,35 +355,44 @@ export default function HomePageClient() {
         return;
       }
 
-      // 2. Parallel fetch: profile + upcoming events
+      // 2. Parallel fetch: profile + upcoming events + people + notes
       const today = new Date().toISOString().split("T")[0];
       const in14  = new Date();
       in14.setDate(in14.getDate() + 14);
       const in14str = in14.toISOString().split("T")[0];
 
-      const [profileResult, eventsResult] = await withTimeout(
-        Promise.all([
-          supabase
-            .from("profiles")
-            .select("full_name, preferences, avatar_url")
-            .eq("id", user.id)
-            .single(),
-          supabase
-            .from("events")
-            .select("id, title, date, is_important, person_name, category")
-            .eq("user_id", user.id)
-            .gte("date", today)
-            .lte("date", in14str)
-            .order("is_important", { ascending: false })
-            .order("date",          { ascending: true })
-            .limit(1),
-        ]),
-        FETCH_TIMEOUT_MS
-      );
+      const [profileResult, eventsResult, peopleResult, notesResult] =
+        await withTimeout(
+          Promise.all([
+            supabase
+              .from("profiles")
+              .select("full_name, preferences, avatar_url")
+              .eq("id", user.id)
+              .single(),
+            supabase
+              .from("events")
+              .select("id, title, date, is_important, person_name, category")
+              .eq("user_id", user.id)
+              .gte("date", today)
+              .lte("date", in14str)
+              .order("is_important", { ascending: false })
+              .order("date",          { ascending: true })
+              .limit(1),
+            supabase
+              .from("people")
+              .select("*")
+              .eq("user_id", user.id),
+            supabase
+              .from("notes")
+              .select("*")
+              .eq("user_id", user.id),
+          ]),
+          FETCH_TIMEOUT_MS
+        );
 
       if (!isMounted.current) return;
 
-      // 3. Apply profile
+      // 3. Apply profile (unchanged — always applied regardless of insights)
       const p = profileResult.data;
       if (p) {
         setProfile({
@@ -385,23 +403,41 @@ export default function HomePageClient() {
         console.debug("[HomePageClient] profile loaded:", p.full_name);
       }
 
-      // 4. Apply events
-      const ev = eventsResult.data?.[0] ?? null;
-      if (ev) {
-        const mapped: AssistantEvent = {
-          id:           ev.id,
-          title:        ev.title,
-          date:         ev.date,
-          person_name:  ev.person_name  ?? null,
-          is_important: ev.is_important ?? false,
-          category:     ev.category     ?? null,
-        };
-        setNextEvent(mapped);
-        setAuthState(resolveState(true, mapped));
-        console.debug("[HomePageClient] next event:", mapped.title, mapped.date);
+      // 4. Try brain insights first; fall back to existing events-only logic
+      const insights = buildInsights({
+        profile: profileResult.data,
+        people:  peopleResult.data ?? [],
+        events:  eventsResult.data ?? [],
+        notes:   notesResult.data ?? [],
+      });
+
+      const assistant =
+        insights.length > 0 ? mapInsightToAssistant(insights[0]) : null;
+
+      if (assistant) {
+        console.debug("[HomePageClient] insight-driven assistant:", assistant);
+        setAssistantCard(assistant);
+        setAuthState(assistant.state);
       } else {
-        setAuthState("calm");
-        console.debug("[HomePageClient] no upcoming events → calm");
+        setAssistantCard(null);
+        // ── Existing fallback logic (unchanged) ──
+        const ev = eventsResult.data?.[0] ?? null;
+        if (ev) {
+          const mapped: AssistantEvent = {
+            id:           ev.id,
+            title:        ev.title,
+            date:         ev.date,
+            person_name:  ev.person_name  ?? null,
+            is_important: ev.is_important ?? false,
+            category:     ev.category     ?? null,
+          };
+          setNextEvent(mapped);
+          setAuthState(resolveState(true, mapped));
+          console.debug("[HomePageClient] next event:", mapped.title, mapped.date);
+        } else {
+          setAuthState("calm");
+          console.debug("[HomePageClient] no upcoming events → calm");
+        }
       }
     } catch (err) {
       // Network timeout, Supabase error, or WebView suspension
@@ -490,9 +526,11 @@ export default function HomePageClient() {
       {/* ── Assistant card / skeleton ── */}
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "12px 14px 0" }}>
         {loading ? (
-          <AssistantSkeleton />
-        ) : (
-          <AssistantCard
+         <AssistantSkeleton />
+         ) : assistantCard ? ( 
+           <InsightCard data={assistantCard} />
+           ) : (
+             <AssistantCard
             state={authState}
             profile={profile}
             nextEvent={nextEvent}

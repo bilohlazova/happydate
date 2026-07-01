@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/brain/supabaseClient";
 
 export default function AuthCallbackPage() {
   const router = useRouter();

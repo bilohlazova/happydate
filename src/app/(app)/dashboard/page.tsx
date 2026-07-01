@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/brain/supabaseClient";
 import type { EventRow } from "@/components/EventsCalendar";
 import type {
   RealtimeChannel,

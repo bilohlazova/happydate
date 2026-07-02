@@ -1,25 +1,58 @@
-import { getNextImportantEvent } from "./engines/eventEngine";
-import { BrainEvent, Insight } from "./types";
+import { buildEventInsight } from "./engines/eventEngine";
+import { buildMemoryInsight } from "./engines/memoryEngine";
+import { buildPreferenceInsight } from "./engines/preferenceEngine";
+import { selectInsights } from "./selectInsights";
+import {
+  BrainEvent,
+  BrainMemory,
+  Insight,
+} from "./types";
 
 export interface BuildInsightsParams {
   profile?: unknown;
   people?: unknown[];
   events?: BrainEvent[];
   notes?: unknown[];
+  memories?: BrainMemory[];
 }
 
 export function buildInsights({
   events = [],
+  memories = [],
 }: BuildInsightsParams): Insight[] {
   const insights: Insight[] = [];
 
-  const nextEvent = getNextImportantEvent({
+  // Event Engine
+  const eventInsight = buildEventInsight({
     events,
   });
 
-  if (nextEvent) {
-    insights.push(nextEvent);
+  if (eventInsight) {
+    insights.push(eventInsight);
   }
 
-  return insights;
+  // Memory Engine
+  const memoryInsight = buildMemoryInsight({
+    memories,
+  });
+
+  if (memoryInsight) {
+    insights.push(memoryInsight);
+  }
+
+  // Preference Engine
+  const preferenceInsight = buildPreferenceInsight({
+    memories,
+  });
+
+  if (preferenceInsight) {
+    insights.push(preferenceInsight);
+  }
+
+  // Future engines:
+  // - Relationship Engine
+  // - Gift Engine
+
+  // Select and order insights for the Care Feed
+  return selectInsights(insights);
 }

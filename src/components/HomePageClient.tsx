@@ -1,5 +1,7 @@
 "use client";
 
+
+
 // src/components/HomePageClient.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 // REFACTORED: iOS WebView / Capacitor-safe, production-ready architecture
@@ -18,7 +20,7 @@
 //     assistant card when available, with the original events-only logic kept
 //     as a fallback when there are no insights.
 // ─────────────────────────────────────────────────────────────────────────────
-import InsightCard from "./assistant/InsightCard";
+import CareFeed from "./care/CareFeed";
 import {
   useEffect,
   useRef,
@@ -34,7 +36,7 @@ import {
   mapInsightToAssistant,
   type AssistantCardData,
 } from "@/lib/brain/mapInsightToAssistant";
-import AssistantCard, {
+import {
   type AssistantState,
   type AssistantEvent,
   type AssistantProfile,
@@ -319,8 +321,13 @@ function CookieConsent() {
 export default function HomePageClient() {
   const [loading,   setLoading]   = useState(true);
   const [authState, setAuthState] = useState<AssistantState>("guest");
-  const [profile,   setProfile]   = useState<AssistantProfile>({});
-  const [nextEvent, setNextEvent] = useState<AssistantEvent | null>(null);
+  // NOTE: `profile` and `nextEvent` are no longer rendered directly here
+  // (CareFeed only consumes `hero`), but the setters are still needed
+  // inside load() to keep this state available for future CareFeed blocks.
+  // The unused read-values are dropped from the destructuring below to
+  // satisfy no-unused-vars, while the setters are kept.
+  const [, setProfile]   = useState<AssistantProfile>({});
+  const [, setNextEvent] = useState<AssistantEvent | null>(null);
   const [assistantCard, setAssistantCard] =
     useState<AssistantCardData | null>(null);
   // ── Refs used for safety guards ──────────────────────────────────────────
@@ -526,15 +533,9 @@ export default function HomePageClient() {
       {/* ── Assistant card / skeleton ── */}
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "12px 14px 0" }}>
         {loading ? (
-         <AssistantSkeleton />
-         ) : assistantCard ? ( 
-           <InsightCard data={assistantCard} />
-           ) : (
-             <AssistantCard
-            state={authState}
-            profile={profile}
-            nextEvent={nextEvent}
-          />
+          <AssistantSkeleton />
+        ) : (
+          <CareFeed hero={assistantCard} />
         )}
       </div>
 

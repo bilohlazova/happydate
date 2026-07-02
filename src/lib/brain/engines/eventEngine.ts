@@ -1,45 +1,72 @@
 import { BrainEvent, Insight } from "../types";
 import { getDaysUntil } from "../utils/dateUtils";
+import { PRIORITY } from "../priorities";
 
 export interface EventEngineParams {
   events: BrainEvent[];
 }
 
-export function getNextImportantEvent({
+export function buildEventInsight({
   events,
 }: EventEngineParams): Insight | null {
   if (events.length === 0) {
     return null;
   }
 
-  const sortedEvents = [...events].sort((a, b) => {
-    return new Date(a.date).getTime() - new Date(b.date).getTime();
+  const upcomingEvents = events
+    .map((event) => ({
+      event,
+      daysUntil: getDaysUntil(event.date),
+    }))
+    .filter(({ daysUntil }) => daysUntil >= 0);
+
+  if (upcomingEvents.length === 0) {
+    return null;
+  }
+
+  upcomingEvents.sort((a, b) => {
+    if (a.event.is_important !== b.event.is_important) {
+      return a.event.is_important ? -1 : 1;
+    }
+
+    return a.daysUntil - b.daysUntil;
   });
 
-  const nextEvent = sortedEvents[0];
+  const { event, daysUntil } = upcomingEvents[0];
 
-  const daysUntil = getDaysUntil(nextEvent.date);
-
-  let description: string;
+  // `message` complements `title` (the user's own event name) —
+  // it should never restate "important", the title already implies that.
+  let message: string;
 
   if (daysUntil === 0) {
-    description = "Dzisiaj";
+    message = "To już dzisiaj.";
   } else if (daysUntil === 1) {
-    description = "Jutro";
+    message = "To już jutro.";
   } else {
-    description = `Za ${daysUntil} dni`;
+    message = `Pozostało ${daysUntil} dni.`;
+  }
+
+  let priority: number = PRIORITY.DEFAULT;
+
+  if (daysUntil === 0) {
+    priority = PRIORITY.TODAY;
+  } else if (daysUntil === 1) {
+    priority = PRIORITY.TOMORROW;
+  } else if (daysUntil <= 7) {
+    priority = PRIORITY.THIS_WEEK;
   }
 
   return {
-    id: `event-${nextEvent.id}`,
+    id: `event-${event.id}`,
     type: "next_event",
-    priority: 100,
+    priority,
+    // TODO:
+    // Replace emoji with unified icon system.
     icon: "🎂",
-    title: nextEvent.title,
-    description,
-    personId: undefined,
+    title: event.title,
+    description: message,
     action: {
-      label: "Pokaż",
+      label: "Pokaż wydarzenie",
       action: "/calendar",
     },
   };

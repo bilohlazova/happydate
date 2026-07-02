@@ -17,21 +17,11 @@ export function mapInsightToAssistant(
   }
 
   return {
-    state:
-      insight.priority === "high"
-        ? "urgent"
-        : insight.priority === "medium"
-        ? "active"
-        : "calm",
-
+    state: "active",
     title: insight.title,
-
     description: insight.description ?? "",
-
-    icon: insight.icon ?? "✨",
-
+    icon: insight.icon,
     actionLabel: insight.action?.label,
-
     actionUrl: insight.action?.action,
   };
 }

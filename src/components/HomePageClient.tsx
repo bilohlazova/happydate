@@ -1,7 +1,5 @@
 "use client";
 
-
-
 // src/components/HomePageClient.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 // REFACTORED: iOS WebView / Capacitor-safe, production-ready architecture
@@ -16,9 +14,9 @@
 //   • Emergency fallback: if init takes > 8 s the component forces a "guest"
 //     state so the user always sees something.
 //   • All inline styles kept (no tailwind dependency) to match existing codebase.
-//   • Brain insights (buildInsights + mapInsightToAssistant) drive the
-//     assistant card when available, with the original events-only logic kept
-//     as a fallback when there are no insights.
+//   • Brain insights are now sourced via loadBrain() (Repository + buildInsights
+//     under the hood) and drive the assistant card when available, with the
+//     original events-only logic kept as a fallback when there are no insights.
 // ─────────────────────────────────────────────────────────────────────────────
 import CareFeed from "./care/CareFeed";
 import {
@@ -31,7 +29,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import { buildInsights } from "@/lib/brain/buildInsights";
+import { loadBrain } from "@/lib/brain/loadBrain";
 import {
   mapInsightToAssistant,
   type AssistantCardData,
@@ -410,8 +408,10 @@ export default function HomePageClient() {
         console.debug("[HomePageClient] profile loaded:", p.full_name);
       }
 
-      // 4. Try brain insights first; fall back to existing events-only logic
-      const insights = buildInsights({
+      // 4. Load Brain insights (Repository + buildInsights live inside
+      //    loadBrain now); fall back to existing events-only logic.
+      const insights = await loadBrain({
+        userId:  user.id,
         profile: profileResult.data,
         people:  peopleResult.data ?? [],
         events:  eventsResult.data ?? [],

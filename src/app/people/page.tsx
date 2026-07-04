@@ -103,18 +103,25 @@ export default function PeoplePage() {
 
       <ul className="flex flex-col gap-3">
         {people.map((person) => (
-          <li key={person.id} className="rounded-md border border-gray-200 p-4">
-            <h2 className="font-medium text-gray-900">{person.name}</h2>
+          <li key={person.id}>
+            <Link
+              href={`/people/${person.id}`}
+              className="block rounded-md border border-gray-200 p-4 transition-colors hover:border-rose-300 hover:bg-rose-50"
+            >
+              <h2 className="font-medium text-gray-900">{person.name}</h2>
 
-            {person.relationship && (
-              <p className="mt-1 text-sm text-gray-600">
-                {person.relationship}
-              </p>
-            )}
+              {person.relationship && (
+                <p className="mt-1 text-sm text-gray-600">
+                  {person.relationship}
+                </p>
+              )}
 
-            {person.birthday && (
-              <p className="mt-1 text-sm text-gray-600">{person.birthday}</p>
-            )}
+              {person.birthday && (
+                <p className="mt-1 text-sm text-gray-600">
+                  {person.birthday}
+                </p>
+              )}
+            </Link>
           </li>
         ))}
       </ul>

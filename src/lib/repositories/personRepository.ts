@@ -40,6 +40,28 @@ export async function getPeople(
 }
 
 /**
+ * Fetch a single person by id.
+ */
+export async function getPersonById(
+  personId: string
+): Promise<PersonRow | null> {
+  const { data, error } = await supabase
+    .from("people")
+    .select("*")
+    .eq("id", personId)
+    .returns<PersonRow[]>()
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `[personRepository] getPersonById failed: ${error.message}`
+    );
+  }
+
+  return data;
+}
+
+/**
  * Creates a new person.
  * Pure write operation with no business logic.
  */

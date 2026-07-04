@@ -1,7 +1,7 @@
 // src/lib/repositories/personRepository.ts
 // ─────────────────────────────────────────────────────────────────────────────
 // Data Layer for People.
-// Read-only access to the `public.people` table.
+// Read and write access to the `public.people` table.
 // No business logic.
 // Higher layers decide how data is used.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -9,9 +9,12 @@
 import { supabase } from "@/lib/supabaseClient";
 import type { PersonRow } from "./person.types";
 
-// TODO:
-// Add create/update/delete operations once
-// People management UI is introduced.
+export interface CreatePersonInput {
+  userId: string;
+  name: string;
+  relationship?: string;
+  birthday?: string;
+}
 
 /**
  * Fetch all people belonging to a given user.
@@ -34,4 +37,32 @@ export async function getPeople(
   }
 
   return data ?? [];
+}
+
+/**
+ * Creates a new person.
+ * Pure write operation with no business logic.
+ */
+export async function createPerson(
+  input: CreatePersonInput
+): Promise<PersonRow> {
+  const { data, error } = await supabase
+    .from("people")
+    .insert({
+      user_id: input.userId,
+      name: input.name,
+      relationship: input.relationship ?? null,
+      birthday: input.birthday ?? null,
+    })
+    .select()
+    .returns<PersonRow[]>()
+    .single();
+
+  if (error) {
+    throw new Error(
+      `[personRepository] createPerson failed: ${error.message}`
+    );
+  }
+
+  return data;
 }

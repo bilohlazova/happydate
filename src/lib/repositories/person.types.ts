@@ -1,3 +1,5 @@
+// src/lib/repositories/person.types.ts
+
 export interface PersonRow {
   id: string;
   user_id: string;
@@ -8,7 +10,7 @@ export interface PersonRow {
 
   birthday: string | null;
 
-  avatar_url: string | null;
+  notes: string | null;
 
   created_at: string;
 }

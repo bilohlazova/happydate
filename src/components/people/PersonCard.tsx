@@ -1,71 +1,73 @@
-// src/components/people/PersonCard.tsx
-
-import Link from "next/link";
-
 import Avatar from "@/components/people/Avatar";
+
+import Card from "@/components/ui/Card";
+import InfoBadge from "@/components/ui/InfoBadge";
+import Panel from "@/components/ui/Panel";
+
 import type { PersonRow } from "@/lib/repositories/person.types";
+import { getRelationshipInfo } from "@/lib/people/relationship";
 
 interface PersonCardProps {
   person: PersonRow;
 }
 
+function formatBirthday(date: string | null): string | null {
+  if (!date) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("pl-PL", {
+    day: "numeric",
+    month: "long",
+  }).format(new Date(date));
+}
+
 export default function PersonCard({
   person,
 }: PersonCardProps) {
+  const relationship = getRelationshipInfo(
+    person.relationship
+  );
+
+  const birthday = formatBirthday(
+    person.birthday
+  );
+
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-        <div className="flex items-center gap-5">
-          <Avatar />
+    <Card className="p-6">
+      <div className="flex flex-col items-center text-center">
+        <Avatar name={person.name} />
 
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              {person.name}
-            </h1>
+        <h1 className="mt-5 text-3xl font-bold text-gray-900">
+          {person.name}
+        </h1>
 
-            {person.relationship && (
-              <p className="mt-2 text-sm text-gray-600">
-                ❤️ {person.relationship}
-              </p>
-            )}
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
+          {relationship && (
+            <InfoBadge icon={relationship.icon}>
+              {relationship.label}
+            </InfoBadge>
+          )}
 
-            {person.birthday && (
-              <p className="mt-1 text-sm text-gray-600">
-                🎂 {person.birthday}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2 md:min-w-[190px]">
-          <Link
-            href={`/care/add-memory?personId=${person.id}`}
-            className="rounded-lg bg-rose-500 px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-rose-600"
-          >
-            ➕ Dodaj wspomnienie
-          </Link>
-
-          <button
-            type="button"
-            disabled
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-500 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            ✏️ Edytuj
-          </button>
+          {birthday && (
+            <InfoBadge icon="🎂">
+              {birthday}
+            </InfoBadge>
+          )}
         </div>
       </div>
 
       {person.notes && (
-        <div className="mt-6 rounded-xl border border-gray-100 bg-gray-50 p-4">
-          <h2 className="mb-2 text-sm font-semibold text-gray-700">
-            📝 Notatki
+        <Panel className="mt-6">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+            Notatki
           </h2>
 
-          <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
+          <p className="whitespace-pre-wrap text-sm leading-7 text-gray-700">
             {person.notes}
           </p>
-        </div>
+        </Panel>
       )}
-    </section>
+    </Card>
   );
 }

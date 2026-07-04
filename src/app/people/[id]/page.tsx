@@ -1,9 +1,8 @@
 "use client";
 
 // Person Details page.
-// Shows a single person's core info: name, relationship, birthday, notes,
-// plus a list of their memories.
-// Data is loaded through the Person Repository and Memory Repository.
+// Shows a single person's profile, HappyDate insights,
+// highlights and memories.
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -13,10 +12,14 @@ import { getPersonById } from "@/lib/repositories/personRepository";
 import type { PersonRow } from "@/lib/repositories/person.types";
 import { getMemoriesForPerson } from "@/lib/repositories/memoryRepository";
 import type { MemoryRow } from "@/lib/repositories/memory.types";
-import MemoryList from "@/components/memories/MemoryList";
+
 import PersonCard from "@/components/people/PersonCard";
+import PersonHighlights from "@/components/people/PersonHighlights";
 import HappyDateAdvisor from "@/components/advisor/HappyDateAdvisor";
+import MemoryList from "@/components/memories/MemoryList";
+
 import { getPersonAdvisorTips } from "@/lib/advisors/personAdvisor";
+import { buildPersonHighlights } from "@/lib/people/highlights";
 
 export default function PersonDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -31,6 +34,7 @@ export default function PersonDetailsPage() {
 
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!isMounted) return;
+
       setUserId(user?.id ?? null);
       setAuthLoading(false);
     });
@@ -40,20 +44,14 @@ export default function PersonDetailsPage() {
     };
   }, []);
 
-  // Person data
+  // Person
   const [person, setPerson] = useState<PersonRow | null>(null);
   const [personLoading, setPersonLoading] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
 
-    if (!userId) {
-      setPerson(null);
-      setPersonLoading(false);
-      return;
-    }
-
-    if (!personId) {
+    if (!userId || !personId) {
       setPerson(null);
       setPersonLoading(false);
       return;
@@ -64,13 +62,18 @@ export default function PersonDetailsPage() {
     async function loadPerson(id: string) {
       try {
         setPersonLoading(true);
+
         const row = await getPersonById(id);
 
         if (isMounted) {
           setPerson(row);
         }
       } catch (error) {
-        console.error("[PersonDetailsPage] getPersonById failed:", error);
+        console.error(
+          "[PersonDetailsPage] getPersonById failed:",
+          error
+        );
+
         if (isMounted) {
           setPerson(null);
         }
@@ -88,20 +91,14 @@ export default function PersonDetailsPage() {
     };
   }, [authLoading, userId, personId]);
 
-  // Memories data
+  // Memories
   const [memories, setMemories] = useState<MemoryRow[]>([]);
   const [memoriesLoading, setMemoriesLoading] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
 
-    if (!userId) {
-      setMemories([]);
-      setMemoriesLoading(false);
-      return;
-    }
-
-    if (!personId) {
+    if (!userId || !personId) {
       setMemories([]);
       setMemoriesLoading(false);
       return;
@@ -146,14 +143,12 @@ export default function PersonDetailsPage() {
     personLoading ||
     memoriesLoading;
 
-  const advisorTips = person
-    ? getPersonAdvisorTips(person, memories)
-    : [];
-
   if (loading) {
     return (
       <main className="mx-auto max-w-2xl p-6">
-        <p className="text-sm text-gray-600">Ładowanie...</p>
+        <p className="text-sm text-gray-600">
+          Ładowanie...
+        </p>
       </main>
     );
   }
@@ -161,20 +156,31 @@ export default function PersonDetailsPage() {
   if (!person) {
     return (
       <main className="mx-auto max-w-2xl p-6">
-        <p className="text-sm text-gray-600">Nie znaleziono osoby</p>
+        <p className="text-sm text-gray-600">
+          Nie znaleziono osoby
+        </p>
       </main>
     );
   }
 
+  const advisorTips = getPersonAdvisorTips(
+    person,
+    memories
+  );
+
+  const highlights = buildPersonHighlights(
+    memories
+  );
+
   return (
-    <main className="mx-auto max-w-2xl p-6">
+    <main className="mx-auto max-w-2xl space-y-6 p-6">
       <PersonCard person={person} />
 
       <HappyDateAdvisor tips={advisorTips} />
 
-      <div className="mt-8">
-        <MemoryList memories={memories} />
-      </div>
+      <PersonHighlights highlights={highlights} />
+
+      <MemoryList memories={memories} />
     </main>
   );
 }

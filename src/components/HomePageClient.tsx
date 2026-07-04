@@ -19,6 +19,7 @@
 //     original events-only logic kept as a fallback when there are no insights.
 // ─────────────────────────────────────────────────────────────────────────────
 import CareFeed from "./care/CareFeed";
+import HomeHero from "@/components/home/HomeHero";
 import {
   useEffect,
   useRef,
@@ -530,6 +531,16 @@ export default function HomePageClient() {
         overflowX: "hidden",
       }}
     >
+      <div
+        style={{
+          maxWidth: 520,
+          margin: "0 auto",
+          padding: "24px 16px 20px",
+        }}
+      >
+        <HomeHero />
+      </div>
+
       {/* ── Assistant card / skeleton ── */}
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "12px 14px 0" }}>
         {loading ? (

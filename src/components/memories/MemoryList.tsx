@@ -1,6 +1,7 @@
-// src/components/memories/MemoryList.tsx
-
 import type { MemoryRow } from "@/lib/repositories/memory.types";
+
+import MemoryTimelineItem from "@/components/memories/MemoryTimelineItem";
+import Card from "@/components/ui/Card";
 
 interface MemoryListProps {
   memories: MemoryRow[];
@@ -9,30 +10,45 @@ interface MemoryListProps {
 export default function MemoryList({
   memories,
 }: MemoryListProps) {
+  if (memories.length === 0) {
+    return (
+      <section className="mt-8">
+        <h2 className="mb-6 text-2xl font-bold text-gray-900">
+          Historia
+        </h2>
+
+        <Card className="p-8 text-center">
+          <div className="mb-4 text-5xl">
+            📖
+          </div>
+
+          <h3 className="text-lg font-semibold text-gray-900">
+            Jeszcze nie ma żadnych wspomnień
+          </h3>
+
+          <p className="mt-2 text-sm leading-6 text-gray-600">
+            Dodaj pierwsze wspomnienie, aby HappyDate
+            lepiej poznawał tę osobę.
+          </p>
+        </Card>
+      </section>
+    );
+  }
+
   return (
-    <div>
-      <h2 className="mb-4 text-lg font-semibold">
-        Wspomnienia
+    <section className="mt-8">
+      <h2 className="mb-6 text-2xl font-bold text-gray-900">
+        Historia
       </h2>
 
-      {memories.length === 0 ? (
-        <p className="text-sm text-gray-600">
-          Brak wspomnień.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {memories.map((memory) => (
-            <li
-              key={memory.id}
-              className="rounded-md border border-gray-200 p-3"
-            >
-              {memory.title ??
-                memory.content_text ??
-                "Bez tytułu"}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+      <div>
+        {memories.map((memory) => (
+          <MemoryTimelineItem
+            key={memory.id}
+            memory={memory}
+          />
+        ))}
+      </div>
+    </section>
   );
 }

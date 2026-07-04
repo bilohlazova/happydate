@@ -1,24 +1,74 @@
 // src/components/people/Avatar.tsx
 
+import Image from "next/image";
+
+import { THEME } from "@/lib/theme";
+
 interface AvatarProps {
-  size?: "md" | "lg";
+  name: string;
+  photoUrl?: string | null;
   className?: string;
 }
 
-const SIZE_CLASSES: Record<NonNullable<AvatarProps["size"]>, string> = {
-  md: "h-16 w-16 text-3xl",
-  lg: "h-20 w-20 text-4xl",
-};
+function getInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
 
 export default function Avatar({
-  size = "lg",
+  name,
+  photoUrl,
   className = "",
 }: AvatarProps) {
+  if (photoUrl) {
+    return (
+      <Image
+        src={photoUrl}
+        alt={name}
+        width={96}
+        height={96}
+        className={`
+          h-24
+          w-24
+          rounded-full
+          object-cover
+          ring-4
+          ring-white
+          shadow-xl
+          ${className}
+        `}
+      />
+    );
+  }
+
   return (
     <div
-      className={`flex items-center justify-center rounded-full bg-rose-100 ${SIZE_CLASSES[size]} ${className}`}
+      className={`
+        flex
+        h-24
+        w-24
+        items-center
+        justify-center
+        rounded-full
+        ${THEME.brand.gradientDiagonal}
+        text-3xl
+        font-extrabold
+        tracking-wide
+        text-white
+        shadow-xl
+        ring-4
+        ring-white
+        select-none
+        transition-transform
+        duration-200
+        ${className}
+      `}
     >
-      👤
+      {getInitials(name)}
     </div>
   );
 }

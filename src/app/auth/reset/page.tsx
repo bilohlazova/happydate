@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState } from "react";
-import { supabase } from "@/brain/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState("");

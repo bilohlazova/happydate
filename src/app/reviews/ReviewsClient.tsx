@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState, FormEvent } from "react";
-import { supabase } from "@/brain/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 
 type Review = {
   id: string;

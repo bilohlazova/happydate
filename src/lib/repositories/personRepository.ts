@@ -2,11 +2,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Data Layer for People.
 // Read-only access to the `public.people` table.
-// No business logic, filtering or sorting beyond simple queries.
+// No business logic.
+// Higher layers decide how data is used.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { supabase } from "@/lib/supabaseClient";
 import type { PersonRow } from "./person.types";
+
+// TODO:
+// Add create/update/delete operations once
+// People management UI is introduced.
 
 /**
  * Fetch all people belonging to a given user.

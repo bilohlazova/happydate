@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/brain/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 
 /** Повертає publicUrl аватарки (або null) і метод refresh() */
 export function useAvatar(userId?: string | null) {

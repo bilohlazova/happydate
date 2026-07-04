@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/brain/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 
 type FormState = {
   eventId: string | null;

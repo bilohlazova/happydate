@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import PeopleSelect from "@/components/people/PeopleSelect";
 import { supabase } from "@/lib/supabaseClient";
 import { createMemory } from "@/lib/repositories/memoryRepository";
 
@@ -117,22 +118,11 @@ export default function AddMemoryPage() {
       </h1>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {/* Osoba */}
-        {/* TODO:
-            Replace with a people selector loaded from Supabase. */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="personId" className="text-sm font-medium text-gray-700">
-            Osoba
-          </label>
-          <input
-            id="personId"
-            type="text"
-            value={personId}
-            onChange={(e) => setPersonId(e.target.value)}
-            placeholder="Tymczasowo wpisz ID osoby"
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
-        </div>
+        <PeopleSelect
+          userId={userId ?? ""}
+          value={personId}
+          onChange={setPersonId}
+        />
 
         {/* Typ */}
         <div className="flex flex-col gap-1">

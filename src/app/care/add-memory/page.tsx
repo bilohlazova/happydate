@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import PeopleSelect from "@/components/people/PeopleSelect";
 import { supabase } from "@/lib/supabaseClient";
 import { createMemory } from "@/lib/repositories/memoryRepository";
@@ -11,6 +11,9 @@ import { createMemory } from "@/lib/repositories/memoryRepository";
 // Creates a new memory via the Memory Repository.
 // Authentication currently follows the same pattern
 // as HomePageClient.
+// If a `personId` query param is present (e.g. navigated from a person's
+// profile page), the person is pre-selected and locked, and after saving
+// the user is redirected back to that person's page.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MEMORY_TYPES = [
@@ -27,8 +30,10 @@ const MEMORY_TYPES = [
 
 type MemoryType = (typeof MEMORY_TYPES)[number]["value"];
 
-export default function AddMemoryPage() {
+function AddMemoryForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselectedPersonId = searchParams.get("personId");
 
   // ── Auth: userId loaded on mount, same pattern as HomePageClient ────────
   const [userId, setUserId] = useState<string | null>(null);
@@ -53,7 +58,7 @@ export default function AddMemoryPage() {
   }, []);
 
   // ── Form state ────────────────────────────────────────────────────────
-  const [personId, setPersonId] = useState("");
+  const [personId, setPersonId] = useState(preselectedPersonId ?? "");
   const [type, setType] = useState<MemoryType>("memory");
   const [title, setTitle] = useState("");
   const [value, setValue] = useState("");
@@ -100,9 +105,11 @@ export default function AddMemoryPage() {
         occurredOn: occurredOn || undefined,
       });
 
-      // TODO:
-      // Reset form if this page stops redirecting after save.
-      router.push("/care");
+      if (preselectedPersonId) {
+        router.push(`/people/${preselectedPersonId}`);
+      } else {
+        router.push("/care");
+      }
     } catch (err) {
       console.error("[AddMemoryPage] createMemory failed:", err);
       setError("Nie udało się zapisać. Spróbuj ponownie.");
@@ -122,6 +129,7 @@ export default function AddMemoryPage() {
           userId={userId ?? ""}
           value={personId}
           onChange={setPersonId}
+          disabled={Boolean(preselectedPersonId)}
         />
 
         {/* Typ */}
@@ -217,5 +225,13 @@ export default function AddMemoryPage() {
         </button>
       </form>
     </main>
+  );
+}
+
+export default function AddMemoryPage() {
+  return (
+    <Suspense fallback={null}>
+      <AddMemoryForm />
+    </Suspense>
   );
 }

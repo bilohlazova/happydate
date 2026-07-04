@@ -9,15 +9,17 @@ export interface PeopleSelectProps {
   userId: string;
   value: string;
   onChange: (personId: string) => void;
+  disabled?: boolean;
 }
+
+const SELECT_ID = "person-select";
 
 export default function PeopleSelect({
   userId,
   value,
   onChange,
+  disabled = false,
 }: PeopleSelectProps) {
-  const selectId = `person-${userId}`;
-
   const [people, setPeople] = useState<PersonRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,18 +60,18 @@ export default function PeopleSelect({
   return (
     <div className="flex flex-col gap-1">
       <label
-        htmlFor={selectId}
+        htmlFor={SELECT_ID}
         className="text-sm font-medium text-gray-700"
       >
         Osoba
       </label>
 
       <select
-        id={selectId}
+        id={SELECT_ID}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        disabled={loading || !userId || people.length === 0}
-        className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+        disabled={disabled || loading || !userId || people.length === 0}
+        className="rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
       >
         <option value="">
           {loading

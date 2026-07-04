@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 
 import { supabase } from "@/lib/supabaseClient";
 import { getPersonById } from "@/lib/repositories/personRepository";
@@ -190,6 +191,15 @@ export default function PersonDetailsPage() {
             <p className="text-sm text-gray-900">{person.notes}</p>
           </div>
         )}
+      </div>
+
+      <div className="mt-4">
+        <Link
+          href={`/care/add-memory?personId=${person.id}`}
+          className="inline-block rounded-md bg-rose-500 px-4 py-2 text-sm text-white"
+        >
+          + Dodaj wspomnienie
+        </Link>
       </div>
 
       <div className="mt-8">

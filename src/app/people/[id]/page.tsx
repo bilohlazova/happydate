@@ -7,7 +7,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
 
 import { supabase } from "@/lib/supabaseClient";
 import { getPersonById } from "@/lib/repositories/personRepository";
@@ -15,6 +14,9 @@ import type { PersonRow } from "@/lib/repositories/person.types";
 import { getMemoriesForPerson } from "@/lib/repositories/memoryRepository";
 import type { MemoryRow } from "@/lib/repositories/memory.types";
 import MemoryList from "@/components/memories/MemoryList";
+import PersonCard from "@/components/people/PersonCard";
+import HappyDateAdvisor from "@/components/advisor/HappyDateAdvisor";
+import { getPersonAdvisorTips } from "@/lib/advisors/personAdvisor";
 
 export default function PersonDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -144,6 +146,10 @@ export default function PersonDetailsPage() {
     personLoading ||
     memoriesLoading;
 
+  const advisorTips = person
+    ? getPersonAdvisorTips(person, memories)
+    : [];
+
   if (loading) {
     return (
       <main className="mx-auto max-w-2xl p-6">
@@ -162,45 +168,9 @@ export default function PersonDetailsPage() {
 
   return (
     <main className="mx-auto max-w-2xl p-6">
-      <h1 className="mb-6 text-2xl font-semibold">{person.name}</h1>
+      <PersonCard person={person} />
 
-      <div className="flex flex-col gap-3 rounded-md border border-gray-200 p-4">
-        {person.relationship && (
-          <div>
-            <p className="text-xs font-medium uppercase text-gray-500">
-              Relacja
-            </p>
-            <p className="text-sm text-gray-900">{person.relationship}</p>
-          </div>
-        )}
-
-        {person.birthday && (
-          <div>
-            <p className="text-xs font-medium uppercase text-gray-500">
-              Urodziny
-            </p>
-            <p className="text-sm text-gray-900">{person.birthday}</p>
-          </div>
-        )}
-
-        {person.notes && (
-          <div>
-            <p className="text-xs font-medium uppercase text-gray-500">
-              Notatki
-            </p>
-            <p className="text-sm text-gray-900">{person.notes}</p>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-4">
-        <Link
-          href={`/care/add-memory?personId=${person.id}`}
-          className="inline-block rounded-md bg-rose-500 px-4 py-2 text-sm text-white"
-        >
-          + Dodaj wspomnienie
-        </Link>
-      </div>
+      <HappyDateAdvisor tips={advisorTips} />
 
       <div className="mt-8">
         <MemoryList memories={memories} />

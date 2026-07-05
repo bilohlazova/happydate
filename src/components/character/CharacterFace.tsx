@@ -2,13 +2,18 @@ import CharacterEyes from "./CharacterEyes";
 import CharacterGlow from "./CharacterGlow";
 import CharacterMouth from "./CharacterMouth";
 
-import type { CharacterState } from "./Character.types";
+import type {
+  CharacterMood,
+  HappySessionState,
+} from "@/lib/happy";
 
 interface CharacterFaceProps {
-  state: CharacterState;
+  mood: CharacterMood;
+  state: HappySessionState;
 }
 
 export default function CharacterFace({
+  mood,
   state,
 }: CharacterFaceProps) {
   return (
@@ -25,11 +30,11 @@ export default function CharacterFace({
         shadow-xl
       "
     >
-      <CharacterGlow mood={state.mood} />
+      <CharacterGlow mood={mood} state={state} />
 
-      <CharacterEyes mood={state.mood} />
+      <CharacterEyes mood={mood} />
 
-      <CharacterMouth speaking={state.speaking} />
+      <CharacterMouth speaking={state === "speaking"} />
     </div>
   );
 }

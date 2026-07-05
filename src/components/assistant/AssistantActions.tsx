@@ -5,7 +5,7 @@
 // Принцип: максимум 3 кнопки, завжди конкретні
 
 import Link from "next/link";
-import { AssistantState } from "./ types";
+import { AssistantState } from "./types";
 
 interface Action {
   icon: string;

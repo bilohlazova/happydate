@@ -3,12 +3,9 @@
 import { useState } from "react";
 
 import MoodCard from "./MoodCard";
+import type { HappyDateMode } from "@/lib/happy";
 
-export type HappyDateMode =
-  | "energy"
-  | "quick"
-  | "calm"
-  | "surprise";
+export type { HappyDateMode };
 
 interface MoodSelectorProps {
   onChange?: (mode: HappyDateMode) => void;

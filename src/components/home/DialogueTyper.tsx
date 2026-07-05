@@ -9,16 +9,12 @@ import {
   useState,
 } from "react";
 
-import type { CharacterMood } from "./character/Character.types";
+import type {
+  CharacterMood,
+  DialogueLine,
+} from "@/lib/happy";
 
-export interface DialogueLine {
-  id: string;
-  text: string;
-  mood?: CharacterMood;
-  /** Пауза після цього рядка (мс). Якщо не задано — використовується lineDelay */
-  pause?: number;
-  voice?: string;
-}
+export type { DialogueLine };
 
 export interface DialogueTyperHandle {
   skipLine: () => void;

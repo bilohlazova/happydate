@@ -1,15 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
-import HappyDateCharacter from "./HappyDateCharacter";
+import HappyDateCharacter from "@/components/character/HappyDateCharacter";
 import DialogueBubble from "./DialogueBubble";
-import DialogueTyper, { type DialogueLine } from "./DialogueTyper";
-import MoodSelector, { type HappyDateMode } from "./MoodSelector";
+import DialogueTyper from "./DialogueTyper";
+import MoodSelector from "./MoodSelector";
 import BriefingButton from "./BriefingButton";
 
-import { HOME_GREETING } from "@/lib/dialogues/greetings";
-import type { CharacterMood } from "./character/Character.types";
+import {
+  createIdleSession,
+  createWelcomeDialogue,
+  runMorningSession,
+} from "@/lib/happy";
+import type {
+  CharacterMood,
+  DialogueLine,
+  HappySession,
+  HappyDateMode,
+} from "@/lib/happy";
 
 interface HomeHeroProps {
   firstName?: string;
@@ -17,50 +26,87 @@ interface HomeHeroProps {
 
 export default function HomeHero({ firstName = "Mario" }: HomeHeroProps) {
   const [mode, setMode] = useState<HappyDateMode>("quick");
-  const [speaking, setSpeaking] = useState(false);
+  const [session, setSession] = useState<HappySession>(
+    () => createIdleSession("quick")
+  );
+  const [dialogue, setDialogue] = useState<DialogueLine[]>(
+    () => createWelcomeDialogue(firstName)
+  );
   const [mood, setMood] = useState<CharacterMood>("happy");
 
-  const greeting = useMemo<DialogueLine[]>(() => {
-    return HOME_GREETING.map((line, index) => {
-      const lineMood: CharacterMood = index === 0 ? "happy" : "calm";
+  function handleModeChange(nextMode: HappyDateMode) {
+    setMode(nextMode);
 
-      return {
-        id: `greeting-${index}`,
-        text: line.replace("{name}", firstName),
-        mood: lineMood,
-      };
+    setSession((currentSession) => {
+      if (
+        currentSession.state === "thinking" ||
+        currentSession.state === "speaking"
+      ) {
+        return currentSession;
+      }
+
+      return createIdleSession(nextMode);
     });
-  }, [firstName]);
+  }
 
-  function handleStart() {
-    console.log("HappyDate mode:", mode);
+  async function handleStart() {
+    if (
+      session.state === "thinking" ||
+      session.state === "speaking"
+    ) {
+      return;
+    }
 
-    // Тут пізніше запустимо Voice Briefing.
+    await runMorningSession({
+      mode,
+      firstName,
+      onSessionChange: setSession,
+      onBriefingReady: (briefing) => {
+        setDialogue(briefing.dialogue);
+      },
+    });
   }
 
   return (
     <section className="mx-auto max-w-xl space-y-8">
       <div className="flex flex-col items-center">
-        <HappyDateCharacter mood={mood} speaking={speaking} />
+        <HappyDateCharacter state={session.state} mood={mood} />
 
         <div className="mt-6 w-full">
           <DialogueBubble>
-            <DialogueTyper
-              lines={greeting}
-              onSpeakingChange={setSpeaking}
-              onMoodChange={(nextMood) => {
-                if (nextMood) {
-                  setMood(nextMood);
-                }
-              }}
-            />
+            {session.state === "thinking" ? (
+              <p className="text-xl font-semibold text-gray-900">
+                Analizuję Twój dzień...
+              </p>
+            ) : (
+              <DialogueTyper
+                lines={dialogue}
+                onMoodChange={(nextMood) => {
+                  if (nextMood) {
+                    setMood(nextMood);
+                  }
+                }}
+                onFinished={() => {
+                  setSession((currentSession) => ({
+                    state: "finished",
+                    mode: currentSession.mode,
+                  }));
+                }}
+              />
+            )}
           </DialogueBubble>
         </div>
       </div>
 
-      <MoodSelector onChange={setMode} />
+      <MoodSelector onChange={handleModeChange} />
 
-      <BriefingButton onClick={handleStart} />
+      <BriefingButton
+        disabled={
+          session.state === "thinking" ||
+          session.state === "speaking"
+        }
+        onClick={handleStart}
+      />
     </section>
   );
 }

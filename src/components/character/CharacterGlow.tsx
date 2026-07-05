@@ -1,11 +1,16 @@
-import type { CharacterMood } from "./Character.types";
+import type {
+  CharacterMood,
+  HappySessionState,
+} from "@/lib/happy";
 
 interface CharacterGlowProps {
   mood: CharacterMood;
+  state: HappySessionState;
 }
 
 export default function CharacterGlow({
   mood,
+  state,
 }: CharacterGlowProps) {
   const gradient =
     mood === "happy"
@@ -26,6 +31,7 @@ export default function CharacterGlow({
         rounded-full
         bg-gradient-to-br
         ${gradient}
+        ${state === "thinking" ? "animate-pulse" : ""}
       `}
     />
   );

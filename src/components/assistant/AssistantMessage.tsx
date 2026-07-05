@@ -3,7 +3,7 @@
 // src/components/assistant/AssistantMessage.tsx
 // Генерує емоційно правильний текст залежно від стану і контексту
 
-import { AssistantState, AssistantEvent, daysUntil } from "./ types";
+import { AssistantState, AssistantEvent, daysUntil } from "./types";
 
 interface Props {
   state: AssistantState;
@@ -51,7 +51,7 @@ function buildPrimary(state: AssistantState, firstName?: string, nextEvent?: Ass
 }
 
 // Другорядне / call-to-action повідомлення
-function buildSecondary(state: AssistantState, preferences?: string | null): string {
+function buildSecondary(state: AssistantState): string {
   switch (state) {
     case "guest":
       return "Zacznij od dodania pierwszej ważnej osoby.";
@@ -64,9 +64,9 @@ function buildSecondary(state: AssistantState, preferences?: string | null): str
   }
 }
 
-export default function AssistantMessage({ state, firstName, nextEvent, preferences }: Props) {
+export default function AssistantMessage({ state, firstName, nextEvent }: Props) {
   const primary   = buildPrimary(state, firstName, nextEvent);
-  const secondary = buildSecondary(state, preferences);
+  const secondary = buildSecondary(state);
 
   const lines = primary.split("\n");
 

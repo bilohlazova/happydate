@@ -1,4 +1,4 @@
-import type { CharacterMood } from "./Character.types";
+import type { CharacterMood } from "@/lib/happy";
 
 interface CharacterEyesProps {
   mood: CharacterMood;

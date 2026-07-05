@@ -1,25 +1,24 @@
-import CharacterFace from "./character/CharacterFace";
+import CharacterFace from "./CharacterFace";
 
 import type {
   CharacterMood,
-} from "./character/Character.types";
+  HappySessionState,
+} from "@/lib/happy";
 
 interface HappyDateCharacterProps {
+  state: HappySessionState;
   mood?: CharacterMood;
-  speaking?: boolean;
 }
 
 export default function HappyDateCharacter({
+  state,
   mood = "happy",
-  speaking = false,
 }: HappyDateCharacterProps) {
   return (
     <div className="flex flex-col items-center">
       <CharacterFace
-        state={{
-          mood,
-          speaking,
-        }}
+        mood={state === "thinking" ? "thinking" : mood}
+        state={state}
       />
 
       <h2 className="mt-5 text-xl font-bold text-sky-700">

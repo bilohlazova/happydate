@@ -1,12 +1,14 @@
 import { createMorningDialogue } from "../dialogues";
-import type { HappyDateMode } from "../types";
+import type { HappyContext } from "../context";
 import type { HappyResponse } from "./responses";
 
 export function createMorningBriefing(
-  mode: HappyDateMode,
-  firstName: string
+  context: HappyContext
 ): HappyResponse {
   return {
-    dialogue: createMorningDialogue(mode, firstName),
+    dialogue: createMorningDialogue(
+      context.mode,
+      context.firstName
+    ),
   };
 }

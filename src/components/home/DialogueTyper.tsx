@@ -13,6 +13,7 @@ import type {
   CharacterMood,
   DialogueLine,
 } from "@/lib/happy";
+import { MobileUI } from "@/lib/theme/mobile";
 
 export type { DialogueLine };
 
@@ -221,8 +222,8 @@ const DialogueTyper = forwardRef<DialogueTyperHandle, DialogueTyperProps>(
               key={line.id}
               className={
                 index === 0
-                  ? "text-xl font-semibold text-gray-900"
-                  : "text-base leading-7 text-gray-600"
+                  ? `${MobileUI.title} font-semibold text-gray-900`
+                  : `${MobileUI.body} leading-7 text-gray-600`
               }
             >
               {text}

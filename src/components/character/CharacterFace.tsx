@@ -1,6 +1,7 @@
 import CharacterEyes from "./CharacterEyes";
 import CharacterGlow from "./CharacterGlow";
 import CharacterMouth from "./CharacterMouth";
+import { MobileUI } from "@/lib/theme/mobile";
 
 import type {
   CharacterMood,
@@ -18,17 +19,16 @@ export default function CharacterFace({
 }: CharacterFaceProps) {
   return (
     <div
-      className="
+      className={`
         relative
         flex
-        h-36
-        w-36
+        ${MobileUI.character}
         items-center
         justify-center
         overflow-hidden
         rounded-full
         shadow-xl
-      "
+      `}
     >
       <CharacterGlow mood={mood} state={state} />
 

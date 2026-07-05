@@ -1,4 +1,5 @@
 import type { CharacterMood } from "@/lib/happy";
+import { MobileUI } from "@/lib/theme/mobile";
 
 interface CharacterEyesProps {
   mood: CharacterMood;
@@ -15,7 +16,9 @@ export default function CharacterEyes({
       : "h-3 w-3 rounded-full";
 
   return (
-    <div className="absolute top-12 flex gap-8">
+    <div
+      className={`absolute ${MobileUI.characterEyesTop} flex ${MobileUI.characterEyesGap}`}
+    >
       <div className={`${eyeClass} bg-white`} />
       <div className={`${eyeClass} bg-white`} />
     </div>

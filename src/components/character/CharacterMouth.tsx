@@ -1,3 +1,5 @@
+import { MobileUI } from "@/lib/theme/mobile";
+
 interface CharacterMouthProps {
   speaking: boolean;
 }
@@ -9,7 +11,7 @@ export default function CharacterMouth({
     <div
       className={`
         absolute
-        top-20
+        ${MobileUI.characterMouthTop}
         bg-white
         transition-all
         duration-200

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { MobileUI } from "@/lib/theme/mobile";
 
 interface GreetingBubbleProps {
   children: ReactNode;
@@ -16,11 +17,12 @@ export default function GreetingBubble({
           border
           border-sky-100
           bg-white
-          p-6
           shadow-sm
         "
       >
-        <div className="space-y-3 text-center">
+        <div
+          className={`${MobileUI.bubblePadding} ${MobileUI.bubbleSpacing} text-center`}
+        >
           {children}
         </div>
       </div>

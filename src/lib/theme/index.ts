@@ -1,5 +1,3 @@
-// src/lib/theme.ts
-
 export const THEME = {
   brand: {
     gradient: "bg-gradient-to-r from-sky-500 to-cyan-500",

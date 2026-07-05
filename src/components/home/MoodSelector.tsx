@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import MoodCard from "./MoodCard";
 import type { HappyDateMode } from "@/lib/happy";
+import { MobileUI } from "@/lib/theme/mobile";
 
 export type { HappyDateMode };
 
@@ -50,13 +51,13 @@ export default function MoodSelector({
   }
 
   return (
-    <section className="space-y-4">
+    <section className={MobileUI.compactSpacing}>
       <div>
-        <h2 className="text-lg font-bold text-gray-900">
+        <h2 className={`${MobileUI.sectionTitle} font-bold text-gray-900`}>
           Jakiego HappyDate dzisiaj potrzebujesz?
         </h2>
 
-        <p className="mt-1 text-sm text-gray-500">
+        <p className={`mt-1 ${MobileUI.caption} text-gray-500`}>
           Wybierz sposób, w jaki chcesz otrzymać
           dzisiejsze podsumowanie.
         </p>

@@ -1,3 +1,5 @@
+import { MobileUI } from "@/lib/theme/mobile";
+
 interface MoodCardProps {
   icon: string;
   title: string;
@@ -21,7 +23,7 @@ export default function MoodCard({
         w-full
         rounded-2xl
         border
-        p-5
+        ${MobileUI.cardPadding}
         text-left
         transition-all
         duration-300
@@ -33,16 +35,16 @@ export default function MoodCard({
       `}
     >
       <div className="flex items-start gap-4">
-        <div className="text-3xl">
+        <div className={MobileUI.cardIcon}>
           {icon}
         </div>
 
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-900">
+          <h3 className={`${MobileUI.body} font-semibold text-gray-900`}>
             {title}
           </h3>
 
-          <p className="mt-1 text-sm leading-6 text-gray-500">
+          <p className={`mt-1 ${MobileUI.caption} leading-6 text-gray-500`}>
             {subtitle}
           </p>
         </div>

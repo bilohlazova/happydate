@@ -1,6 +1,8 @@
 import { createMorningBriefing } from "./briefing";
+
+import type { HappyContext } from "../context";
 import type { HappyResponse } from "./responses";
-import type { HappyDateMode } from "../types/mode";
+import type { HappyDateMode } from "../types";
 
 export type HappySessionState =
   | "idle"
@@ -14,18 +16,13 @@ export interface HappySession {
 }
 
 interface RunMorningSessionParams {
-  mode: HappyDateMode;
-  firstName: string;
+  context: HappyContext;
+
   onSessionChange: (session: HappySession) => void;
-  onBriefingReady: (briefing: HappyResponse) => void;
-}
 
-const THINKING_DELAY_MS = 1200;
-
-function wait(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
+  onBriefingReady: (
+    briefing: HappyResponse
+  ) => void;
 }
 
 export function createIdleSession(
@@ -38,23 +35,29 @@ export function createIdleSession(
 }
 
 export async function runMorningSession({
-  mode,
-  firstName,
+  context,
   onSessionChange,
   onBriefingReady,
 }: RunMorningSessionParams) {
   onSessionChange({
     state: "thinking",
-    mode,
+    mode: context.mode,
   });
 
-  await wait(THINKING_DELAY_MS);
+  // Тимчасова затримка.
+  // Пізніше тут буде AI, календар, пам'ять,
+  // погода, подарунки тощо.
+  await new Promise((resolve) =>
+    setTimeout(resolve, 1200)
+  );
 
-  const briefing = createMorningBriefing(mode, firstName);
+  const briefing =
+    createMorningBriefing(context);
 
   onBriefingReady(briefing);
+
   onSessionChange({
     state: "speaking",
-    mode,
+    mode: context.mode,
   });
 }

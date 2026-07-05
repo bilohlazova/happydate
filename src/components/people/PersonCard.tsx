@@ -8,6 +8,12 @@ import type { PersonRow } from "@/lib/repositories/person.types";
 import { getRelationshipInfo } from "@/lib/people/relationship";
 import { Cake, ChevronRight, Heart, Sparkles } from "lucide-react";
 
+type PersonCardData = PersonRow & {
+  color_token?: string | null;
+  favorite?: boolean | null;
+  is_favorite?: boolean | null;
+};
+
 interface PersonCardProps {
   person: PersonRow;
   variant?: "detail" | "list";
@@ -45,77 +51,110 @@ export default function PersonCard({
   );
 
   if (variant === "list") {
-    const displayTags = tags.slice(0, 3);
+    const personData = person as PersonCardData;
+    const displayTags = tags.slice(0, 2);
     const nextDate = nextDateLabel ?? birthday;
     const hasCountdown = typeof daysUntilNextDate === "number";
+    const hasBirthday = Boolean(nextDate);
+    const isFavorite = Boolean(
+      personData.favorite ?? personData.is_favorite ?? false
+    );
     const accent = getAccent(person.id);
 
     return (
-      <article className="group grid min-h-[8.4rem] grid-cols-[auto_1fr_auto] items-center gap-4 rounded-[1.5rem] bg-white p-4 shadow-[0_13px_34px_rgba(15,23,42,0.06)] ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:shadow-[0_20px_44px_rgba(37,99,235,0.12)] sm:grid-cols-[auto_1fr_minmax(9.5rem,auto)_auto] sm:gap-5">
+      <article className="group relative grid min-h-[6.1rem] grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-3 rounded-[1.2rem] bg-white px-3 py-3 shadow-[0_10px_26px_rgba(15,23,42,0.055)] ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(37,99,235,0.1)] sm:min-h-[6.4rem] sm:gap-4 sm:px-4">
+        {isFavorite && (
+          <span
+            className="absolute right-2.5 top-2 text-xs leading-none"
+            aria-label="Ulubiona osoba"
+          >
+            ⭐
+          </span>
+        )}
+
         <div className="relative">
           <Avatar
             name={person.name}
-            className="h-20 w-20 text-2xl sm:h-24 sm:w-24"
+            colorToken={personData.color_token}
+            className="h-14 w-14 text-lg shadow-lg sm:h-16 sm:w-16 sm:text-xl"
           />
           <span
-            className={`absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full ${accent.badge} text-white ring-4 ring-white`}
+            className={`absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full ${accent.badge} text-white ring-[3px] ring-white sm:h-8 sm:w-8`}
           >
             {relationship?.icon ? (
-              <span className="text-base leading-none">{relationship.icon}</span>
+              <span className="text-xs leading-none sm:text-sm">
+                {relationship.icon}
+              </span>
             ) : (
-              <Heart className="h-4 w-4 fill-white" />
+              <Heart className="h-3.5 w-3.5 fill-white" />
             )}
           </span>
         </div>
 
         <div className="min-w-0">
-          <h2 className="truncate text-2xl font-black leading-7 text-slate-950">
+          <h2 className="truncate text-[1.38rem] font-black leading-6 text-slate-950 sm:text-2xl sm:leading-7">
             {person.name}
           </h2>
-          <p className="mt-1 truncate text-sm font-medium text-slate-500">
-            {relationship ? `${relationship.icon} ${relationship.label}` : "👤 Bliska osoba"}
+          <p className="mt-0.5 truncate text-[0.82rem] font-semibold text-slate-500 sm:text-sm">
+            {relationship
+              ? `${relationship.icon} ${relationship.label}`
+              : "👤 Bliska osoba"}
           </p>
 
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
             {displayTags.length > 0 ? (
               displayTags.map((tag) => (
                 <span
                   key={tag}
-                  className={`rounded-full ${accent.soft} px-3 py-1 text-xs font-bold ${accent.text}`}
+                  className={`rounded-full ${accent.soft} px-2.5 py-0.5 text-[0.7rem] font-bold leading-5 ${accent.text}`}
                 >
                   {tag}
                 </span>
               ))
             ) : (
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[0.7rem] font-bold leading-5 text-slate-500">
                 ✨ Dodaj tag
               </span>
             )}
           </div>
 
-          <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-            <Sparkles className="h-4 w-4" />
-            {memoriesCount} {getMemoryLabel(memoriesCount)}
+          <p className="mt-1.5 flex items-center gap-1 text-[0.72rem] font-semibold text-slate-500 sm:text-xs">
+            <Sparkles className="h-3.5 w-3.5" />
+            {memoriesCount > 0
+              ? `${memoriesCount} ${getMemoryLabel(memoriesCount)}`
+              : "Dodaj pierwsze wspomnienie"}
           </p>
         </div>
 
-        <div className="hidden items-center gap-4 border-l border-slate-200 pl-6 sm:flex">
-          <span
-            className={`flex h-14 w-14 items-center justify-center rounded-full ${accent.soft} ${accent.text}`}
-          >
-            <Cake className="h-7 w-7" strokeWidth={2.3} />
-          </span>
-          <div>
-            <p className={`text-xl font-black ${accent.text}`}>
-              {hasCountdown ? `Za ${daysUntilNextDate} dni` : "Brak daty"}
-            </p>
-            <p className="mt-1 text-sm font-medium text-slate-500">
-              {nextDate ?? "Dodaj ważną datę"}
-            </p>
+        <div className="flex min-w-[4.75rem] items-center justify-end gap-2 border-l border-slate-100 pl-2 sm:min-w-[8.75rem] sm:gap-3 sm:pl-5">
+          {hasBirthday && (
+            <span
+              className={`hidden h-11 w-11 shrink-0 items-center justify-center rounded-full ${accent.soft} ${accent.text} sm:flex`}
+            >
+              <Cake className="h-5 w-5" strokeWidth={2.3} />
+            </span>
+          )}
+          <div className="text-right">
+            {hasBirthday ? (
+              <>
+                <p
+                  className={`text-sm font-black leading-5 ${accent.text} sm:text-lg`}
+                >
+                  {hasCountdown ? `Za ${daysUntilNextDate} dni` : "Urodziny"}
+                </p>
+                <p className="mt-0.5 max-w-[5.2rem] truncate text-[0.7rem] font-medium text-slate-500 sm:max-w-none sm:text-xs">
+                  {nextDate}
+                </p>
+              </>
+            ) : (
+              <p className="max-w-[4.6rem] text-[0.68rem] font-bold leading-4 text-slate-400 sm:max-w-[7rem] sm:text-xs">
+                Brak daty urodzin
+              </p>
+            )}
           </div>
         </div>
 
-        <ChevronRight className="h-7 w-7 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-blue-600" />
+        <ChevronRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-blue-600 sm:h-6 sm:w-6" />
       </article>
     );
   }
@@ -167,7 +206,11 @@ function getMemoryLabel(count: number): string {
   const lastDigit = count % 10;
   const lastTwoDigits = count % 100;
 
-  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)) {
+  if (
+    lastDigit >= 2 &&
+    lastDigit <= 4 &&
+    (lastTwoDigits < 12 || lastTwoDigits > 14)
+  ) {
     return "wspomnienia";
   }
 

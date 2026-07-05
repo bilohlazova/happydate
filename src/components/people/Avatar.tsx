@@ -4,9 +4,12 @@ import Image from "next/image";
 
 import { THEME } from "@/lib/theme";
 
+type AvatarColorToken = "blue" | "pink" | "green" | "purple" | "orange";
+
 interface AvatarProps {
   name: string;
   photoUrl?: string | null;
+  colorToken?: string | null;
   className?: string;
 }
 
@@ -22,6 +25,7 @@ function getInitials(name: string): string {
 export default function Avatar({
   name,
   photoUrl,
+  colorToken,
   className = "",
 }: AvatarProps) {
   if (photoUrl) {
@@ -54,7 +58,7 @@ export default function Avatar({
         items-center
         justify-center
         rounded-full
-        ${THEME.brand.gradientDiagonal}
+        ${getAvatarColorClass(colorToken)}
         text-3xl
         font-extrabold
         tracking-wide
@@ -71,4 +75,26 @@ export default function Avatar({
       {getInitials(name)}
     </div>
   );
+}
+
+function getAvatarColorClass(colorToken?: string | null): string {
+  const colors: Record<AvatarColorToken, string> = {
+    blue: "bg-gradient-to-br from-sky-400 to-blue-600",
+    pink: "bg-gradient-to-br from-pink-400 to-rose-600",
+    green: "bg-gradient-to-br from-emerald-400 to-green-600",
+    purple: "bg-gradient-to-br from-violet-400 to-purple-600",
+    orange: "bg-gradient-to-br from-amber-400 to-orange-600",
+  };
+
+  if (
+    colorToken === "blue" ||
+    colorToken === "pink" ||
+    colorToken === "green" ||
+    colorToken === "purple" ||
+    colorToken === "orange"
+  ) {
+    return colors[colorToken];
+  }
+
+  return THEME.brand.gradientDiagonal;
 }

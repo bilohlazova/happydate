@@ -6,6 +6,7 @@ import HappyDateCharacter from "@/components/character/HappyDateCharacter";
 
 import DialogueBubble from "./DialogueBubble";
 import DialogueTyper from "./DialogueTyper";
+import HappyCards from "./HappyCards";
 import MoodSelector from "./MoodSelector";
 import BriefingButton from "./BriefingButton";
 
@@ -20,6 +21,7 @@ import { MobileUI } from "@/lib/theme/mobile";
 import type {
   CharacterMood,
   DialogueLine,
+  HappyCard,
   HappyDateMode,
   HappySession,
 } from "@/lib/happy";
@@ -43,6 +45,9 @@ export default function HomeHero({
     useState<DialogueLine[]>(() =>
       createWelcomeDialogue(firstName)
     );
+
+  const [cards, setCards] =
+    useState<HappyCard[]>([]);
 
   const [mood, setMood] =
     useState<CharacterMood>("happy");
@@ -82,6 +87,7 @@ export default function HomeHero({
       onSessionChange: setSession,
       onBriefingReady: (briefing) => {
         setDialogue(briefing.dialogue);
+        setCards(briefing.cards);
       },
     });
   }
@@ -119,6 +125,8 @@ export default function HomeHero({
               />
             )}
           </DialogueBubble>
+
+          <HappyCards cards={cards} />
         </div>
       </div>
 

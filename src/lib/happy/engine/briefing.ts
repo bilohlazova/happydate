@@ -1,14 +1,19 @@
 import { createMorningDialogue } from "../dialogues";
+import { generateMorningCards } from "../brain";
+
 import type { HappyContext } from "../context";
 import type { HappyResponse } from "./responses";
 
-export function createMorningBriefing(
+export async function createMorningBriefing(
   context: HappyContext
-): HappyResponse {
+): Promise<HappyResponse> {
+  const cards = await generateMorningCards(context);
+
   return {
     dialogue: createMorningDialogue(
       context.mode,
       context.firstName
     ),
+    cards,
   };
 }

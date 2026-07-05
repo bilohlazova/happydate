@@ -18,7 +18,9 @@ export interface HappySession {
 interface RunMorningSessionParams {
   context: HappyContext;
 
-  onSessionChange: (session: HappySession) => void;
+  onSessionChange: (
+    session: HappySession
+  ) => void;
 
   onBriefingReady: (
     briefing: HappyResponse
@@ -34,25 +36,36 @@ export function createIdleSession(
   };
 }
 
+const THINKING_DELAY = 1200;
+
+function wait(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 export async function runMorningSession({
   context,
   onSessionChange,
   onBriefingReady,
-}: RunMorningSessionParams) {
+}: RunMorningSessionParams): Promise<void> {
   onSessionChange({
     state: "thinking",
     mode: context.mode,
   });
 
   // Тимчасова затримка.
-  // Пізніше тут буде AI, календар, пам'ять,
-  // погода, подарунки тощо.
-  await new Promise((resolve) =>
-    setTimeout(resolve, 1200)
-  );
+  // Пізніше тут буде:
+  // • AI
+  // • календар
+  // • пам'ять
+  // • погода
+  // • подарунки
+  // • рекомендації
+  await wait(THINKING_DELAY);
 
   const briefing =
-    createMorningBriefing(context);
+    await createMorningBriefing(context);
 
   onBriefingReady(briefing);
 

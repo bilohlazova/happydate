@@ -12,6 +12,8 @@ export type {
   CharacterMood,
   CharacterState,
   DialogueLine,
+  HappyCard,
+  HappyCardType,
   HappyDateMode,
 } from "./types";
 

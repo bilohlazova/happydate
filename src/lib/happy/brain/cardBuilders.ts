@@ -1,5 +1,13 @@
 import type { PersonSummary } from "@/lib/repositories/people";
+import type { EventSummary } from "@/lib/repositories/events";
 import type { HappyCard } from "../types";
+
+function formatCardDate(date: Date): string {
+  return new Intl.DateTimeFormat("pl-PL", {
+    day: "numeric",
+    month: "long",
+  }).format(date);
+}
 
 export function createBirthdayCard(
   person: PersonSummary
@@ -47,9 +55,24 @@ export function createGiftIdeaCard(
     type: "idea",
     priority: "low",
     icon: "💡",
-    title: "Mam pomysł",
+    title: "Pomysł na prezent",
     description: `Może przygotować prezent dla ${person.firstName}?`,
     actionLabel: "Sprawdź",
     actionRoute: "/gift/start",
+  };
+}
+
+export function createEventCard(
+  event: EventSummary
+): HappyCard {
+  return {
+    id: `event-${event.id}`,
+    type: "reminder",
+    priority: "medium",
+    icon: "📅",
+    title: event.title,
+    description: formatCardDate(event.date),
+    actionLabel: "Pokaż",
+    actionRoute: "/dashboard",
   };
 }

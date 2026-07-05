@@ -1,6 +1,7 @@
 import { loadBrain } from "./loadBrain";
 import {
   createBirthdayCard,
+  createEventCard,
   createMemoryCards,
   createGiftIdeaCard,
 } from "./cardBuilders";
@@ -16,14 +17,20 @@ export async function generateMorningCards(
   const cards: HappyCard[] = [];
 
   const [birthdayPerson] = brain.upcomingBirthdays;
+  const [upcomingEvent] = brain.upcomingEvents;
 
-  if (!birthdayPerson) {
-    return cards;
+  if (birthdayPerson) {
+    cards.push(createBirthdayCard(birthdayPerson));
   }
 
-  cards.push(createBirthdayCard(birthdayPerson));
-  cards.push(...createMemoryCards(birthdayPerson));
-  cards.push(createGiftIdeaCard(birthdayPerson));
+  if (upcomingEvent) {
+    cards.push(createEventCard(upcomingEvent));
+  }
+
+  if (birthdayPerson) {
+    cards.push(...createMemoryCards(birthdayPerson));
+    cards.push(createGiftIdeaCard(birthdayPerson));
+  }
 
   return cards;
 }

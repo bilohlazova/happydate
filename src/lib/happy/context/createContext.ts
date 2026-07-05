@@ -3,7 +3,7 @@ import type { HappyDateMode } from "../types";
 import { getHappyMemory } from "../memory";
 
 interface CreateContextParams {
-  firstName: string;
+  firstName?: string;
   mode: HappyDateMode;
 }
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type {
   HappyCard,
+  HappyCardPriority,
   HappyCardType,
 } from "@/lib/happy";
 
@@ -28,7 +29,7 @@ const THOUGHT_STYLES: Record<
     icon: "bg-pink-50 text-pink-700",
   },
   idea: {
-    label: "Mam pomysł...",
+    label: "Pomysł na prezent...",
     accent: "from-amber-300 to-yellow-300",
     icon: "bg-amber-50 text-amber-700",
   },
@@ -39,6 +40,12 @@ const THOUGHT_STYLES: Record<
   },
 };
 
+const PRIORITY_ORDER: Record<HappyCardPriority, number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
 export default function HappyCards({
   cards,
 }: HappyCardsProps) {
@@ -46,7 +53,8 @@ export default function HappyCards({
 
   const sortedCards = [...cards].sort(
     (firstCard, secondCard) =>
-      firstCard.priority - secondCard.priority
+      PRIORITY_ORDER[firstCard.priority] -
+      PRIORITY_ORDER[secondCard.priority]
   );
 
   return (

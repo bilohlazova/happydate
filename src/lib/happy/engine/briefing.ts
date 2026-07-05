@@ -12,7 +12,8 @@ export async function createMorningBriefing(
   return {
     dialogue: createMorningDialogue(
       context.mode,
-      context.firstName
+      context.firstName,
+      cards.length
     ),
     cards,
   };

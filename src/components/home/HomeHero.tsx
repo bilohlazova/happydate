@@ -31,7 +31,7 @@ interface HomeHeroProps {
 }
 
 export default function HomeHero({
-  firstName = "Mario",
+  firstName,
 }: HomeHeroProps) {
   const [mode, setMode] =
     useState<HappyDateMode>("quick");

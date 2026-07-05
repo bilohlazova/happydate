@@ -2,7 +2,7 @@ import type { HappyDateMode } from "../types";
 import type { HappyMemory } from "../memory";
 
 export interface HappyContext {
-  firstName: string;
+  firstName?: string;
   mode: HappyDateMode;
 
   locale: string;

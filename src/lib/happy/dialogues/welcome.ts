@@ -1,12 +1,16 @@
 import type { DialogueLine } from "../types";
 
 export function createWelcomeDialogue(
-  firstName: string
+  firstName?: string
 ): DialogueLine[] {
+  const greeting = firstName
+    ? `Dzień dobry, ${firstName}! 👋`
+    : "Dzień dobry! 👋";
+
   return [
     {
       id: "welcome-0",
-      text: `Dzień dobry, ${firstName}! 👋`,
+      text: greeting,
       mood: "happy",
     },
     {

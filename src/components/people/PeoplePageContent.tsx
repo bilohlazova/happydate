@@ -16,8 +16,8 @@ import { AddPersonMenu } from "@/components/people/AddPersonMenu";
 import type { MemoryRow } from "@/lib/repositories/memory.types";
 import type { PersonRow } from "@/lib/repositories/person.types";
 
-const COLLAPSE_THRESHOLD = 20;
-const COLLAPSED_VISIBLE_COUNT = 10;
+const COLLAPSE_THRESHOLD = 4;
+const COLLAPSED_VISIBLE_COUNT = 4;
 
 interface PeoplePageContentProps {
   loading: boolean;
@@ -153,27 +153,62 @@ function PeopleList({
     return <PeopleMessage>Brak wyników dla tego wyszukiwania.</PeopleMessage>;
   }
 
-  const favoritePeople = filteredPeople.filter((item) => item.isFavorite);
-  const otherPeople = filteredPeople.filter((item) => !item.isFavorite);
+  if (query.trim()) {
+    return (
+      <PeopleSection
+        title={`🔎 Wyniki (${filteredPeople.length})`}
+        items={filteredPeople}
+      />
+    );
+  }
+
+  const nowPeople = filteredPeople.filter(
+    (item) =>
+      typeof item.daysUntilNextDate === "number" &&
+      item.daysUntilNextDate <= 7
+  );
+  const nowIds = new Set(nowPeople.map((item) => item.person.id));
+
+  const weekPeople = filteredPeople.filter(
+    (item) =>
+      !nowIds.has(item.person.id) &&
+      ((typeof item.daysUntilNextDate === "number" &&
+        item.daysUntilNextDate <= 14) ||
+        item.memoriesCount === 0)
+  );
+  const weekIds = new Set(weekPeople.map((item) => item.person.id));
+
+  const importantPeople = filteredPeople.filter(
+    (item) =>
+      item.isFavorite &&
+      !nowIds.has(item.person.id) &&
+      !weekIds.has(item.person.id)
+  );
+  const importantIds = new Set(importantPeople.map((item) => item.person.id));
+
+  const otherPeople = filteredPeople.filter(
+    (item) =>
+      !nowIds.has(item.person.id) &&
+      !weekIds.has(item.person.id) &&
+      !importantIds.has(item.person.id)
+  );
   const shouldCollapse = peopleCount > COLLAPSE_THRESHOLD && !query.trim();
   const visibleOtherPeople =
     shouldCollapse && !expanded
       ? otherPeople.slice(0, COLLAPSED_VISIBLE_COUNT)
       : otherPeople;
   const hiddenCount = otherPeople.length - visibleOtherPeople.length;
-  const otherPeopleTitle =
-    favoritePeople.length > 0
-      ? `👥 Wszystkie pozostałe (${otherPeople.length})`
-      : `👥 Osoby (${filteredPeople.length})`;
 
   return (
     <div className="flex flex-col gap-4">
-      {favoritePeople.length > 0 && (
-        <PeopleSection title="⭐ Ulubione" items={favoritePeople} />
-      )}
+      <PeopleSection title="❤️ Teraz" items={nowPeople} />
+
+      <PeopleSection title="🕒 W tym tygodniu" items={weekPeople} />
+
+      <PeopleSection title="❤️ Najważniejsze" items={importantPeople} />
 
       <PeopleSection
-        title={otherPeopleTitle}
+        title={`👥 Pozostali (${otherPeople.length})`}
         caption={
           shouldCollapse
             ? `Pokazano ${visibleOtherPeople.length} z ${otherPeople.length}`

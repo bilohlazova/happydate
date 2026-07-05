@@ -1,7 +1,5 @@
-import { Cake, Clock3, Heart } from "lucide-react";
+import { Cake, Heart, MessageCircleHeart } from "lucide-react";
 import type { ReactNode } from "react";
-
-import { AddPersonMenuItems } from "@/components/people/AddPersonMenu";
 
 interface PeopleSummaryCardProps {
   peopleCount: number;
@@ -15,45 +13,27 @@ export function PeopleSummaryCard({
   waitingForContact,
 }: PeopleSummaryCardProps) {
   return (
-    <section className="rounded-[1.75rem] bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] ring-1 ring-slate-100 sm:p-8">
-      <div className="grid gap-7 md:grid-cols-[1.05fr_0.95fr] md:items-center">
-        <div>
-          <div className="flex items-center gap-3">
-            <p className="text-2xl font-black text-slate-950 sm:text-3xl">
-              {peopleCount} ważne osoby
-            </p>
-            <Heart className="h-8 w-8 fill-blue-600 text-blue-600" />
-          </div>
-          <p className="mt-4 max-w-xs text-lg font-medium leading-8 text-slate-500">
-            Happy pamięta o tym, co najważniejsze
-          </p>
+    <section className="rounded-[1.25rem] bg-white px-4 py-4 shadow-[0_12px_30px_rgba(15,23,42,0.06)] ring-1 ring-slate-100">
+      <div className="flex items-center gap-2">
+        <p className="text-xl font-black text-slate-950">
+          {peopleCount} ważne osoby
+        </p>
+        <Heart className="h-6 w-6 fill-blue-600 text-blue-600" />
+      </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-4">
-            <StatPill
-              tone="pink"
-              icon={<Cake className="h-6 w-6" />}
-              value={birthdaysThisWeek}
-              label="urodziny w tym tygodniu"
-            />
-            <StatPill
-              tone="blue"
-              icon={<Clock3 className="h-6 w-6" />}
-              value={waitingForContact}
-              label="osoby czekają na kontakt"
-            />
-          </div>
-
-          <button
-            type="button"
-            className="mt-6 text-left text-base font-bold text-blue-600 transition hover:text-blue-500"
-          >
-            Zobacz nadchodzące wydarzenia →
-          </button>
-        </div>
-
-        <div className="hidden border-l border-slate-200 pl-7 md:block">
-          <AddPersonMenuItems />
-        </div>
+      <div className="mt-3 grid grid-cols-2 gap-2.5">
+        <StatPill
+          tone="pink"
+          icon={<Cake className="h-4 w-4" />}
+          value={birthdaysThisWeek}
+          label="urodziny"
+        />
+        <StatPill
+          tone="blue"
+          icon={<MessageCircleHeart className="h-4 w-4" />}
+          value={waitingForContact}
+          label="czekają na kontakt"
+        />
       </div>
     </section>
   );
@@ -76,12 +56,12 @@ function StatPill({
       : "bg-blue-50 text-blue-600";
 
   return (
-    <div className={`rounded-2xl ${palette} p-4`}>
-      <div className="flex items-center gap-3">
+    <div className={`rounded-[1rem] ${palette} px-3 py-2.5`}>
+      <div className="flex items-center gap-2">
         {icon}
-        <span className="text-xl font-black text-slate-950">{value}</span>
+        <span className="text-lg font-black text-slate-950">{value}</span>
       </div>
-      <p className="mt-1 text-sm font-medium leading-5 text-slate-600">
+      <p className="mt-0.5 text-xs font-bold leading-4 text-slate-600">
         {label}
       </p>
     </div>

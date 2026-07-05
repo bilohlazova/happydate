@@ -6,7 +6,7 @@ import Panel from "@/components/ui/Panel";
 
 import type { PersonRow } from "@/lib/repositories/person.types";
 import { getRelationshipInfo } from "@/lib/people/relationship";
-import { Cake, ChevronRight, Heart, Sparkles } from "lucide-react";
+import { BookOpen, Cake, ChevronRight, Heart } from "lucide-react";
 
 type PersonCardData = PersonRow & {
   color_token?: string | null;
@@ -101,25 +101,18 @@ export default function PersonCard({
               : "👤 Bliska osoba"}
           </p>
 
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {displayTags.length > 0 ? (
-              displayTags.map((tag) => (
-                <span
-                  key={tag}
-                  className={`rounded-full ${accent.soft} px-2.5 py-0.5 text-[0.7rem] font-bold leading-5 ${accent.text}`}
-                >
-                  {tag}
-                </span>
-              ))
-            ) : (
-              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[0.7rem] font-bold leading-5 text-slate-500">
-                ✨ Dodaj tag
-              </span>
-            )}
-          </div>
+          {displayTags.length > 0 && (
+            <p className={`mt-1 truncate text-[0.74rem] font-bold ${accent.text}`}>
+              {displayTags.map(formatTagPreview).join(" • ")}
+            </p>
+          )}
 
-          <p className="mt-1.5 flex items-center gap-1 text-[0.72rem] font-semibold text-slate-500 sm:text-xs">
-            <Sparkles className="h-3.5 w-3.5" />
+          <p
+            className={`mt-1.5 flex items-center gap-1 text-[0.72rem] font-semibold sm:text-xs ${
+              memoriesCount > 0 ? "text-slate-500" : "text-blue-600"
+            }`}
+          >
+            <BookOpen className="h-3.5 w-3.5" />
             {memoriesCount > 0
               ? `${memoriesCount} ${getMemoryLabel(memoriesCount)}`
               : "Dodaj pierwsze wspomnienie"}
@@ -215,6 +208,32 @@ function getMemoryLabel(count: number): string {
   }
 
   return "wspomnień";
+}
+
+function formatTagPreview(tag: string): string {
+  const normalized = tag.toLowerCase();
+
+  if (normalized.includes("kaw") || normalized.includes("latte")) {
+    return `☕ ${tag}`;
+  }
+
+  if (normalized.includes("kwiat") || normalized.includes("tulipan")) {
+    return `🌷 ${tag}`;
+  }
+
+  if (normalized.includes("prezent") || normalized.includes("gift")) {
+    return `🎁 ${tag}`;
+  }
+
+  if (normalized.includes("jedz") || normalized.includes("restaurant")) {
+    return `🍽️ ${tag}`;
+  }
+
+  if (normalized.includes("sport") || normalized.includes("gry")) {
+    return `⚽ ${tag}`;
+  }
+
+  return `✨ ${tag}`;
 }
 
 function getAccent(seed: string) {

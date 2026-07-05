@@ -107,7 +107,7 @@ export default function HomePageClient() {
         style={{
           maxWidth: 520,
           margin: "0 auto",
-          padding: "24px 16px 60px",
+          padding: "10px 16px 24px",
         }}
       >
         <HomeHero />

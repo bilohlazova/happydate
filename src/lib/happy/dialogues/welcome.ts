@@ -11,12 +11,7 @@ export function createWelcomeDialogue(
     },
     {
       id: "welcome-1",
-      text: "Sprawdziłem już Twój dzień.",
-      mood: "calm",
-    },
-    {
-      id: "welcome-2",
-      text: "Wybierz, jak mam przygotować dzisiejsze podsumowanie.",
+      text: "Wybierz dzisiejszy tryb.",
       mood: "calm",
     },
   ];

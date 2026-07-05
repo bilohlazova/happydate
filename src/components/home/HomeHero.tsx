@@ -94,7 +94,7 @@ export default function HomeHero({
           mood={mood}
         />
 
-        <div className="mt-5 w-full">
+        <div className="mt-2 w-full">
           <DialogueBubble>
             {session.state === "thinking" ? (
               <p

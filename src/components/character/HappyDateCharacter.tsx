@@ -1,6 +1,4 @@
 import CharacterFace from "./CharacterFace";
-import { MobileUI } from "@/lib/theme/mobile";
-
 import type {
   CharacterMood,
   HappySessionState,
@@ -22,11 +20,6 @@ export default function HappyDateCharacter({
         state={state}
       />
 
-      <h2
-        className={`${MobileUI.characterTitleSpacing} ${MobileUI.characterTitle} font-bold text-sky-700`}
-      >
-        HappyDate
-      </h2>
     </div>
   );
 }

@@ -24,6 +24,7 @@ export default function MoodCard({
         rounded-2xl
         border
         ${MobileUI.cardPadding}
+        min-h-16
         text-left
         transition-all
         duration-300
@@ -34,7 +35,7 @@ export default function MoodCard({
         }
       `}
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-center gap-3">
         <div className={MobileUI.cardIcon}>
           {icon}
         </div>
@@ -44,7 +45,7 @@ export default function MoodCard({
             {title}
           </h3>
 
-          <p className={`mt-1 ${MobileUI.caption} leading-6 text-gray-500`}>
+          <p className={`mt-0.5 ${MobileUI.caption} leading-[15px] text-gray-500`}>
             {subtitle}
           </p>
         </div>

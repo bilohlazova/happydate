@@ -54,16 +54,11 @@ export default function MoodSelector({
     <section className={MobileUI.compactSpacing}>
       <div>
         <h2 className={`${MobileUI.sectionTitle} font-bold text-gray-900`}>
-          Jakiego HappyDate dzisiaj potrzebujesz?
+          Wybierz tryb
         </h2>
-
-        <p className={`mt-1 ${MobileUI.caption} text-gray-500`}>
-          Wybierz sposób, w jaki chcesz otrzymać
-          dzisiejsze podsumowanie.
-        </p>
       </div>
 
-      <div className="space-y-3">
+      <div className={MobileUI.cardSpacing}>
         {MODES.map((mode) => (
           <MoodCard
             key={mode.id}

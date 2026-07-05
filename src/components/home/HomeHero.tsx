@@ -1,47 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
-import HappyDateAvatar from "./HappyDateAvatar";
-import MoodSelector, {
-  HappyDateMode,
-} from "./MoodSelector";
+import HappyDateCharacter from "./HappyDateCharacter";
+import DialogueBubble from "./DialogueBubble";
+import DialogueTyper, { type DialogueLine } from "./DialogueTyper";
+import MoodSelector, { type HappyDateMode } from "./MoodSelector";
 import BriefingButton from "./BriefingButton";
 
-export default function HomeHero() {
-  const [mode, setMode] =
-    useState<HappyDateMode>("quick");
+import { HOME_GREETING } from "@/lib/dialogues/greetings";
+import type { CharacterMood } from "./character/Character.types";
+
+interface HomeHeroProps {
+  firstName?: string;
+}
+
+export default function HomeHero({ firstName = "Mario" }: HomeHeroProps) {
+  const [mode, setMode] = useState<HappyDateMode>("quick");
+  const [speaking, setSpeaking] = useState(false);
+  const [mood, setMood] = useState<CharacterMood>("happy");
+
+  const greeting = useMemo<DialogueLine[]>(() => {
+    return HOME_GREETING.map((line, index) => {
+      const lineMood: CharacterMood = index === 0 ? "happy" : "calm";
+
+      return {
+        id: `greeting-${index}`,
+        text: line.replace("{name}", firstName),
+        mood: lineMood,
+      };
+    });
+  }, [firstName]);
 
   function handleStart() {
     console.log("HappyDate mode:", mode);
 
-    // Тут пізніше запустимо голосовий briefing.
+    // Тут пізніше запустимо Voice Briefing.
   }
 
   return (
     <section className="mx-auto max-w-xl space-y-8">
-      <div className="flex flex-col items-center text-center">
-        <HappyDateAvatar />
+      <div className="flex flex-col items-center">
+        <HappyDateCharacter mood={mood} speaking={speaking} />
 
-        <h1 className="mt-6 text-4xl font-bold text-gray-900">
-          Dzień dobry, Mario!
-        </h1>
-
-        <p className="mt-3 max-w-md text-lg leading-8 text-gray-600">
-          Sprawdziłem już Twój dzień.
-          <br />
-          Wybierz, jak mam przygotować
-          dzisiejsze podsumowanie.
-        </p>
+        <div className="mt-6 w-full">
+          <DialogueBubble>
+            <DialogueTyper
+              lines={greeting}
+              onSpeakingChange={setSpeaking}
+              onMoodChange={(nextMood) => {
+                if (nextMood) {
+                  setMood(nextMood);
+                }
+              }}
+            />
+          </DialogueBubble>
+        </div>
       </div>
 
-      <MoodSelector
-        onChange={setMode}
-      />
+      <MoodSelector onChange={setMode} />
 
-      <BriefingButton
-        onClick={handleStart}
-      />
+      <BriefingButton onClick={handleStart} />
     </section>
   );
 }

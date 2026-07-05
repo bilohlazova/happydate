@@ -19,7 +19,6 @@ import HappyDateAdvisor from "@/components/advisor/HappyDateAdvisor";
 import MemoryList from "@/components/memories/MemoryList";
 
 import { getPersonAdvisorTips } from "@/lib/advisors/personAdvisor";
-import { buildPersonHighlights } from "@/lib/people/highlights";
 
 export default function PersonDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -168,17 +167,13 @@ export default function PersonDetailsPage() {
     memories
   );
 
-  const highlights = buildPersonHighlights(
-    memories
-  );
-
   return (
     <main className="mx-auto max-w-2xl space-y-6 p-6">
       <PersonCard person={person} />
 
       <HappyDateAdvisor tips={advisorTips} />
 
-      <PersonHighlights highlights={highlights} />
+      <PersonHighlights memories={memories} />
 
       <MemoryList memories={memories} />
     </main>

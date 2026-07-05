@@ -1,13 +1,18 @@
 import { getPeople } from "@/lib/repositories/people";
 import { getEvents } from "@/lib/repositories/events";
+import { supabase } from "@/lib/supabaseClient";
+import { getActiveMemories } from "@/lib/repositories/memoryRepository";
+import { mapMemory } from "@/lib/brain/mappers/mapMemory";
 
 import type { PersonSummary } from "@/lib/repositories/people";
 import type { EventSummary } from "@/lib/repositories/events";
+import type { BrainMemory } from "@/lib/brain/types";
+import type { MemoryRow } from "@/lib/repositories/memory.types";
 import type { HappyContext } from "../context";
 
 export interface HappyBrain {
   upcomingBirthdays: PersonSummary[];
-  importantMemories: unknown[];
+  importantMemories: BrainMemory[];
   recentNotes: unknown[];
   upcomingEvents: EventSummary[];
 }
@@ -42,12 +47,58 @@ function getDaysUntilBirthday(
   );
 }
 
+function getMemoryCreatedAtValue(memory: MemoryRow): number {
+  if (!memory.created_at) {
+    return 0;
+  }
+
+  return new Date(memory.created_at).getTime();
+}
+
+async function getMemoriesForCurrentUser(): Promise<BrainMemory[]> {
+  try {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError) {
+      console.error("[happy.loadBrain] getUser failed:", userError);
+      return [];
+    }
+
+    if (!user) {
+      return [];
+    }
+
+    const memories = await getActiveMemories(user.id);
+
+    return memories
+      .filter((memory) => memory.is_active)
+      .sort((firstMemory, secondMemory) => {
+        if (firstMemory.importance !== secondMemory.importance) {
+          return secondMemory.importance - firstMemory.importance;
+        }
+
+        return (
+          getMemoryCreatedAtValue(secondMemory) -
+          getMemoryCreatedAtValue(firstMemory)
+        );
+      })
+      .map(mapMemory);
+  } catch (error) {
+    console.error("[happy.loadBrain] getActiveMemories failed:", error);
+    return [];
+  }
+}
+
 export async function loadBrain(
   context: HappyContext
 ): Promise<HappyBrain> {
-  const [people, events] = await Promise.all([
+  const [people, events, memories] = await Promise.all([
     getPeople(),
     getEvents(),
+    getMemoriesForCurrentUser(),
   ]);
 
   const upcomingBirthdays = people
@@ -82,7 +133,7 @@ export async function loadBrain(
 
   return {
     upcomingBirthdays,
-    importantMemories: [],
+    importantMemories: memories,
     recentNotes: [],
     upcomingEvents,
   };

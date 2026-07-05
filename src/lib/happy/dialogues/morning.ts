@@ -3,7 +3,8 @@ import type { DialogueLine, HappyDateMode } from "../types";
 export function createMorningDialogue(
   mode: HappyDateMode,
   firstName: string | undefined,
-  cardCount: number
+  cardCount: number,
+  memoryTitle?: string
 ): DialogueLine[] {
   const energeticGreeting = firstName
     ? `Dzień dobry, ${firstName}! ☀️`
@@ -25,6 +26,10 @@ export function createMorningDialogue(
       ? "Warto przejrzeć je przed rozpoczęciem dnia."
       : "Możesz spokojnie wrócić do tego później.";
 
+  const memoryLine = memoryTitle
+    ? `Przypomniałem sobie coś ważnego: ${memoryTitle}.`
+    : null;
+
   switch (mode) {
     case "energy":
       return [
@@ -38,7 +43,9 @@ export function createMorningDialogue(
         },
         {
           id: "morning-energy-2",
-          text: "Jestem gotowy pomóc Ci zadbać o ważne osoby.",
+          text:
+            memoryLine ??
+            "Jestem gotowy pomóc Ci zadbać o ważne osoby.",
         },
       ];
 
@@ -54,7 +61,7 @@ export function createMorningDialogue(
         },
         {
           id: "morning-quick-2",
-          text: quickFollowUp,
+          text: memoryLine ?? quickFollowUp,
         },
       ];
 
@@ -70,7 +77,9 @@ export function createMorningDialogue(
         },
         {
           id: "morning-calm-2",
-          text: "Przejdziemy przez wszystko krok po kroku.",
+          text:
+            memoryLine ??
+            "Przejdziemy przez wszystko krok po kroku.",
         },
       ];
 
@@ -82,7 +91,9 @@ export function createMorningDialogue(
         },
         {
           id: "morning-surprise-1",
-          text: "Mam dziś dla Ciebie małą niespodziankę.",
+          text:
+            memoryLine ??
+            "Mam dziś dla Ciebie małą niespodziankę.",
         },
         {
           id: "morning-surprise-2",

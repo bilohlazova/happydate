@@ -1,5 +1,6 @@
 import type { PersonSummary } from "@/lib/repositories/people";
 import type { EventSummary } from "@/lib/repositories/events";
+import type { BrainMemory } from "@/lib/brain/types";
 import type { HappyCard } from "../types";
 
 function formatCardDate(date: Date): string {
@@ -74,5 +75,34 @@ export function createEventCard(
     description: formatCardDate(event.date),
     actionLabel: "Pokaż",
     actionRoute: "/dashboard",
+  };
+}
+
+export function createMemoryCard(
+  memory: BrainMemory
+): HappyCard {
+  const title =
+    memory.title ??
+    memory.value ??
+    memory.content ??
+    "Ważne wspomnienie";
+
+  const description =
+    memory.content ??
+    memory.value ??
+    memory.title ??
+    "Zapisana informacja z pamięci HappyDate.";
+
+  return {
+    id: `memory-${memory.id}`,
+    type: "memory",
+    priority: "medium",
+    icon: "🧠",
+    title,
+    description,
+    actionLabel: "Zobacz",
+    actionRoute: memory.personId
+      ? `/people/${memory.personId}`
+      : "/care",
   };
 }

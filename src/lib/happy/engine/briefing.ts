@@ -8,12 +8,14 @@ export async function createMorningBriefing(
   context: HappyContext
 ): Promise<HappyResponse> {
   const cards = await generateMorningCards(context);
+  const memoryCard = cards.find((card) => card.type === "memory");
 
   return {
     dialogue: createMorningDialogue(
       context.mode,
       context.firstName,
-      cards.length
+      cards.length,
+      memoryCard?.title
     ),
     cards,
   };

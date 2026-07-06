@@ -7,7 +7,7 @@ import Panel from "@/components/ui/Panel";
 import type { PersonRow } from "@/lib/repositories/person.types";
 import { getRelationshipInfo } from "@/lib/people/relationship";
 import { MobileUI } from "@/lib/theme/mobile";
-import { BookOpen, Cake, ChevronRight, Heart } from "lucide-react";
+import { BookOpen, ChevronRight, Heart } from "lucide-react";
 
 type PersonCardData = PersonRow & {
   color_token?: string | null;
@@ -43,17 +43,13 @@ export default function PersonCard({
   nextDateLabel = null,
   daysUntilNextDate = null,
 }: PersonCardProps) {
-  const relationship = getRelationshipInfo(
-    person.relationship
-  );
-
-  const birthday = formatBirthday(
-    person.birthday
-  );
+  const relationship = getRelationshipInfo(person.relationship);
+  const birthday = formatBirthday(person.birthday);
 
   if (variant === "list") {
     const personData = person as PersonCardData;
-    const displayTags = tags.slice(0, 2);
+    // Only one tag shown in compact mode — keeps the middle line to a single row.
+    const displayTag = tags[0];
     const nextDate = nextDateLabel ?? birthday;
     const hasCountdown = typeof daysUntilNextDate === "number";
     const hasBirthday = Boolean(nextDate);
@@ -63,10 +59,12 @@ export default function PersonCard({
     const accent = getAccent(person.id);
 
     return (
-      <article className={`group relative grid min-h-[5.35rem] grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2.5 px-3 py-2.5 transition hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(37,99,235,0.1)] sm:min-h-[5.7rem] sm:gap-3.5 sm:px-4 ${MobileUI.card}`}>
+      <article
+        className={`group relative grid min-h-[4.5rem] grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 px-3 py-2 transition hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(37,99,235,0.1)] sm:min-h-[4.75rem] sm:gap-2.5 sm:px-3.5 ${MobileUI.card}`}
+      >
         {isFavorite && (
           <span
-            className="absolute right-2.5 top-2 text-xs leading-none"
+            className="absolute right-2 top-1.5 text-[0.65rem] leading-none"
             aria-label="Ulubiona osoba"
           >
             ⭐
@@ -77,78 +75,66 @@ export default function PersonCard({
           <Avatar
             name={person.name}
             colorToken={personData.color_token}
-            className="h-12 w-12 text-base shadow-lg sm:h-14 sm:w-14 sm:text-lg"
+            className="h-11 w-11 text-sm shadow-md sm:h-12 sm:w-12 sm:text-base"
           />
           <span
-            className={`absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full ${accent.badge} text-white ring-[3px] ring-white sm:h-7 sm:w-7`}
+            className={`absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full ${accent.badge} text-white ring-2 ring-white`}
           >
             {relationship?.icon ? (
-              <span className="text-xs leading-none sm:text-sm">
+              <span className="text-[0.65rem] leading-none">
                 {relationship.icon}
               </span>
             ) : (
-              <Heart className="h-3.5 w-3.5 fill-white" />
+              <Heart className="h-3 w-3 fill-white" />
             )}
           </span>
         </div>
 
         <div className="min-w-0">
-          <h2 className="truncate text-[1.08rem] font-black leading-5 text-slate-950 sm:text-xl sm:leading-6">
+          <h2 className="truncate text-base font-bold leading-5 text-slate-950">
             {person.name}
           </h2>
-          <p className="mt-0.5 truncate text-[0.78rem] font-semibold text-slate-500 sm:text-sm">
+
+          <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
             {relationship
-              ? `${relationship.icon} ${relationship.label}`
+              ? displayTag
+                ? `${relationship.icon} ${relationship.label} • ${formatTagPreview(displayTag)}`
+                : `${relationship.icon} ${relationship.label}`
               : "👤 Bliska osoba"}
           </p>
 
-          {displayTags.length > 0 && (
-            <p className={`mt-1 truncate text-[0.74rem] font-bold ${accent.text}`}>
-              {displayTags.map(formatTagPreview).join(" • ")}
-            </p>
-          )}
-
           <p
-            className={`mt-1.5 flex items-center gap-1 text-[0.72rem] font-semibold sm:text-xs ${
+            className={`mt-1 flex items-center gap-1 text-[0.7rem] font-semibold ${
               memoriesCount > 0 ? "text-slate-500" : "text-blue-600"
             }`}
           >
-            <BookOpen className="h-3.5 w-3.5" />
+            <BookOpen className="h-3 w-3" />
             {memoriesCount > 0
               ? `${memoriesCount} ${getMemoryLabel(memoriesCount)}`
-              : "Dodaj pierwsze wspomnienie"}
+              : "Brak wspomnień"}
           </p>
         </div>
 
-        <div className="flex min-w-[4.45rem] items-center justify-end gap-2 border-l border-slate-100 pl-2 sm:min-w-[7.5rem] sm:gap-3 sm:pl-4">
-          {hasBirthday && (
-            <span
-              className={`hidden h-11 w-11 shrink-0 items-center justify-center rounded-full ${accent.soft} ${accent.text} sm:flex`}
-            >
-              <Cake className="h-5 w-5" strokeWidth={2.3} />
-            </span>
-          )}
+        <div className="flex min-w-[3.8rem] items-center justify-end border-l border-slate-100 pl-2 sm:pl-3">
           <div className="text-right">
             {hasBirthday ? (
               <>
-                <p
-                  className={`text-[0.78rem] font-black leading-4 ${accent.text} sm:text-base`}
-                >
-                  {hasCountdown ? `Za ${daysUntilNextDate} dni` : "Urodziny"}
+                <p className={`text-[0.75rem] font-black leading-4 ${accent.text}`}>
+                  {hasCountdown ? `🎂 Za ${daysUntilNextDate} dni` : "🎂 Urodziny"}
                 </p>
-                <p className="mt-0.5 max-w-[5.2rem] truncate text-[0.7rem] font-medium text-slate-500 sm:max-w-none sm:text-xs">
+                <p className="mt-0.5 max-w-[4.6rem] truncate text-[0.65rem] font-medium text-slate-500">
                   {nextDate}
                 </p>
               </>
             ) : (
-              <p className="max-w-[4.6rem] text-[0.68rem] font-bold leading-4 text-slate-400 sm:max-w-[7rem] sm:text-xs">
-                Brak daty urodzin
+              <p className="max-w-[4.2rem] text-[0.65rem] font-bold leading-4 text-slate-400">
+                Brak daty
               </p>
             )}
           </div>
         </div>
 
-        <ChevronRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-blue-600 sm:h-6 sm:w-6" />
+        <ChevronRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-blue-600" />
       </article>
     );
   }
@@ -169,11 +155,7 @@ export default function PersonCard({
             </InfoBadge>
           )}
 
-          {birthday && (
-            <InfoBadge icon="🎂">
-              {birthday}
-            </InfoBadge>
-          )}
+          {birthday && <InfoBadge icon="🎂">{birthday}</InfoBadge>}
         </div>
       </div>
 
@@ -239,36 +221,16 @@ function formatTagPreview(tag: string): string {
 
 function getAccent(seed: string) {
   const palettes = [
-    {
-      badge: "bg-pink-500",
-      soft: "bg-pink-50",
-      text: "text-pink-600",
-    },
-    {
-      badge: "bg-blue-600",
-      soft: "bg-blue-50",
-      text: "text-blue-600",
-    },
-    {
-      badge: "bg-emerald-600",
-      soft: "bg-emerald-50",
-      text: "text-emerald-600",
-    },
-    {
-      badge: "bg-amber-500",
-      soft: "bg-amber-50",
-      text: "text-amber-600",
-    },
-    {
-      badge: "bg-violet-600",
-      soft: "bg-violet-50",
-      text: "text-violet-600",
-    },
+    { badge: "bg-pink-500", soft: "bg-pink-50", text: "text-pink-600" },
+    { badge: "bg-blue-600", soft: "bg-blue-50", text: "text-blue-600" },
+    { badge: "bg-emerald-600", soft: "bg-emerald-50", text: "text-emerald-600" },
+    { badge: "bg-amber-500", soft: "bg-amber-50", text: "text-amber-600" },
+    { badge: "bg-violet-600", soft: "bg-violet-50", text: "text-violet-600" },
   ];
 
-  const index = seed
-    .split("")
-    .reduce((sum, char) => sum + char.charCodeAt(0), 0) % palettes.length;
+  const index =
+    seed.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0) %
+    palettes.length;
 
   return palettes[index];
 }

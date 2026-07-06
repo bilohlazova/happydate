@@ -201,12 +201,18 @@ function PeopleList({
   const hiddenCount = otherPeople.length - visibleOtherPeople.length;
 
   return (
-    <div className={MobileUI.stack}>
-      <PeopleSection title="❤️ Teraz" items={nowPeople} />
+    <div className="flex flex-col gap-3">
+      <PeopleSection title={`❤️ Teraz (${nowPeople.length})`} items={nowPeople} />
 
-      <PeopleSection title="🕒 W tym tygodniu" items={weekPeople} />
+      <PeopleSection
+        title={`🕒 W tym tygodniu (${weekPeople.length})`}
+        items={weekPeople}
+      />
 
-      <PeopleSection title="❤️ Najważniejsze" items={importantPeople} />
+      <PeopleSection
+        title={`⭐ Najważniejsze (${importantPeople.length})`}
+        items={importantPeople}
+      />
 
       <PeopleSection
         title={`👥 Pozostali (${otherPeople.length})`}
@@ -256,14 +262,18 @@ function PeopleSection({
 
   return (
     <section>
-      <div className="mb-2 flex items-end justify-between gap-3 px-1">
-        <h2 className="text-sm font-black text-slate-950">{title}</h2>
+      <div className="mb-1.5 flex items-end justify-between gap-3 px-1">
+        <h2 className="text-xs font-black uppercase tracking-wide text-slate-500">
+          {title}
+        </h2>
         {caption && (
-          <p className="text-xs font-bold text-slate-400">▼ {caption}</p>
+          <p className="text-[0.65rem] font-bold text-slate-400">
+            ▼ {caption}
+          </p>
         )}
       </div>
 
-      <ul className={MobileUI.sectionStack}>
+      <ul className="flex flex-col gap-1.5">
         {items.map((item) => (
           <li key={item.person.id}>
             <Link href={`/people/${item.person.id}`} className="block">

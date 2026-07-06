@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { MobileUI } from "@/lib/theme/mobile";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -98,39 +99,39 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-6">
-        <h1 className="text-2xl font-bold mb-1 text-sky-600">Zaloguj się</h1>
-        <p className="text-sm text-gray-500 mb-6">Witaj ponownie! Wpisz e-mail i hasło.</p>
+    <main className={`${MobileUI.screen} flex items-center justify-center px-4 py-6`}>
+      <div className={`${MobileUI.card} w-full max-w-[430px] p-5`}>
+        <h1 className="mb-1 text-[2rem] font-black leading-tight text-sky-600">Zaloguj się</h1>
+        <p className="mb-5 text-sm font-semibold leading-5 text-gray-500">Witaj ponownie! Wpisz e-mail i hasło.</p>
 
         {errorMsg && (
-          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="mb-4 rounded-[0.95rem] border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
             {errorMsg}
           </div>
         )}
         {infoMsg && (
-          <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+          <div className="mb-4 rounded-[0.95rem] border border-green-200 bg-green-50 px-3 py-2 text-sm font-semibold text-green-700">
             {infoMsg}
           </div>
         )}
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+            <label className="mb-1.5 block text-sm font-bold text-gray-700">E-mail</label>
             <input
               type="email"
               autoComplete="email"
               placeholder="nazwa@domena.pl"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border rounded-md p-2"
+              className={MobileUI.input}
               required
               autoFocus
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Hasło</label>
+            <label className="mb-1.5 block text-sm font-bold text-gray-700">Hasło</label>
             <div className="relative">
               <input
                 type={showPwd ? "text" : "password"}
@@ -138,14 +139,14 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full border rounded-md p-2 pr-11"
+                className={`${MobileUI.input} pr-11`}
                 required
                 minLength={6}
               />
               <button
                 type="button"
                 onClick={() => setShowPwd((v) => !v)}
-                className="absolute inset-y-0 right-0 px-3 text-gray-500 hover:text-gray-700"
+                className="absolute inset-y-0 right-0 min-w-11 px-3 text-gray-500 hover:text-gray-700"
                 aria-label={showPwd ? "Ukryj hasło" : "Pokaż hasło"}
               >
                 {showPwd ? "🙈" : "👁️"}
@@ -156,7 +157,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-sky-600 text-white py-2 rounded-md hover:bg-sky-700 transition disabled:opacity-60"
+            className={`${MobileUI.button} w-full bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-60`}
           >
             {loading ? "Logowanie…" : "Zaloguj"}
           </button>

@@ -1166,11 +1166,11 @@ export default function CalendarPage() {
         address-bar-collapse bug that causes content to overflow or shift.
         w-full instead of implicit 100% ensures correct width on all breakpoints.
       */}
-      <div className="min-h-[100dvh] bg-white flex flex-col w-full max-w-lg mx-auto">
+      <div className="mx-auto flex min-h-[100dvh] w-full max-w-[var(--hd-screen-max)] flex-col bg-white pb-[calc(var(--hd-nav-height)+env(safe-area-inset-bottom))]">
         <ToastStack items={toasts} />
 
         {/* ── TOP BAR ── */}
-        <div className="flex items-center justify-between px-4 pt-12 pb-2">
+        <div className="flex items-center justify-between px-4 pb-2 pt-[calc(env(safe-area-inset-top)+12px)]">
           <button
             onClick={() => setShowSearch(true)}
             className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors text-lg"

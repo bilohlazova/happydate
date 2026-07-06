@@ -53,10 +53,11 @@ const SERVICES = [
 
 export default function ServicesPage() {
   return (
-    <main style={{ background: "#f8f7ff", minHeight: "100svh", paddingBottom: 100, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <main style={{ background: "#f8f7ff", minHeight: "100svh", paddingBottom: "calc(var(--hd-nav-height) + 24px + env(safe-area-inset-bottom))", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
 
       {/* ── HERO — компактний ── */}
-      <section style={{ background: "linear-gradient(135deg,#fce7f3,#fef9c3,#dbeafe)", padding: "24px 16px 20px", textAlign: "center" }}>
+      <section style={{ background: "linear-gradient(135deg,#fce7f3,#fef9c3,#dbeafe)", padding: "22px 16px 18px", textAlign: "center" }}>
+        <div style={{ maxWidth: "var(--hd-screen-max)", margin: "0 auto" }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a1040", margin: "0 0 8px", lineHeight: 1.3 }}>
           Jedna usługa.<br />Wiele spokojnych chwil.
         </h1>
@@ -69,9 +70,10 @@ export default function ServicesPage() {
         >
           Zobacz HappyDate Care ↓
         </a>
+        </div>
       </section>
 
-      <div style={{ padding: "16px 16px 0" }}>
+      <div style={{ maxWidth: "var(--hd-screen-max)", margin: "0 auto", padding: "16px 16px 0" }}>
 
         {/* ── HAPPYDATE CARE — kompaktna karta ── */}
         <section id="care" style={{ background: "#fff", borderRadius: 20, border: "1.5px solid #ede9f8", padding: "18px 16px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.04)" }}>

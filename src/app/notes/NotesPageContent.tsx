@@ -260,25 +260,28 @@ export default function NotesPageContent() {
           min-height: 100svh;
           background: #f2f2f7;
           padding-top: env(safe-area-inset-top);
-          padding-bottom: calc(96px + env(safe-area-inset-bottom));
+          padding-bottom: calc(var(--hd-nav-height) + 24px + env(safe-area-inset-bottom));
           color: #000;
           -webkit-font-smoothing: antialiased;
         }
 
         /* ── Header ── */
         .hd-header {
-          padding: 16px 20px 8px;
+          width: 100%;
+          max-width: var(--hd-screen-max);
+          margin: 0 auto;
+          padding: 14px 16px 8px;
           display: flex; align-items: flex-end;
           justify-content: space-between; gap: 12px;
         }
         .hd-header-left h1 {
-          font-size: 32px; font-weight: 700; color: #000;
-          letter-spacing: -.7px; line-height: 1; margin: 0 0 3px;
+          font-size: clamp(30px, 8.5vw, 36px); font-weight: 750; color: #000;
+          letter-spacing: 0; line-height: 1; margin: 0 0 3px;
         }
         .hd-header-left p { font-size: 13px; color: #aeaeb2; font-weight: 400; margin: 0; }
 
         .hd-add-btn {
-          width: 36px; height: 36px; border-radius: 50%;
+          width: 40px; height: 40px; border-radius: 50%;
           background: #007aff;
           display: flex; align-items: center; justify-content: center;
           border: none; cursor: pointer;
@@ -291,7 +294,10 @@ export default function NotesPageContent() {
 
         /* ── Filters ── */
         .hd-tabs {
-          display: flex; gap: 7px; padding: 2px 16px 14px;
+          width: 100%;
+          max-width: var(--hd-screen-max);
+          margin: 0 auto;
+          display: flex; gap: 7px; padding: 2px 16px 12px;
           overflow-x: auto; scrollbar-width: none;
         }
         .hd-tabs::-webkit-scrollbar { display: none; }
@@ -310,7 +316,15 @@ export default function NotesPageContent() {
         }
 
         /* ── Notes feed — clean, no interruptions ── */
-        .hd-feed { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+        .hd-feed {
+          width: 100%;
+          max-width: var(--hd-screen-max);
+          margin: 0 auto;
+          padding: 0 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
 
         /* ── Memory card ── */
         .hd-card {
@@ -558,7 +572,9 @@ export default function NotesPageContent() {
 
         /* ── Search bar ── */
         .hd-search {
-          margin: 0 16px 10px;
+          width: calc(100% - 32px);
+          max-width: calc(var(--hd-screen-max) - 32px);
+          margin: 0 auto 10px;
           background: rgba(118,118,128,.12);
           border-radius: 12px;
           display: flex; align-items: center; gap: 7px;
@@ -581,7 +597,9 @@ export default function NotesPageContent() {
 
         /* ── AI Insights section ── */
         .hd-ai-section {
-          margin: 0 16px 14px;
+          width: calc(100% - 32px);
+          max-width: calc(var(--hd-screen-max) - 32px);
+          margin: 0 auto 14px;
           background: rgba(0,122,255,.06);
           border-radius: 14px;
           padding: 12px 14px;
@@ -605,6 +623,9 @@ export default function NotesPageContent() {
 
         /* ── Search result hint ── */
         .hd-search-hint {
+          width: 100%;
+          max-width: var(--hd-screen-max);
+          margin: 0 auto;
           padding: 0 20px 10px;
           font-size: 13px; color: #8e8e93; font-weight: 400;
         }

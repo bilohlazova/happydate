@@ -37,34 +37,13 @@ function CookieConsent() {
   if (!visible) return null;
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: "rgba(20,20,20,0.95)",
-        color: "#fff",
-        padding: "13px 20px",
-        zIndex: 50,
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 600,
-          margin: "0 auto",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
-        <p style={{ fontSize: 13, margin: 0 }}>
+    <div className="fixed inset-x-0 bottom-[calc(var(--hd-nav-height)+env(safe-area-inset-bottom))] z-50 bg-slate-950/95 px-4 py-3 text-white md:bottom-0">
+      <div className="mx-auto flex max-w-[430px] flex-wrap items-center justify-between gap-3">
+        <p className="m-0 text-[13px] font-medium leading-snug">
           Używamy cookies zgodnie z{" "}
           <Link
             href="/privacy"
-            style={{ color: "#60a5fa", textDecoration: "underline" }}
+            className="text-sky-300 underline"
           >
             Polityką Prywatności
           </Link>
@@ -75,16 +54,7 @@ function CookieConsent() {
             safeStorage.setItem("happydate_cookie_consent", "true");
             setVisible(false);
           }}
-          style={{
-            background: "#3a9bd5",
-            color: "#fff",
-            border: "none",
-            padding: "7px 16px",
-            borderRadius: "var(--border-radius-md)",
-            fontSize: 13,
-            fontWeight: 500,
-            cursor: "pointer",
-          }}
+          className="hd-button min-h-9 bg-sky-500 px-4 text-[13px] text-white"
         >
           Akceptuję
         </button>
@@ -95,21 +65,8 @@ function CookieConsent() {
 
 export default function HomePageClient() {
   return (
-    <main
-      style={{
-        background: "var(--color-background-tertiary)",
-        minHeight: "100vh",
-        WebkitOverflowScrolling: "touch",
-        overflowX: "hidden",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 520,
-          margin: "0 auto",
-          padding: "10px 16px 24px",
-        }}
-      >
+    <main className="hd-screen overflow-x-hidden">
+      <div className="hd-container hd-container-wide hd-page-pad">
         <HomeHero />
       </div>
 

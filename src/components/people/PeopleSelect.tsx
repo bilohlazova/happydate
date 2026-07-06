@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { getPeople } from "@/lib/repositories/personRepository";
 import type { PersonRow } from "@/lib/repositories/person.types";
+import { MobileUI } from "@/lib/theme/mobile";
 
 export interface PeopleSelectProps {
   userId: string;
@@ -58,10 +59,10 @@ export default function PeopleSelect({
   }, [userId]);
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       <label
         htmlFor={SELECT_ID}
-        className="text-sm font-medium text-gray-700"
+        className="text-sm font-bold text-gray-700"
       >
         Osoba
       </label>
@@ -71,7 +72,7 @@ export default function PeopleSelect({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled || loading || !userId || people.length === 0}
-        className="rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
+        className={`${MobileUI.input} disabled:bg-gray-100`}
       >
         <option value="">
           {loading

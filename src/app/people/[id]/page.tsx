@@ -19,6 +19,7 @@ import HappyDateAdvisor from "@/components/advisor/HappyDateAdvisor";
 import MemoryList from "@/components/memories/MemoryList";
 
 import { getPersonAdvisorTips } from "@/lib/advisors/personAdvisor";
+import { MobileUI } from "@/lib/theme/mobile";
 
 export default function PersonDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -144,20 +145,24 @@ export default function PersonDetailsPage() {
 
   if (loading) {
     return (
-      <main className="mx-auto max-w-2xl p-6">
-        <p className="text-sm text-gray-600">
+      <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-4`}>
+        <div className={MobileUI.container}>
+        <p className={`${MobileUI.card} p-5 text-sm font-semibold text-gray-600`}>
           Ładowanie...
         </p>
+        </div>
       </main>
     );
   }
 
   if (!person) {
     return (
-      <main className="mx-auto max-w-2xl p-6">
-        <p className="text-sm text-gray-600">
+      <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-4`}>
+        <div className={MobileUI.container}>
+        <p className={`${MobileUI.card} p-5 text-sm font-semibold text-gray-600`}>
           Nie znaleziono osoby
         </p>
+        </div>
       </main>
     );
   }
@@ -168,7 +173,8 @@ export default function PersonDetailsPage() {
   );
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6">
+    <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-4`}>
+      <div className={`${MobileUI.container} ${MobileUI.stack}`}>
       <PersonCard person={person} />
 
       <HappyDateAdvisor tips={advisorTips} />
@@ -176,6 +182,7 @@ export default function PersonDetailsPage() {
       <PersonHighlights memories={memories} />
 
       <MemoryList memories={memories} />
+      </div>
     </main>
   );
 }

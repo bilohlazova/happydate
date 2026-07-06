@@ -6,6 +6,7 @@ import Panel from "@/components/ui/Panel";
 
 import type { PersonRow } from "@/lib/repositories/person.types";
 import { getRelationshipInfo } from "@/lib/people/relationship";
+import { MobileUI } from "@/lib/theme/mobile";
 import { BookOpen, Cake, ChevronRight, Heart } from "lucide-react";
 
 type PersonCardData = PersonRow & {
@@ -62,7 +63,7 @@ export default function PersonCard({
     const accent = getAccent(person.id);
 
     return (
-      <article className="group relative grid min-h-[6.1rem] grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-3 rounded-[1.2rem] bg-white px-3 py-3 shadow-[0_10px_26px_rgba(15,23,42,0.055)] ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(37,99,235,0.1)] sm:min-h-[6.4rem] sm:gap-4 sm:px-4">
+      <article className={`group relative grid min-h-[5.35rem] grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2.5 px-3 py-2.5 transition hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(37,99,235,0.1)] sm:min-h-[5.7rem] sm:gap-3.5 sm:px-4 ${MobileUI.card}`}>
         {isFavorite && (
           <span
             className="absolute right-2.5 top-2 text-xs leading-none"
@@ -76,10 +77,10 @@ export default function PersonCard({
           <Avatar
             name={person.name}
             colorToken={personData.color_token}
-            className="h-14 w-14 text-lg shadow-lg sm:h-16 sm:w-16 sm:text-xl"
+            className="h-12 w-12 text-base shadow-lg sm:h-14 sm:w-14 sm:text-lg"
           />
           <span
-            className={`absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full ${accent.badge} text-white ring-[3px] ring-white sm:h-8 sm:w-8`}
+            className={`absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full ${accent.badge} text-white ring-[3px] ring-white sm:h-7 sm:w-7`}
           >
             {relationship?.icon ? (
               <span className="text-xs leading-none sm:text-sm">
@@ -92,10 +93,10 @@ export default function PersonCard({
         </div>
 
         <div className="min-w-0">
-          <h2 className="truncate text-[1.38rem] font-black leading-6 text-slate-950 sm:text-2xl sm:leading-7">
+          <h2 className="truncate text-[1.08rem] font-black leading-5 text-slate-950 sm:text-xl sm:leading-6">
             {person.name}
           </h2>
-          <p className="mt-0.5 truncate text-[0.82rem] font-semibold text-slate-500 sm:text-sm">
+          <p className="mt-0.5 truncate text-[0.78rem] font-semibold text-slate-500 sm:text-sm">
             {relationship
               ? `${relationship.icon} ${relationship.label}`
               : "👤 Bliska osoba"}
@@ -119,7 +120,7 @@ export default function PersonCard({
           </p>
         </div>
 
-        <div className="flex min-w-[4.75rem] items-center justify-end gap-2 border-l border-slate-100 pl-2 sm:min-w-[8.75rem] sm:gap-3 sm:pl-5">
+        <div className="flex min-w-[4.45rem] items-center justify-end gap-2 border-l border-slate-100 pl-2 sm:min-w-[7.5rem] sm:gap-3 sm:pl-4">
           {hasBirthday && (
             <span
               className={`hidden h-11 w-11 shrink-0 items-center justify-center rounded-full ${accent.soft} ${accent.text} sm:flex`}
@@ -131,7 +132,7 @@ export default function PersonCard({
             {hasBirthday ? (
               <>
                 <p
-                  className={`text-sm font-black leading-5 ${accent.text} sm:text-lg`}
+                  className={`text-[0.78rem] font-black leading-4 ${accent.text} sm:text-base`}
                 >
                   {hasCountdown ? `Za ${daysUntilNextDate} dni` : "Urodziny"}
                 </p>

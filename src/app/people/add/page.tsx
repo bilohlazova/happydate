@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabaseClient";
 import { createPerson } from "@/lib/repositories/personRepository";
+import { MobileUI } from "@/lib/theme/mobile";
 
 // Add Person page.
 // Creates a new person via the Person Repository.
@@ -74,20 +75,19 @@ export default function AddPersonPage() {
   };
 
   return (
-    <main className="mx-auto max-w-2xl p-6">
-      <h1 className="mb-6 text-2xl font-semibold">
-        Dodaj osobę
-      </h1>
+    <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-4`}>
+      <div className={`${MobileUI.container} ${MobileUI.stack}`}>
+        <header>
+          <h1 className={MobileUI.title}>Dodaj osobę</h1>
+          <p className={MobileUI.pageSubtitle}>Zapisz najważniejsze dane relacji.</p>
+        </header>
 
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col gap-4"
-      >
+      <form onSubmit={handleSubmit} className={`${MobileUI.card} flex flex-col gap-4 p-4`}>
         {/* Name */}
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           <label
             htmlFor="name"
-            className="text-sm font-medium text-gray-700"
+            className="text-sm font-bold text-gray-700"
           >
             Imię
           </label>
@@ -97,15 +97,15 @@ export default function AddPersonPage() {
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className={MobileUI.input}
           />
         </div>
 
         {/* Relationship */}
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           <label
             htmlFor="relationship"
-            className="text-sm font-medium text-gray-700"
+            className="text-sm font-bold text-gray-700"
           >
             Relacja
           </label>
@@ -115,15 +115,15 @@ export default function AddPersonPage() {
             type="text"
             value={relationship}
             onChange={(event) => setRelationship(event.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className={MobileUI.input}
           />
         </div>
 
         {/* Birthday */}
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           <label
             htmlFor="birthday"
-            className="text-sm font-medium text-gray-700"
+            className="text-sm font-bold text-gray-700"
           >
             Urodziny
           </label>
@@ -133,7 +133,7 @@ export default function AddPersonPage() {
             type="date"
             value={birthday}
             onChange={(event) => setBirthday(event.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className={MobileUI.input}
           />
         </div>
 
@@ -146,11 +146,12 @@ export default function AddPersonPage() {
         <button
           type="submit"
           disabled={authLoading || isSaving || !userId}
-          className="rounded-md bg-rose-500 px-4 py-2 text-white disabled:opacity-50"
+          className={`${MobileUI.button} bg-rose-500 text-white disabled:opacity-50`}
         >
           {isSaving ? "Zapisywanie..." : "Zapisz"}
         </button>
       </form>
+      </div>
     </main>
   );
 }

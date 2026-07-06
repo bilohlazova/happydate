@@ -15,31 +15,31 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center h-16 z-50"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-    >
-      {items.map((item) => {
-        // Точне порівняння для "/" щоб не підсвічувати все підряд
-        const active = item.href === "/"
-          ? pathname === "/"
-          : pathname.startsWith(item.href);
+    <nav className="hd-bottom-nav" aria-label="Główna nawigacja">
+      <div className="hd-bottom-nav__inner">
+        {items.map((item) => {
+          // Точне порівняння для "/" щоб не підсвічувати все підряд
+          const active = item.href === "/"
+            ? pathname === "/"
+            : pathname.startsWith(item.href);
 
-        return (
-          <button
-            key={item.href}
-            onClick={() => router.push(item.href)}
-            className="flex flex-col items-center justify-center flex-1 h-full active:scale-95 transition-transform"
-          >
-            <span className={active ? "text-pink-600 text-xl" : "text-slate-400 text-xl"}>
-              {item.icon}
-            </span>
-            <span className={active ? "text-pink-600 text-[11px] font-medium" : "text-slate-400 text-[11px]"}>
-              {item.label}
-            </span>
-          </button>
-        );
-      })}
+          return (
+            <button
+              key={item.href}
+              onClick={() => router.push(item.href)}
+              className={`hd-bottom-nav__item${active ? " is-active" : ""}`}
+              aria-current={active ? "page" : undefined}
+            >
+              <span className="hd-bottom-nav__icon" aria-hidden="true">
+                {item.icon}
+              </span>
+              <span className="hd-bottom-nav__label">
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </nav>
   );
 }

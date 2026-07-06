@@ -15,6 +15,7 @@ import { PeopleSummaryCard } from "@/components/people/PeopleSummaryCard";
 import { AddPersonMenu } from "@/components/people/AddPersonMenu";
 import type { MemoryRow } from "@/lib/repositories/memory.types";
 import type { PersonRow } from "@/lib/repositories/person.types";
+import { MobileUI } from "@/lib/theme/mobile";
 
 const COLLAPSE_THRESHOLD = 4;
 const COLLAPSED_VISIBLE_COUNT = 4;
@@ -97,8 +98,8 @@ export function PeoplePageContent({
   );
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 pb-28 pt-6 sm:px-6">
-      <div className="mx-auto flex max-w-3xl flex-col gap-4">
+    <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-4`}>
+      <div className={`${MobileUI.container} ${MobileUI.stack}`}>
         <PeopleHeader />
 
         <PeopleSummaryCard
@@ -109,7 +110,7 @@ export function PeoplePageContent({
 
         <HappyRecommendationCard recommendation={recommendation} />
 
-        <div className="sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-20 -mx-4 bg-slate-50/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6">
+        <div className="sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-20 -mx-4 bg-slate-50/95 px-4 py-2 backdrop-blur sm:-mx-5 sm:px-5">
           <PeopleSearch value={query} onChange={setQuery} />
         </div>
 
@@ -200,7 +201,7 @@ function PeopleList({
   const hiddenCount = otherPeople.length - visibleOtherPeople.length;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className={MobileUI.stack}>
       <PeopleSection title="❤️ Teraz" items={nowPeople} />
 
       <PeopleSection title="🕒 W tym tygodniu" items={weekPeople} />
@@ -221,7 +222,7 @@ function PeopleList({
         <button
           type="button"
           onClick={() => onExpandedChange(true)}
-          className="h-12 rounded-[1.1rem] bg-white text-sm font-extrabold text-blue-600 shadow-[0_10px_26px_rgba(15,23,42,0.055)] ring-1 ring-slate-100 transition active:scale-[0.99]"
+          className={`${MobileUI.button} bg-white text-blue-600 shadow-[0_10px_26px_rgba(15,23,42,0.055)] ring-1 ring-slate-100`}
         >
           Pokaż pozostałe {hiddenCount}
         </button>
@@ -231,7 +232,7 @@ function PeopleList({
         <button
           type="button"
           onClick={() => onExpandedChange(false)}
-          className="h-12 rounded-[1.1rem] bg-blue-50 text-sm font-extrabold text-blue-600 transition active:scale-[0.99]"
+          className={`${MobileUI.button} bg-blue-50 text-blue-600`}
         >
           Zwiń listę
         </button>
@@ -262,7 +263,7 @@ function PeopleSection({
         )}
       </div>
 
-      <ul className="flex flex-col gap-2.5">
+      <ul className={MobileUI.sectionStack}>
         {items.map((item) => (
           <li key={item.person.id}>
             <Link href={`/people/${item.person.id}`} className="block">
@@ -284,7 +285,7 @@ function PeopleSection({
 
 function PeopleMessage({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-[1.5rem] bg-white p-6 text-sm font-semibold text-slate-500 shadow-[0_13px_34px_rgba(15,23,42,0.06)]">
+    <div className={`${MobileUI.card} p-5 text-sm font-semibold text-slate-500`}>
       {children}
     </div>
   );
@@ -292,7 +293,7 @@ function PeopleMessage({ children }: { children: ReactNode }) {
 
 function PeopleEmptyState() {
   return (
-    <section className="rounded-[1.5rem] bg-white px-5 py-8 text-center shadow-[0_13px_34px_rgba(15,23,42,0.06)] ring-1 ring-slate-100">
+    <section className={`${MobileUI.card} px-5 py-8 text-center`}>
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-3xl">
         💙
       </div>

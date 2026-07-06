@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { MobileUI } from "@/lib/theme/mobile";
 
 type SpecialDate = {
   id?: string;
@@ -166,56 +167,56 @@ export default function SurveyPage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-gray-500">Ładowanie…</p>
+      <main className={`${MobileUI.screen} flex items-center justify-center px-4`}>
+        <p className={`${MobileUI.card} p-5 text-sm font-semibold text-gray-500`}>Ładowanie…</p>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-screen justify-center bg-gray-50 p-6">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-lg p-6 space-y-6">
-        <h1 className="text-2xl font-bold text-sky-600">Krótka ankieta 🎁</h1>
-        <p className="text-sm text-gray-600">
+    <main className={`${MobileUI.screen} ${MobileUI.contentBottom} py-4`}>
+      <div className={`${MobileUI.container} ${MobileUI.card} space-y-5 p-5`}>
+        <h1 className="text-[2rem] font-black leading-tight text-sky-600">Krótka ankieta 🎁</h1>
+        <p className="text-sm font-semibold leading-5 text-gray-600">
           Pomóż nam lepiej dobierać prezenty i wsparcie — za wypełnienie otrzymasz <b>+100 punktów</b>.
         </p>
 
         <form onSubmit={submit} className="space-y-6">
           {/* Likes */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1.5 block text-sm font-bold text-gray-700">
               Co chętnie dostał(a)byś w prezencie? (wpisz po przecinku)
             </label>
             <input
               type="text"
               defaultValue={likesText}
               onChange={(e) => setLikes(splitTags(e.target.value))}
-              className="w-full border rounded-md p-2"
+              className={MobileUI.input}
               placeholder="kwiaty, książki, czekolada…"
             />
           </div>
 
           {/* Dislikes */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1.5 block text-sm font-bold text-gray-700">
               Czego nie chcesz otrzymywać? (po przecinku)
             </label>
             <input
               type="text"
               defaultValue={dislikesText}
               onChange={(e) => setDislikes(splitTags(e.target.value))}
-              className="w-full border rounded-md p-2"
+              className={MobileUI.input}
               placeholder="słodycze, alkohol…"
             />
           </div>
 
           {/* Dream */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Twoje marzenie</label>
+            <label className="mb-1.5 block text-sm font-bold text-gray-700">Twoje marzenie</label>
             <textarea
               value={dream}
               onChange={(e) => setDream(e.target.value)}
-              className="w-full border rounded-md p-2"
+              className={`${MobileUI.input} h-auto min-h-24 py-3`}
               rows={3}
               placeholder="O czym marzysz? (np. kurs językowy, weekend w górach)"
             />
@@ -223,13 +224,13 @@ export default function SurveyPage() {
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="mb-1.5 block text-sm font-bold text-gray-700">
               Dodatkowe uwagi (rozmiar, alergie, itp.)
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full border rounded-md p-2"
+              className={`${MobileUI.input} h-auto min-h-24 py-3`}
               rows={3}
               placeholder="Np. rozmiar M, alergia na orzechy…"
             />
@@ -242,7 +243,7 @@ export default function SurveyPage() {
               <button
                 type="button"
                 onClick={addEmptyDate}
-                className="text-sm px-3 py-1 rounded-md bg-sky-500 text-white hover:bg-sky-600"
+                className={`${MobileUI.button} min-h-9 bg-sky-500 px-3 text-white hover:bg-sky-600`}
               >
                 + Dodaj datę
               </button>
@@ -258,20 +259,20 @@ export default function SurveyPage() {
               {dates.map((d, i) => (
                 <div
                   key={i}
-                  className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center border rounded-md p-2"
+                  className="grid grid-cols-1 items-center gap-2 rounded-[1rem] border border-slate-200 p-2 sm:grid-cols-4"
                 >
                   <input
                     type="date"
                     value={d.date}
                     onChange={(e) => updateDate(i, { date: e.target.value })}
-                    className="border rounded-md p-2 col-span-1"
+                    className={`${MobileUI.input} col-span-1`}
                   />
                   <select
                     value={d.kind}
                     onChange={(e) =>
                       updateDate(i, { kind: e.target.value as SpecialDate["kind"] })
                     }
-                    className="border rounded-md p-2 col-span-1"
+                    className={`${MobileUI.input} col-span-1`}
                   >
                     <option value="support">trudny dzień</option>
                     <option value="celebration">święto</option>
@@ -280,13 +281,13 @@ export default function SurveyPage() {
                     type="text"
                     value={d.label}
                     onChange={(e) => updateDate(i, { label: e.target.value })}
-                    className="border rounded-md p-2 col-span-1"
+                    className={`${MobileUI.input} col-span-1`}
                     placeholder="opis (np. rocznica)"
                   />
                   <button
                     type="button"
                     onClick={() => removeDate(i)}
-                    className="text-sm px-3 py-2 rounded-md bg-red-50 text-red-600 hover:bg-red-100 col-span-1"
+                    className={`${MobileUI.button} col-span-1 bg-red-50 text-red-600 hover:bg-red-100`}
                   >
                     Usuń
                   </button>
@@ -299,17 +300,17 @@ export default function SurveyPage() {
             <button
               type="submit"
               disabled={saving}
-              className="w-full bg-emerald-600 text-white py-2 rounded-md hover:bg-emerald-700 transition disabled:opacity-60"
+              className={`${MobileUI.button} w-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60`}
             >
               {saving ? "Zapisywanie…" : "Zakończ i odbierz +100 pkt"}
             </button>
           </div>
 
           {msg && (
-            <div className="p-2 text-sm rounded-md bg-green-100 text-green-700">{msg}</div>
+            <div className="rounded-[0.95rem] bg-green-100 p-3 text-sm font-semibold text-green-700">{msg}</div>
           )}
           {err && (
-            <div className="p-2 text-sm rounded-md bg-red-100 text-red-700">
+            <div className="rounded-[0.95rem] bg-red-100 p-3 text-sm font-semibold text-red-700">
               {err}
             </div>
           )}

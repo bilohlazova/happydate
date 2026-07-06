@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import PeopleSelect from "@/components/people/PeopleSelect";
 import { supabase } from "@/lib/supabaseClient";
 import { createMemory } from "@/lib/repositories/memoryRepository";
+import { MobileUI } from "@/lib/theme/mobile";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Add Memory page.
@@ -119,12 +120,14 @@ function AddMemoryForm() {
   };
 
   return (
-    <main className="mx-auto max-w-2xl p-6">
-      <h1 className="mb-6 text-2xl font-semibold">
-        Dodaj pamięć
-      </h1>
+    <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-4`}>
+      <div className={`${MobileUI.container} ${MobileUI.stack}`}>
+      <header>
+        <h1 className={MobileUI.title}>Dodaj pamięć</h1>
+        <p className={MobileUI.pageSubtitle}>Zapisz detal, który przyda się później.</p>
+      </header>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className={`${MobileUI.card} flex flex-col gap-4 p-4`}>
         <PeopleSelect
           userId={userId ?? ""}
           value={personId}
@@ -133,15 +136,15 @@ function AddMemoryForm() {
         />
 
         {/* Typ */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="type" className="text-sm font-medium text-gray-700">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="type" className="text-sm font-bold text-gray-700">
             Typ
           </label>
           <select
             id="type"
             value={type}
             onChange={(e) => setType(e.target.value as MemoryType)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className={MobileUI.input}
           >
             {MEMORY_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
@@ -152,8 +155,8 @@ function AddMemoryForm() {
         </div>
 
         {/* Tytuł */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="title" className="text-sm font-medium text-gray-700">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="title" className="text-sm font-bold text-gray-700">
             Tytuł
           </label>
           <input
@@ -162,13 +165,13 @@ function AddMemoryForm() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Np. Ulubiona kawiarnia"
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className={MobileUI.input}
           />
         </div>
 
         {/* Wartość */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="value" className="text-sm font-medium text-gray-700">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="value" className="text-sm font-bold text-gray-700">
             Wartość
           </label>
           <input
@@ -177,13 +180,13 @@ function AddMemoryForm() {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="Np. Cappuccino bez cukru"
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className={MobileUI.input}
           />
         </div>
 
         {/* Data */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="occurredOn" className="text-sm font-medium text-gray-700">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="occurredOn" className="text-sm font-bold text-gray-700">
             Data
           </label>
           <input
@@ -191,13 +194,13 @@ function AddMemoryForm() {
             type="date"
             value={occurredOn}
             onChange={(e) => setOccurredOn(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className={MobileUI.input}
           />
         </div>
 
         {/* Notatka */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="content" className="text-sm font-medium text-gray-700">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="content" className="text-sm font-bold text-gray-700">
             Notatka
           </label>
           <textarea
@@ -206,7 +209,7 @@ function AddMemoryForm() {
             onChange={(e) => setContent(e.target.value)}
             placeholder="Dodatkowe szczegóły..."
             rows={4}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className={`${MobileUI.input} h-auto min-h-28 py-3`}
           />
         </div>
 
@@ -219,11 +222,12 @@ function AddMemoryForm() {
         <button
           type="submit"
           disabled={isSaving || authLoading || !userId}
-          className="mt-2 rounded-md bg-rose-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className={`${MobileUI.button} mt-2 bg-rose-500 text-white disabled:opacity-50`}
         >
           {isSaving ? "Zapisywanie..." : "Zapisz"}
         </button>
       </form>
+      </div>
     </main>
   );
 }

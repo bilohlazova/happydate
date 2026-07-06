@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { MobileUI } from "@/lib/theme/mobile";
 
 type FormState = {
   eventId: string | null;
@@ -133,14 +134,14 @@ export default function GiftStartPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-rose-50 to-amber-50">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 md:px-8 py-8">
+    <main className={`${MobileUI.screen} bg-gradient-to-br from-sky-50 via-rose-50 to-amber-50`}>
+      <div className={`${MobileUI.container} ${MobileUI.contentBottom} py-4`}>
         {/* HERO */}
         <header className="mb-6">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 text-sm font-semibold text-sky-700 border border-white/70">
             🎁 HappyDate Concierge
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-2">
+          <h1 className={`${MobileUI.title} mt-2`}>
             Zrób prezent
           </h1>
           <p className="text-slate-600 mt-1">
@@ -149,7 +150,7 @@ export default function GiftStartPage() {
         </header>
 
         {/* Wydarzenie */}
-        <section className="bg-white/80 backdrop-blur rounded-3xl shadow-xl p-5 border border-white/60 mb-6">
+        <section className={`${MobileUI.card} mb-4 border-white/60 bg-white/80 p-4 backdrop-blur`}>
           <h2 className="font-semibold text-slate-800 mb-3">Wydarzenie</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
             <div className="sm:col-span-2">
@@ -159,7 +160,7 @@ export default function GiftStartPage() {
                 value={form.occasion}
                 onChange={(e) => setForm((f) => ({ ...f, occasion: e.target.value }))}
                 placeholder="Urodziny Mamy, Rocznica, Wieczór gier…"
-                className="w-full h-10 border rounded-xl p-2"
+                className={MobileUI.input}
               />
             </div>
             <div>
@@ -168,7 +169,7 @@ export default function GiftStartPage() {
                 type="date"
                 value={form.eventDate ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, eventDate: e.target.value }))}
-                className="w-full h-10 border rounded-xl p-2"
+                className={MobileUI.input}
               />
             </div>
           </div>
@@ -177,7 +178,7 @@ export default function GiftStartPage() {
         {/* Formularz */}
         <form
           onSubmit={handleSubmit}
-          className="bg-white/80 backdrop-blur rounded-3xl shadow-xl p-5 border border-white/60 space-y-4"
+          className={`${MobileUI.card} space-y-4 border-white/60 bg-white/80 p-4 backdrop-blur`}
         >
           <h2 className="font-semibold text-slate-800">Dla kogo i co lubi?</h2>
 
@@ -188,7 +189,7 @@ export default function GiftStartPage() {
                 value={form.forWhom}
                 onChange={(e) => setForm((f) => ({ ...f, forWhom: e.target.value }))}
                 placeholder="Mama, partner, koleżanka z pracy…"
-                className="w-full h-10 border rounded-xl p-2"
+                className={MobileUI.input}
               />
             </div>
 
@@ -197,7 +198,7 @@ export default function GiftStartPage() {
               <select
                 value={form.gender}
                 onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))}
-                className="w-full h-10 border rounded-xl p-2"
+                className={MobileUI.input}
               >
                 <option value="">—</option>
                 <option value="kobieta">Kobieta</option>
@@ -246,7 +247,7 @@ export default function GiftStartPage() {
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex justify-center items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-5 h-11 rounded-2xl shadow"
+              className={`${MobileUI.button} bg-emerald-500 px-5 text-white shadow hover:bg-emerald-600`}
             >
               {saving ? "Wysyłanie…" : "Wyślij zgłoszenie"}
             </button>
@@ -255,7 +256,7 @@ export default function GiftStartPage() {
               href={whatsAppHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex justify-center items-center gap-2 bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50 px-5 h-11 rounded-2xl"
+              className={`${MobileUI.button} border border-emerald-200 bg-white px-5 text-emerald-700 hover:bg-emerald-50`}
             >
               💬 Udostępnij przez WhatsApp
             </a>

@@ -39,13 +39,13 @@ export default function Header() {
   return (
     <>
       <header
-        className="sticky top-0 z-40 bg-gradient-to-r from-blue-400 to-cyan-400"
+        className="sticky top-0 z-40 border-b border-white/20 bg-gradient-to-r from-sky-500/95 to-cyan-400/95 shadow-[0_8px_22px_rgba(14,165,233,0.12)] backdrop-blur-xl"
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
-        <div className="flex items-center justify-between px-4 h-14">
+        <div className="hd-container flex h-14 items-center justify-between">
 
           {/* LOGO */}
-          <Link href="/" className="text-white font-bold text-lg">
+          <Link href="/" className="min-w-0 truncate text-lg font-extrabold text-white">
             🎁 HappyDate
           </Link>
 
@@ -73,7 +73,7 @@ export default function Header() {
             {!isLoggedIn && (
               <Link
                 href="/auth/login"
-                className="text-white text-sm bg-white/20 px-3 py-1 rounded-lg"
+                className="hd-button min-h-9 bg-white/18 px-3 text-sm font-bold text-white"
               >
                 Login
               </Link>
@@ -82,7 +82,7 @@ export default function Header() {
             {/* HAMBURGER — тільки мобільний */}
             <button
               onClick={() => setMobileMenuOpen((v) => !v)}
-              className="sm:hidden text-white text-xl"
+              className="hd-icon-button sm:hidden text-xl text-white"
               aria-label="Toggle menu"
             >
               ☰
@@ -92,14 +92,14 @@ export default function Header() {
 
         {/* MOBILE MENU — тільки публічні сторінки */}
         {mobileMenuOpen && (
-          <div className="sm:hidden bg-white shadow-lg">
+          <div className="sm:hidden bg-white/96 shadow-lg backdrop-blur-xl">
             {NAV.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
                 className={cx(
-                  "block px-4 py-3 text-sm",
+                  "block min-h-11 px-4 py-3 text-sm font-semibold",
                   item.match(pathname)
                     ? "bg-blue-100 font-semibold"
                     : "hover:bg-gray-100"
@@ -119,7 +119,7 @@ export default function Header() {
                   await supabase.auth.signOut();
                   setMobileMenuOpen(false);
                 }}
-                className="block w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-gray-100"
+                className="block min-h-11 w-full px-4 py-3 text-left text-sm font-semibold text-red-500 hover:bg-gray-100"
               >
                 🚪 Wyloguj
               </button>

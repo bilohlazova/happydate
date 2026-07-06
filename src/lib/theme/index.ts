@@ -14,9 +14,9 @@ export const THEME = {
   },
 
   card: {
-    base: "rounded-3xl border border-sky-100 bg-white",
+    base: "hd-surface",
 
     shadow:
-      "shadow-[0_10px_30px_rgba(14,165,233,0.08)]",
+      "",
   },
 };

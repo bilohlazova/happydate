@@ -200,12 +200,12 @@ export default function AISuggestionsModal({ open, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]" aria-modal="true" role="dialog" aria-labelledby="hd-ai-title">
       <div
-        className="flex items-center justify-center h-full p-4"
+        className="flex h-full items-end justify-center p-0 sm:items-center sm:p-4"
         onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
       >
         <div
           ref={panelRef}
-          className="flex flex-col w-[min(94vw,520px)] max-h-[90vh] rounded-2xl bg-white shadow-2xl ring-1 ring-black/10 animate-[hd-pop_.18s_ease-out_both]"
+          className="flex max-h-[92dvh] w-full flex-col rounded-t-[1.5rem] bg-white shadow-2xl ring-1 ring-black/10 animate-[hd-pop_.18s_ease-out_both] sm:w-[min(94vw,520px)] sm:rounded-2xl"
         >
           {/* Header */}
           <div className="flex items-center justify-between gap-2 bg-gradient-to-r from-sky-500 to-cyan-500 px-4 py-3 text-white shrink-0">
@@ -264,7 +264,7 @@ export default function AISuggestionsModal({ open, onClose }: Props) {
               </div>
 
               {/* Composer */}
-              <div className="border-t bg-white/70 px-4 py-3 shrink-0">
+              <div className="shrink-0 border-t bg-white/70 px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom))]">
                 <div className="flex items-end gap-2">
                   <textarea
                     ref={inputRef}
@@ -274,7 +274,7 @@ export default function AISuggestionsModal({ open, onClose }: Props) {
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void submit(); } }}
                     placeholder='Np. „Dziewczyna, 20 lat, 50 zł, lubi koty i lawendę”'
                     rows={1}
-                    className="flex-1 resize-none rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none shadow-inner focus:ring-2 focus:ring-cyan-300"
+                    className="flex-1 resize-none rounded-xl border border-neutral-200 px-3 py-2 text-[16px] outline-none shadow-inner focus:ring-2 focus:ring-cyan-300"
                   />
                   <button
                     type="button"

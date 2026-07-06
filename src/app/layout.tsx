@@ -40,32 +40,21 @@ export default function RootLayout({
           ${geistSans.variable}
           ${geistMono.variable}
           antialiased
-          min-h-screen
-          bg-slate-50
+          hd-app-shell
         `}
-        style={{
-          // ✅ Відступ знизу для home indicator на iPhone
-          paddingBottom: "env(safe-area-inset-bottom)",
-        }}
       >
-        <div className="flex flex-col min-h-screen">
+        <div className="flex min-h-screen flex-col">
 
           {/* HEADER — сам розтягується під статус-бар через paddingTop у Header.tsx */}
           <Header />
 
           {/* CONTENT */}
-          <main className="flex-1 overflow-y-auto pb-20">
+          <main className="hd-main">
             {children}
           </main>
 
           {/* MOBILE NAV (FIXED) */}
-          <div
-            className="md:hidden fixed bottom-0 left-0 right-0 z-50"
-            style={{
-              // ✅ BottomNav не перекривається home indicator
-              paddingBottom: "env(safe-area-inset-bottom)",
-            }}
-          >
+          <div className="md:hidden">
             <BottomNav />
           </div>
 

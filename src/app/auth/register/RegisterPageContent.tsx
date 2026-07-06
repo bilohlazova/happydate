@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { MobileUI } from "@/lib/theme/mobile";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -129,51 +130,51 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-6">
-        <h1 className="text-2xl font-bold mb-1 text-sky-600">Załóż konto</h1>
-        <p className="text-sm text-gray-500 mb-6">
+    <main className={`${MobileUI.screen} flex items-center justify-center px-4 py-6`}>
+      <div className={`${MobileUI.card} w-full max-w-[430px] p-5`}>
+        <h1 className="mb-1 text-[2rem] font-black leading-tight text-sky-600">Załóż konto</h1>
+        <p className="mb-5 text-sm font-semibold leading-5 text-gray-500">
           Utwórz konto, a następnie wypełnij krótką ankietę i odbierz <b>+100 punktów</b>.
         </p>
 
         {errorMsg && (
-          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="mb-4 rounded-[0.95rem] border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
             {errorMsg}
           </div>
         )}
         {infoMsg && (
-          <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <div className="mb-4 rounded-[0.95rem] border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
             {infoMsg}
           </div>
         )}
 
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Imię i nazwisko (opcjonalnie)</label>
+            <label className="mb-1.5 block text-sm font-bold text-gray-700">Imię i nazwisko (opcjonalnie)</label>
             <input
               type="text"
               placeholder="Maria Kowalska"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full border rounded-md p-2"
+              className={MobileUI.input}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+            <label className="mb-1.5 block text-sm font-bold text-gray-700">E-mail</label>
             <input
               type="email"
               autoComplete="email"
               placeholder="nazwa@domena.pl"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border rounded-md p-2"
+              className={MobileUI.input}
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Hasło</label>
+            <label className="mb-1.5 block text-sm font-bold text-gray-700">Hasło</label>
             <div className="relative">
               <input
                 type={showPwd ? "text" : "password"}
@@ -181,14 +182,14 @@ export default function RegisterPage() {
                 placeholder="min. 6 znaków"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full border rounded-md p-2 pr-11"
+                className={`${MobileUI.input} pr-11`}
                 required
                 minLength={6}
               />
               <button
                 type="button"
                 onClick={() => setShowPwd((v) => !v)}
-                className="absolute inset-y-0 right-0 px-3 text-gray-500 hover:text-gray-700"
+                className="absolute inset-y-0 right-0 min-w-11 px-3 text-gray-500 hover:text-gray-700"
                 aria-label={showPwd ? "Ukryj hasło" : "Pokaż hasło"}
               >
                 {showPwd ? "🙈" : "👁️"}
@@ -197,14 +198,14 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Powtórz hasło</label>
+            <label className="mb-1.5 block text-sm font-bold text-gray-700">Powtórz hasło</label>
             <input
               type={showPwd ? "text" : "password"}
               autoComplete="new-password"
               placeholder="powtórz hasło"
               value={password2}
               onChange={(e) => setPassword2(e.target.value)}
-              className="w-full border rounded-md p-2"
+              className={MobileUI.input}
               required
               minLength={6}
             />
@@ -213,7 +214,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-sky-600 text-white py-2 rounded-md hover:bg-sky-700 transition disabled:opacity-60"
+            className={`${MobileUI.button} w-full bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-60`}
           >
             {loading ? "Rejestracja…" : "Zarejestruj"}
           </button>

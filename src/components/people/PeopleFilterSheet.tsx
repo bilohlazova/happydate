@@ -40,6 +40,7 @@ const GENDER_OPTIONS: Array<{ value: GenderFilter; label: string }> = [
   { value: "all", label: "Wszystkie" },
   { value: "female", label: "Kobiety" },
   { value: "male", label: "Mężczyźni" },
+  { value: "other", label: "Inna" },
   { value: "unspecified", label: "Nie podano" },
 ];
 
@@ -67,14 +68,14 @@ export function PeopleFilterSheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-[120]">
       <button
         type="button"
         aria-label="Zamknij filtry"
         className="absolute inset-0 bg-slate-950/25"
         onClick={onClose}
       />
-      <section className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[82dvh] w-full max-w-[520px] flex-col rounded-t-[1.35rem] bg-white shadow-[0_-18px_60px_rgba(15,23,42,0.22)]">
+      <section className="absolute inset-x-0 bottom-0 mx-auto flex h-[min(82dvh,42rem)] w-full max-w-[520px] flex-col rounded-t-[1.35rem] bg-white shadow-[0_-18px_60px_rgba(15,23,42,0.22)]">
         <div className="shrink-0 px-4 pt-3">
           <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-slate-200" />
           <div className="mb-3 flex items-center justify-between">
@@ -89,7 +90,7 @@ export function PeopleFilterSheet({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
           <div className="grid gap-3">
             <FilterGroup title="Relacja">
               <ChipGrid
@@ -151,7 +152,7 @@ export function PeopleFilterSheet({
           </div>
         </div>
 
-        <div className="grid shrink-0 grid-cols-[0.8fr_1.2fr] gap-2 border-t border-slate-100 bg-white px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
+        <div className="relative z-[2] grid shrink-0 grid-cols-[0.8fr_1.2fr] gap-2 border-t border-slate-100 bg-white px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_22px_rgba(15,23,42,0.06)]">
           <button
             type="button"
             onClick={() => onDraftChange(DEFAULT_PEOPLE_FILTERS)}

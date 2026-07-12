@@ -20,11 +20,17 @@ import {
   createPerson,
   getPeople,
 } from "@/lib/repositories/personRepository";
-import type { PersonGender, PersonRow } from "@/lib/repositories/person.types";
+import type {
+  PersonGender,
+  PersonRelationKey,
+  PersonRow,
+} from "@/lib/repositories/person.types";
 import { GenderSelectField } from "@/components/people/GenderSelectField";
 import { RelationPickerField } from "@/components/people/RelationPickerField";
 import {
-  getRelationCategoryForLabel,
+  getRelationCategoryForKey,
+  getRelationLabel,
+  inferRelationKeyFromLabel,
   type RelationCategory,
 } from "@/components/people/peopleRelations";
 import { MobileUI } from "@/lib/theme/mobile";
@@ -105,6 +111,7 @@ export default function AddPersonPage() {
   const [authLoading, setAuthLoading] = useState(true);
   const [name, setName] = useState("");
   const [relationship, setRelationship] = useState("");
+  const [relationKey, setRelationKey] = useState<PersonRelationKey | null>(null);
   const [relationCategory, setRelationCategory] =
     useState<RelationCategory | null>(null);
   const [birthday, setBirthday] = useState("");
@@ -211,12 +218,15 @@ export default function AddPersonPage() {
     setIsSaving(true);
 
     try {
+      const resolvedRelation = getRelationLabel(relationKey, gender, relationship);
+
       await createPerson({
         userId,
         name: name.trim(),
-        relationship: relationship.trim() || undefined,
-        relationLabel: relationship.trim() || undefined,
-        relationCategory,
+        relationship: resolvedRelation || undefined,
+        relationLabel: resolvedRelation || undefined,
+        relationKey,
+        relationCategory: getRelationCategoryForKey(relationKey) ?? relationCategory,
         birthday: birthday || undefined,
         phone: normalizePhone(phone),
         email: normalizeEmail(email),
@@ -307,8 +317,13 @@ export default function AddPersonPage() {
             name: contact.name,
             relationship: contact.relationship,
             relationLabel: contact.relationship,
+            relationKey: contact.relationship
+              ? inferRelationKeyFromLabel(contact.relationship)
+              : null,
             relationCategory: contact.relationship
-              ? getRelationCategoryForLabel(contact.relationship)
+              ? getRelationCategoryForKey(
+                  inferRelationKeyFromLabel(contact.relationship)
+                )
               : null,
             birthday: contact.birthday,
             gender: "unspecified",
@@ -358,8 +373,11 @@ export default function AddPersonPage() {
 
     if (parsed.name) setName(parsed.name);
     if (parsed.relationship) {
-      setRelationship(parsed.relationship);
-      setRelationCategory(getRelationCategoryForLabel(parsed.relationship));
+      const nextRelationKey = inferRelationKeyFromLabel(parsed.relationship);
+
+      setRelationship(getRelationLabel(nextRelationKey, gender, parsed.relationship));
+      setRelationKey(nextRelationKey);
+      setRelationCategory(getRelationCategoryForKey(nextRelationKey));
     }
     if (parsed.birthday) setBirthday(parsed.birthday);
     if (parsed.phone) setPhone(parsed.phone);
@@ -426,6 +444,7 @@ export default function AddPersonPage() {
             ModeIcon={ModeIcon}
             name={name}
             relationship={relationship}
+            relationKey={relationKey}
             birthday={birthday}
             gender={gender}
             sourceText={sourceText}
@@ -439,8 +458,15 @@ export default function AddPersonPage() {
               setRelationship(value);
               setRelationCategory(category);
             }}
+            onRelationKeyChange={setRelationKey}
             onBirthdayChange={setBirthday}
-            onGenderChange={setGender}
+            onGenderChange={(value) => {
+              setGender(value);
+
+              if (relationKey && relationKey !== "other") {
+                setRelationship(getRelationLabel(relationKey, value));
+              }
+            }}
             onSourceTextChange={setSourceText}
             onParseSource={handleParseSource}
             onCardImageChange={handleCardImageChange}
@@ -667,6 +693,7 @@ function SinglePersonFlow({
   ModeIcon,
   name,
   relationship,
+  relationKey,
   birthday,
   gender,
   sourceText,
@@ -677,6 +704,7 @@ function SinglePersonFlow({
   isSaving,
   onNameChange,
   onRelationshipChange,
+  onRelationKeyChange,
   onBirthdayChange,
   onGenderChange,
   onSourceTextChange,
@@ -688,6 +716,7 @@ function SinglePersonFlow({
   ModeIcon: typeof Contact;
   name: string;
   relationship: string;
+  relationKey: PersonRelationKey | null;
   birthday: string;
   gender: PersonGender;
   sourceText: string;
@@ -698,6 +727,7 @@ function SinglePersonFlow({
   isSaving: boolean;
   onNameChange: (value: string) => void;
   onRelationshipChange: (value: string, category: RelationCategory | null) => void;
+  onRelationKeyChange: (value: PersonRelationKey | null) => void;
   onBirthdayChange: (value: string) => void;
   onGenderChange: (value: PersonGender) => void;
   onSourceTextChange: (value: string) => void;
@@ -775,9 +805,16 @@ function SinglePersonFlow({
           />
         </Field>
 
+        <GenderSelectField value={gender} onChange={onGenderChange} />
+
         <RelationPickerField
           value={relationship}
-          onChange={onRelationshipChange}
+          valueKey={relationKey}
+          gender={gender}
+          onChange={(value, category, key) => {
+            onRelationshipChange(value, category);
+            onRelationKeyChange(key);
+          }}
         />
 
         <Field label="Urodziny" htmlFor="birthday">
@@ -789,8 +826,6 @@ function SinglePersonFlow({
             className={MobileUI.input}
           />
         </Field>
-
-        <GenderSelectField value={gender} onChange={onGenderChange} />
 
         {status && (
           <p className="rounded-[0.8rem] bg-sky-50 px-3 py-2 text-xs font-bold leading-5 text-sky-700">

@@ -111,6 +111,7 @@ function genderLabel(value: PeopleFilters["gender"]) {
     all: "Wszystkie",
     female: "Kobiety",
     male: "Mężczyźni",
+    other: "Inna",
     unspecified: "Nie podano",
   }[value];
 }

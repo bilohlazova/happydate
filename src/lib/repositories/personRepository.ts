@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabaseClient";
 import type {
   PersonGender,
   PersonRelationCategory,
+  PersonRelationKey,
   PersonRow,
 } from "./person.types";
 
@@ -18,12 +19,13 @@ export interface CreatePersonInput {
   name: string;
   relationship?: string;
   relationLabel?: string;
+  relationKey?: PersonRelationKey | null;
   relationCategory?: PersonRelationCategory | null;
   birthday?: string;
   phone?: string;
   email?: string;
   externalContactId?: string;
-  contactSource?: "manual" | "contacts" | "card" | "link";
+  contactSource?: "manual" | "contacts" | "card" | "link" | "qr" | "invite";
   gender?: PersonGender;
 }
 
@@ -32,6 +34,7 @@ export interface UpdatePersonInput {
   name: string;
   relationship?: string;
   relationLabel?: string;
+  relationKey?: PersonRelationKey | null;
   relationCategory?: PersonRelationCategory | null;
   birthday?: string;
   gender?: PersonGender;
@@ -96,6 +99,7 @@ export async function createPerson(
       name: input.name,
       relationship: input.relationship ?? null,
       relation_label: input.relationLabel ?? input.relationship ?? null,
+      relation_key: input.relationKey ?? null,
       relation_category: input.relationCategory ?? null,
       birthday: input.birthday ?? null,
       phone: input.phone ?? null,
@@ -126,6 +130,7 @@ export async function updatePerson(
       name: input.name,
       relationship: input.relationship ?? null,
       relation_label: input.relationLabel ?? input.relationship ?? null,
+      relation_key: input.relationKey ?? null,
       relation_category: input.relationCategory ?? null,
       birthday: input.birthday ?? null,
       gender: input.gender ?? "unspecified",

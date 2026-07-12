@@ -19,8 +19,11 @@ import { PeopleSummaryCard } from "@/components/people/PeopleSummaryCard";
 import { AddPersonMenu } from "@/components/people/AddPersonMenu";
 import { RelationPickerField } from "@/components/people/RelationPickerField";
 import {
+  getPersonRelationKey,
   getPersonRelationLabel,
-  getRelationCategoryForLabel,
+  getPersonRelationSearchAliases,
+  getRelationCategoryForKey,
+  getRelationLabel,
   type RelationCategory,
 } from "@/components/people/peopleRelations";
 import {
@@ -33,7 +36,11 @@ import {
   type PeopleFilters,
 } from "@/components/people/peopleFilters";
 import type { MemoryRow } from "@/lib/repositories/memory.types";
-import type { PersonGender, PersonRow } from "@/lib/repositories/person.types";
+import type {
+  PersonGender,
+  PersonRelationKey,
+  PersonRow,
+} from "@/lib/repositories/person.types";
 import {
   deletePerson,
   updatePerson,
@@ -453,6 +460,7 @@ function PersonActionsSheet({
   const [mode, setMode] = useState<"actions" | "edit" | "delete">("actions");
   const [name, setName] = useState("");
   const [relationship, setRelationship] = useState("");
+  const [relationKey, setRelationKey] = useState<PersonRelationKey | null>(null);
   const [relationCategory, setRelationCategory] =
     useState<RelationCategory | null>(null);
   const [birthday, setBirthday] = useState("");
@@ -468,8 +476,10 @@ function PersonActionsSheet({
     setMode("actions");
     setName(person.name);
     setRelationship(relationLabel);
+    setRelationKey(getPersonRelationKey(person));
     setRelationCategory(
-      person.relation_category ?? getRelationCategoryForLabel(relationLabel)
+      getRelationCategoryForKey(getPersonRelationKey(person)) ??
+        person.relation_category
     );
     setBirthday(person.birthday ?? "");
     setGender(person.gender ?? "unspecified");
@@ -490,12 +500,15 @@ function PersonActionsSheet({
     setError(null);
 
     try {
+      const resolvedRelation = getRelationLabel(relationKey, gender, relationship);
+
       const updatedPerson = await updatePerson({
         personId: person.id,
         name: name.trim(),
-        relationship: relationship.trim() || undefined,
-        relationLabel: relationship.trim() || undefined,
-        relationCategory,
+        relationship: resolvedRelation || undefined,
+        relationLabel: resolvedRelation || undefined,
+        relationKey,
+        relationCategory: getRelationCategoryForKey(relationKey) ?? relationCategory,
         birthday: birthday || undefined,
         gender,
       });
@@ -587,11 +600,24 @@ function PersonActionsSheet({
                 className={MobileUI.input}
               />
             </Field>
+            <GenderSelectField
+              value={gender}
+              onChange={(value) => {
+                setGender(value);
+
+                if (relationKey && relationKey !== "other") {
+                  setRelationship(getRelationLabel(relationKey, value));
+                }
+              }}
+            />
             <RelationPickerField
               value={relationship}
-              onChange={(value, category) => {
+              valueKey={relationKey}
+              gender={gender}
+              onChange={(value, category, key) => {
                 setRelationship(value);
                 setRelationCategory(category);
+                setRelationKey(key);
               }}
             />
             <Field label="Urodziny" htmlFor="edit-birthday">
@@ -603,7 +629,6 @@ function PersonActionsSheet({
                 className={MobileUI.input}
               />
             </Field>
-            <GenderSelectField value={gender} onChange={setGender} />
             {error && (
               <p className="rounded-[0.8rem] bg-rose-50 px-3 py-2 text-xs font-bold text-rose-600">
                 {error}
@@ -756,6 +781,7 @@ function buildSearchText(
   return [
     person.name,
     getPersonRelationLabel(person),
+    ...getPersonRelationSearchAliases(person),
     person.notes,
     person.phone,
     person.email,

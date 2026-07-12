@@ -1,6 +1,21 @@
 // src/lib/repositories/person.types.ts
 
 export type PersonGender = "female" | "male" | "other" | "unspecified";
+export type PersonRelationKey =
+  | "spouse"
+  | "partner"
+  | "parent"
+  | "child"
+  | "sibling"
+  | "close_friend"
+  | "friend"
+  | "family"
+  | "work"
+  | "acquaintance"
+  | "neighbor"
+  | "client"
+  | "other";
+
 export type PersonRelationCategory =
   | "partner"
   | "close_family"
@@ -22,6 +37,8 @@ export interface PersonRow {
   relationship: string | null;
 
   relation_label: string | null;
+
+  relation_key: PersonRelationKey | null;
 
   relation_category: PersonRelationCategory | null;
 

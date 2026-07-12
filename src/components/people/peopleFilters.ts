@@ -6,7 +6,7 @@ import {
 
 export type RelationFilter = "all" | "family" | "partner" | "friends" | "work" | "other";
 export type ImportantDateFilter = "none" | "today" | "7_days" | "30_days" | "missing";
-export type GenderFilter = "all" | "female" | "male" | "unspecified";
+export type GenderFilter = "all" | "female" | "male" | "other" | "unspecified";
 export type ProfileFilter = "none" | "missing_relation" | "missing_memories" | "incomplete";
 export type PeopleSort = "default" | "az" | "birthday" | "recent";
 

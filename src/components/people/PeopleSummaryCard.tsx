@@ -13,15 +13,15 @@ export function PeopleSummaryCard({
   waitingForContact,
 }: PeopleSummaryCardProps) {
   return (
-    <section className="rounded-[1rem] bg-white px-3.5 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.05)] ring-1 ring-slate-100">
+    <section className="rounded-[0.95rem] bg-white px-3.5 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.045)] ring-1 ring-slate-100">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-lg font-black leading-6 text-slate-950">
+        <p className="text-base font-black leading-5 text-slate-950">
           {peopleCount} ważne osoby
         </p>
-        <Heart className="h-5 w-5 shrink-0 fill-blue-600 text-blue-600" />
+        <Heart className="h-[18px] w-[18px] shrink-0 fill-blue-600 text-blue-600" />
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+      <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
         <StatPill
           tone="pink"
           icon={<Cake className="h-3.5 w-3.5" />}

@@ -6,7 +6,6 @@ import Panel from "@/components/ui/Panel";
 
 import type { PersonRow } from "@/lib/repositories/person.types";
 import { getRelationshipInfo } from "@/lib/people/relationship";
-import { MobileUI } from "@/lib/theme/mobile";
 import { ChevronRight } from "lucide-react";
 
 type PersonCardData = PersonRow & {
@@ -63,11 +62,11 @@ export default function PersonCard({
 
     return (
       <article
-        className={`group relative grid min-h-[4.25rem] grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 px-3 py-2 transition hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(37,99,235,0.09)] sm:min-h-[4.5rem] ${MobileUI.card}`}
+        className="group relative grid min-h-14 grid-cols-[2.25rem_minmax(0,1fr)_3.35rem_1rem] items-center gap-2 rounded-[0.9rem] bg-white px-2.5 py-1.5 shadow-[0_4px_14px_rgba(15,23,42,0.035)] ring-1 ring-slate-100 transition hover:bg-blue-50/30"
       >
         {isFavorite && (
           <span
-            className="absolute right-2 top-1.5 text-[0.6rem] leading-none"
+            className="absolute right-1.5 top-1 text-[0.55rem] leading-none"
             aria-label="Ulubiona osoba"
           >
             ⭐
@@ -78,44 +77,44 @@ export default function PersonCard({
           <Avatar
             name={person.name}
             colorToken={personData.color_token}
-            className="h-10 w-10 text-xs shadow-md sm:h-11 sm:w-11 sm:text-sm"
+            className="!h-9 !w-9 !text-[0.7rem] !shadow-none !ring-0"
           />
         </div>
 
         <div className="min-w-0">
-          <h2 className="truncate text-base font-bold leading-5 text-slate-950">
+          <h2 className="truncate text-[0.95rem] font-bold leading-5 text-slate-950">
             {person.name}
           </h2>
 
-          <p className="mt-0.5 truncate text-xs font-semibold leading-4 text-slate-500">
+          <p className="truncate text-[0.72rem] font-semibold leading-4 text-slate-500">
             {buildRelationLine(relationship, displayTags)}
           </p>
 
-          <p className="truncate text-[0.7rem] font-semibold leading-4 text-slate-500">
+          <p className="truncate text-[0.68rem] font-semibold leading-3 text-slate-500">
             {memoryText}
           </p>
         </div>
 
-        <div className="flex min-w-[3.35rem] items-center justify-end border-l border-slate-100 pl-2">
+        <div className="flex min-w-0 items-center justify-end border-l border-slate-100 pl-1.5">
           <div className="text-right">
             {hasBirthday ? (
               <>
-                <p className={`text-[0.7rem] font-black leading-4 ${accent.text}`}>
+                <p className={`text-[0.65rem] font-black leading-3.5 ${accent.text}`}>
                   {hasCountdown ? `Za ${daysUntilNextDate} dni` : "🎂"}
                 </p>
-                <p className="max-w-[3.5rem] truncate text-[0.65rem] font-semibold leading-4 text-slate-500">
+                <p className="truncate text-[0.6rem] font-semibold leading-3.5 text-slate-500">
                   {nextDate}
                 </p>
               </>
             ) : (
-              <p className="max-w-[3.5rem] text-[0.65rem] font-bold leading-4 text-slate-400">
+              <p className="text-[0.6rem] font-bold leading-3.5 text-slate-400">
                 Brak daty
               </p>
             )}
           </div>
         </div>
 
-        <ChevronRight className="h-[18px] w-[18px] text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-blue-600" />
+        <ChevronRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-blue-600" />
       </article>
     );
   }

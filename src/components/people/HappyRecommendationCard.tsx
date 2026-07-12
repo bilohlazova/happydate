@@ -17,7 +17,7 @@ export function HappyRecommendationCard({
   }
 
   return (
-    <section className="flex min-h-16 items-center justify-between gap-3 rounded-[1rem] bg-blue-50 px-3.5 py-2.5 shadow-[0_8px_20px_rgba(37,99,235,0.06)]">
+    <section className="flex min-h-14 items-center justify-between gap-3 rounded-[0.95rem] bg-blue-50 px-3.5 py-2 shadow-[0_6px_16px_rgba(37,99,235,0.05)]">
       <div className="min-w-0">
         <p className="truncate text-xs font-black text-slate-950">
           {recommendation.title}
@@ -33,7 +33,7 @@ export function HappyRecommendationCard({
         </button>
       </div>
 
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-2xl shadow-[0_8px_18px_rgba(37,99,235,0.08)]">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-xl shadow-[0_6px_14px_rgba(37,99,235,0.07)]">
         {recommendation.icon}
       </div>
     </section>

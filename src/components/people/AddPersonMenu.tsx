@@ -53,7 +53,7 @@ export function AddPersonMenu() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex h-11 items-center gap-2.5 rounded-[0.95rem] bg-blue-600 px-3.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(37,99,235,0.24)] transition hover:bg-blue-500 active:scale-[0.98] sm:h-12 sm:px-4"
+        className="inline-flex h-10 items-center gap-2 rounded-[0.9rem] bg-blue-600 px-3 text-sm font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.22)] transition hover:bg-blue-500 active:scale-[0.98] sm:h-11 sm:px-3.5"
         aria-expanded={open}
         aria-haspopup="menu"
       >

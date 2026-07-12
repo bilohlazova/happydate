@@ -17,8 +17,8 @@ import type { MemoryRow } from "@/lib/repositories/memory.types";
 import type { PersonRow } from "@/lib/repositories/person.types";
 import { MobileUI } from "@/lib/theme/mobile";
 
-const COLLAPSE_THRESHOLD = 4;
-const COLLAPSED_VISIBLE_COUNT = 4;
+const COLLAPSE_THRESHOLD = 10;
+const COLLAPSED_VISIBLE_COUNT = 10;
 
 interface PeoplePageContentProps {
   loading: boolean;
@@ -91,8 +91,8 @@ export function PeoplePageContent({
   );
 
   return (
-    <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-3`}>
-      <div className={`${MobileUI.container} flex flex-col gap-2.5`}>
+    <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-2.5`}>
+      <div className={`${MobileUI.container} flex flex-col gap-2`}>
         <PeopleHeader />
 
         <PeopleSummaryCard
@@ -103,7 +103,7 @@ export function PeoplePageContent({
 
         <HappyRecommendationCard recommendation={recommendation} />
 
-        <div className="sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-20 -mx-4 bg-slate-50/95 px-4 py-1.5 backdrop-blur sm:-mx-5 sm:px-5">
+        <div className="sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-20 -mx-4 bg-slate-50/95 px-4 py-1 backdrop-blur sm:-mx-5 sm:px-5">
           <PeopleSearch value={query} onChange={setQuery} />
         </div>
 
@@ -183,7 +183,7 @@ function PeopleList({
   const hiddenCount = otherPeople.length - visibleOtherPeople.length;
 
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-2">
       <PeopleSection title={`❤️ Teraz (${nowPeople.length})`} items={nowPeople} />
 
       <PeopleSection
@@ -250,7 +250,7 @@ function PeopleSection({
         )}
       </div>
 
-      <ul className="flex flex-col gap-1.5">
+      <ul className="flex flex-col gap-1">
         {items.map((item) => (
           <li key={item.person.id}>
             <Link href={`/people/${item.person.id}`} className="block">

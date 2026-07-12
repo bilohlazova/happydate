@@ -53,18 +53,18 @@ export function AddPersonMenu() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex h-14 items-center gap-3 rounded-[1.4rem] bg-blue-600 px-5 text-sm font-bold text-white shadow-[0_14px_32px_rgba(37,99,235,0.28)] transition hover:bg-blue-500 active:scale-[0.98] sm:px-6 sm:text-base"
+        className="inline-flex h-11 items-center gap-2.5 rounded-[0.95rem] bg-blue-600 px-3.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(37,99,235,0.24)] transition hover:bg-blue-500 active:scale-[0.98] sm:h-12 sm:px-4"
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <UserRoundPlus className="h-5 w-5" strokeWidth={2.6} />
+        <UserRoundPlus className="h-[18px] w-[18px]" strokeWidth={2.6} />
         Dodaj osobę
       </button>
 
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-16 z-30 w-[min(21rem,calc(100vw-2rem))] overflow-hidden rounded-[1.5rem] border border-blue-100 bg-white p-3 shadow-[0_24px_70px_rgba(15,23,42,0.18)]"
+          className="absolute right-0 top-14 z-30 w-[min(21rem,calc(100vw-2rem))] overflow-hidden rounded-[1.5rem] border border-blue-100 bg-white p-3 shadow-[0_24px_70px_rgba(15,23,42,0.18)]"
         >
           <AddPersonMenuItems />
         </div>

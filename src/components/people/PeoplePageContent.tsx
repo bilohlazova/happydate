@@ -27,18 +27,12 @@ interface PeoplePageContentProps {
   recommendation: HappyRecommendation | null;
 }
 
-type PersonWithFavorite = PersonRow & {
-  favorite?: boolean | null;
-  is_favorite?: boolean | null;
-};
-
 interface PersonListItem {
   person: PersonRow;
   tags: string[];
   memoriesCount: number;
   nextDateLabel: string | null;
   daysUntilNextDate: number | null;
-  isFavorite: boolean;
   searchText: string;
 }
 
@@ -66,7 +60,6 @@ export function PeoplePageContent({
           memoriesCount: personMemories.length,
           nextDateLabel: birthday?.label ?? null,
           daysUntilNextDate: birthday?.daysUntil ?? null,
-          isFavorite: isFavoritePerson(person),
           searchText: buildSearchText(person, tags, personMemories),
         };
       }),
@@ -98,8 +91,8 @@ export function PeoplePageContent({
   );
 
   return (
-    <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-4`}>
-      <div className={`${MobileUI.container} ${MobileUI.stack}`}>
+    <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-3`}>
+      <div className={`${MobileUI.container} flex flex-col gap-2.5`}>
         <PeopleHeader />
 
         <PeopleSummaryCard
@@ -110,7 +103,7 @@ export function PeoplePageContent({
 
         <HappyRecommendationCard recommendation={recommendation} />
 
-        <div className="sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-20 -mx-4 bg-slate-50/95 px-4 py-2 backdrop-blur sm:-mx-5 sm:px-5">
+        <div className="sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-20 -mx-4 bg-slate-50/95 px-4 py-1.5 backdrop-blur sm:-mx-5 sm:px-5">
           <PeopleSearch value={query} onChange={setQuery} />
         </div>
 
@@ -179,19 +172,8 @@ function PeopleList({
   );
   const weekIds = new Set(weekPeople.map((item) => item.person.id));
 
-  const importantPeople = filteredPeople.filter(
-    (item) =>
-      item.isFavorite &&
-      !nowIds.has(item.person.id) &&
-      !weekIds.has(item.person.id)
-  );
-  const importantIds = new Set(importantPeople.map((item) => item.person.id));
-
   const otherPeople = filteredPeople.filter(
-    (item) =>
-      !nowIds.has(item.person.id) &&
-      !weekIds.has(item.person.id) &&
-      !importantIds.has(item.person.id)
+    (item) => !nowIds.has(item.person.id) && !weekIds.has(item.person.id)
   );
   const shouldCollapse = peopleCount > COLLAPSE_THRESHOLD && !query.trim();
   const visibleOtherPeople =
@@ -201,7 +183,7 @@ function PeopleList({
   const hiddenCount = otherPeople.length - visibleOtherPeople.length;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2.5">
       <PeopleSection title={`❤️ Teraz (${nowPeople.length})`} items={nowPeople} />
 
       <PeopleSection
@@ -210,14 +192,9 @@ function PeopleList({
       />
 
       <PeopleSection
-        title={`⭐ Najważniejsze (${importantPeople.length})`}
-        items={importantPeople}
-      />
-
-      <PeopleSection
         title={`👥 Pozostali (${otherPeople.length})`}
         caption={
-          shouldCollapse
+          shouldCollapse && hiddenCount > 0
             ? `Pokazano ${visibleOtherPeople.length} z ${otherPeople.length}`
             : undefined
         }
@@ -262,8 +239,8 @@ function PeopleSection({
 
   return (
     <section>
-      <div className="mb-1.5 flex items-end justify-between gap-3 px-1">
-        <h2 className="text-xs font-black uppercase tracking-wide text-slate-500">
+      <div className="mb-1 flex items-end justify-between gap-3 px-1">
+        <h2 className="text-[0.75rem] font-black uppercase tracking-wide text-slate-500">
           {title}
         </h2>
         {caption && (
@@ -364,14 +341,6 @@ function getTagsForPerson(person: PersonRow, memories: MemoryRow[]): string[] {
   return Array.from(tags).slice(0, 4);
 }
 
-function isFavoritePerson(person: PersonRow): boolean {
-  const personWithFavorite = person as PersonWithFavorite;
-
-  return Boolean(
-    personWithFavorite.favorite ?? personWithFavorite.is_favorite ?? false
-  );
-}
-
 function formatTag(tag: string): string {
   return tag
     .replaceAll("_", " ")
@@ -391,7 +360,6 @@ function getBirthdayInfo(date: string | null) {
     label: new Intl.DateTimeFormat("pl-PL", {
       day: "numeric",
       month: "short",
-      year: "numeric",
     }).format(birthday),
   };
 }

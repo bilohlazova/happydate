@@ -13,24 +13,24 @@ export function PeopleSummaryCard({
   waitingForContact,
 }: PeopleSummaryCardProps) {
   return (
-    <section className="rounded-[1.25rem] bg-white px-4 py-4 shadow-[0_12px_30px_rgba(15,23,42,0.06)] ring-1 ring-slate-100">
-      <div className="flex items-center gap-2">
-        <p className="text-xl font-black text-slate-950">
+    <section className="rounded-[1rem] bg-white px-3.5 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.05)] ring-1 ring-slate-100">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-lg font-black leading-6 text-slate-950">
           {peopleCount} ważne osoby
         </p>
-        <Heart className="h-6 w-6 fill-blue-600 text-blue-600" />
+        <Heart className="h-5 w-5 shrink-0 fill-blue-600 text-blue-600" />
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2.5">
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
         <StatPill
           tone="pink"
-          icon={<Cake className="h-4 w-4" />}
+          icon={<Cake className="h-3.5 w-3.5" />}
           value={birthdaysThisWeek}
           label="urodziny"
         />
         <StatPill
           tone="blue"
-          icon={<MessageCircleHeart className="h-4 w-4" />}
+          icon={<MessageCircleHeart className="h-3.5 w-3.5" />}
           value={waitingForContact}
           label="czekają na kontakt"
         />
@@ -52,18 +52,18 @@ function StatPill({
 }) {
   const palette =
     tone === "pink"
-      ? "bg-pink-50 text-pink-600"
-      : "bg-blue-50 text-blue-600";
+      ? "text-pink-600"
+      : "text-blue-600";
 
   return (
-    <div className={`rounded-[1rem] ${palette} px-3 py-2.5`}>
-      <div className="flex items-center gap-2">
+    <div className={`flex min-w-0 items-center gap-1.5 ${palette}`}>
+      <span className="shrink-0">
         {icon}
-        <span className="text-lg font-black text-slate-950">{value}</span>
-      </div>
-      <p className="mt-0.5 text-xs font-bold leading-4 text-slate-600">
+      </span>
+      <span className="text-sm font-black leading-5 text-slate-950">{value}</span>
+      <span className="truncate text-xs font-bold leading-5 text-slate-600">
         {label}
-      </p>
+      </span>
     </div>
   );
 }

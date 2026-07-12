@@ -3,27 +3,26 @@
 import { HeartHandshake } from "lucide-react";
 
 import { AddPersonMenu } from "@/components/people/AddPersonMenu";
-import { MobileUI } from "@/lib/theme/mobile";
 
 export function PeopleHeader() {
   return (
-    <section className={MobileUI.header}>
+    <section className="flex items-end justify-between gap-3">
       <div>
-        <div className="flex items-center gap-3">
-          <h1 className={MobileUI.title}>
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-[2rem] font-black leading-none text-slate-950 sm:text-[2.25rem]">
             Osoby
           </h1>
           <HeartHandshake
-            className="mt-1 h-9 w-9 text-blue-600 sm:h-10 sm:w-10"
+            className="mt-0.5 h-7 w-7 text-blue-600 sm:h-8 sm:w-8"
             strokeWidth={2.25}
           />
         </div>
-        <p className={MobileUI.pageSubtitle}>
+        <p className="mt-1 text-[0.9rem] font-semibold leading-snug text-slate-500">
           Twoi ludzie. Twoje relacje.
         </p>
       </div>
 
-      <div className="shrink-0 pt-1">
+      <div className="shrink-0">
         <AddPersonMenu />
       </div>
     </section>

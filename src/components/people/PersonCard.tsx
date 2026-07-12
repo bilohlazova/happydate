@@ -7,7 +7,7 @@ import Panel from "@/components/ui/Panel";
 import type { PersonRow } from "@/lib/repositories/person.types";
 import { getRelationshipInfo } from "@/lib/people/relationship";
 import { MobileUI } from "@/lib/theme/mobile";
-import { BookOpen, ChevronRight, Heart } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 type PersonCardData = PersonRow & {
   color_token?: string | null;
@@ -48,8 +48,7 @@ export default function PersonCard({
 
   if (variant === "list") {
     const personData = person as PersonCardData;
-    // Only one tag shown in compact mode — keeps the middle line to a single row.
-    const displayTag = tags[0];
+    const displayTags = tags.slice(0, 1);
     const nextDate = nextDateLabel ?? birthday;
     const hasCountdown = typeof daysUntilNextDate === "number";
     const hasBirthday = Boolean(nextDate);
@@ -57,37 +56,30 @@ export default function PersonCard({
       personData.favorite ?? personData.is_favorite ?? false
     );
     const accent = getAccent(person.id);
+    const memoryText =
+      memoriesCount > 0
+        ? `📖 ${memoriesCount}`
+        : "📖 Brak wspomnień";
 
     return (
       <article
-        className={`group relative grid min-h-[4.5rem] grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 px-3 py-2 transition hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(37,99,235,0.1)] sm:min-h-[4.75rem] sm:gap-2.5 sm:px-3.5 ${MobileUI.card}`}
+        className={`group relative grid min-h-[4.25rem] grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 px-3 py-2 transition hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(37,99,235,0.09)] sm:min-h-[4.5rem] ${MobileUI.card}`}
       >
         {isFavorite && (
           <span
-            className="absolute right-2 top-1.5 text-[0.65rem] leading-none"
+            className="absolute right-2 top-1.5 text-[0.6rem] leading-none"
             aria-label="Ulubiona osoba"
           >
             ⭐
           </span>
         )}
 
-        <div className="relative">
+        <div>
           <Avatar
             name={person.name}
             colorToken={personData.color_token}
-            className="h-11 w-11 text-sm shadow-md sm:h-12 sm:w-12 sm:text-base"
+            className="h-10 w-10 text-xs shadow-md sm:h-11 sm:w-11 sm:text-sm"
           />
-          <span
-            className={`absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full ${accent.badge} text-white ring-2 ring-white`}
-          >
-            {relationship?.icon ? (
-              <span className="text-[0.65rem] leading-none">
-                {relationship.icon}
-              </span>
-            ) : (
-              <Heart className="h-3 w-3 fill-white" />
-            )}
-          </span>
         </div>
 
         <div className="min-w-0">
@@ -95,46 +87,35 @@ export default function PersonCard({
             {person.name}
           </h2>
 
-          <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
-            {relationship
-              ? displayTag
-                ? `${relationship.icon} ${relationship.label} • ${formatTagPreview(displayTag)}`
-                : `${relationship.icon} ${relationship.label}`
-              : "👤 Bliska osoba"}
+          <p className="mt-0.5 truncate text-xs font-semibold leading-4 text-slate-500">
+            {buildRelationLine(relationship, displayTags)}
           </p>
 
-          <p
-            className={`mt-1 flex items-center gap-1 text-[0.7rem] font-semibold ${
-              memoriesCount > 0 ? "text-slate-500" : "text-blue-600"
-            }`}
-          >
-            <BookOpen className="h-3 w-3" />
-            {memoriesCount > 0
-              ? `${memoriesCount} ${getMemoryLabel(memoriesCount)}`
-              : "Brak wspomnień"}
+          <p className="truncate text-[0.7rem] font-semibold leading-4 text-slate-500">
+            {memoryText}
           </p>
         </div>
 
-        <div className="flex min-w-[3.8rem] items-center justify-end border-l border-slate-100 pl-2 sm:pl-3">
+        <div className="flex min-w-[3.35rem] items-center justify-end border-l border-slate-100 pl-2">
           <div className="text-right">
             {hasBirthday ? (
               <>
-                <p className={`text-[0.75rem] font-black leading-4 ${accent.text}`}>
-                  {hasCountdown ? `🎂 Za ${daysUntilNextDate} dni` : "🎂 Urodziny"}
+                <p className={`text-[0.7rem] font-black leading-4 ${accent.text}`}>
+                  {hasCountdown ? `Za ${daysUntilNextDate} dni` : "🎂"}
                 </p>
-                <p className="mt-0.5 max-w-[4.6rem] truncate text-[0.65rem] font-medium text-slate-500">
+                <p className="max-w-[3.5rem] truncate text-[0.65rem] font-semibold leading-4 text-slate-500">
                   {nextDate}
                 </p>
               </>
             ) : (
-              <p className="max-w-[4.2rem] text-[0.65rem] font-bold leading-4 text-slate-400">
+              <p className="max-w-[3.5rem] text-[0.65rem] font-bold leading-4 text-slate-400">
                 Brak daty
               </p>
             )}
           </div>
         </div>
 
-        <ChevronRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-blue-600" />
+        <ChevronRight className="h-[18px] w-[18px] text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-blue-600" />
       </article>
     );
   }
@@ -174,25 +155,6 @@ export default function PersonCard({
   );
 }
 
-function getMemoryLabel(count: number): string {
-  if (count === 1) {
-    return "wspomnienie";
-  }
-
-  const lastDigit = count % 10;
-  const lastTwoDigits = count % 100;
-
-  if (
-    lastDigit >= 2 &&
-    lastDigit <= 4 &&
-    (lastTwoDigits < 12 || lastTwoDigits > 14)
-  ) {
-    return "wspomnienia";
-  }
-
-  return "wspomnień";
-}
-
 function formatTagPreview(tag: string): string {
   const normalized = tag.toLowerCase();
 
@@ -219,13 +181,25 @@ function formatTagPreview(tag: string): string {
   return `✨ ${tag}`;
 }
 
+function buildRelationLine(
+  relationship: ReturnType<typeof getRelationshipInfo>,
+  tags: string[]
+): string {
+  const relationText = relationship
+    ? `${relationship.icon} ${relationship.label}`
+    : "👤 Bliska osoba";
+  const tagText = tags.map(formatTagPreview);
+
+  return [relationText, ...tagText].join(" • ");
+}
+
 function getAccent(seed: string) {
   const palettes = [
-    { badge: "bg-pink-500", soft: "bg-pink-50", text: "text-pink-600" },
-    { badge: "bg-blue-600", soft: "bg-blue-50", text: "text-blue-600" },
-    { badge: "bg-emerald-600", soft: "bg-emerald-50", text: "text-emerald-600" },
-    { badge: "bg-amber-500", soft: "bg-amber-50", text: "text-amber-600" },
-    { badge: "bg-violet-600", soft: "bg-violet-50", text: "text-violet-600" },
+    { text: "text-pink-600" },
+    { text: "text-blue-600" },
+    { text: "text-emerald-600" },
+    { text: "text-amber-600" },
+    { text: "text-violet-600" },
   ];
 
   const index =

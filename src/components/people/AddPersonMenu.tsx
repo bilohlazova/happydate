@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   Contact,
@@ -14,21 +15,25 @@ const MENU_ITEMS = [
     icon: Contact,
     title: "Importuj z kontaktów",
     description: "Wybierz osoby z telefonu",
+    href: "/people/add?mode=contacts",
   },
   {
     icon: Pencil,
     title: "Dodaj ręcznie",
     description: "Wpisz dane samodzielnie",
+    href: "/people/add?mode=manual",
   },
   {
     icon: QrCode,
     title: "Zeskanuj wizytówkę",
-    description: "AI odczyta dane",
+    description: "Dodaj zdjęcie i dane",
+    href: "/people/add?mode=card",
   },
   {
     icon: LinkIcon,
     title: "Link / QR",
     description: "Dodaj z linku lub QR",
+    href: "/people/add?mode=link",
   },
 ];
 
@@ -80,9 +85,9 @@ export function AddPersonMenuItems() {
         const Icon = item.icon;
 
         return (
-          <button
+          <Link
             key={item.title}
-            type="button"
+            href={item.href}
             className="flex min-h-14 w-full items-center gap-3 rounded-[0.9rem] px-2.5 py-2 text-left transition hover:bg-sky-50"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[0.8rem] bg-sky-50 text-sky-600">
@@ -96,7 +101,7 @@ export function AddPersonMenuItems() {
                 {item.description}
               </span>
             </span>
-          </button>
+          </Link>
         );
       })}
     </div>

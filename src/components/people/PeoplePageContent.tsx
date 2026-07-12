@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import PersonCard from "@/components/people/PersonCard";
 import {
@@ -44,6 +44,18 @@ export function PeoplePageContent({
 }: PeoplePageContentProps) {
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
+  const [compactChrome, setCompactChrome] = useState(false);
+
+  useEffect(() => {
+    function updateCompactChrome() {
+      setCompactChrome(window.scrollY > 72);
+    }
+
+    updateCompactChrome();
+    window.addEventListener("scroll", updateCompactChrome, { passive: true });
+
+    return () => window.removeEventListener("scroll", updateCompactChrome);
+  }, []);
 
   const peopleViewModels = useMemo(
     () =>
@@ -89,19 +101,32 @@ export function PeoplePageContent({
     people.length -
       peopleViewModels.filter((item) => item.memoriesCount > 0).length
   );
+  const alphabetItems = useMemo(
+    () => getAlphabetItems(filteredPeople),
+    [filteredPeople]
+  );
 
   return (
     <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-2.5`}>
       <div className={`${MobileUI.container} flex flex-col gap-2`}>
         <PeopleHeader />
 
-        <PeopleSummaryCard
-          peopleCount={people.length}
-          birthdaysThisWeek={birthdaysThisWeek}
-          waitingForContact={waitingForContact}
-        />
+        <div
+          className={`grid gap-2 overflow-hidden transition-all duration-300 ${
+            compactChrome
+              ? "max-h-0 -translate-y-1 opacity-0"
+              : "max-h-36 translate-y-0 opacity-100"
+          }`}
+          aria-hidden={compactChrome}
+        >
+          <PeopleSummaryCard
+            peopleCount={people.length}
+            birthdaysThisWeek={birthdaysThisWeek}
+            waitingForContact={waitingForContact}
+          />
 
-        <HappyRecommendationCard recommendation={recommendation} />
+          <HappyRecommendationCard recommendation={recommendation} />
+        </div>
 
         <div className="sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-20 -mx-4 bg-slate-50/95 px-4 py-1 backdrop-blur sm:-mx-5 sm:px-5">
           <PeopleSearch value={query} onChange={setQuery} />
@@ -115,6 +140,8 @@ export function PeoplePageContent({
           expanded={expanded}
           onExpandedChange={setExpanded}
         />
+
+        <PeopleAlphabetIndex items={alphabetItems} />
       </div>
     </main>
   );
@@ -252,7 +279,7 @@ function PeopleSection({
 
       <ul className="flex flex-col gap-1">
         {items.map((item) => (
-          <li key={item.person.id}>
+          <li key={item.person.id} id={`person-${item.person.id}`}>
             <Link href={`/people/${item.person.id}`} className="block">
               <PersonCard
                 person={item.person}
@@ -267,6 +294,38 @@ function PeopleSection({
         ))}
       </ul>
     </section>
+  );
+}
+
+function PeopleAlphabetIndex({
+  items,
+}: {
+  items: Array<{ letter: string; personId: string }>;
+}) {
+  if (items.length < 6) {
+    return null;
+  }
+
+  return (
+    <nav
+      aria-label="Szybki indeks osób"
+      className="fixed right-1 top-1/2 z-30 hidden -translate-y-1/2 flex-col rounded-full bg-white/75 px-1 py-1.5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] ring-1 ring-slate-100 backdrop-blur min-[380px]:flex"
+    >
+      {items.map((item) => (
+        <button
+          key={item.letter}
+          type="button"
+          onClick={() => {
+            document
+              .getElementById(`person-${item.personId}`)
+              ?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }}
+          className="flex h-4 w-4 items-center justify-center rounded-full text-[0.58rem] font-black text-sky-600 transition hover:bg-sky-50"
+        >
+          {item.letter}
+        </button>
+      ))}
+    </nav>
   );
 }
 
@@ -339,6 +398,26 @@ function getTagsForPerson(person: PersonRow, memories: MemoryRow[]): string[] {
   }
 
   return Array.from(tags).slice(0, 4);
+}
+
+function getAlphabetItems(items: PersonListItem[]) {
+  const firstPersonByLetter = new Map<string, string>();
+
+  items
+    .slice()
+    .sort((a, b) => a.person.name.localeCompare(b.person.name, "pl"))
+    .forEach((item) => {
+      const letter = item.person.name.trim().charAt(0).toUpperCase();
+
+      if (letter && !firstPersonByLetter.has(letter)) {
+        firstPersonByLetter.set(letter, item.person.id);
+      }
+    });
+
+  return Array.from(firstPersonByLetter.entries()).map(([letter, personId]) => ({
+    letter,
+    personId,
+  }));
 }
 
 function formatTag(tag: string): string {

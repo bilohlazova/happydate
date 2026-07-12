@@ -6,7 +6,7 @@ import Panel from "@/components/ui/Panel";
 
 import type { PersonRow } from "@/lib/repositories/person.types";
 import { getRelationshipInfo } from "@/lib/people/relationship";
-import { ChevronRight } from "lucide-react";
+import { BookOpen, ChevronRight, Gift, MessageCircle } from "lucide-react";
 
 type PersonCardData = PersonRow & {
   color_token?: string | null;
@@ -54,67 +54,88 @@ export default function PersonCard({
     const isFavorite = Boolean(
       personData.favorite ?? personData.is_favorite ?? false
     );
-    const accent = getAccent(person.id);
+    const accent = getBirthdayAccent(daysUntilNextDate);
     const memoryText =
       memoriesCount > 0
         ? `📖 ${memoriesCount}`
         : "📖 Brak wspomnień";
 
     return (
-      <article
-        className="group relative grid min-h-14 grid-cols-[2.25rem_minmax(0,1fr)_3.35rem_1rem] items-center gap-2 rounded-[0.9rem] bg-white px-2.5 py-1.5 shadow-[0_4px_14px_rgba(15,23,42,0.035)] ring-1 ring-slate-100 transition hover:bg-blue-50/30"
-      >
-        {isFavorite && (
+      <article className="group relative overflow-hidden rounded-[0.9rem] bg-white shadow-[0_4px_14px_rgba(15,23,42,0.035)] ring-1 ring-slate-100">
+        <div className="absolute inset-y-0 right-0 flex w-32 items-stretch justify-end bg-slate-50">
           <span
-            className="absolute right-1.5 top-1 text-[0.55rem] leading-none"
-            aria-label="Ulubiona osoba"
+            className="flex w-10 items-center justify-center bg-sky-500 text-white"
+            aria-label="Dodaj wspomnienie"
           >
-            ⭐
+            <BookOpen className="h-4 w-4" />
           </span>
-        )}
-
-        <div>
-          <Avatar
-            name={person.name}
-            colorToken={personData.color_token}
-            className="!h-9 !w-9 !text-[0.7rem] !shadow-none !ring-0"
-          />
+          <span
+            className="flex w-10 items-center justify-center bg-cyan-500 text-white"
+            aria-label="Pomysł na prezent"
+          >
+            <Gift className="h-4 w-4" />
+          </span>
+          <span
+            className="flex w-10 items-center justify-center bg-slate-700 text-white"
+            aria-label="Skontaktuj się"
+          >
+            <MessageCircle className="h-4 w-4" />
+          </span>
         </div>
 
-        <div className="min-w-0">
-          <h2 className="truncate text-[0.95rem] font-bold leading-5 text-slate-950">
-            {person.name}
-          </h2>
+        <div className="relative grid min-h-14 grid-cols-[2.25rem_minmax(0,1fr)_3.35rem_1rem] items-center gap-2 bg-white px-2.5 py-1.5 transition-transform duration-200 group-hover:-translate-x-10 group-active:-translate-x-10 group-focus-within:-translate-x-10">
+          {isFavorite && (
+            <span
+              className="absolute right-1.5 top-1 text-[0.55rem] leading-none"
+              aria-label="Ulubiona osoba"
+            >
+              ⭐
+            </span>
+          )}
 
-          <p className="truncate text-[0.72rem] font-semibold leading-4 text-slate-500">
-            {buildRelationLine(relationship, displayTags)}
-          </p>
-
-          <p className="truncate text-[0.68rem] font-semibold leading-3 text-slate-500">
-            {memoryText}
-          </p>
-        </div>
-
-        <div className="flex min-w-0 items-center justify-end border-l border-slate-100 pl-1.5">
-          <div className="text-right">
-            {hasBirthday ? (
-              <>
-                <p className={`text-[0.65rem] font-black leading-3.5 ${accent.text}`}>
-                  {hasCountdown ? `Za ${daysUntilNextDate} dni` : "🎂"}
-                </p>
-                <p className="truncate text-[0.6rem] font-semibold leading-3.5 text-slate-500">
-                  {nextDate}
-                </p>
-              </>
-            ) : (
-              <p className="text-[0.6rem] font-bold leading-3.5 text-slate-400">
-                Brak daty
-              </p>
-            )}
+          <div>
+            <Avatar
+              name={person.name}
+              colorToken={personData.color_token}
+              className="!h-9 !w-9 !text-[0.7rem] !shadow-none !ring-0"
+            />
           </div>
-        </div>
 
-        <ChevronRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-blue-600" />
+          <div className="min-w-0">
+            <h2 className="truncate text-[0.95rem] font-bold leading-5 text-slate-950">
+              {person.name}
+            </h2>
+
+            <p className="truncate text-[0.72rem] font-semibold leading-4 text-slate-500">
+              {buildRelationLine(relationship, displayTags)}
+            </p>
+
+            <p className="truncate text-[0.68rem] font-semibold leading-3 text-slate-500">
+              {memoryText}
+            </p>
+          </div>
+
+          <div className="flex min-w-0 items-center justify-end border-l border-slate-100 pl-1.5">
+            <div className="text-right">
+              {hasBirthday ? (
+                <>
+                  <p className={`text-[0.65rem] font-black leading-3.5 ${accent.text}`}>
+                    {hasCountdown ? `Za ${daysUntilNextDate} dni` : "🎂"}
+                  </p>
+                  <p className="truncate text-[0.6rem] font-semibold leading-3.5 text-slate-500">
+                    {nextDate}
+                  </p>
+                </>
+              ) : (
+                <p className="text-[0.6rem] font-bold leading-3.5 text-slate-400">
+                  Brak daty
+                </p>
+              )}
+            </div>
+          </div>
+
+          <ChevronRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-sky-600" />
+        </div>
       </article>
     );
   }
@@ -192,18 +213,22 @@ function buildRelationLine(
   return [relationText, ...tagText].join(" • ");
 }
 
-function getAccent(seed: string) {
-  const palettes = [
-    { text: "text-pink-600" },
-    { text: "text-blue-600" },
-    { text: "text-emerald-600" },
-    { text: "text-amber-600" },
-    { text: "text-violet-600" },
-  ];
+function getBirthdayAccent(daysUntil: number | null) {
+  if (daysUntil === null) {
+    return { text: "text-slate-400" };
+  }
 
-  const index =
-    seed.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0) %
-    palettes.length;
+  if (daysUntil === 0) {
+    return { text: "text-pink-600" };
+  }
 
-  return palettes[index];
+  if (daysUntil <= 7) {
+    return { text: "text-sky-600" };
+  }
+
+  if (daysUntil <= 30) {
+    return { text: "text-emerald-600" };
+  }
+
+  return { text: "text-slate-500" };
 }

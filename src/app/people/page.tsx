@@ -120,6 +120,21 @@ export default function PeoplePage() {
       people={people}
       memories={memories}
       recommendation={recommendation}
+      onPersonUpdated={(updatedPerson) => {
+        setPeople((currentPeople) =>
+          currentPeople.map((person) =>
+            person.id === updatedPerson.id ? updatedPerson : person
+          )
+        );
+      }}
+      onPersonDeleted={(personId) => {
+        setPeople((currentPeople) =>
+          currentPeople.filter((person) => person.id !== personId)
+        );
+        setMemories((currentMemories) =>
+          currentMemories.filter((memory) => memory.person_id !== personId)
+        );
+      }}
     />
   );
 }

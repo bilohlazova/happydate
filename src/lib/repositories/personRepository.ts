@@ -27,6 +27,16 @@ export interface CreatePersonInput {
   gender?: PersonGender;
 }
 
+export interface UpdatePersonInput {
+  personId: string;
+  name: string;
+  relationship?: string;
+  relationLabel?: string;
+  relationCategory?: PersonRelationCategory | null;
+  birthday?: string;
+  gender?: PersonGender;
+}
+
 /**
  * Fetch all people belonging to a given user.
  * Ordered alphabetically by name.
@@ -105,4 +115,41 @@ export async function createPerson(
   }
 
   return data;
+}
+
+export async function updatePerson(
+  input: UpdatePersonInput
+): Promise<PersonRow> {
+  const { data, error } = await supabase
+    .from("people")
+    .update({
+      name: input.name,
+      relationship: input.relationship ?? null,
+      relation_label: input.relationLabel ?? input.relationship ?? null,
+      relation_category: input.relationCategory ?? null,
+      birthday: input.birthday ?? null,
+      gender: input.gender ?? "unspecified",
+    })
+    .eq("id", input.personId)
+    .select()
+    .returns<PersonRow[]>()
+    .single();
+
+  if (error) {
+    throw new Error(
+      `[personRepository] updatePerson failed: ${error.message}`
+    );
+  }
+
+  return data;
+}
+
+export async function deletePerson(personId: string): Promise<void> {
+  const { error } = await supabase.from("people").delete().eq("id", personId);
+
+  if (error) {
+    throw new Error(
+      `[personRepository] deletePerson failed: ${error.message}`
+    );
+  }
 }

@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { Pencil, Trash2, X } from "lucide-react";
 
 import PersonCard from "@/components/people/PersonCard";
 import { ActivePeopleFilters } from "@/components/people/ActivePeopleFilters";
+import { GenderSelectField } from "@/components/people/GenderSelectField";
 import {
   HappyRecommendationCard,
   type HappyRecommendation,
@@ -15,7 +17,12 @@ import { PeopleHeader } from "@/components/people/PeopleHeader";
 import { PeopleSearch } from "@/components/people/PeopleSearch";
 import { PeopleSummaryCard } from "@/components/people/PeopleSummaryCard";
 import { AddPersonMenu } from "@/components/people/AddPersonMenu";
-import { getPersonRelationLabel } from "@/components/people/peopleRelations";
+import { RelationPickerField } from "@/components/people/RelationPickerField";
+import {
+  getPersonRelationLabel,
+  getRelationCategoryForLabel,
+  type RelationCategory,
+} from "@/components/people/peopleRelations";
 import {
   DEFAULT_PEOPLE_FILTERS,
   filterPeople,
@@ -26,7 +33,11 @@ import {
   type PeopleFilters,
 } from "@/components/people/peopleFilters";
 import type { MemoryRow } from "@/lib/repositories/memory.types";
-import type { PersonRow } from "@/lib/repositories/person.types";
+import type { PersonGender, PersonRow } from "@/lib/repositories/person.types";
+import {
+  deletePerson,
+  updatePerson,
+} from "@/lib/repositories/personRepository";
 import { MobileUI } from "@/lib/theme/mobile";
 
 const COLLAPSE_THRESHOLD = 10;
@@ -37,6 +48,8 @@ interface PeoplePageContentProps {
   people: PersonRow[];
   memories: MemoryRow[];
   recommendation: HappyRecommendation | null;
+  onPersonUpdated: (person: PersonRow) => void;
+  onPersonDeleted: (personId: string) => void;
 }
 
 interface PersonListItem {
@@ -53,6 +66,8 @@ export function PeoplePageContent({
   people,
   memories,
   recommendation,
+  onPersonUpdated,
+  onPersonDeleted,
 }: PeoplePageContentProps) {
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -64,6 +79,7 @@ export function PeoplePageContent({
   const [draftFilters, setDraftFilters] = useState<PeopleFilters>(
     DEFAULT_PEOPLE_FILTERS
   );
+  const [actionPerson, setActionPerson] = useState<PersonRow | null>(null);
 
   useEffect(() => {
     function updateCompactChrome() {
@@ -174,6 +190,7 @@ export function PeoplePageContent({
           onExpandedChange={setExpanded}
           onClearFilters={() => setAppliedFilters(DEFAULT_PEOPLE_FILTERS)}
           onClearSearch={() => setQuery("")}
+          onPersonAction={setActionPerson}
         />
 
         {appliedFilters.sort === "az" && (
@@ -191,6 +208,19 @@ export function PeoplePageContent({
           }}
           onClose={() => setFilterSheetOpen(false)}
         />
+
+        <PersonActionsSheet
+          person={actionPerson}
+          onClose={() => setActionPerson(null)}
+          onUpdated={(person) => {
+            onPersonUpdated(person);
+            setActionPerson(null);
+          }}
+          onDeleted={(personId) => {
+            onPersonDeleted(personId);
+            setActionPerson(null);
+          }}
+        />
       </div>
     </main>
   );
@@ -206,6 +236,7 @@ function PeopleList({
   onExpandedChange,
   onClearFilters,
   onClearSearch,
+  onPersonAction,
 }: {
   loading: boolean;
   peopleCount: number;
@@ -216,6 +247,7 @@ function PeopleList({
   onExpandedChange: (expanded: boolean) => void;
   onClearFilters: () => void;
   onClearSearch: () => void;
+  onPersonAction: (person: PersonRow) => void;
 }) {
   if (loading) {
     return <PeopleMessage>Ładowanie...</PeopleMessage>;
@@ -240,6 +272,7 @@ function PeopleList({
       <PeopleSection
         title={`🔎 Wyniki (${pluralizePeoplePl(filteredPeople.length)})`}
         items={filteredPeople}
+        onPersonAction={onPersonAction}
       />
     );
   }
@@ -272,11 +305,16 @@ function PeopleList({
 
   return (
     <div className="flex flex-col gap-2">
-      <PeopleSection title={`❤️ Teraz (${nowPeople.length})`} items={nowPeople} />
+      <PeopleSection
+        title={`❤️ Teraz (${nowPeople.length})`}
+        items={nowPeople}
+        onPersonAction={onPersonAction}
+      />
 
       <PeopleSection
         title={`🕒 W tym tygodniu (${weekPeople.length})`}
         items={weekPeople}
+        onPersonAction={onPersonAction}
       />
 
       <PeopleSection
@@ -287,6 +325,7 @@ function PeopleList({
             : undefined
         }
         items={visibleOtherPeople}
+        onPersonAction={onPersonAction}
       />
 
       {shouldCollapse && hiddenCount > 0 && (
@@ -316,10 +355,12 @@ function PeopleSection({
   title,
   caption,
   items,
+  onPersonAction,
 }: {
   title: string;
   caption?: string;
   items: PersonListItem[];
+  onPersonAction: (person: PersonRow) => void;
 }) {
   if (items.length === 0) {
     return null;
@@ -341,7 +382,15 @@ function PeopleSection({
       <ul className="flex flex-col gap-1">
         {items.map((item) => (
           <li key={item.person.id} id={`person-${item.person.id}`}>
-            <Link href={`/people/${item.person.id}`} className="block">
+            <Link
+              href={`/people/${item.person.id}`}
+              className="block"
+              style={{ WebkitTouchCallout: "none" } as CSSProperties}
+              onContextMenu={(event) => {
+                event.preventDefault();
+                onPersonAction(item.person);
+              }}
+            >
               <PersonCard
                 person={item.person}
                 variant="list"
@@ -387,6 +436,249 @@ function PeopleAlphabetIndex({
         </button>
       ))}
     </nav>
+  );
+}
+
+function PersonActionsSheet({
+  person,
+  onClose,
+  onUpdated,
+  onDeleted,
+}: {
+  person: PersonRow | null;
+  onClose: () => void;
+  onUpdated: (person: PersonRow) => void;
+  onDeleted: (personId: string) => void;
+}) {
+  const [mode, setMode] = useState<"actions" | "edit" | "delete">("actions");
+  const [name, setName] = useState("");
+  const [relationship, setRelationship] = useState("");
+  const [relationCategory, setRelationCategory] =
+    useState<RelationCategory | null>(null);
+  const [birthday, setBirthday] = useState("");
+  const [gender, setGender] = useState<PersonGender>("unspecified");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!person) return;
+
+    const relationLabel = getPersonRelationLabel(person);
+
+    setMode("actions");
+    setName(person.name);
+    setRelationship(relationLabel);
+    setRelationCategory(
+      person.relation_category ?? getRelationCategoryForLabel(relationLabel)
+    );
+    setBirthday(person.birthday ?? "");
+    setGender(person.gender ?? "unspecified");
+    setSaving(false);
+    setError(null);
+  }, [person]);
+
+  if (!person) return null;
+
+  async function handleSave() {
+    if (!person) return;
+    if (!name.trim()) {
+      setError("Imię jest wymagane.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const updatedPerson = await updatePerson({
+        personId: person.id,
+        name: name.trim(),
+        relationship: relationship.trim() || undefined,
+        relationLabel: relationship.trim() || undefined,
+        relationCategory,
+        birthday: birthday || undefined,
+        gender,
+      });
+
+      onUpdated(updatedPerson);
+    } catch (saveError) {
+      console.error("[PersonActionsSheet] updatePerson failed:", saveError);
+      setError("Nie udało się zapisać zmian.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!person) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      await deletePerson(person.id);
+      onDeleted(person.id);
+    } catch (deleteError) {
+      console.error("[PersonActionsSheet] deletePerson failed:", deleteError);
+      setError("Nie udało się usunąć osoby.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <button
+        type="button"
+        aria-label="Zamknij akcje osoby"
+        className="absolute inset-0 bg-slate-950/25"
+        onClick={onClose}
+      />
+      <section className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[520px] rounded-t-[1.35rem] bg-white px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-18px_60px_rgba(15,23,42,0.22)]">
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-slate-200" />
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="truncate text-lg font-black text-slate-950">
+              {person.name}
+            </h2>
+            <p className="truncate text-xs font-semibold text-slate-500">
+              {getPersonRelationLabel(person) || "Brak relacji"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-500"
+            aria-label="Zamknij"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {mode === "actions" && (
+          <div className="grid gap-2">
+            <button
+              type="button"
+              onClick={() => setMode("edit")}
+              className="flex min-h-12 items-center gap-3 rounded-[0.95rem] bg-sky-50 px-3 text-left text-sm font-black text-sky-700"
+            >
+              <Pencil className="h-5 w-5" />
+              Zmień
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("delete")}
+              className="flex min-h-12 items-center gap-3 rounded-[0.95rem] bg-rose-50 px-3 text-left text-sm font-black text-rose-600"
+            >
+              <Trash2 className="h-5 w-5" />
+              Usuń
+            </button>
+          </div>
+        )}
+
+        {mode === "edit" && (
+          <div className="grid gap-3">
+            <Field label="Imię" htmlFor="edit-name">
+              <input
+                id="edit-name"
+                type="text"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className={MobileUI.input}
+              />
+            </Field>
+            <RelationPickerField
+              value={relationship}
+              onChange={(value, category) => {
+                setRelationship(value);
+                setRelationCategory(category);
+              }}
+            />
+            <Field label="Urodziny" htmlFor="edit-birthday">
+              <input
+                id="edit-birthday"
+                type="date"
+                value={birthday}
+                onChange={(event) => setBirthday(event.target.value)}
+                className={MobileUI.input}
+              />
+            </Field>
+            <GenderSelectField value={gender} onChange={setGender} />
+            {error && (
+              <p className="rounded-[0.8rem] bg-rose-50 px-3 py-2 text-xs font-bold text-rose-600">
+                {error}
+              </p>
+            )}
+            <div className="grid grid-cols-[0.8fr_1.2fr] gap-2">
+              <button
+                type="button"
+                onClick={() => setMode("actions")}
+                className="min-h-11 rounded-[0.9rem] bg-slate-50 px-4 text-sm font-black text-slate-600"
+              >
+                Wróć
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={handleSave}
+                className="min-h-11 rounded-[0.9rem] bg-gradient-to-r from-sky-500 to-cyan-500 px-4 text-sm font-black text-white shadow-[0_10px_24px_rgba(14,165,233,0.24)] disabled:opacity-50"
+              >
+                {saving ? "Zapisywanie..." : "Zapisz"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {mode === "delete" && (
+          <div>
+            <p className="rounded-[0.9rem] bg-rose-50 px-3 py-3 text-sm font-bold leading-5 text-rose-700">
+              Usunąć tę osobę z HappyDate? Tej akcji nie da się cofnąć.
+            </p>
+            {error && (
+              <p className="mt-2 rounded-[0.8rem] bg-rose-50 px-3 py-2 text-xs font-bold text-rose-600">
+                {error}
+              </p>
+            )}
+            <div className="mt-3 grid grid-cols-[0.8fr_1.2fr] gap-2">
+              <button
+                type="button"
+                onClick={() => setMode("actions")}
+                className="min-h-11 rounded-[0.9rem] bg-slate-50 px-4 text-sm font-black text-slate-600"
+              >
+                Anuluj
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={handleDelete}
+                className="min-h-11 rounded-[0.9rem] bg-rose-600 px-4 text-sm font-black text-white disabled:opacity-50"
+              >
+                {saving ? "Usuwanie..." : "Usuń osobę"}
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={htmlFor} className="text-xs font-black text-slate-600">
+        {label}
+      </label>
+      {children}
+    </div>
   );
 }
 

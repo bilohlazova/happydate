@@ -14,6 +14,10 @@ export interface CreatePersonInput {
   name: string;
   relationship?: string;
   birthday?: string;
+  phone?: string;
+  email?: string;
+  externalContactId?: string;
+  contactSource?: "manual" | "contacts" | "card" | "link";
 }
 
 /**
@@ -75,6 +79,10 @@ export async function createPerson(
       name: input.name,
       relationship: input.relationship ?? null,
       birthday: input.birthday ?? null,
+      phone: input.phone ?? null,
+      email: input.email ?? null,
+      external_contact_id: input.externalContactId ?? null,
+      contact_source: input.contactSource ?? "manual",
     })
     .select()
     .returns<PersonRow[]>()

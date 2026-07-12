@@ -12,5 +12,13 @@ export interface PersonRow {
 
   notes: string | null;
 
+  phone: string | null;
+
+  email: string | null;
+
+  external_contact_id: string | null;
+
+  contact_source: string | null;
+
   created_at: string;
 }

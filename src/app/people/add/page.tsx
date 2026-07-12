@@ -20,7 +20,13 @@ import {
   createPerson,
   getPeople,
 } from "@/lib/repositories/personRepository";
-import type { PersonRow } from "@/lib/repositories/person.types";
+import type { PersonGender, PersonRow } from "@/lib/repositories/person.types";
+import { GenderSelectField } from "@/components/people/GenderSelectField";
+import { RelationPickerField } from "@/components/people/RelationPickerField";
+import {
+  getRelationCategoryForLabel,
+  type RelationCategory,
+} from "@/components/people/peopleRelations";
 import { MobileUI } from "@/lib/theme/mobile";
 
 type AddMode = "contacts" | "manual" | "card" | "link";
@@ -99,7 +105,10 @@ export default function AddPersonPage() {
   const [authLoading, setAuthLoading] = useState(true);
   const [name, setName] = useState("");
   const [relationship, setRelationship] = useState("");
+  const [relationCategory, setRelationCategory] =
+    useState<RelationCategory | null>(null);
   const [birthday, setBirthday] = useState("");
+  const [gender, setGender] = useState<PersonGender>("unspecified");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [externalContactId, setExternalContactId] = useState("");
@@ -206,11 +215,14 @@ export default function AddPersonPage() {
         userId,
         name: name.trim(),
         relationship: relationship.trim() || undefined,
+        relationLabel: relationship.trim() || undefined,
+        relationCategory,
         birthday: birthday || undefined,
         phone: normalizePhone(phone),
         email: normalizeEmail(email),
         externalContactId: externalContactId.trim() || undefined,
         contactSource: mode,
+        gender,
       });
 
       router.push("/people");
@@ -294,7 +306,12 @@ export default function AddPersonPage() {
             userId,
             name: contact.name,
             relationship: contact.relationship,
+            relationLabel: contact.relationship,
+            relationCategory: contact.relationship
+              ? getRelationCategoryForLabel(contact.relationship)
+              : null,
             birthday: contact.birthday,
+            gender: "unspecified",
             phone: contact.phone,
             email: contact.email,
             externalContactId: contact.externalContactId,
@@ -340,7 +357,10 @@ export default function AddPersonPage() {
     }
 
     if (parsed.name) setName(parsed.name);
-    if (parsed.relationship) setRelationship(parsed.relationship);
+    if (parsed.relationship) {
+      setRelationship(parsed.relationship);
+      setRelationCategory(getRelationCategoryForLabel(parsed.relationship));
+    }
     if (parsed.birthday) setBirthday(parsed.birthday);
     if (parsed.phone) setPhone(parsed.phone);
     if (parsed.email) setEmail(parsed.email);
@@ -407,6 +427,7 @@ export default function AddPersonPage() {
             name={name}
             relationship={relationship}
             birthday={birthday}
+            gender={gender}
             sourceText={sourceText}
             cardImageUrl={cardImageUrl}
             status={status}
@@ -414,8 +435,12 @@ export default function AddPersonPage() {
             canSave={canSave}
             isSaving={isSaving}
             onNameChange={setName}
-            onRelationshipChange={setRelationship}
+            onRelationshipChange={(value, category) => {
+              setRelationship(value);
+              setRelationCategory(category);
+            }}
             onBirthdayChange={setBirthday}
+            onGenderChange={setGender}
             onSourceTextChange={setSourceText}
             onParseSource={handleParseSource}
             onCardImageChange={handleCardImageChange}
@@ -643,6 +668,7 @@ function SinglePersonFlow({
   name,
   relationship,
   birthday,
+  gender,
   sourceText,
   cardImageUrl,
   status,
@@ -652,6 +678,7 @@ function SinglePersonFlow({
   onNameChange,
   onRelationshipChange,
   onBirthdayChange,
+  onGenderChange,
   onSourceTextChange,
   onParseSource,
   onCardImageChange,
@@ -662,6 +689,7 @@ function SinglePersonFlow({
   name: string;
   relationship: string;
   birthday: string;
+  gender: PersonGender;
   sourceText: string;
   cardImageUrl: string | null;
   status: string | null;
@@ -669,8 +697,9 @@ function SinglePersonFlow({
   canSave: boolean;
   isSaving: boolean;
   onNameChange: (value: string) => void;
-  onRelationshipChange: (value: string) => void;
+  onRelationshipChange: (value: string, category: RelationCategory | null) => void;
   onBirthdayChange: (value: string) => void;
+  onGenderChange: (value: PersonGender) => void;
   onSourceTextChange: (value: string) => void;
   onParseSource: () => void;
   onCardImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -746,16 +775,10 @@ function SinglePersonFlow({
           />
         </Field>
 
-        <Field label="Relacja" htmlFor="relationship">
-          <input
-            id="relationship"
-            type="text"
-            value={relationship}
-            onChange={(event) => onRelationshipChange(event.target.value)}
-            className={MobileUI.input}
-            placeholder="np. Przyjaciel, Rodzina, Praca"
-          />
-        </Field>
+        <RelationPickerField
+          value={relationship}
+          onChange={onRelationshipChange}
+        />
 
         <Field label="Urodziny" htmlFor="birthday">
           <input
@@ -766,6 +789,8 @@ function SinglePersonFlow({
             className={MobileUI.input}
           />
         </Field>
+
+        <GenderSelectField value={gender} onChange={onGenderChange} />
 
         {status && (
           <p className="rounded-[0.8rem] bg-sky-50 px-3 py-2 text-xs font-bold leading-5 text-sky-700">

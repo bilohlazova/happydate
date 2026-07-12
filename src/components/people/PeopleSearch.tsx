@@ -3,9 +3,18 @@ import { SlidersHorizontal, Search } from "lucide-react";
 interface PeopleSearchProps {
   value: string;
   onChange: (value: string) => void;
+  onFilterClick: () => void;
+  activeFilterCount: number;
 }
 
-export function PeopleSearch({ value, onChange }: PeopleSearchProps) {
+export function PeopleSearch({
+  value,
+  onChange,
+  onFilterClick,
+  activeFilterCount,
+}: PeopleSearchProps) {
+  const hasActiveFilters = activeFilterCount > 0;
+
   return (
     <div className="flex items-center">
       <label className="relative min-w-0 flex-1">
@@ -19,10 +28,20 @@ export function PeopleSearch({ value, onChange }: PeopleSearchProps) {
         />
         <button
           type="button"
-          className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-[0.7rem] text-slate-500 transition hover:bg-sky-50 hover:text-sky-600 active:scale-[0.96]"
+          onClick={onFilterClick}
+          className={`absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-[0.7rem] transition active:scale-[0.96] ${
+            hasActiveFilters
+              ? "bg-sky-500 text-white"
+              : "text-slate-500 hover:bg-sky-50 hover:text-sky-600"
+          }`}
           aria-label="Filtry"
         >
           <SlidersHorizontal className="h-[18px] w-[18px]" />
+          {hasActiveFilters && (
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-pink-500 px-1 text-[0.58rem] font-black leading-none text-white ring-2 ring-white">
+              {activeFilterCount}
+            </span>
+          )}
         </button>
       </label>
     </div>

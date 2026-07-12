@@ -5,14 +5,26 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 import PersonCard from "@/components/people/PersonCard";
+import { ActivePeopleFilters } from "@/components/people/ActivePeopleFilters";
 import {
   HappyRecommendationCard,
   type HappyRecommendation,
 } from "@/components/people/HappyRecommendationCard";
+import { PeopleFilterSheet } from "@/components/people/PeopleFilterSheet";
 import { PeopleHeader } from "@/components/people/PeopleHeader";
 import { PeopleSearch } from "@/components/people/PeopleSearch";
 import { PeopleSummaryCard } from "@/components/people/PeopleSummaryCard";
 import { AddPersonMenu } from "@/components/people/AddPersonMenu";
+import { getPersonRelationLabel } from "@/components/people/peopleRelations";
+import {
+  DEFAULT_PEOPLE_FILTERS,
+  filterPeople,
+  getActiveFilterCount,
+  getDaysUntilBirthday,
+  pluralizePeoplePl,
+  sortPeople,
+  type PeopleFilters,
+} from "@/components/people/peopleFilters";
 import type { MemoryRow } from "@/lib/repositories/memory.types";
 import type { PersonRow } from "@/lib/repositories/person.types";
 import { MobileUI } from "@/lib/theme/mobile";
@@ -45,6 +57,13 @@ export function PeoplePageContent({
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [compactChrome, setCompactChrome] = useState(false);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState<PeopleFilters>(
+    DEFAULT_PEOPLE_FILTERS
+  );
+  const [draftFilters, setDraftFilters] = useState<PeopleFilters>(
+    DEFAULT_PEOPLE_FILTERS
+  );
 
   useEffect(() => {
     function updateCompactChrome() {
@@ -79,16 +98,15 @@ export function PeoplePageContent({
   );
 
   const filteredPeople = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const filtered = filterPeople(peopleViewModels, query, appliedFilters);
 
-    if (!normalizedQuery) {
-      return peopleViewModels;
-    }
+    return sortPeople(filtered, appliedFilters.sort);
+  }, [appliedFilters, peopleViewModels, query]);
 
-    return peopleViewModels.filter((item) =>
-      item.searchText.includes(normalizedQuery)
-    );
-  }, [peopleViewModels, query]);
+  const draftResultCount = useMemo(
+    () => filterPeople(peopleViewModels, query, draftFilters).length,
+    [draftFilters, peopleViewModels, query]
+  );
 
   const birthdaysThisWeek = peopleViewModels.filter(
     (item) =>
@@ -105,6 +123,7 @@ export function PeoplePageContent({
     () => getAlphabetItems(filteredPeople),
     [filteredPeople]
   );
+  const activeFilterCount = getActiveFilterCount(appliedFilters);
 
   return (
     <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-2.5`}>
@@ -129,19 +148,49 @@ export function PeoplePageContent({
         </div>
 
         <div className="sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-20 -mx-4 bg-slate-50/95 px-4 py-1 backdrop-blur sm:-mx-5 sm:px-5">
-          <PeopleSearch value={query} onChange={setQuery} />
+          <PeopleSearch
+            value={query}
+            onChange={setQuery}
+            onFilterClick={() => {
+              setDraftFilters(appliedFilters);
+              setFilterSheetOpen(true);
+            }}
+            activeFilterCount={activeFilterCount}
+          />
         </div>
+
+        <ActivePeopleFilters
+          filters={appliedFilters}
+          onChange={setAppliedFilters}
+        />
 
         <PeopleList
           loading={loading}
           peopleCount={people.length}
           filteredPeople={filteredPeople}
           query={query}
+          appliedFilters={appliedFilters}
           expanded={expanded}
           onExpandedChange={setExpanded}
+          onClearFilters={() => setAppliedFilters(DEFAULT_PEOPLE_FILTERS)}
+          onClearSearch={() => setQuery("")}
         />
 
-        <PeopleAlphabetIndex items={alphabetItems} />
+        {appliedFilters.sort === "az" && (
+          <PeopleAlphabetIndex items={alphabetItems} />
+        )}
+
+        <PeopleFilterSheet
+          open={filterSheetOpen}
+          draftFilters={draftFilters}
+          resultCount={draftResultCount}
+          onDraftChange={setDraftFilters}
+          onApply={() => {
+            setAppliedFilters(draftFilters);
+            setFilterSheetOpen(false);
+          }}
+          onClose={() => setFilterSheetOpen(false)}
+        />
       </div>
     </main>
   );
@@ -152,15 +201,21 @@ function PeopleList({
   peopleCount,
   filteredPeople,
   query,
+  appliedFilters,
   expanded,
   onExpandedChange,
+  onClearFilters,
+  onClearSearch,
 }: {
   loading: boolean;
   peopleCount: number;
   filteredPeople: PersonListItem[];
   query: string;
+  appliedFilters: PeopleFilters;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
+  onClearFilters: () => void;
+  onClearSearch: () => void;
 }) {
   if (loading) {
     return <PeopleMessage>Ładowanie...</PeopleMessage>;
@@ -171,13 +226,19 @@ function PeopleList({
   }
 
   if (filteredPeople.length === 0) {
-    return <PeopleMessage>Brak wyników dla tego wyszukiwania.</PeopleMessage>;
+    return (
+      <PeopleNoResults
+        hasQuery={Boolean(query.trim())}
+        onClearFilters={onClearFilters}
+        onClearSearch={onClearSearch}
+      />
+    );
   }
 
-  if (query.trim()) {
+  if (query.trim() || appliedFilters.sort !== "default") {
     return (
       <PeopleSection
-        title={`🔎 Wyniki (${filteredPeople.length})`}
+        title={`🔎 Wyniki (${pluralizePeoplePl(filteredPeople.length)})`}
         items={filteredPeople}
       />
     );
@@ -337,6 +398,45 @@ function PeopleMessage({ children }: { children: ReactNode }) {
   );
 }
 
+function PeopleNoResults({
+  hasQuery,
+  onClearFilters,
+  onClearSearch,
+}: {
+  hasQuery: boolean;
+  onClearFilters: () => void;
+  onClearSearch: () => void;
+}) {
+  return (
+    <section className={`${MobileUI.card} px-4 py-5 text-center`}>
+      <h2 className="text-base font-black text-slate-950">
+        Nie znaleziono osób
+      </h2>
+      <p className="mx-auto mt-1 max-w-xs text-xs font-semibold leading-5 text-slate-500">
+        Spróbuj zmienić wyszukiwanie lub wyczyścić filtry.
+      </p>
+      <div className="mt-4 grid gap-2">
+        <button
+          type="button"
+          onClick={onClearFilters}
+          className="min-h-10 rounded-[0.9rem] bg-sky-50 px-4 text-sm font-black text-sky-700"
+        >
+          Wyczyść filtry
+        </button>
+        {hasQuery && (
+          <button
+            type="button"
+            onClick={onClearSearch}
+            className="min-h-10 rounded-[0.9rem] bg-white px-4 text-sm font-black text-slate-600 ring-1 ring-slate-100"
+          >
+            Wyczyść wyszukiwanie
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function PeopleEmptyState() {
   return (
     <section className={`${MobileUI.card} px-5 py-8 text-center`}>
@@ -363,8 +463,10 @@ function buildSearchText(
 ) {
   return [
     person.name,
-    person.relationship,
+    getPersonRelationLabel(person),
     person.notes,
+    person.phone,
+    person.email,
     ...tags,
     ...memories.flatMap((memory) => [
       memory.title,
@@ -374,8 +476,7 @@ function buildSearchText(
     ]),
   ]
     .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+    .join(" ");
 }
 
 function getTagsForPerson(person: PersonRow, memories: MemoryRow[]): string[] {
@@ -393,8 +494,10 @@ function getTagsForPerson(person: PersonRow, memories: MemoryRow[]): string[] {
     }
   });
 
-  if (tags.size === 0 && person.relationship) {
-    tags.add(formatTag(person.relationship));
+  const relationLabel = getPersonRelationLabel(person);
+
+  if (tags.size === 0 && relationLabel) {
+    tags.add(formatTag(relationLabel));
   }
 
   return Array.from(tags).slice(0, 4);
@@ -428,37 +531,21 @@ function formatTag(tag: string): string {
 }
 
 function getBirthdayInfo(date: string | null) {
-  if (!date) {
+  const daysUntil = getDaysUntilBirthday(date);
+
+  if (daysUntil === null || !date) {
     return null;
   }
 
   const birthday = parseLocalDate(date);
 
   return {
-    daysUntil: getDaysUntilBirthday(birthday),
+    daysUntil,
     label: new Intl.DateTimeFormat("pl-PL", {
       day: "numeric",
       month: "short",
     }).format(birthday),
   };
-}
-
-function getDaysUntilBirthday(birthday: Date): number {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const nextBirthday = new Date(
-    today.getFullYear(),
-    birthday.getMonth(),
-    birthday.getDate()
-  );
-
-  if (nextBirthday < today) {
-    nextBirthday.setFullYear(today.getFullYear() + 1);
-  }
-
-  return Math.round(
-    (nextBirthday.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)
-  );
 }
 
 function parseLocalDate(value: string): Date {

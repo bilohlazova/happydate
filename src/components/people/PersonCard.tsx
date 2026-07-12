@@ -1,4 +1,5 @@
 import Avatar from "@/components/people/Avatar";
+import { getPersonRelationLabel } from "@/components/people/peopleRelations";
 
 import Card from "@/components/ui/Card";
 import InfoBadge from "@/components/ui/InfoBadge";
@@ -42,7 +43,8 @@ export default function PersonCard({
   nextDateLabel = null,
   daysUntilNextDate = null,
 }: PersonCardProps) {
-  const relationship = getRelationshipInfo(person.relationship);
+  const relationLabel = getPersonRelationLabel(person);
+  const displayedRelationship = getRelationshipInfo(relationLabel);
   const birthday = formatBirthday(person.birthday);
 
   if (variant === "list") {
@@ -107,7 +109,7 @@ export default function PersonCard({
             </h2>
 
             <p className="truncate text-[0.72rem] font-semibold leading-4 text-slate-500">
-              {buildRelationLine(relationship, displayTags)}
+            {buildRelationLine(displayedRelationship, displayTags)}
             </p>
 
             <p className="truncate text-[0.68rem] font-semibold leading-3 text-slate-500">
@@ -150,9 +152,9 @@ export default function PersonCard({
         </h1>
 
         <div className="mt-4 flex flex-wrap justify-center gap-3">
-          {relationship && (
-            <InfoBadge icon={relationship.icon}>
-              {relationship.label}
+          {displayedRelationship && (
+            <InfoBadge icon={displayedRelationship.icon}>
+              {displayedRelationship.label}
             </InfoBadge>
           )}
 

@@ -15,4 +15,8 @@ export interface HappyCard {
   description: string;
   actionLabel: string;
   actionRoute: string;
+  personId?: string;
+  reason?: string;
+  sourceInsightId?: string;
+  sourceMemoryIds?: string[];
 }

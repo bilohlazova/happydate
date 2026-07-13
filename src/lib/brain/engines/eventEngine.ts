@@ -4,10 +4,12 @@ import { PRIORITY } from "../priorities";
 
 export interface EventEngineParams {
   events: BrainEvent[];
+  currentDate?: Date;
 }
 
 export function buildEventInsight({
   events,
+  currentDate = new Date(),
 }: EventEngineParams): Insight | null {
   if (events.length === 0) {
     return null;
@@ -16,7 +18,7 @@ export function buildEventInsight({
   const upcomingEvents = events
     .map((event) => ({
       event,
-      daysUntil: getDaysUntil(event.date),
+      daysUntil: getDaysUntil(event.date, currentDate),
     }))
     .filter(({ daysUntil }) => daysUntil >= 0);
 

@@ -11,5 +11,8 @@ export function mapMemory(row: MemoryRow): BrainMemory {
     content: row.content_text,
     importance: row.importance,
     occurredOn: row.occurred_on,
+    createdAt: row.created_at,
+    isActive: row.is_active,
+    eventId: row.event_id,
   };
 }

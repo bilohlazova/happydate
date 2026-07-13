@@ -4,7 +4,17 @@ export type InsightType =
   | "preference"
   | "gift"
   | "relationship"
-  | "missing_data";
+  | "missing_data"
+  | "gift_saved"
+  | "gift_suggestion_ready"
+  | "missing_person_context"
+  | "recent_memory";
+
+export type InsightReason =
+  | "upcoming_event_and_saved_gift"
+  | "upcoming_event_and_person_context"
+  | "upcoming_event_missing_context"
+  | "recent_linked_memory";
 
 export interface InsightAction {
   label: string;
@@ -30,6 +40,14 @@ export interface Insight {
 
   personId?: string;
 
+  eventId?: string;
+
+  reason?: InsightReason;
+
+  metadata?: {
+    sourceMemoryIds: string[];
+  };
+
   action?: InsightAction;
 }
 
@@ -43,6 +61,14 @@ export interface BrainEvent {
   // resolve events by person ID instead of a denormalized name.
   person_name: string | null;
   category: string | null;
+
+  /** Canonical link when the event belongs to a person. */
+  personId?: string | null;
+}
+
+export interface BrainPerson {
+  id: string;
+  name: string;
 }
 
 /**
@@ -65,4 +91,10 @@ export interface BrainMemory {
   importance: number;
 
   occurredOn: string | null;
+
+  createdAt: string | null;
+
+  isActive: boolean;
+
+  eventId: string | null;
 }

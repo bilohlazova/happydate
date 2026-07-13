@@ -1,7 +1,9 @@
 import { getPeople } from "@/lib/repositories/people";
 import { getEvents } from "@/lib/repositories/events";
-import { supabase } from "@/lib/supabaseClient";
-import { getActiveMemories } from "@/lib/repositories/memoryRepository";
+import {
+  getActiveMemories,
+  getCurrentMemoryUserId,
+} from "@/lib/repositories/memoryRepository";
 import { mapMemory } from "@/lib/brain/mappers/mapMemory";
 
 import type { PersonSummary } from "@/lib/repositories/people";
@@ -11,6 +13,7 @@ import type { MemoryRow } from "@/lib/repositories/memory.types";
 import type { HappyContext } from "../context";
 
 export interface HappyBrain {
+  people: PersonSummary[];
   upcomingBirthdays: PersonSummary[];
   importantMemories: BrainMemory[];
   recentNotes: unknown[];
@@ -57,21 +60,10 @@ function getMemoryCreatedAtValue(memory: MemoryRow): number {
 
 async function getMemoriesForCurrentUser(): Promise<BrainMemory[]> {
   try {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const userId = await getCurrentMemoryUserId();
+    if (!userId) return [];
 
-    if (userError) {
-      console.error("[happy.loadBrain] getUser failed:", userError);
-      return [];
-    }
-
-    if (!user) {
-      return [];
-    }
-
-    const memories = await getActiveMemories(user.id);
+    const memories = await getActiveMemories(userId);
 
     return memories
       .filter((memory) => memory.is_active)
@@ -132,6 +124,7 @@ export async function loadBrain(
     );
 
   return {
+    people,
     upcomingBirthdays,
     importantMemories: memories,
     recentNotes: [],

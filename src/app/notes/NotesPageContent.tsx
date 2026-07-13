@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
+import MemoryEditorSheet from "@/components/notes/MemoryEditorSheet";
+import type { MemoryEditorSubmitInput } from "@/components/notes/MemoryEditorSheet";
+import NoteMemoryCard from "@/components/notes/NoteMemoryCard";
 import {
   createMemoryImageSignedUrls,
   createNotesMemory,
@@ -16,7 +19,20 @@ import type { UploadMemoryImagesResult } from "@/lib/repositories/memoryReposito
 import type {
   NotesMemoryPerson,
   NotesMemoryRow,
+  NotesPrimaryFilter,
 } from "@/lib/repositories/memory.types";
+import {
+  formatNotesResultCount,
+  getNotesPrimaryFilterCounts,
+  NOTES_PRIMARY_EMPTY_MESSAGES,
+  NOTES_PRIMARY_FILTER_OPTIONS,
+} from "@/lib/repositories/memory.types";
+import { NOTES_TYPE_OPTIONS } from "@/lib/memories/notesMemoryTypes";
+import {
+  buildMemoryEditorCreateFields,
+  buildMemoryEditorUpdatePatch,
+} from "@/lib/memories/notesMemoryTypes";
+import type { NotesRawType } from "@/lib/memories/notesMemoryTypes";
 
 // ─────────────────────────────────────────────
 // TYPES — match real Supabase memories schema
@@ -26,31 +42,6 @@ import type {
 // HELPERS
 // ─────────────────────────────────────────────
 
-function formatRelativeDate(iso: string): string {
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-  if (diff === 0) return "dziś";
-  if (diff === 1) return "wczoraj";
-  if (diff < 7)  return `${diff} dni temu`;
-  if (diff < 30) return `${Math.floor(diff / 7)} tyg. temu`;
-  return new Date(iso).toLocaleDateString("pl-PL", { day: "numeric", month: "short" });
-}
-
-function getInitials(name: string): string {
-  return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
-}
-
-const RELATION_COLORS: Record<string, { bg: string; text: string }> = {
-  family:  { bg: "#e8f0fe", text: "#1a4a9e" },
-  friend:  { bg: "#e8f5ed", text: "#1a6644" },
-  partner: { bg: "#fce8ed", text: "#8a1a38" },
-  work:    { bg: "#fdf6e8", text: "#7a5c1a" },
-  other:   { bg: "#f0ede8", text: "#5a5550" },
-};
-
-function getRelColor(relation: string | null) {
-  return RELATION_COLORS[relation ?? "other"] ?? RELATION_COLORS.other;
-}
-
 // ─────────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────────
@@ -59,6 +50,7 @@ export default function NotesPageContent() {
   const [memories,       setMemories]       = useState<NotesMemoryRow[]>([]);
   const [people,         setPeople]         = useState<NotesMemoryPerson[]>([]);
   const [loading,        setLoading]        = useState(true);
+  const [primaryFilter,  setPrimaryFilter]  = useState<NotesPrimaryFilter>("all");
   const [filterPersonId, setFilterPersonId] = useState<string>("all");
 
   // 3-dot context menu
@@ -69,20 +61,11 @@ export default function NotesPageContent() {
   const [lightboxIdx,    setLightboxIdx]    = useState(0);
 
   // Modal (bottom sheet)
+  const [showTypeSheet,  setShowTypeSheet]  = useState(false);
   const [showModal,      setShowModal]      = useState(false);
   const [editingMemory,  setEditingMemory]  = useState<NotesMemoryRow | null>(null);
-  const [saving,         setSaving]         = useState(false);
-  const [uploading,      setUploading]      = useState(false);
-
-  // Form state
-  const [noteText,       setNoteText]       = useState("");
-  const [selectedPerson, setSelectedPerson] = useState("");
-  const [photoFiles,     setPhotoFiles]     = useState<File[]>([]);
-  const [photoPreviews,  setPhotoPreviews]  = useState<string[]>([]);
-  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [selectedNewType, setSelectedNewType] = useState<NotesRawType>("note");
   const [imageDisplayUrls, setImageDisplayUrls] = useState<Record<string, string>>({});
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Search ──
   const [search, setSearch] = useState("");
@@ -124,13 +107,19 @@ export default function NotesPageContent() {
   const filtered = filterMemories({
     memories,
     people,
+    primaryFilter,
     personId: filterPersonId,
     search,
   });
+  const primaryFilterCounts = getNotesPrimaryFilterCounts(memories);
 
   // ── AI Insights — computed from real data, no hallucinations ──
   // Only show when not searching and not filtering by person
-  const showAiSection = !q && filterPersonId === "all" && memories.length >= 2;
+  const showAiSection =
+    !q &&
+    primaryFilter === "all" &&
+    filterPersonId === "all" &&
+    memories.length >= 2;
 
   // Top person by memory count
   const personMemCounts: Record<string, number> = {};
@@ -156,98 +145,59 @@ export default function NotesPageContent() {
     giftKeywords.some(k => m.content_text?.toLowerCase().includes(k))
   ).length;
 
-  // ── Photo helpers ──
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    if (!files.length) return;
-    setPhotoFiles(prev => [...prev, ...files]);
-    files.forEach(f => {
-      const reader = new FileReader();
-      reader.onload = ev => setPhotoPreviews(prev => [...prev, ev.target?.result as string]);
-      reader.readAsDataURL(f);
-    });
-  }
-
-  async function uploadPhotos(): Promise<UploadMemoryImagesResult> {
-    if (!photoFiles.length) return { objectPaths: [], errors: [] };
-    setUploading(true);
-    try {
-      return await uploadMemoryImages(photoFiles);
-    } finally {
-      setUploading(false);
-    }
-  }
-
   // ── Modal ──
-  function openNew() {
+  function openNew(type: NotesRawType) {
     setEditingMemory(null);
-    setNoteText(""); setSelectedPerson("");
-    setPhotoFiles([]); setPhotoPreviews([]); setExistingImages([]);
+    setSelectedNewType(type);
     setShowModal(true);
   }
 
   function openEdit(m: NotesMemoryRow) {
     setEditingMemory(m);
-    setNoteText(m.content_text ?? "");
-    setSelectedPerson(m.person_id ?? "");
-    setPhotoFiles([]); setPhotoPreviews([]);
-    setExistingImages(m.images ?? []);
     setMenuOpenId(null);
     setShowModal(true);
   }
 
-  function closeModal() { setShowModal(false); setEditingMemory(null); }
+  function closeModal() {
+    setShowModal(false);
+    setEditingMemory(null);
+  }
 
-  async function saveMemory() {
-    if (!noteText.trim()) return;
-    setSaving(true);
+  async function saveMemory({ state, newFiles }: MemoryEditorSubmitInput) {
     const userId = await getCurrentMemoryUserId();
-    if (!userId) { setSaving(false); return; }
+    if (!userId) throw new Error("Zaloguj się ponownie przed zapisaniem.");
 
-    try {
-      const uploadResult = await uploadPhotos();
-      const allImages = [...existingImages, ...uploadResult.objectPaths];
+    const uploadResult: UploadMemoryImagesResult = newFiles.length
+      ? await uploadMemoryImages(newFiles)
+      : { objectPaths: [], errors: [] };
+    const allImages = [
+      ...state.existingImages,
+      ...uploadResult.objectPaths,
+    ];
+    const stateWithImages = {
+      ...state,
+      existingImages: allImages,
+    };
 
-      const payload = {
-        content_text: noteText.trim(),
-        person_id:    selectedPerson || null,
-        images:       allImages.length ? allImages : null,
-      };
-
-      if (editingMemory) {
-        await updateNotesMemory(editingMemory.id, {
-          contentText: payload.content_text,
-          personId: payload.person_id,
-          images: payload.images,
-        });
-      } else {
-        await createNotesMemory({
-          userId,
-          contentText: payload.content_text,
-          personId: payload.person_id,
-          images: payload.images,
-        });
-      }
-
-      closeModal();
-      void loadMemories();
-
-      if (uploadResult.errors.length > 0) {
-        window.alert(
-          `Nie udało się dodać części zdjęć:\n${uploadResult.errors
-            .map((item) => item.error)
-            .join("\n")}`
-        );
-      }
-    } catch (error) {
-      window.alert(
-        error instanceof Error
-          ? error.message
-          : "Nie udało się zapisać wspomnienia."
+    if (editingMemory) {
+      await updateNotesMemory(
+        editingMemory.id,
+        buildMemoryEditorUpdatePatch(stateWithImages)
       );
-    } finally {
-      setSaving(false);
+    } else {
+      await createNotesMemory({
+        userId,
+        ...buildMemoryEditorCreateFields(stateWithImages),
+      });
     }
+
+    await loadMemories();
+    const uploadErrors = uploadResult.errors.map((item) => item.error);
+    if (uploadErrors.length === 0) {
+      closeModal();
+    }
+
+    return { uploadErrors };
   }
 
   // ── Delete ──
@@ -283,6 +233,7 @@ export default function NotesPageContent() {
           padding-bottom: calc(var(--hd-nav-height) + 24px + env(safe-area-inset-bottom));
           color: #000;
           -webkit-font-smoothing: antialiased;
+          overflow-x: hidden;
         }
 
         /* ── Header ── */
@@ -323,17 +274,46 @@ export default function NotesPageContent() {
         .hd-tabs::-webkit-scrollbar { display: none; }
         .hd-tab {
           flex-shrink: 0; background: rgba(118,118,128,.12);
-          border-radius: 20px; padding: 6px 15px;
+          border-radius: 22px; padding: 8px 14px;
           font-size: 13px; font-weight: 500; color: #3c3c43;
           border: none; cursor: pointer;
           font-family: -apple-system, sans-serif;
           transition: background .12s, color .12s, box-shadow .12s;
-          letter-spacing: -.1px; min-height: 32px; white-space: nowrap;
+          letter-spacing: -.1px; min-height: 44px; white-space: nowrap;
+          display: inline-flex; align-items: center; gap: 6px;
         }
         .hd-tab.on {
           background: #007aff; color: #fff;
           box-shadow: 0 2px 8px rgba(0,122,255,.28);
         }
+        .hd-tab-count {
+          min-width: 19px; height: 19px; border-radius: 10px;
+          padding: 0 5px; box-sizing: border-box;
+          display: inline-flex; align-items: center; justify-content: center;
+          background: rgba(60,60,67,.12); color: #636366;
+          font-size: 11px; font-variant-numeric: tabular-nums;
+        }
+        .hd-tab.on .hd-tab-count {
+          background: rgba(255,255,255,.22); color: #fff;
+        }
+        .hd-person-filter {
+          width: 100%; max-width: var(--hd-screen-max);
+          margin: -2px auto 12px; padding: 0 16px;
+          display: flex; align-items: center; gap: 9px;
+        }
+        .hd-person-filter label {
+          flex-shrink: 0; font-size: 13px; font-weight: 600; color: #636366;
+        }
+        .hd-person-filter select {
+          min-width: 0; width: min(100%, 230px); min-height: 44px;
+          border: .5px solid rgba(60,60,67,.14); border-radius: 12px;
+          background: #fff; color: #000; padding: 0 34px 0 12px;
+          font: 500 14px -apple-system, sans-serif;
+        }
+        .hd-person-filter select:focus-visible {
+          outline: 3px solid rgba(0,122,255,.25); outline-offset: 1px;
+        }
+        .hd-person-filter select:disabled { opacity: .48; }
 
         /* ── Notes feed — clean, no interruptions ── */
         .hd-feed {
@@ -351,33 +331,58 @@ export default function NotesPageContent() {
           background: #fff;
           border-radius: 18px;
           overflow: hidden;
-          cursor: pointer;
           -webkit-tap-highlight-color: transparent;
-          transition: transform .08s;
+          border-left: 3px solid transparent;
         }
-        .hd-card:active { transform: scale(.99); }
+        .hd-card-memory { border-left-color: rgba(201,52,44,.28); }
+        .hd-card-gift { border-left-color: rgba(168,95,0,.28); }
+        .hd-card-journal { border-left-color: rgba(81,79,192,.24); background: #fdfdff; }
 
         .hd-card-body { padding: 14px 16px 12px; }
 
-        /* Person row */
-        .hd-card-top {
-          display: flex; align-items: center; gap: 9px; margin-bottom: 9px;
+        .hd-card-header {
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 12px; margin-bottom: 9px;
+        }
+
+        .hd-card-kind {
+          display: inline-flex; align-items: center; gap: 5px;
+          border-radius: 999px; padding: 4px 9px;
+          font-size: .75rem; font-weight: 600; letter-spacing: -.05px;
+          line-height: 1.25; min-width: 0;
+        }
+
+        .hd-card-title-row {
+          display: flex; align-items: center; gap: 9px;
+          min-width: 0; margin-bottom: 5px;
         }
         .hd-card-avatar {
           width: 28px; height: 28px; border-radius: 9px;
           display: flex; align-items: center; justify-content: center;
           font-size: 10px; font-weight: 700; flex-shrink: 0; letter-spacing: .3px;
         }
-        .hd-card-person { font-size: 13px; font-weight: 600; color: #000; letter-spacing: -.1px; }
-        .hd-card-date   { font-size: 12px; color: #aeaeb2; margin-left: auto; font-weight: 400; }
+        .hd-card-title {
+          min-width: 0; margin: 0; color: #111;
+          font-size: 17px; line-height: 1.25; font-weight: 650;
+          letter-spacing: -.25px; overflow-wrap: anywhere;
+        }
+        .hd-card-meta {
+          display: flex; align-items: center; flex-wrap: wrap;
+          min-width: 0; margin-bottom: 8px;
+          color: #8e8e93; font-size: 12px; line-height: 1.4;
+          overflow-wrap: anywhere;
+        }
+        .hd-card-meta-separator { margin: 0 6px; color: #c7c7cc; }
 
         /* Memory text */
         .hd-card-text {
           font-size: 15px; color: #1c1c1e; line-height: 1.55;
-          white-space: pre-wrap; word-break: break-word; letter-spacing: -.1px;
-          margin-bottom: 10px;
+          white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
+          letter-spacing: -.1px; margin-bottom: 0;
+          display: -webkit-box; -webkit-box-orient: vertical;
+          -webkit-line-clamp: 3; overflow: hidden;
         }
-        .hd-card-text-only { margin-bottom: 0; }
+        .hd-card-text.is-fallback { color: #aeaeb2; font-style: italic; }
 
         /* AI tags */
         .hd-card-tags {
@@ -390,17 +395,22 @@ export default function NotesPageContent() {
         }
 
         /* 3-dot menu */
-        .hd-card-menu-wrap { position: relative; margin-left: auto; flex-shrink: 0; }
+        .hd-card-menu-wrap { position: relative; margin: -8px -8px -8px auto; flex-shrink: 0; }
         .hd-card-menu-btn {
-          width: 28px; height: 28px; border-radius: 8px;
+          width: 44px; height: 44px; border-radius: 12px;
           background: transparent; border: none; cursor: pointer;
           display: flex; align-items: center; justify-content: center;
-          color: #c7c7cc; font-size: 18px; line-height: 1;
+          color: #8e8e93; font-size: 18px; line-height: 1;
           transition: background .1s; font-family: -apple-system, sans-serif;
         }
         .hd-card-menu-btn:active { background: rgba(118,118,128,.12); }
+        .hd-card-menu-btn:focus-visible,
+        .hd-card-menu-item:focus-visible,
+        .hd-card-image-button:focus-visible {
+          outline: 3px solid rgba(0,122,255,.3); outline-offset: 1px;
+        }
         .hd-card-menu-popup {
-          position: absolute; right: 0; top: 32px;
+          position: absolute; right: 0; top: 44px;
           background: #fff;
           border-radius: 14px;
           box-shadow: 0 8px 28px rgba(0,0,0,.14);
@@ -419,17 +429,31 @@ export default function NotesPageContent() {
         .hd-card-menu-item:active { background: #f2f2f7; }
         .hd-card-menu-item.danger { color: #ff3b30; }
 
-        /* ── Photo layouts ── */
-        .hd-photos { overflow: hidden; border-radius: 0 0 18px 18px; }
-        .hd-photos-with-padding { margin: 0 12px 12px; border-radius: 14px; overflow: hidden; }
-        .hd-photo-1 img { width: 100%; height: 240px; object-fit: cover; display: block; cursor: pointer; }
-        .hd-photo-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
-        .hd-photo-2 img { width: 100%; height: 180px; object-fit: cover; display: block; cursor: pointer; }
-        .hd-photo-3 { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; height: 200px; }
-        .hd-photo-3 img:first-child { grid-row: 1 / 3; height: 200px; width: 100%; object-fit: cover; display: block; cursor: pointer; }
-        .hd-photo-3 img:not(:first-child) { height: 99px; width: 100%; object-fit: cover; display: block; cursor: pointer; }
-        .hd-photo-tap { transition: opacity .1s; }
-        .hd-photo-tap:active { opacity: .85; }
+        /* ── Compact image previews ── */
+        .hd-card-images {
+          display: grid; grid-template-columns: 1fr;
+          gap: 3px; margin: 0 12px 12px;
+          border-radius: 14px; overflow: hidden;
+          aspect-ratio: 16 / 7;
+        }
+        .hd-card-images.is-grid { grid-template-columns: 1fr 1fr; aspect-ratio: 16 / 6; }
+        .hd-card-image-button {
+          position: relative; display: block; width: 100%; min-width: 0;
+          height: 100%; padding: 0; border: 0; background: #e5e5ea;
+          cursor: pointer; overflow: hidden;
+        }
+        .hd-card-image-button[hidden] { display: none; }
+        .hd-card-image-button img {
+          width: 100%; height: 100%; display: block;
+          object-fit: cover; transition: opacity .1s;
+        }
+        .hd-card-image-button:active img { opacity: .82; }
+        .hd-card-image-more {
+          position: absolute; inset: 0;
+          display: flex; align-items: center; justify-content: center;
+          background: rgba(0,0,0,.38); color: #fff;
+          font-size: 18px; font-weight: 650;
+        }
 
         /* ── Loading / Empty ── */
         .hd-loading { text-align: center; padding: 52px 28px; color: #aeaeb2; font-size: 14px; }
@@ -500,8 +524,36 @@ export default function NotesPageContent() {
           width: 100%; max-width: 480px;
           padding-bottom: calc(20px + env(safe-area-inset-bottom));
           animation: hdSlideUp .3s cubic-bezier(.32,.72,0,1);
-          max-height: 92svh; overflow-y: auto;
+          max-height: 92svh; overflow: hidden;
+          display: flex; flex-direction: column;
         }
+        .hd-type-sheet {
+          background: #f2f2f7;
+          border-radius: 20px 20px 0 0;
+          width: 100%; max-width: 480px;
+          padding: 0 16px calc(18px + env(safe-area-inset-bottom));
+          animation: hdSlideUp .3s cubic-bezier(.32,.72,0,1);
+          box-sizing: border-box;
+        }
+        .hd-type-sheet-title {
+          font-size: 18px; font-weight: 650; color: #000;
+          letter-spacing: -.2px; margin: 14px 0 12px;
+        }
+        .hd-type-options {
+          background: #fff; border-radius: 14px; overflow: hidden;
+        }
+        .hd-type-option {
+          width: 100%; min-height: 52px; border: none;
+          border-bottom: .5px solid rgba(60,60,67,.12);
+          background: #fff; padding: 0 15px;
+          display: flex; align-items: center; gap: 12px;
+          color: #000; font-size: 16px; font-weight: 500;
+          font-family: -apple-system, sans-serif; cursor: pointer;
+          text-align: left;
+        }
+        .hd-type-option:last-child { border-bottom: none; }
+        .hd-type-option:active { background: #f2f2f7; }
+        .hd-type-option-icon { width: 28px; text-align: center; font-size: 20px; }
         .hd-modal-handle {
           width: 36px; height: 5px; border-radius: 3px;
           background: rgba(60,60,67,.22); margin: 10px auto 0;
@@ -509,17 +561,26 @@ export default function NotesPageContent() {
         .hd-modal-hdr {
           padding: 14px 16px 12px;
           display: flex; align-items: center; justify-content: space-between;
-          position: sticky; top: 0; background: #f2f2f7; z-index: 1;
+          flex-shrink: 0; gap: 12px;
         }
-        .hd-modal-title { font-size: 17px; font-weight: 600; color: #000; letter-spacing: -.2px; }
+        .hd-modal-heading { min-width: 0; }
+        .hd-modal-title { font-size: 17px; font-weight: 650; color: #000; letter-spacing: -.2px; }
+        .hd-modal-subtitle {
+          margin-top: 3px; color: #8e8e93; font-size: 13px;
+          line-height: 1.35; overflow-wrap: anywhere;
+        }
         .hd-modal-close {
-          width: 28px; height: 28px; border-radius: 50%;
+          width: 44px; height: 44px; border-radius: 50%;
           background: rgba(118,118,128,.18); border: none; cursor: pointer;
           display: flex; align-items: center; justify-content: center;
           color: #636366; font-size: 12px;
-          font-family: -apple-system, sans-serif;
+          font-family: -apple-system, sans-serif; flex-shrink: 0;
         }
-        .hd-modal-body { padding: 0 16px; }
+        .hd-modal-body {
+          padding: 0 16px; min-height: 0;
+          overflow-y: auto; overflow-x: hidden;
+          -webkit-overflow-scrolling: touch;
+        }
 
         .hd-field { margin-bottom: 12px; }
         .hd-label {
@@ -538,13 +599,27 @@ export default function NotesPageContent() {
         }
         .hd-textarea:focus { box-shadow: 0 0 0 3px rgba(0,122,255,.15); }
 
+        .hd-input {
+          width: 100%; min-height: 46px; border: none; border-radius: 12px;
+          padding: 11px 15px; font-size: 16px;
+          font-family: -apple-system, sans-serif; color: #000;
+          background: #fff; outline: none; box-sizing: border-box;
+          letter-spacing: -.1px; transition: box-shadow .15s;
+        }
+        .hd-input:focus { box-shadow: 0 0 0 3px rgba(0,122,255,.15); }
+        .hd-input[aria-invalid='true'],
+        .hd-select[aria-invalid='true'],
+        .hd-textarea[aria-invalid='true'] {
+          box-shadow: 0 0 0 2px rgba(255,59,48,.24);
+        }
+
         .hd-select {
           width: 100%; border: none; border-radius: 12px;
           padding: 13px 15px; font-size: 16px;
           font-family: -apple-system, sans-serif; color: #000;
           background: #fff; outline: none;
           appearance: none; box-sizing: border-box; letter-spacing: -.1px;
-          transition: box-shadow .15s;
+          transition: box-shadow .15s; min-height: 46px;
         }
         .hd-select:focus { box-shadow: 0 0 0 3px rgba(0,122,255,.15); }
 
@@ -559,6 +634,7 @@ export default function NotesPageContent() {
           transition: background .1s;
         }
         .hd-photo-upload:active { background: #f2f2f7; }
+        .hd-photo-upload:disabled { opacity: .45; cursor: default; }
 
         .hd-previews { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
         .hd-preview-item {
@@ -566,6 +642,11 @@ export default function NotesPageContent() {
           border-radius: 10px; overflow: hidden; flex-shrink: 0;
         }
         .hd-preview-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .hd-preview-placeholder {
+          width: 100%; height: 100%; display: flex;
+          align-items: center; justify-content: center;
+          background: #e5e5ea; font-size: 22px;
+        }
         .hd-preview-remove {
           position: absolute; top: 3px; right: 3px;
           width: 18px; height: 18px; border-radius: 50%;
@@ -574,7 +655,20 @@ export default function NotesPageContent() {
           font-family: -apple-system, sans-serif;
         }
 
-        .hd-modal-actions { display: flex; gap: 10px; margin: 14px 16px 0; }
+        .hd-field-error, .hd-form-error {
+          margin: 6px 2px 0; color: #c9342c;
+          font-size: 13px; line-height: 1.35;
+        }
+        .hd-upload-errors {
+          margin: 4px 0 12px; padding: 10px 12px;
+          border-radius: 10px; background: rgba(255,149,0,.1);
+          color: #7a4b00; font-size: 13px; line-height: 1.4;
+        }
+
+        .hd-modal-actions {
+          display: flex; gap: 10px; margin: 0; padding: 14px 16px 0;
+          flex-shrink: 0; background: #f2f2f7;
+        }
         .hd-btn-cancel {
           flex: 1; border: none; background: #fff; border-radius: 14px;
           padding: 14px; font-size: 16px; font-weight: 500; color: #007aff;
@@ -666,14 +760,9 @@ export default function NotesPageContent() {
         <div className="hd-header">
           <div className="hd-header-left">
             <h1>Notatki</h1>
-            <p>
-              {memories.length === 0
-                ? "brak wspomnień"
-                : `${memories.length} ${memories.length === 1 ? "wspomnienie" : memories.length < 5 ? "wspomnienia" : "wspomnień"}`
-              }
-            </p>
+            <p>{formatNotesResultCount(filtered.length)}</p>
           </div>
-          <button className="hd-add-btn" onClick={openNew} aria-label="Dodaj notatkę">
+          <button className="hd-add-btn" onClick={() => setShowTypeSheet(true)} aria-label="Dodaj notatkę">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
             </svg>
@@ -697,27 +786,41 @@ export default function NotesPageContent() {
 
         {/* ── FILTER TABS ── */}
         <div className="hd-tabs">
-          <button
-            className={`hd-tab ${filterPersonId === "all" ? "on" : ""}`}
-            onClick={() => setFilterPersonId("all")}
-          >
-            Wszystkie
-          </button>
-          <button
-            className={`hd-tab ${filterPersonId === "none" ? "on" : ""}`}
-            onClick={() => setFilterPersonId("none")}
-          >
-            Moje
-          </button>
-          {people.map(p => (
+          {NOTES_PRIMARY_FILTER_OPTIONS.map(option => (
             <button
-              key={p.id}
-              className={`hd-tab ${filterPersonId === p.id ? "on" : ""}`}
-              onClick={() => setFilterPersonId(p.id)}
+              key={option.value}
+              className={`hd-tab ${primaryFilter === option.value ? "on" : ""}`}
+              onClick={() => setPrimaryFilter(option.value)}
+              aria-pressed={primaryFilter === option.value}
             >
-              {p.name.split(" ")[0]}
+              <span>{option.label}</span>
+              <span className="hd-tab-count" aria-label={formatNotesResultCount(primaryFilterCounts[option.value])}>
+                {primaryFilterCounts[option.value]}
+              </span>
             </button>
           ))}
+        </div>
+
+        <div className="hd-person-filter">
+          <label htmlFor="notes-person-filter">Osoba</label>
+          <select
+            id="notes-person-filter"
+            value={filterPersonId}
+            onChange={event => setFilterPersonId(event.target.value)}
+            disabled={primaryFilter === "journal"}
+            aria-describedby={primaryFilter === "journal" ? "notes-person-filter-hint" : undefined}
+          >
+            <option value="all">Wszystkie osoby</option>
+            {people.map(person => (
+              <option key={person.id} value={person.id}>{person.name}</option>
+            ))}
+            <option value="none">Bez przypisanej osoby</option>
+          </select>
+          {primaryFilter === "journal" && (
+            <span id="notes-person-filter-hint" className="sr-only">
+              Filtr osoby jest niedostępny dla dziennika.
+            </span>
+          )}
         </div>
 
         {/* ── AI INSIGHTS — only when not searching, based on real data ── */}
@@ -772,139 +875,40 @@ export default function NotesPageContent() {
             <div className="hd-empty">
               <div className="hd-empty-glyph">🕊️</div>
               <div className="hd-empty-title">
-                {q ? "Brak wyników" : filterPersonId !== "all" ? "Brak wspomnień" : "Zacznij od pierwszego wspomnienia"}
+                {q
+                  ? "Nie znaleziono pasujących zapisów."
+                  : NOTES_PRIMARY_EMPTY_MESSAGES[primaryFilter]}
               </div>
               <div className="hd-empty-sub">
                 {q
                   ? `Nic nie pasuje do „${search}". Spróbuj inaczej.`
-                  : filterPersonId !== "all"
-                    ? "Dodaj notatkę dotyczącą tej osoby."
-                    : "Zapisuj chwile, rozmowy i ważne detale."}
+                  : filterPersonId !== "all" && primaryFilter !== "journal"
+                    ? "Wybierz inną osobę albo dodaj nowy zapis."
+                    : "Dodaj nowy zapis lub wybierz inny filtr."}
               </div>
             </div>
           )}
 
           {filtered.map(memory => {
-            const person = people.find(p => p.id === memory.person_id);
+            const person = people.find(p => p.id === memory.person_id) ?? null;
             const imgs = (memory.images ?? []).flatMap((storedValue) => {
               const displayUrl = imageDisplayUrls[storedValue];
               return displayUrl ? [displayUrl] : [];
             });
-            const imgCount = imgs.length;
-            const tags   = memory.ai_tags ?? [];
-            const hasText = !!memory.content_text?.trim();
-            const isMenuOpen = menuOpenId === memory.id;
 
             return (
-              <div
+              <NoteMemoryCard
                 key={memory.id}
-                className="hd-card"
-                onClick={() => { if (!isMenuOpen) setMenuOpenId(null); }}
-              >
-                <div className="hd-card-body">
-                  {/* Top row: person + date + 3-dot menu */}
-                  <div className="hd-card-top">
-                    {person ? (() => {
-                      const rc = getRelColor(person.relation);
-                      return (
-                        <>
-                          <div
-                            className="hd-card-avatar"
-                            style={{ background: rc.bg, color: rc.text }}
-                          >
-                            {getInitials(person.name)}
-                          </div>
-                          <span className="hd-card-person">{person.name}</span>
-                        </>
-                      );
-                    })() : (
-                      <>
-                        <div
-                          className="hd-card-avatar"
-                          style={{ background: "#f0ede8", color: "#5a5550" }}
-                        >
-                          JA
-                        </div>
-                        <span className="hd-card-person" style={{ color: "#636366" }}>Moja notatka</span>
-                      </>
-                    )}
-                    <span className="hd-card-date">{formatRelativeDate(memory.created_at)}</span>
-
-                    {/* 3-dot context menu */}
-                    <div className="hd-card-menu-wrap" onClick={e => e.stopPropagation()}>
-                      <button
-                        className="hd-card-menu-btn"
-                        onClick={() => setMenuOpenId(isMenuOpen ? null : memory.id)}
-                        aria-label="Opcje"
-                      >
-                        •••
-                      </button>
-                      {isMenuOpen && (
-                        <div className="hd-card-menu-popup">
-                          <button className="hd-card-menu-item" onClick={() => openEdit(memory)}>
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M11 2l3 3-8 8H3v-3l8-8z"/>
-                            </svg>
-                            Edytuj
-                          </button>
-                          <button className="hd-card-menu-item danger" onClick={() => deleteMemory(memory.id)}>
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="2,4 14,4"/><path d="M5 4V2h6v2M6 7v5M10 7v5"/><path d="M3 4l1 9h8l1-9"/>
-                            </svg>
-                            Usuń
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Memory text */}
-                  {hasText && (
-                    <div className={`hd-card-text${imgCount === 0 && tags.length === 0 ? " hd-card-text-only" : ""}`}>
-                      {memory.content_text}
-                    </div>
-                  )}
-
-                  {/* AI tags */}
-                  {tags.length > 0 && (
-                    <div className="hd-card-tags">
-                      {tags.slice(0, 5).map(tag => (
-                        <span key={tag} className="hd-tag">{tag}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Photos — outside card-body for edge-to-edge on single image */}
-                {imgCount > 0 && (() => {
-                  const show = imgs.slice(0, 3);
-                  if (imgCount === 1) return (
-                    <div className="hd-photos hd-photo-1">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={show[0]} alt="" className="hd-photo-tap" loading="lazy"
-                        onClick={e => { e.stopPropagation(); openLightbox(imgs, 0); }} />
-                    </div>
-                  );
-                  if (imgCount === 2) return (
-                    <div className="hd-photos-with-padding hd-photo-2">
-                      {show.map((url, i) => (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img key={i} src={url} alt="" className="hd-photo-tap" loading="lazy"
-                          onClick={e => { e.stopPropagation(); openLightbox(imgs, i); }} />
-                      ))}
-                    </div>
-                  );
-                  return (
-                    <div className="hd-photos-with-padding hd-photo-3">
-                      {show.map((url, i) => (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img key={i} src={url} alt="" className="hd-photo-tap" loading="lazy"
-                          onClick={e => { e.stopPropagation(); openLightbox(imgs, i); }} />
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
+                memory={memory}
+                person={person}
+                displayImageUrls={imgs}
+                menuOpen={menuOpenId === memory.id}
+                onMenuToggle={() => setMenuOpenId(menuOpenId === memory.id ? null : memory.id)}
+                onMenuClose={() => setMenuOpenId(null)}
+                onEdit={openEdit}
+                onDelete={deleteMemory}
+                onOpenLightbox={openLightbox}
+              />
             );
           })}
         </div>
@@ -931,117 +935,51 @@ export default function NotesPageContent() {
         </div>
       )}
 
-      {/* ── ADD / EDIT BOTTOM SHEET ── */}
-      {showModal && (
+      {/* ── NEW ENTRY TYPE BOTTOM SHEET ── */}
+      {showTypeSheet && (
         <div
           className="hd-modal-overlay"
-          onClick={e => { if (e.target === e.currentTarget) closeModal(); }}
+          onClick={event => {
+            if (event.target === event.currentTarget) setShowTypeSheet(false);
+          }}
         >
-          <div className="hd-modal">
+          <div className="hd-type-sheet">
             <div className="hd-modal-handle" />
-            <div className="hd-modal-hdr">
-              <div className="hd-modal-title">
-                {editingMemory ? "Edytuj wspomnienie" : "Nowe wspomnienie"}
-              </div>
-              <button className="hd-modal-close" onClick={closeModal} aria-label="Zamknij">✕</button>
-            </div>
-
-            <div className="hd-modal-body">
-              <div className="hd-field">
-                <label className="hd-label">Treść</label>
-                <textarea
-                  className="hd-textarea"
-                  placeholder="Co chcesz zapamiętać?"
-                  value={noteText}
-                  onChange={e => setNoteText(e.target.value)}
-                  autoFocus
-                />
-              </div>
-
-              <div className="hd-field">
-                <label className="hd-label">Osoba (opcjonalnie)</label>
-                <select
-                  className="hd-select"
-                  value={selectedPerson}
-                  onChange={e => setSelectedPerson(e.target.value)}
+            <div className="hd-type-sheet-title">Co chcesz zapisać?</div>
+            <div className="hd-type-options">
+              {NOTES_TYPE_OPTIONS.map(option => (
+                <button
+                  key={option.type}
+                  type="button"
+                  className="hd-type-option"
+                  onClick={() => {
+                    setShowTypeSheet(false);
+                    openNew(option.type);
+                  }}
                 >
-                  <option value="">Moja notatka</option>
-                  {people.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="hd-field">
-                <label className="hd-label">Zdjęcia</label>
-
-                {/* Existing images */}
-                {existingImages.length > 0 && (
-                  <div className="hd-previews" style={{ marginBottom: 8 }}>
-                    {existingImages.map((storedValue, i) => {
-                      const displayUrl = imageDisplayUrls[storedValue];
-                      if (!displayUrl) return null;
-
-                      return (
-                        <div key={`${storedValue}-${i}`} className="hd-preview-item">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={displayUrl} alt="" />
-                          <button className="hd-preview-remove"
-                            onClick={() => setExistingImages(prev => prev.filter(value => value !== storedValue))}>
-                            ✕
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* New previews */}
-                {photoPreviews.length > 0 && (
-                  <div className="hd-previews" style={{ marginBottom: 8 }}>
-                    {photoPreviews.map((src, i) => (
-                      <div key={i} className="hd-preview-item">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={src} alt="" />
-                        <button className="hd-preview-remove"
-                          onClick={() => {
-                            setPhotoFiles(prev => prev.filter((_, j) => j !== i));
-                            setPhotoPreviews(prev => prev.filter((_, j) => j !== i));
-                          }}>
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <button className="hd-photo-upload" onClick={() => fileInputRef.current?.click()}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-                    <rect x="1" y="3" width="14" height="11" rx="2"/><circle cx="10.5" cy="8.5" r="1.5"/><path d="M1 10l3-3 2 2 3-3 3 3"/>
-                  </svg>
-                  Dodaj zdjęcie
+                  <span className="hd-type-option-icon" aria-hidden="true">
+                    {option.icon}
+                  </span>
+                  {option.choiceLabel}
                 </button>
-                <input
-                  ref={fileInputRef} type="file" accept="image/*" multiple
-                  style={{ display: "none" }} onChange={handlePhotoChange}
-                />
-              </div>
-            </div>
-
-            <div className="hd-modal-actions">
-              <button className="hd-btn-cancel" onClick={closeModal}>Anuluj</button>
-              <button
-                className="hd-btn-save"
-                onClick={saveMemory}
-                disabled={!noteText.trim() || saving || uploading}
-              >
-                {saving || uploading
-                  ? "Zapisuję..."
-                  : editingMemory ? "Zapisz" : "Dodaj"}
-              </button>
+              ))}
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── ADD / EDIT BOTTOM SHEET ── */}
+      {showModal && (
+        <MemoryEditorSheet
+          key={editingMemory ? `edit-${editingMemory.id}` : `create-${selectedNewType}`}
+          mode={editingMemory ? "edit" : "create"}
+          type={editingMemory ? editingMemory.type : selectedNewType}
+          memory={editingMemory}
+          people={people}
+          imageDisplayUrls={imageDisplayUrls}
+          onCancel={closeModal}
+          onSubmit={saveMemory}
+        />
       )}
     </>
   );

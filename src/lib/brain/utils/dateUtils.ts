@@ -1,5 +1,5 @@
-export function getDaysUntil(date: string): number {
-  const today = new Date();
+export function getDaysUntil(date: string, currentDate = new Date()): number {
+  const today = new Date(currentDate);
   const target = new Date(date);
 
   // прибираємо години, хвилини та секунди

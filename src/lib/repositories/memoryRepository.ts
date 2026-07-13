@@ -8,10 +8,12 @@ import { supabase } from "@/lib/supabaseClient";
 import { mapMemory } from "@/lib/brain/mappers/mapMemory";
 import type { BrainMemory } from "@/lib/brain/types";
 import type {
+  FilterNotesMemoriesInput,
   MemoryRow,
   NotesMemoryPerson,
   NotesMemoryRow,
 } from "./memory.types";
+import { filterNotesMemories } from "./memory.types";
 import {
   assertPersistableMemoryImageValues,
   DEFAULT_MEMORY_IMAGE_SIGNED_URL_EXPIRY,
@@ -20,6 +22,14 @@ import {
   prepareMemoryImagePathsForSigning,
   uploadMemoryImageFiles,
 } from "@/lib/storage/memoryImages";
+import {
+  buildCreateNotesMemoryPayload,
+  buildUpdateNotesMemoryPayload,
+} from "@/lib/memories/notesMemoryTypes";
+import type {
+  NotesMemoryCreateFields,
+  NotesMemoryUpdatePatch,
+} from "@/lib/memories/notesMemoryTypes";
 import type {
   MemoryImageUploadError,
   UploadMemoryImagesResult,
@@ -28,31 +38,19 @@ import type {
 export type { MemoryImageUploadError, UploadMemoryImagesResult };
 
 const NOTES_MEMORY_COLUMNS =
-  "id, content_text, created_at, person_id, images, ai_tags, ai_summary";
+  "id, content_text, created_at, person_id, images, ai_tags, ai_summary, type, title, value_text, occurred_on";
 
 export interface ListMemoriesInput {
   userId: string;
 }
 
-export interface FilterMemoriesInput {
-  memories: NotesMemoryRow[];
-  people: NotesMemoryPerson[];
-  personId: string;
-  search: string;
-}
+export type FilterMemoriesInput = FilterNotesMemoriesInput;
 
-export interface CreateNotesMemoryInput {
+export interface CreateNotesMemoryInput extends NotesMemoryCreateFields {
   userId: string;
-  contentText: string;
-  personId: string | null;
-  images: string[] | null;
 }
 
-export interface UpdateNotesMemoryInput {
-  contentText: string;
-  personId: string | null;
-  images: string[] | null;
-}
+export type UpdateNotesMemoryInput = NotesMemoryUpdatePatch;
 
 export interface MemoryImageSignedUrlResult {
   originalValue: string;
@@ -123,38 +121,13 @@ export async function listMemories({
 }
 
 /**
- * Apply the Notes person filter and text search without changing the database
- * query or result ordering used by the existing screen.
+ * Apply the Notes primary, person, and text filters without changing the
+ * database query or result ordering used by the existing screen.
  */
-export function filterMemories({
-  memories,
-  people,
-  personId,
-  search,
-}: FilterMemoriesInput): NotesMemoryRow[] {
-  const byPerson =
-    personId === "all"
-      ? memories
-      : personId === "none"
-        ? memories.filter((memory) => !memory.person_id)
-        : memories.filter((memory) => memory.person_id === personId);
-
-  const query = search.trim().toLowerCase();
-  if (!query) return byPerson;
-
-  return byPerson.filter((memory) => {
-    if (memory.content_text?.toLowerCase().includes(query)) return true;
-    if (
-      (memory.ai_tags ?? []).some((tag) =>
-        tag.toLowerCase().includes(query)
-      )
-    ) {
-      return true;
-    }
-
-    const person = people.find((item) => item.id === memory.person_id);
-    return person?.name.toLowerCase().includes(query) ?? false;
-  });
+export function filterMemories(
+  input: FilterMemoriesInput
+): NotesMemoryRow[] {
+  return filterNotesMemories(input);
 }
 
 /**
@@ -299,16 +272,9 @@ export async function createNotesMemory(
   input: CreateNotesMemoryInput
 ): Promise<void> {
   const images = assertPersistableMemoryImageValues(input.images);
+  const payload = buildCreateNotesMemoryPayload({ ...input, images });
 
-  await supabase.from("memories").insert({
-    content_text: input.contentText,
-    person_id: input.personId,
-    images,
-    user_id: input.userId,
-    type: "note",
-    source: "manual",
-    is_active: true,
-  });
+  await supabase.from("memories").insert(payload);
 }
 
 /**
@@ -318,15 +284,18 @@ export async function updateNotesMemory(
   memoryId: string,
   input: UpdateNotesMemoryInput
 ): Promise<void> {
-  const images = assertPersistableMemoryImageValues(input.images);
+  const safeInput =
+    input.images === undefined
+      ? input
+      : {
+          ...input,
+          images: assertPersistableMemoryImageValues(input.images),
+        };
+  const payload = buildUpdateNotesMemoryPayload(safeInput);
 
   await supabase
     .from("memories")
-    .update({
-      content_text: input.contentText,
-      person_id: input.personId,
-      images,
-    })
+    .update(payload)
     .eq("id", memoryId);
 }
 

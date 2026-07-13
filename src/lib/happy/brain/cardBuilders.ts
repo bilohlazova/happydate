@@ -22,6 +22,7 @@ export function createBirthdayCard(
     description: "Warto przygotować prezent wcześniej.",
     actionLabel: "Przejdź",
     actionRoute: `/people/${person.id}`,
+    personId: person.id,
   };
 }
 
@@ -44,6 +45,7 @@ export function createMemoryCards(
       description: favoriteThings.join(", "),
       actionLabel: "Zobacz",
       actionRoute: `/people/${person.id}`,
+      personId: person.id,
     },
   ];
 }
@@ -104,5 +106,6 @@ export function createMemoryCard(
     actionRoute: memory.personId
       ? `/people/${memory.personId}`
       : "/care",
+    personId: memory.personId ?? undefined,
   };
 }

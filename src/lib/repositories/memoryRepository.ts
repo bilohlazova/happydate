@@ -7,7 +7,69 @@
 import { supabase } from "@/lib/supabaseClient";
 import { mapMemory } from "@/lib/brain/mappers/mapMemory";
 import type { BrainMemory } from "@/lib/brain/types";
-import type { MemoryRow } from "./memory.types";
+import type {
+  MemoryRow,
+  NotesMemoryPerson,
+  NotesMemoryRow,
+} from "./memory.types";
+import {
+  assertPersistableMemoryImageValues,
+  DEFAULT_MEMORY_IMAGE_SIGNED_URL_EXPIRY,
+  getOwnedMemoryImagePaths,
+  MEMORY_IMAGES_BUCKET,
+  prepareMemoryImagePathsForSigning,
+  uploadMemoryImageFiles,
+} from "@/lib/storage/memoryImages";
+import type {
+  MemoryImageUploadError,
+  UploadMemoryImagesResult,
+} from "@/lib/storage/memoryImages";
+
+export type { MemoryImageUploadError, UploadMemoryImagesResult };
+
+const NOTES_MEMORY_COLUMNS =
+  "id, content_text, created_at, person_id, images, ai_tags, ai_summary";
+
+export interface ListMemoriesInput {
+  userId: string;
+}
+
+export interface FilterMemoriesInput {
+  memories: NotesMemoryRow[];
+  people: NotesMemoryPerson[];
+  personId: string;
+  search: string;
+}
+
+export interface CreateNotesMemoryInput {
+  userId: string;
+  contentText: string;
+  personId: string | null;
+  images: string[] | null;
+}
+
+export interface UpdateNotesMemoryInput {
+  contentText: string;
+  personId: string | null;
+  images: string[] | null;
+}
+
+export interface MemoryImageSignedUrlResult {
+  originalValue: string;
+  objectPath: string | null;
+  signedUrl: string | null;
+  error: string | null;
+}
+
+export interface DeleteMemoryImageObjectsResult {
+  deleted: string[];
+  ignored: Array<{
+    storedValue: string;
+    objectPath: string | null;
+    reason: "invalid_path" | "foreign_owner" | "not_authenticated";
+  }>;
+  failed: Array<{ objectPath: string; error: string }>;
+}
 
 export interface CreateMemoryInput {
   userId: string;
@@ -17,6 +79,262 @@ export interface CreateMemoryInput {
   value: string;
   content?: string;
   occurredOn?: string;
+}
+
+/**
+ * Return the currently authenticated user's id for client-side memory flows.
+ */
+export async function getCurrentMemoryUserId(): Promise<string | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return user?.id ?? null;
+}
+
+/**
+ * Fetch the person projection used by the Notes filters and editor.
+ * Ownership remains enforced by the same RLS policy as the previous direct
+ * Notes query.
+ */
+export async function getNotesMemoryPeople(): Promise<NotesMemoryPerson[]> {
+  const { data } = await supabase
+    .from("people")
+    .select("id, name, relation")
+    .order("name");
+
+  return data ?? [];
+}
+
+/**
+ * Fetch the Notes projection for a user, newest first.
+ */
+export async function listMemories({
+  userId,
+}: ListMemoriesInput): Promise<NotesMemoryRow[]> {
+  const { data } = await supabase
+    .from("memories")
+    .select(NOTES_MEMORY_COLUMNS)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .returns<NotesMemoryRow[]>();
+
+  return data ?? [];
+}
+
+/**
+ * Apply the Notes person filter and text search without changing the database
+ * query or result ordering used by the existing screen.
+ */
+export function filterMemories({
+  memories,
+  people,
+  personId,
+  search,
+}: FilterMemoriesInput): NotesMemoryRow[] {
+  const byPerson =
+    personId === "all"
+      ? memories
+      : personId === "none"
+        ? memories.filter((memory) => !memory.person_id)
+        : memories.filter((memory) => memory.person_id === personId);
+
+  const query = search.trim().toLowerCase();
+  if (!query) return byPerson;
+
+  return byPerson.filter((memory) => {
+    if (memory.content_text?.toLowerCase().includes(query)) return true;
+    if (
+      (memory.ai_tags ?? []).some((tag) =>
+        tag.toLowerCase().includes(query)
+      )
+    ) {
+      return true;
+    }
+
+    const person = people.find((item) => item.id === memory.person_id);
+    return person?.name.toLowerCase().includes(query) ?? false;
+  });
+}
+
+/**
+ * Resolve legacy URLs and canonical object paths into temporary display URLs.
+ * Paths are deduplicated and signed in one Storage request.
+ */
+export async function createMemoryImageSignedUrls(
+  values: string[],
+  expiresIn = DEFAULT_MEMORY_IMAGE_SIGNED_URL_EXPIRY
+): Promise<MemoryImageSignedUrlResult[]> {
+  const { entries, uniqueObjectPaths } =
+    prepareMemoryImagePathsForSigning(values);
+
+  if (uniqueObjectPaths.length === 0) {
+    return entries.map((entry) => ({
+      ...entry,
+      signedUrl: null,
+    }));
+  }
+
+  const { data, error } = await supabase.storage
+    .from(MEMORY_IMAGES_BUCKET)
+    .createSignedUrls(uniqueObjectPaths, expiresIn);
+
+  const signedByPath = new Map<
+    string,
+    { signedUrl: string | null; error: string | null }
+  >();
+
+  uniqueObjectPaths.forEach((objectPath, index) => {
+    const signedResult = data?.[index];
+    const resultError = signedResult?.error
+      ? String(signedResult.error)
+      : error?.message ?? null;
+
+    signedByPath.set(objectPath, {
+      signedUrl: signedResult?.signedUrl ?? null,
+      error:
+        resultError ??
+        (signedResult?.signedUrl ? null : "Unable to create signed URL"),
+    });
+  });
+
+  return entries.map((entry) => {
+    if (!entry.objectPath) {
+      return { ...entry, signedUrl: null };
+    }
+
+    const signed = signedByPath.get(entry.objectPath);
+    return {
+      originalValue: entry.originalValue,
+      objectPath: entry.objectPath,
+      signedUrl: signed?.signedUrl ?? null,
+      error: signed?.error ?? "Unable to create signed URL",
+    };
+  });
+}
+
+/**
+ * Upload Notes images to owner-scoped canonical object paths. Successful paths
+ * are retained even if another file in the same batch fails.
+ */
+export async function uploadMemoryImages(
+  files: File[]
+): Promise<UploadMemoryImagesResult> {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    const message = authError?.message ?? "Zaloguj się ponownie przed wysłaniem zdjęć.";
+    return {
+      objectPaths: [],
+      errors: files.map((file) => ({ fileName: file.name, error: message })),
+    };
+  }
+
+  return uploadMemoryImageFiles(user.id, files, async (objectPath, file) => {
+    const { error } = await supabase.storage
+      .from(MEMORY_IMAGES_BUCKET)
+      .upload(objectPath, file);
+    return { error };
+  });
+}
+
+/**
+ * Safely remove only objects that belong to the authenticated user.
+ * This helper is intentionally not connected to Notes lifecycle actions yet.
+ */
+export async function deleteMemoryImageObjects(
+  storedValues: string[]
+): Promise<DeleteMemoryImageObjectsResult> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      deleted: [],
+      ignored: storedValues.map((storedValue) => ({
+        storedValue,
+        objectPath: null,
+        reason: "not_authenticated" as const,
+      })),
+      failed: [],
+    };
+  }
+
+  const { acceptedPaths, ignored } = getOwnedMemoryImagePaths(
+    storedValues,
+    user.id
+  );
+
+  if (acceptedPaths.length === 0) {
+    return { deleted: [], ignored, failed: [] };
+  }
+
+  const { error } = await supabase.storage
+    .from(MEMORY_IMAGES_BUCKET)
+    .remove(acceptedPaths);
+
+  if (error) {
+    return {
+      deleted: [],
+      ignored,
+      failed: acceptedPaths.map((objectPath) => ({
+        objectPath,
+        error: error.message,
+      })),
+    };
+  }
+
+  return { deleted: acceptedPaths, ignored, failed: [] };
+}
+
+/**
+ * Create a free-form Notes memory with explicit compatibility metadata.
+ * Other structured-memory columns remain omitted and untouched.
+ */
+export async function createNotesMemory(
+  input: CreateNotesMemoryInput
+): Promise<void> {
+  const images = assertPersistableMemoryImageValues(input.images);
+
+  await supabase.from("memories").insert({
+    content_text: input.contentText,
+    person_id: input.personId,
+    images,
+    user_id: input.userId,
+    type: "note",
+    source: "manual",
+    is_active: true,
+  });
+}
+
+/**
+ * Update only the fields currently editable on the Notes screen.
+ */
+export async function updateNotesMemory(
+  memoryId: string,
+  input: UpdateNotesMemoryInput
+): Promise<void> {
+  const images = assertPersistableMemoryImageValues(input.images);
+
+  await supabase
+    .from("memories")
+    .update({
+      content_text: input.contentText,
+      person_id: input.personId,
+      images,
+    })
+    .eq("id", memoryId);
+}
+
+/**
+ * Hard-delete a memory, preserving the existing Notes behavior.
+ */
+export async function deleteMemory(memoryId: string): Promise<void> {
+  await supabase.from("memories").delete().eq("id", memoryId);
 }
 
 /**

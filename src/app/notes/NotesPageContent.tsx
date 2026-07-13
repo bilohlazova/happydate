@@ -1,27 +1,26 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import {
+  createMemoryImageSignedUrls,
+  createNotesMemory,
+  deleteMemory as deleteMemoryRecord,
+  filterMemories,
+  getCurrentMemoryUserId,
+  getNotesMemoryPeople,
+  listMemories,
+  updateNotesMemory,
+  uploadMemoryImages,
+} from "@/lib/repositories/memoryRepository";
+import type { UploadMemoryImagesResult } from "@/lib/repositories/memoryRepository";
+import type {
+  NotesMemoryPerson,
+  NotesMemoryRow,
+} from "@/lib/repositories/memory.types";
 
 // ─────────────────────────────────────────────
 // TYPES — match real Supabase memories schema
 // ─────────────────────────────────────────────
-
-type Person = {
-  id: string;
-  name: string;
-  relation: string | null;
-};
-
-type Memory = {
-  id: string;
-  content_text: string | null;
-  created_at: string;
-  person_id: string | null;
-  images: string[] | null;
-  ai_tags: string[] | null;
-  ai_summary: string | null;
-};
 
 // ─────────────────────────────────────────────
 // HELPERS
@@ -57,8 +56,8 @@ function getRelColor(relation: string | null) {
 // ─────────────────────────────────────────────
 
 export default function NotesPageContent() {
-  const [memories,       setMemories]       = useState<Memory[]>([]);
-  const [people,         setPeople]         = useState<Person[]>([]);
+  const [memories,       setMemories]       = useState<NotesMemoryRow[]>([]);
+  const [people,         setPeople]         = useState<NotesMemoryPerson[]>([]);
   const [loading,        setLoading]        = useState(true);
   const [filterPersonId, setFilterPersonId] = useState<string>("all");
 
@@ -71,7 +70,7 @@ export default function NotesPageContent() {
 
   // Modal (bottom sheet)
   const [showModal,      setShowModal]      = useState(false);
-  const [editingMemory,  setEditingMemory]  = useState<Memory | null>(null);
+  const [editingMemory,  setEditingMemory]  = useState<NotesMemoryRow | null>(null);
   const [saving,         setSaving]         = useState(false);
   const [uploading,      setUploading]      = useState(false);
 
@@ -81,6 +80,7 @@ export default function NotesPageContent() {
   const [photoFiles,     setPhotoFiles]     = useState<File[]>([]);
   const [photoPreviews,  setPhotoPreviews]  = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [imageDisplayUrls, setImageDisplayUrls] = useState<Record<string, string>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -89,20 +89,25 @@ export default function NotesPageContent() {
 
   // ── Load ──
   const loadPeople = useCallback(async () => {
-    const { data } = await supabase
-      .from("people").select("id, name, relation").order("name");
-    setPeople(data ?? []);
+    setPeople(await getNotesMemoryPeople());
   }, []);
 
   const loadMemories = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data } = await supabase
-      .from("memories")
-      .select("id, content_text, created_at, person_id, images, ai_tags, ai_summary")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-    setMemories(data ?? []);
+    const userId = await getCurrentMemoryUserId();
+    if (!userId) return;
+    const rows = await listMemories({ userId });
+    const storedImageValues = rows.flatMap((memory) => memory.images ?? []);
+    const resolvedImages = await createMemoryImageSignedUrls(storedImageValues);
+    const displayUrls: Record<string, string> = {};
+
+    for (const image of resolvedImages) {
+      if (image.signedUrl) {
+        displayUrls[image.originalValue] = image.signedUrl;
+      }
+    }
+
+    setImageDisplayUrls(displayUrls);
+    setMemories(rows);
   }, []);
 
   useEffect(() => {
@@ -116,17 +121,11 @@ export default function NotesPageContent() {
   // ── Filter + Search ──
   // Search matches: note text, person name, ai_tags
   const q = search.trim().toLowerCase();
-  const byPerson =
-    filterPersonId === "all"  ? memories :
-    filterPersonId === "none" ? memories.filter(m => !m.person_id) :
-    memories.filter(m => m.person_id === filterPersonId);
-
-  const filtered = q === "" ? byPerson : byPerson.filter(m => {
-    if (m.content_text?.toLowerCase().includes(q)) return true;
-    if ((m.ai_tags ?? []).some(t => t.toLowerCase().includes(q))) return true;
-    const person = people.find(p => p.id === m.person_id);
-    if (person?.name.toLowerCase().includes(q)) return true;
-    return false;
+  const filtered = filterMemories({
+    memories,
+    people,
+    personId: filterPersonId,
+    search,
   });
 
   // ── AI Insights — computed from real data, no hallucinations ──
@@ -169,21 +168,14 @@ export default function NotesPageContent() {
     });
   }
 
-  async function uploadPhotos(userId: string): Promise<string[]> {
-    if (!photoFiles.length) return [];
+  async function uploadPhotos(): Promise<UploadMemoryImagesResult> {
+    if (!photoFiles.length) return { objectPaths: [], errors: [] };
     setUploading(true);
-    const urls: string[] = [];
-    for (const file of photoFiles) {
-      const ext  = file.name.split(".").pop();
-      const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from("memory-images").upload(path, file);
-      if (!error) {
-        const { data } = supabase.storage.from("memory-images").getPublicUrl(path);
-        urls.push(data.publicUrl);
-      }
+    try {
+      return await uploadMemoryImages(photoFiles);
+    } finally {
+      setUploading(false);
     }
-    setUploading(false);
-    return urls;
   }
 
   // ── Modal ──
@@ -194,7 +186,7 @@ export default function NotesPageContent() {
     setShowModal(true);
   }
 
-  function openEdit(m: Memory) {
+  function openEdit(m: NotesMemoryRow) {
     setEditingMemory(m);
     setNoteText(m.content_text ?? "");
     setSelectedPerson(m.person_id ?? "");
@@ -209,31 +201,59 @@ export default function NotesPageContent() {
   async function saveMemory() {
     if (!noteText.trim()) return;
     setSaving(true);
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) { setSaving(false); return; }
+    const userId = await getCurrentMemoryUserId();
+    if (!userId) { setSaving(false); return; }
 
-    const newUrls   = await uploadPhotos(auth.user.id);
-    const allImages = [...existingImages, ...newUrls];
+    try {
+      const uploadResult = await uploadPhotos();
+      const allImages = [...existingImages, ...uploadResult.objectPaths];
 
-    const payload = {
-      content_text: noteText.trim(),
-      person_id:    selectedPerson || null,
-      images:       allImages.length ? allImages : null,
-    };
+      const payload = {
+        content_text: noteText.trim(),
+        person_id:    selectedPerson || null,
+        images:       allImages.length ? allImages : null,
+      };
 
-    if (editingMemory) {
-      await supabase.from("memories").update(payload).eq("id", editingMemory.id);
-    } else {
-      await supabase.from("memories").insert({ ...payload, user_id: auth.user.id });
+      if (editingMemory) {
+        await updateNotesMemory(editingMemory.id, {
+          contentText: payload.content_text,
+          personId: payload.person_id,
+          images: payload.images,
+        });
+      } else {
+        await createNotesMemory({
+          userId,
+          contentText: payload.content_text,
+          personId: payload.person_id,
+          images: payload.images,
+        });
+      }
+
+      closeModal();
+      void loadMemories();
+
+      if (uploadResult.errors.length > 0) {
+        window.alert(
+          `Nie udało się dodać części zdjęć:\n${uploadResult.errors
+            .map((item) => item.error)
+            .join("\n")}`
+        );
+      }
+    } catch (error) {
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "Nie udało się zapisać wspomnienia."
+      );
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false); closeModal(); loadMemories();
   }
 
   // ── Delete ──
   async function deleteMemory(id: string) {
     setMenuOpenId(null);
-    await supabase.from("memories").delete().eq("id", id);
+    await deleteMemoryRecord(id);
     loadMemories();
   }
 
@@ -766,7 +786,10 @@ export default function NotesPageContent() {
 
           {filtered.map(memory => {
             const person = people.find(p => p.id === memory.person_id);
-            const imgs   = memory.images ?? [];
+            const imgs = (memory.images ?? []).flatMap((storedValue) => {
+              const displayUrl = imageDisplayUrls[storedValue];
+              return displayUrl ? [displayUrl] : [];
+            });
             const imgCount = imgs.length;
             const tags   = memory.ai_tags ?? [];
             const hasText = !!memory.content_text?.trim();
@@ -955,16 +978,21 @@ export default function NotesPageContent() {
                 {/* Existing images */}
                 {existingImages.length > 0 && (
                   <div className="hd-previews" style={{ marginBottom: 8 }}>
-                    {existingImages.map((url, i) => (
-                      <div key={i} className="hd-preview-item">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt="" />
-                        <button className="hd-preview-remove"
-                          onClick={() => setExistingImages(prev => prev.filter(u => u !== url))}>
-                          ✕
-                        </button>
-                      </div>
-                    ))}
+                    {existingImages.map((storedValue, i) => {
+                      const displayUrl = imageDisplayUrls[storedValue];
+                      if (!displayUrl) return null;
+
+                      return (
+                        <div key={`${storedValue}-${i}`} className="hd-preview-item">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={displayUrl} alt="" />
+                          <button className="hd-preview-remove"
+                            onClick={() => setExistingImages(prev => prev.filter(value => value !== storedValue))}>
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 

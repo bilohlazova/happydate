@@ -46,6 +46,6 @@ export const MEMORY_ICONS: Record<string, string> = {
   default: "📝",
 };
 
-export function getMemoryIcon(type: string): string {
-  return MEMORY_ICONS[type] ?? MEMORY_ICONS.default;
+export function getMemoryIcon(type: string | null | undefined): string {
+  return (type ? MEMORY_ICONS[type] : undefined) ?? MEMORY_ICONS.default;
 }

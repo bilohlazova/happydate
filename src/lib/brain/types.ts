@@ -54,7 +54,7 @@ export interface BrainMemory {
 
   personId: string | null;
 
-  type: string;
+  type: string | null;
 
   title: string | null;
 

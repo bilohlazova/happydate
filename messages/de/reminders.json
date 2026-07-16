@@ -1,0 +1,27 @@
+{
+  "today": {
+    "title": "Heute ist ein wichtiger Tag für {personName}",
+    "description": "Der Tag ist heute. Behalte dieses Datum im Blick."
+  },
+  "savedGift": {
+    "title": "Du hast bereits eine Idee für {personName}",
+    "description": "{daysUntil, plural, one {Das wichtige Datum ist morgen und deine Idee ist bereits gespeichert.} other {Das wichtige Datum ist in # Tagen und deine Idee ist bereits gespeichert.}}"
+  },
+  "prepareGift": {
+    "title": "Happy hat einen Ausgangspunkt für {personName}",
+    "description": "{daysUntil, plural, one {Das wichtige Datum ist morgen.} other {Das wichtige Datum ist in # Tagen.}} Inspiration: {context1}{contextCount, select, one {.} other { · {context2}.}}"
+  },
+  "missingContext": {
+    "title": "Ergänze eine Information über {personName}",
+    "description": "{daysUntil, plural, one {Das wichtige Datum ist morgen. Eine Information kann bei der Vorbereitung helfen.} other {Das wichtige Datum ist in # Tagen. Ergänze eine hilfreiche Information.}}"
+  },
+  "upcoming": {
+    "title": "Ein wichtiges Datum rückt näher",
+    "description": "{daysUntil, plural, one {Es ist morgen.} other {Es sind noch # Tage.}}"
+  },
+  "actions": {
+    "viewPerson": "Profil ansehen",
+    "prepare": "Vorbereiten",
+    "addInformation": "Information ergänzen"
+  }
+}

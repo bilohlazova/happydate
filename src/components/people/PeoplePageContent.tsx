@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Pencil, Trash2, X } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 import PersonCard from "@/components/people/PersonCard";
 import { ActivePeopleFilters } from "@/components/people/ActivePeopleFilters";
@@ -31,7 +32,6 @@ import {
   filterPeople,
   getActiveFilterCount,
   getDaysUntilBirthday,
-  pluralizePeoplePl,
   sortPeople,
   type PeopleFilters,
 } from "@/components/people/peopleFilters";
@@ -46,6 +46,7 @@ import {
   updatePerson,
 } from "@/lib/repositories/personRepository";
 import { MobileUI } from "@/lib/theme/mobile";
+import type { AppLocale } from "@/i18n/config";
 
 const COLLAPSE_THRESHOLD = 10;
 const COLLAPSED_VISIBLE_COUNT = 10;
@@ -76,6 +77,8 @@ export function PeoplePageContent({
   onPersonUpdated,
   onPersonDeleted,
 }: PeoplePageContentProps) {
+  const t = useTranslations("people");
+  const locale = useLocale() as AppLocale;
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [compactChrome, setCompactChrome] = useState(false);
@@ -106,7 +109,7 @@ export function PeoplePageContent({
           (memory) => memory.person_id === person.id
         );
         const tags = getTagsForPerson(person, personMemories);
-        const birthday = getBirthdayInfo(person.birthday);
+        const birthday = getBirthdayInfo(person.birthday, locale);
 
         return {
           person,
@@ -117,7 +120,7 @@ export function PeoplePageContent({
           searchText: buildSearchText(person, tags, personMemories),
         };
       }),
-    [memories, people]
+    [locale, memories, people]
   );
 
   const filteredPeople = useMemo(() => {
@@ -198,10 +201,11 @@ export function PeoplePageContent({
           onClearFilters={() => setAppliedFilters(DEFAULT_PEOPLE_FILTERS)}
           onClearSearch={() => setQuery("")}
           onPersonAction={setActionPerson}
+          t={t}
         />
 
         {appliedFilters.sort === "az" && (
-          <PeopleAlphabetIndex items={alphabetItems} />
+          <PeopleAlphabetIndex items={alphabetItems} label={t("accessibility.alphabet")} />
         )}
 
         <PeopleFilterSheet
@@ -244,6 +248,7 @@ function PeopleList({
   onClearFilters,
   onClearSearch,
   onPersonAction,
+  t,
 }: {
   loading: boolean;
   peopleCount: number;
@@ -255,9 +260,10 @@ function PeopleList({
   onClearFilters: () => void;
   onClearSearch: () => void;
   onPersonAction: (person: PersonRow) => void;
+  t: ReturnType<typeof useTranslations<"people">>;
 }) {
   if (loading) {
-    return <PeopleMessage>Ładowanie...</PeopleMessage>;
+    return <PeopleMessage>{t("states.loading")}</PeopleMessage>;
   }
 
   if (peopleCount === 0) {
@@ -277,7 +283,7 @@ function PeopleList({
   if (query.trim() || appliedFilters.sort !== "default") {
     return (
       <PeopleSection
-        title={`🔎 Wyniki (${pluralizePeoplePl(filteredPeople.length)})`}
+        title={t("sections.results", { count: filteredPeople.length })}
         items={filteredPeople}
         onPersonAction={onPersonAction}
       />
@@ -313,22 +319,22 @@ function PeopleList({
   return (
     <div className="flex flex-col gap-2">
       <PeopleSection
-        title={`❤️ Teraz (${nowPeople.length})`}
+        title={t("sections.now", { count: nowPeople.length })}
         items={nowPeople}
         onPersonAction={onPersonAction}
       />
 
       <PeopleSection
-        title={`🕒 W tym tygodniu (${weekPeople.length})`}
+        title={t("sections.week", { count: weekPeople.length })}
         items={weekPeople}
         onPersonAction={onPersonAction}
       />
 
       <PeopleSection
-        title={`👥 Pozostali (${otherPeople.length})`}
+        title={t("sections.others", { count: otherPeople.length })}
         caption={
           shouldCollapse && hiddenCount > 0
-            ? `Pokazano ${visibleOtherPeople.length} z ${otherPeople.length}`
+            ? t("sections.shown", { visible: visibleOtherPeople.length, total: otherPeople.length })
             : undefined
         }
         items={visibleOtherPeople}
@@ -341,7 +347,7 @@ function PeopleList({
           onClick={() => onExpandedChange(true)}
           className={`${MobileUI.button} bg-white text-blue-600 shadow-[0_10px_26px_rgba(15,23,42,0.055)] ring-1 ring-slate-100`}
         >
-          Pokaż pozostałe {hiddenCount}
+          {t("sections.showOthers", { count: hiddenCount })}
         </button>
       )}
 
@@ -351,7 +357,7 @@ function PeopleList({
           onClick={() => onExpandedChange(false)}
           className={`${MobileUI.button} bg-blue-50 text-blue-600`}
         >
-          Zwiń listę
+          {t("sections.collapse")}
         </button>
       )}
     </div>
@@ -416,8 +422,10 @@ function PeopleSection({
 
 function PeopleAlphabetIndex({
   items,
+  label,
 }: {
   items: Array<{ letter: string; personId: string }>;
+  label: string;
 }) {
   if (items.length < 6) {
     return null;
@@ -425,7 +433,7 @@ function PeopleAlphabetIndex({
 
   return (
     <nav
-      aria-label="Szybki indeks osób"
+      aria-label={label}
       className="fixed right-1 top-1/2 z-30 hidden -translate-y-1/2 flex-col rounded-full bg-white/75 px-1 py-1.5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] ring-1 ring-slate-100 backdrop-blur min-[380px]:flex"
     >
       {items.map((item) => (
@@ -457,6 +465,7 @@ function PersonActionsSheet({
   onUpdated: (person: PersonRow) => void;
   onDeleted: (personId: string) => void;
 }) {
+  const formT = useTranslations("personForm");
   const [mode, setMode] = useState<"actions" | "edit" | "delete">("actions");
   const [name, setName] = useState("");
   const [relationship, setRelationship] = useState("");
@@ -492,7 +501,7 @@ function PersonActionsSheet({
   async function handleSave() {
     if (!person) return;
     if (!name.trim()) {
-      setError("Imię jest wymagane.");
+      setError(formT("validation.nameRequired"));
       return;
     }
 
@@ -516,7 +525,7 @@ function PersonActionsSheet({
       onUpdated(updatedPerson);
     } catch (saveError) {
       console.error("[PersonActionsSheet] updatePerson failed:", saveError);
-      setError("Nie udało się zapisać zmian.");
+      setError(formT("states.saveError"));
     } finally {
       setSaving(false);
     }
@@ -547,7 +556,7 @@ function PersonActionsSheet({
         className="absolute inset-0 bg-slate-950/25"
         onClick={onClose}
       />
-      <section className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[520px] rounded-t-[1.35rem] bg-white px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-18px_60px_rgba(15,23,42,0.22)]">
+      <section aria-label={mode === "edit" ? formT("accessibility.editForm") : undefined} className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[520px] rounded-t-[1.35rem] bg-white px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-18px_60px_rgba(15,23,42,0.22)]">
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-slate-200" />
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -576,7 +585,7 @@ function PersonActionsSheet({
               className="flex min-h-12 items-center gap-3 rounded-[0.95rem] bg-sky-50 px-3 text-left text-sm font-black text-sky-700"
             >
               <Pencil className="h-5 w-5" />
-              Zmień
+              {formT("title.edit")}
             </button>
             <button
               type="button"
@@ -591,16 +600,18 @@ function PersonActionsSheet({
 
         {mode === "edit" && (
           <div className="grid gap-3">
-            <Field label="Imię" htmlFor="edit-name">
+            <Field label={formT("fields.name")} htmlFor="edit-name">
               <input
                 id="edit-name"
                 type="text"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 className={MobileUI.input}
+                aria-label={formT("accessibility.birthdayInput")}
               />
             </Field>
             <GenderSelectField
+              localized
               value={gender}
               onChange={(value) => {
                 setGender(value);
@@ -611,6 +622,7 @@ function PersonActionsSheet({
               }}
             />
             <RelationPickerField
+              localized
               value={relationship}
               valueKey={relationKey}
               gender={gender}
@@ -620,7 +632,7 @@ function PersonActionsSheet({
                 setRelationKey(key);
               }}
             />
-            <Field label="Urodziny" htmlFor="edit-birthday">
+            <Field label={formT("fields.birthday")} htmlFor="edit-birthday">
               <input
                 id="edit-birthday"
                 type="date"
@@ -640,7 +652,7 @@ function PersonActionsSheet({
                 onClick={() => setMode("actions")}
                 className="min-h-11 rounded-[0.9rem] bg-slate-50 px-4 text-sm font-black text-slate-600"
               >
-                Wróć
+                {formT("actions.cancel")}
               </button>
               <button
                 type="button"
@@ -648,7 +660,7 @@ function PersonActionsSheet({
                 onClick={handleSave}
                 className="min-h-11 rounded-[0.9rem] bg-gradient-to-r from-sky-500 to-cyan-500 px-4 text-sm font-black text-white shadow-[0_10px_24px_rgba(14,165,233,0.24)] disabled:opacity-50"
               >
-                {saving ? "Zapisywanie..." : "Zapisz"}
+                {saving ? formT("states.saving") : formT("actions.update")}
               </button>
             </div>
           </div>
@@ -724,13 +736,14 @@ function PeopleNoResults({
   onClearFilters: () => void;
   onClearSearch: () => void;
 }) {
+  const t = useTranslations("people");
   return (
     <section className={`${MobileUI.card} px-4 py-5 text-center`}>
       <h2 className="text-base font-black text-slate-950">
-        Nie znaleziono osób
+        {t("states.noResults")}
       </h2>
       <p className="mx-auto mt-1 max-w-xs text-xs font-semibold leading-5 text-slate-500">
-        Spróbuj zmienić wyszukiwanie lub wyczyścić filtry.
+        {t("states.noResultsBody")}
       </p>
       <div className="mt-4 grid gap-2">
         <button
@@ -738,7 +751,7 @@ function PeopleNoResults({
           onClick={onClearFilters}
           className="min-h-10 rounded-[0.9rem] bg-sky-50 px-4 text-sm font-black text-sky-700"
         >
-          Wyczyść filtry
+          {t("states.clearFilters")}
         </button>
         {hasQuery && (
           <button
@@ -746,7 +759,7 @@ function PeopleNoResults({
             onClick={onClearSearch}
             className="min-h-10 rounded-[0.9rem] bg-white px-4 text-sm font-black text-slate-600 ring-1 ring-slate-100"
           >
-            Wyczyść wyszukiwanie
+            {t("search.clear")}
           </button>
         )}
       </div>
@@ -755,16 +768,17 @@ function PeopleNoResults({
 }
 
 function PeopleEmptyState() {
+  const t = useTranslations("people");
   return (
     <section className={`${MobileUI.card} px-5 py-8 text-center`}>
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-3xl">
         💙
       </div>
       <h2 className="mt-4 text-xl font-black text-slate-950">
-        Twoja lista jest jeszcze pusta
+        {t("states.emptyTitle")}
       </h2>
       <p className="mx-auto mt-2 max-w-xs text-sm font-semibold leading-6 text-slate-500">
-        Dodaj pierwszą ważną osobę.
+        {t("states.emptyBody")}
       </p>
       <div className="mt-5 flex justify-center">
         <AddPersonMenu />
@@ -848,7 +862,7 @@ function formatTag(tag: string): string {
     .replace(/^\w/, (letter) => letter.toUpperCase());
 }
 
-function getBirthdayInfo(date: string | null) {
+function getBirthdayInfo(date: string | null, locale: AppLocale) {
   const daysUntil = getDaysUntilBirthday(date);
 
   if (daysUntil === null || !date) {
@@ -859,7 +873,7 @@ function getBirthdayInfo(date: string | null) {
 
   return {
     daysUntil,
-    label: new Intl.DateTimeFormat("pl-PL", {
+    label: new Intl.DateTimeFormat(locale, {
       day: "numeric",
       month: "short",
     }).format(birthday),

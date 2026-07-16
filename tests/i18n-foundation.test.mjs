@@ -100,7 +100,7 @@ test("every supported locale has exactly the Polish common key structure", async
 });
 
 test("every namespace has exact key parity across all locales", async () => {
-  const namespaces = ["common", "navigation", "profile", "auth"];
+  const namespaces = ["common", "navigation", "profile", "auth", "people", "person", "personForm", "notes", "reminders"];
   for (const namespace of namespaces) {
     const polishKeys = keyPaths(
       await readNamespaceMessages("pl", namespace),

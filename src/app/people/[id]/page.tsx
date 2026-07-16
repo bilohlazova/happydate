@@ -6,6 +6,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { supabase } from "@/lib/supabaseClient";
 import { getPersonById } from "@/lib/repositories/personRepository";
@@ -25,6 +26,7 @@ import { mapMemory } from "@/lib/brain/mappers/mapMemory";
 import { buildPersonKnowledge } from "@/lib/brain/engines/personKnowledgeEngine";
 
 export default function PersonDetailsPage() {
+  const t = useTranslations("person");
   const params = useParams<{ id: string }>();
   const personId = params.id;
 
@@ -162,7 +164,7 @@ export default function PersonDetailsPage() {
       <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-4`}>
         <div className={MobileUI.container}>
         <p className={`${MobileUI.card} p-5 text-sm font-semibold text-gray-600`}>
-          Ładowanie...
+          {t("profile.loading")}
         </p>
         </div>
       </main>
@@ -174,7 +176,7 @@ export default function PersonDetailsPage() {
       <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-4`}>
         <div className={MobileUI.container}>
         <p className={`${MobileUI.card} p-5 text-sm font-semibold text-gray-600`}>
-          Nie znaleziono osoby
+          {t("profile.notFound")}
         </p>
         </div>
       </main>
@@ -187,7 +189,7 @@ export default function PersonDetailsPage() {
   );
 
   return (
-    <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-4`}>
+    <main aria-label={t("accessibility.profile", { name: person.name })} className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-4`}>
       <div className={`${MobileUI.container} ${MobileUI.stack}`}>
       <PersonCard person={person} />
 

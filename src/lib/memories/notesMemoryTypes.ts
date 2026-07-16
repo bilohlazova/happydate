@@ -5,7 +5,8 @@ import {
   parseISO,
   startOfDay,
 } from "date-fns";
-import { pl } from "date-fns/locale";
+import { getDateFnsLocale } from "../../i18n/dateLocales.ts";
+import type { AppLocale } from "../../i18n/config.ts";
 
 export type NotesRawType = "note" | "memory" | "gift" | "journal";
 
@@ -339,6 +340,20 @@ export interface NotesCardPresentationInput {
   createdAt: string;
   personName: string | null;
   imageCount: number;
+  locale?: AppLocale;
+  labels?: Partial<NotesPresentationLabels>;
+}
+
+export interface NotesPresentationLabels {
+  typeLabels: Record<NotesRawType | "other", string>;
+  fallbackTitles: Record<NotesRawType | "other", string>;
+  emptyContent: Record<NotesRawType | "other", string>;
+  personMeta: (name: string) => string;
+  imageCount: (count: number) => string;
+  today: string;
+  yesterday: string;
+  daysAgo: (count: number) => string;
+  unknownDate: string;
 }
 
 export interface NotesCardPresentation {
@@ -379,22 +394,24 @@ function parseNotesCalendarDate(value: string): Date | null {
 export function formatNotesCardDate(
   occurredOn: string | null,
   createdAt: string,
-  now = new Date()
+  now = new Date(),
+  locale: AppLocale = "pl",
+  labels?: Pick<NotesPresentationLabels, "today" | "yesterday" | "daysAgo" | "unknownDate">
 ): string {
   const occurredDate = meaningfulText(occurredOn)
     ? parseNotesCalendarDate(occurredOn!.trim())
     : null;
   const date = occurredDate ?? parseNotesCalendarDate(createdAt);
 
-  if (!date) return "Nieznana data";
+  if (!date) return labels?.unknownDate ?? "Nieznana data";
 
   const daysAgo = differenceInCalendarDays(startOfDay(now), startOfDay(date));
-  if (daysAgo === 0) return "Dzisiaj";
-  if (daysAgo === 1) return "Wczoraj";
-  if (daysAgo >= 2 && daysAgo <= 6) return `${daysAgo} dni temu`;
+  if (daysAgo === 0) return labels?.today ?? "Dzisiaj";
+  if (daysAgo === 1) return labels?.yesterday ?? "Wczoraj";
+  if (daysAgo >= 2 && daysAgo <= 6) return labels?.daysAgo(daysAgo) ?? `${daysAgo} dni temu`;
 
   return format(date, date.getFullYear() === now.getFullYear() ? "d MMMM" : "d MMMM yyyy", {
-    locale: pl,
+    locale: getDateFnsLocale(locale),
   });
 }
 
@@ -415,6 +432,8 @@ export function getNotesCardPresentation(
   input: NotesCardPresentationInput
 ): NotesCardPresentation {
   const config = getNotesTypeDisplayConfig(input.normalizedType);
+  const localizedTypeLabel = input.labels?.typeLabels?.[config.type] ?? config.cardLabel;
+  const fallbackTitle = input.labels?.fallbackTitles?.[config.type];
   const explicitTitle = meaningfulText(input.title);
   const personName = meaningfulText(input.personName);
   const visiblePersonName = config.type === "journal" ? null : personName;
@@ -423,12 +442,12 @@ export function getNotesCardPresentation(
   let titleUsesPerson = false;
 
   if (config.type === "gift") {
-    title = visiblePersonName ?? explicitTitle ?? "Pomysł na prezent";
+    title = visiblePersonName ?? explicitTitle ?? fallbackTitle ?? "Pomysł na prezent";
     titleUsesPerson = Boolean(visiblePersonName);
   } else if (config.type === "journal") {
-    title = explicitTitle ?? "Mój dzień";
+    title = explicitTitle ?? fallbackTitle ?? "Mój dzień";
   } else {
-    title = explicitTitle ?? visiblePersonName ?? config.cardLabel;
+    title = explicitTitle ?? visiblePersonName ?? fallbackTitle ?? localizedTypeLabel;
     titleUsesPerson = !explicitTitle && Boolean(visiblePersonName);
   }
 
@@ -444,28 +463,37 @@ export function getNotesCardPresentation(
     journal: "Brak treści wpisu",
     other: "Brak treści",
   };
-  const imageCountLabel = formatNotesImageCount(input.imageCount);
+  const imageCountLabel = input.imageCount > 1
+    ? input.labels?.imageCount?.(input.imageCount) ?? formatNotesImageCount(input.imageCount)
+    : null;
   const dateLabel = formatNotesCardDate(
     input.occurredOn,
-    input.createdAt
+    input.createdAt,
+    new Date(),
+    input.locale,
+    input.labels?.today && input.labels.yesterday && input.labels.daysAgo && input.labels.unknownDate
+      ? { today: input.labels.today, yesterday: input.labels.yesterday, daysAgo: input.labels.daysAgo, unknownDate: input.labels.unknownDate }
+      : undefined
   );
   const metaParts = [
-    visiblePersonName && !titleUsesPerson ? `O osobie: ${visiblePersonName}` : null,
+    visiblePersonName && !titleUsesPerson
+      ? input.labels?.personMeta?.(visiblePersonName) ?? `O osobie: ${visiblePersonName}`
+      : null,
     dateLabel,
     imageCountLabel,
   ].filter((part): part is string => Boolean(part));
 
   return {
     displayType: config.type,
-    typeLabel: config.cardLabel,
+    typeLabel: localizedTypeLabel,
     icon: config.icon,
     background: config.background,
     color: config.color,
     title,
-    showTitle: title.trim().toLocaleLowerCase("pl-PL") !== config.cardLabel.toLocaleLowerCase("pl-PL"),
+    showTitle: title.trim().toLocaleLowerCase(input.locale ?? "pl-PL") !== localizedTypeLabel.toLocaleLowerCase(input.locale ?? "pl-PL"),
     titleUsesPerson,
     visiblePersonName,
-    content: content ?? emptyFallbacks[config.type],
+    content: content ?? input.labels?.emptyContent?.[config.type] ?? emptyFallbacks[config.type],
     contentIsFallback: !content,
     dateLabel,
     metaParts,

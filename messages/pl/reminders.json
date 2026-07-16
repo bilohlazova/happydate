@@ -1,0 +1,27 @@
+{
+  "today": {
+    "title": "Dziś ważny dzień dla {personName}",
+    "description": "To już dzisiaj. Warto pamiętać o tej dacie."
+  },
+  "savedGift": {
+    "title": "Masz już pomysł dla {personName}",
+    "description": "{daysUntil, plural, =1 {Ważna data jest jutro, a pomysł jest już zapisany.} one {Do ważnej daty został # dzień, a pomysł jest już zapisany.} few {Do ważnej daty zostały # dni, a pomysł jest już zapisany.} many {Do ważnej daty zostało # dni, a pomysł jest już zapisany.} other {Do ważnej daty zostało # dnia, a pomysł jest już zapisany.}}"
+  },
+  "prepareGift": {
+    "title": "Happy ma punkt wyjścia dla {personName}",
+    "description": "{daysUntil, plural, =1 {Ważna data jest jutro.} one {Do ważnej daty został # dzień.} few {Do ważnej daty zostały # dni.} many {Do ważnej daty zostało # dni.} other {Do ważnej daty zostało # dnia.}} Inspiracje: {context1}{contextCount, select, one {.} other { · {context2}.}}"
+  },
+  "missingContext": {
+    "title": "Dodaj jedną rzecz o {personName}",
+    "description": "{daysUntil, plural, =1 {Ważna data jest jutro. Jedna wskazówka może pomóc w przygotowaniach.} one {Do ważnej daty został # dzień. Dodaj jedną przydatną wskazówkę.} few {Do ważnej daty zostały # dni. Dodaj jedną przydatną wskazówkę.} many {Do ważnej daty zostało # dni. Dodaj jedną przydatną wskazówkę.} other {Do ważnej daty zostało # dnia. Dodaj jedną przydatną wskazówkę.}}"
+  },
+  "upcoming": {
+    "title": "Zbliża się ważna data",
+    "description": "{daysUntil, plural, =1 {To już jutro.} one {Pozostał # dzień.} few {Pozostały # dni.} many {Pozostało # dni.} other {Pozostało # dnia.}}"
+  },
+  "actions": {
+    "viewPerson": "Zobacz profil",
+    "prepare": "Przygotuj się",
+    "addInformation": "Dodaj informację"
+  }
+}

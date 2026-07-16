@@ -1,4 +1,6 @@
 import type { SyntheticEvent } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import type { AppLocale } from "@/i18n/config";
 
 import {
   getNotesCardPresentation,
@@ -53,6 +55,8 @@ export default function NoteMemoryCard({
   onDelete,
   onOpenLightbox,
 }: NoteMemoryCardProps) {
+  const t = useTranslations("notes");
+  const locale = useLocale() as AppLocale;
   const presentation = getNotesCardPresentation({
     normalizedType: normalizeStoredMemoryType(memory.type),
     title: memory.title,
@@ -62,6 +66,16 @@ export default function NoteMemoryCard({
     createdAt: memory.created_at,
     personName: person?.name ?? null,
     imageCount: memory.images?.length ?? 0,
+    locale,
+    labels: {
+      typeLabels: { note: t("types.note"), memory: t("types.memory"), gift: t("types.gift"), journal: t("types.journal"), other: t("types.other") },
+      fallbackTitles: { note: t("types.note"), memory: t("types.memory"), gift: t("card.giftFallback"), journal: t("card.journalFallback"), other: t("types.other") },
+      emptyContent: { note: t("card.noNoteContent"), memory: t("card.noMemoryContent"), gift: t("card.noGiftContent"), journal: t("card.noJournalContent"), other: t("card.noContent") },
+      personMeta: (name) => t("card.personMeta", { name }),
+      imageCount: (count) => t("card.imageCount", { count }),
+      today: t("dates.today"), yesterday: t("dates.yesterday"),
+      daysAgo: (count) => t("dates.daysAgo", { count }), unknownDate: t("dates.unknown"),
+    },
   });
   const visiblePerson = presentation.visiblePersonName ? person : null;
   const relationColor = visiblePerson
@@ -96,7 +110,7 @@ export default function NoteMemoryCard({
               type="button"
               className="hd-card-menu-btn"
               onClick={onMenuToggle}
-              aria-label="Opcje zapisu"
+              aria-label={t("card.options")}
               aria-expanded={menuOpen}
               aria-haspopup="menu"
             >
@@ -116,7 +130,7 @@ export default function NoteMemoryCard({
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M11 2l3 3-8 8H3v-3l8-8z" />
                   </svg>
-                  Edytuj
+                  {t("actions.edit")}
                 </button>
                 <button
                   type="button"
@@ -132,7 +146,7 @@ export default function NoteMemoryCard({
                     <path d="M5 4V2h6v2M6 7v5M10 7v5" />
                     <path d="M3 4l1 9h8l1-9" />
                   </svg>
-                  Usuń
+                  {t("actions.delete")}
                 </button>
               </div>
             )}
@@ -187,12 +201,12 @@ export default function NoteMemoryCard({
                 event.stopPropagation();
                 onOpenLightbox(displayImageUrls, index);
               }}
-              aria-label={`Otwórz zdjęcie ${index + 1} z ${displayImageUrls.length}`}
+              aria-label={t("accessibility.openImage", { index: index + 1, count: displayImageUrls.length })}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={url}
-                alt={`Zdjęcie do zapisu „${presentation.title}”`}
+                alt={t("accessibility.imageAlt", { title: presentation.title })}
                 loading="lazy"
                 onError={hideFailedImage}
               />

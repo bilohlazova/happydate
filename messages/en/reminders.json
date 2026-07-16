@@ -1,0 +1,27 @@
+{
+  "today": {
+    "title": "Today is an important day for {personName}",
+    "description": "It is today. Keep this date in mind."
+  },
+  "savedGift": {
+    "title": "You already have an idea for {personName}",
+    "description": "{daysUntil, plural, one {The important date is tomorrow, and your idea is already saved.} other {The important date is in # days, and your idea is already saved.}}"
+  },
+  "prepareGift": {
+    "title": "Happy has a starting point for {personName}",
+    "description": "{daysUntil, plural, one {The important date is tomorrow.} other {The important date is in # days.}} Inspiration: {context1}{contextCount, select, one {.} other { · {context2}.}}"
+  },
+  "missingContext": {
+    "title": "Add one detail about {personName}",
+    "description": "{daysUntil, plural, one {The important date is tomorrow. One detail can help you prepare.} other {The important date is in # days. Add one useful detail.}}"
+  },
+  "upcoming": {
+    "title": "An important date is approaching",
+    "description": "{daysUntil, plural, one {It is tomorrow.} other {There are # days left.}}"
+  },
+  "actions": {
+    "viewPerson": "View profile",
+    "prepare": "Get ready",
+    "addInformation": "Add information"
+  }
+}

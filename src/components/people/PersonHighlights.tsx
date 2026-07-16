@@ -1,4 +1,5 @@
 import Card from "@/components/ui/Card";
+import { useTranslations } from "next-intl";
 
 import type { MemoryRow } from "@/lib/repositories/memory.types";
 import { getPersonHighlights } from "@/lib/people/personHighlights";
@@ -10,6 +11,7 @@ interface PersonHighlightsProps {
 export default function PersonHighlights({
   memories,
 }: PersonHighlightsProps) {
+  const t = useTranslations("person");
   const highlights = getPersonHighlights(memories);
 
   if (highlights.length === 0) {
@@ -19,7 +21,7 @@ export default function PersonHighlights({
   return (
     <section className="space-y-4">
       <h2 className="text-2xl font-bold text-gray-900">
-        ⭐ Najważniejsze
+        {t("highlights.title")}
       </h2>
 
       <div className="grid grid-cols-2 gap-4">
@@ -33,7 +35,7 @@ export default function PersonHighlights({
             </div>
 
             <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-              {highlight.title}
+              {t(`highlights.${highlight.id as "coffee" | "food" | "restaurant" | "place" | "flower" | "movie" | "music" | "book" | "hobby"}`)}
             </p>
 
             <p className="mt-2 font-semibold text-gray-900">

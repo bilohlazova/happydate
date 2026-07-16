@@ -1,5 +1,6 @@
 import type { AdvisorTip } from "@/lib/advisors/personAdvisor";
 import { THEME } from "@/lib/theme";
+import { useTranslations } from "next-intl";
 
 interface HappyDateAdvisorProps {
   tips: AdvisorTip[];
@@ -8,6 +9,7 @@ interface HappyDateAdvisorProps {
 export default function HappyDateAdvisor({
   tips,
 }: HappyDateAdvisorProps) {
+  const t = useTranslations("person");
   if (tips.length === 0) {
     return null;
   }
@@ -33,12 +35,20 @@ export default function HappyDateAdvisor({
         </h2>
 
         <p className="mt-1 text-sm text-sky-100">
-          Twój osobisty asystent prezentowy
+          {t("advisor.subtitle")}
         </p>
       </div>
 
       <div className="space-y-4 p-5">
-        {tips.map((tip) => (
+        {tips.map((tip) => {
+          const name = tip.title.match(/(?:Poznajmy lepiej|Coraz lepiej znamy) (.+)$/)?.[1] ?? "";
+          const localized = tip.id === "first-memory" ? { title: t("advisor.firstMemoryTitle", { name }), message: t("advisor.firstMemoryMessage", { name }) }
+            : tip.id === "more-memories" ? { title: t("advisor.moreMemoriesTitle", { name }), message: t("advisor.moreMemoriesMessage") }
+            : tip.id === "flowers" ? { title: t("advisor.flowersTitle"), message: t("advisor.flowersMessage") }
+            : tip.id === "restaurant" ? { title: t("advisor.restaurantTitle"), message: t("advisor.restaurantMessage") }
+            : tip.id === "hobby" ? { title: t("advisor.hobbyTitle"), message: t("advisor.hobbyMessage") }
+            : { title: tip.title, message: tip.message };
+          return (
           <div
             key={tip.id}
             className="rounded-2xl border border-sky-100 bg-white p-4 transition hover:shadow-md"
@@ -50,16 +60,17 @@ export default function HappyDateAdvisor({
 
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900">
-                  {tip.title}
+                  {localized.title}
                 </h3>
 
                 <p className="mt-1 text-sm leading-6 text-gray-600">
-                  {tip.message}
+                  {localized.message}
                 </p>
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

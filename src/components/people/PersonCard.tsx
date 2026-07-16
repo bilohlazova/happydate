@@ -1,5 +1,5 @@
 import Avatar from "@/components/people/Avatar";
-import { getPersonRelationLabel } from "@/components/people/peopleRelations";
+import { getPersonRelationKey, getPersonRelationLabel } from "@/components/people/peopleRelations";
 
 import Card from "@/components/ui/Card";
 import InfoBadge from "@/components/ui/InfoBadge";
@@ -8,6 +8,10 @@ import Panel from "@/components/ui/Panel";
 import type { PersonRow } from "@/lib/repositories/person.types";
 import { getRelationshipInfo } from "@/lib/people/relationship";
 import { BookOpen, ChevronRight, Gift, MessageCircle } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { format } from "date-fns";
+import { getDateFnsLocale } from "@/i18n/dateLocales";
+import type { AppLocale } from "@/i18n/config";
 
 type PersonCardData = PersonRow & {
   color_token?: string | null;
@@ -24,15 +28,13 @@ interface PersonCardProps {
   daysUntilNextDate?: number | null;
 }
 
-function formatBirthday(date: string | null): string | null {
+function formatBirthday(date: string | null, locale: AppLocale): string | null {
   if (!date) {
     return null;
   }
 
-  return new Intl.DateTimeFormat("pl-PL", {
-    day: "numeric",
-    month: "long",
-  }).format(new Date(date));
+  const [year, month, day] = date.split("-").map(Number);
+  return format(new Date(year, month - 1, day), "d MMMM", { locale: getDateFnsLocale(locale) });
 }
 
 export default function PersonCard({
@@ -43,9 +45,15 @@ export default function PersonCard({
   nextDateLabel = null,
   daysUntilNextDate = null,
 }: PersonCardProps) {
+  const t = useTranslations("people");
+  const personT = useTranslations("person");
+  const locale = useLocale() as AppLocale;
   const relationLabel = getPersonRelationLabel(person);
   const displayedRelationship = getRelationshipInfo(relationLabel);
-  const birthday = formatBirthday(person.birthday);
+  const birthday = formatBirthday(person.birthday, locale);
+  const relationKey = getPersonRelationKey(person);
+  const relationGender = person.gender === "female" || person.gender === "male" ? person.gender : "neutral";
+  const localizedRelation = relationKey && relationKey !== "other" ? t(`relationships.${relationKey}.${relationGender}`) : relationLabel;
 
   if (variant === "list") {
     const personData = person as PersonCardData;
@@ -57,29 +65,26 @@ export default function PersonCard({
       personData.favorite ?? personData.is_favorite ?? false
     );
     const accent = getBirthdayAccent(daysUntilNextDate);
-    const memoryText =
-      memoriesCount > 0
-        ? `📖 ${memoriesCount}`
-        : "📖 Brak wspomnień";
+    const memoryText = memoriesCount > 0 ? t("card.memories", { count: memoriesCount }) : t("card.noMemories");
 
     return (
       <article className="group relative overflow-hidden rounded-[0.9rem] bg-white shadow-[0_4px_14px_rgba(15,23,42,0.035)] ring-1 ring-slate-100">
         <div className="absolute inset-y-0 right-0 flex w-32 items-stretch justify-end bg-slate-50">
           <span
             className="flex w-10 items-center justify-center bg-sky-500 text-white"
-            aria-label="Dodaj wspomnienie"
+            aria-label={t("card.addMemory")}
           >
             <BookOpen className="h-4 w-4" />
           </span>
           <span
             className="flex w-10 items-center justify-center bg-cyan-500 text-white"
-            aria-label="Pomysł na prezent"
+            aria-label={t("card.giftIdea")}
           >
             <Gift className="h-4 w-4" />
           </span>
           <span
             className="flex w-10 items-center justify-center bg-slate-700 text-white"
-            aria-label="Skontaktuj się"
+            aria-label={t("card.contact")}
           >
             <MessageCircle className="h-4 w-4" />
           </span>
@@ -89,7 +94,7 @@ export default function PersonCard({
           {isFavorite && (
             <span
               className="absolute right-1.5 top-1 text-[0.55rem] leading-none"
-              aria-label="Ulubiona osoba"
+              aria-label={t("card.favorite")}
             >
               ⭐
             </span>
@@ -109,7 +114,7 @@ export default function PersonCard({
             </h2>
 
             <p className="truncate text-[0.72rem] font-semibold leading-4 text-slate-500">
-            {buildRelationLine(displayedRelationship, displayTags)}
+            {buildRelationLine(displayedRelationship, localizedRelation || t("relationships.closePerson"), displayTags)}
             </p>
 
             <p className="truncate text-[0.68rem] font-semibold leading-3 text-slate-500">
@@ -122,7 +127,7 @@ export default function PersonCard({
               {hasBirthday ? (
                 <>
                   <p className={`text-[0.65rem] font-black leading-3.5 ${accent.text}`}>
-                    {hasCountdown ? `Za ${daysUntilNextDate} dni` : "🎂"}
+                    {hasCountdown ? t("birthday.countdown", { days: daysUntilNextDate }) : "🎂"}
                   </p>
                   <p className="truncate text-[0.6rem] font-semibold leading-3.5 text-slate-500">
                     {nextDate}
@@ -130,7 +135,7 @@ export default function PersonCard({
                 </>
               ) : (
                 <p className="text-[0.6rem] font-bold leading-3.5 text-slate-400">
-                  Brak daty
+                  {t("birthday.missing")}
                 </p>
               )}
             </div>
@@ -154,7 +159,7 @@ export default function PersonCard({
         <div className="mt-4 flex flex-wrap justify-center gap-3">
           {displayedRelationship && (
             <InfoBadge icon={displayedRelationship.icon}>
-              {displayedRelationship.label}
+              {localizedRelation}
             </InfoBadge>
           )}
 
@@ -165,7 +170,7 @@ export default function PersonCard({
       {person.notes && (
         <Panel className="mt-6">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
-            Notatki
+            {personT("details.notes")}
           </h2>
 
           <p className="whitespace-pre-wrap text-sm leading-7 text-gray-700">
@@ -205,11 +210,10 @@ function formatTagPreview(tag: string): string {
 
 function buildRelationLine(
   relationship: ReturnType<typeof getRelationshipInfo>,
+  relationLabel: string,
   tags: string[]
 ): string {
-  const relationText = relationship
-    ? `${relationship.icon} ${relationship.label}`
-    : "👤 Bliska osoba";
+  const relationText = relationship ? `${relationship.icon} ${relationLabel}` : `👤 ${relationLabel}`;
   const tagText = tags.map(formatTagPreview);
 
   return [relationText, ...tagText].join(" • ");

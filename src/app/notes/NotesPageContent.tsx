@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import MemoryEditorSheet from "@/components/notes/MemoryEditorSheet";
 import type { MemoryEditorSubmitInput } from "@/components/notes/MemoryEditorSheet";
 import NoteMemoryCard from "@/components/notes/NoteMemoryCard";
@@ -22,9 +23,7 @@ import type {
   NotesPrimaryFilter,
 } from "@/lib/repositories/memory.types";
 import {
-  formatNotesResultCount,
   getNotesPrimaryFilterCounts,
-  NOTES_PRIMARY_EMPTY_MESSAGES,
   NOTES_PRIMARY_FILTER_OPTIONS,
 } from "@/lib/repositories/memory.types";
 import { NOTES_TYPE_OPTIONS } from "@/lib/memories/notesMemoryTypes";
@@ -47,6 +46,7 @@ import type { NotesRawType } from "@/lib/memories/notesMemoryTypes";
 // ─────────────────────────────────────────────
 
 export default function NotesPageContent() {
+  const t = useTranslations("notes");
   const [memories,       setMemories]       = useState<NotesMemoryRow[]>([]);
   const [people,         setPeople]         = useState<NotesMemoryPerson[]>([]);
   const [loading,        setLoading]        = useState(true);
@@ -112,6 +112,10 @@ export default function NotesPageContent() {
     search,
   });
   const primaryFilterCounts = getNotesPrimaryFilterCounts(memories);
+  const emptyStateKeys = {
+    all: "states.emptyAll", people: "states.emptyPeople", memory: "states.emptyMemory",
+    gift: "states.emptyGift", journal: "states.emptyJournal", note: "states.emptyNote",
+  } as const;
 
   // ── AI Insights — computed from real data, no hallucinations ──
   // Only show when not searching and not filtering by person
@@ -165,7 +169,7 @@ export default function NotesPageContent() {
 
   async function saveMemory({ state, newFiles }: MemoryEditorSubmitInput) {
     const userId = await getCurrentMemoryUserId();
-    if (!userId) throw new Error("Zaloguj się ponownie przed zapisaniem.");
+    if (!userId) throw new Error("AUTH_REQUIRED");
 
     const uploadResult: UploadMemoryImagesResult = newFiles.length
       ? await uploadMemoryImages(newFiles)
@@ -759,10 +763,10 @@ export default function NotesPageContent() {
         {/* ── HEADER ── */}
         <div className="hd-header">
           <div className="hd-header-left">
-            <h1>Notatki</h1>
-            <p>{formatNotesResultCount(filtered.length)}</p>
+            <h1>{t("page.title")}</h1>
+            <p>{t("page.resultCount", { count: filtered.length })}</p>
           </div>
-          <button className="hd-add-btn" onClick={() => setShowTypeSheet(true)} aria-label="Dodaj notatkę">
+          <button className="hd-add-btn" onClick={() => setShowTypeSheet(true)} aria-label={t("accessibility.add")}>
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
             </svg>
@@ -775,12 +779,12 @@ export default function NotesPageContent() {
             <circle cx="8.5" cy="8.5" r="5.5"/><line x1="12.5" y1="12.5" x2="17" y2="17"/>
           </svg>
           <input
-            placeholder="Szukaj wspomnień, osób, tagów…"
+            placeholder={t("search.placeholder")}
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
           {search && (
-            <button className="hd-search-clear" onClick={() => setSearch("")} aria-label="Wyczyść">✕</button>
+            <button className="hd-search-clear" onClick={() => setSearch("")} aria-label={t("search.clear")}>✕</button>
           )}
         </div>
 
@@ -793,8 +797,8 @@ export default function NotesPageContent() {
               onClick={() => setPrimaryFilter(option.value)}
               aria-pressed={primaryFilter === option.value}
             >
-              <span>{option.label}</span>
-              <span className="hd-tab-count" aria-label={formatNotesResultCount(primaryFilterCounts[option.value])}>
+              <span>{t(`filters.${option.value}`)}</span>
+              <span className="hd-tab-count" aria-label={t("page.resultCount", { count: primaryFilterCounts[option.value] })}>
                 {primaryFilterCounts[option.value]}
               </span>
             </button>
@@ -802,7 +806,7 @@ export default function NotesPageContent() {
         </div>
 
         <div className="hd-person-filter">
-          <label htmlFor="notes-person-filter">Osoba</label>
+          <label htmlFor="notes-person-filter">{t("filters.person")}</label>
           <select
             id="notes-person-filter"
             value={filterPersonId}
@@ -810,15 +814,15 @@ export default function NotesPageContent() {
             disabled={primaryFilter === "journal"}
             aria-describedby={primaryFilter === "journal" ? "notes-person-filter-hint" : undefined}
           >
-            <option value="all">Wszystkie osoby</option>
+            <option value="all">{t("filters.allPeople")}</option>
             {people.map(person => (
               <option key={person.id} value={person.id}>{person.name}</option>
             ))}
-            <option value="none">Bez przypisanej osoby</option>
+            <option value="none">{t("filters.noPerson")}</option>
           </select>
           {primaryFilter === "journal" && (
             <span id="notes-person-filter-hint" className="sr-only">
-              Filtr osoby jest niedostępny dla dziennika.
+              {t("filters.journalHint")}
             </span>
           )}
         </div>
@@ -827,25 +831,24 @@ export default function NotesPageContent() {
         {showAiSection && (topPerson || topTags.length > 0 || giftCount > 0) && (
           <div className="hd-ai-section">
             <div className="hd-ai-section-label">
-              <span>✦</span> AI zauważyło
+              <span>✦</span> {t("insights.title")}
             </div>
             <div className="hd-ai-rows">
               {topPerson && personMemCounts[topPerson.id] >= 2 && (
                 <div className="hd-ai-row">
                   <strong>{topPerson.name}</strong>{" "}
-                  pojawia się najczęściej — {personMemCounts[topPerson.id]} wspomnień
+                  {t("insights.topPerson", { count: personMemCounts[topPerson.id] })}
                 </div>
               )}
               {topTags.length > 0 && (
                 <div className="hd-ai-row">
-                  Powtarzające się tematy:{" "}
+                  {t("insights.topics")}{" "}
                   <strong>{topTags.join(" · ")}</strong>
                 </div>
               )}
               {giftCount > 0 && (
                 <div className="hd-ai-row">
-                  Masz <strong>{giftCount} {giftCount === 1 ? "pomysł" : giftCount < 5 ? "pomysły" : "pomysłów"}</strong>{" "}
-                  na prezenty zapisanych w notatkach
+                  {t.rich("insights.gifts", { count: giftCount, strong: (chunks) => <strong>{chunks}</strong> })}
                 </div>
               )}
             </div>
@@ -856,12 +859,10 @@ export default function NotesPageContent() {
         {q && (
           <div className="hd-search-hint">
   {filtered.length === 0 ? (
-    <>Brak wyników dla &quot;{search}&quot;</>
+    <>{t("search.noResults", { query: search })}</>
   ) : (
     <>
-      <strong>{filtered.length}</strong>{" "}
-      {filtered.length === 1 ? "wynik" : "wyników"} dla{" "}
-      &quot;{search}&quot;
+      {t("search.results", { count: filtered.length, query: search })}
     </>
   )}
 </div>
@@ -869,22 +870,22 @@ export default function NotesPageContent() {
 
         {/* ── NOTES FEED — clean, no AI chips inside ── */}
         <div className="hd-feed">
-          {loading && <div className="hd-loading">Ładowanie wspomnień...</div>}
+          {loading && <div className="hd-loading">{t("states.loading")}</div>}
 
           {!loading && filtered.length === 0 && (
             <div className="hd-empty">
               <div className="hd-empty-glyph">🕊️</div>
               <div className="hd-empty-title">
                 {q
-                  ? "Nie znaleziono pasujących zapisów."
-                  : NOTES_PRIMARY_EMPTY_MESSAGES[primaryFilter]}
+                  ? t("states.noMatches")
+                  : t(emptyStateKeys[primaryFilter])}
               </div>
               <div className="hd-empty-sub">
                 {q
-                  ? `Nic nie pasuje do „${search}". Spróbuj inaczej.`
+                  ? t("states.tryAgain", { query: search })
                   : filterPersonId !== "all" && primaryFilter !== "journal"
-                    ? "Wybierz inną osobę albo dodaj nowy zapis."
-                    : "Dodaj nowy zapis lub wybierz inny filtr."}
+                    ? t("states.chooseOther")
+                    : t("states.addOrFilter")}
               </div>
             </div>
           )}
@@ -916,7 +917,7 @@ export default function NotesPageContent() {
 
       {/* ── LIGHTBOX ── */}
       {lightboxOpen && (
-        <div className="hd-lightbox" onClick={closeLightbox}>
+        <div className="hd-lightbox" onClick={closeLightbox} role="dialog" aria-label={t("accessibility.closeLightbox")}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             className="hd-lightbox-img"
@@ -924,11 +925,11 @@ export default function NotesPageContent() {
             alt=""
             onClick={e => e.stopPropagation()}
           />
-          <button className="hd-lightbox-close" onClick={closeLightbox}>✕</button>
+          <button className="hd-lightbox-close" onClick={closeLightbox} aria-label={t("accessibility.closeLightbox")}>✕</button>
           {lightboxUrls.length > 1 && (
             <>
-              <button className="hd-lightbox-nav hd-lb-prev" onClick={e => { e.stopPropagation(); lbPrev(); }}>‹</button>
-              <button className="hd-lightbox-nav hd-lb-next" onClick={e => { e.stopPropagation(); lbNext(); }}>›</button>
+              <button className="hd-lightbox-nav hd-lb-prev" aria-label={t("accessibility.previousImage")} onClick={e => { e.stopPropagation(); lbPrev(); }}>‹</button>
+              <button className="hd-lightbox-nav hd-lb-next" aria-label={t("accessibility.nextImage")} onClick={e => { e.stopPropagation(); lbNext(); }}>›</button>
               <div className="hd-lightbox-counter">{lightboxIdx + 1} / {lightboxUrls.length}</div>
             </>
           )}
@@ -945,7 +946,7 @@ export default function NotesPageContent() {
         >
           <div className="hd-type-sheet">
             <div className="hd-modal-handle" />
-            <div className="hd-type-sheet-title">Co chcesz zapisać?</div>
+            <div className="hd-type-sheet-title">{t("typeSelector.title")}</div>
             <div className="hd-type-options">
               {NOTES_TYPE_OPTIONS.map(option => (
                 <button
@@ -960,7 +961,7 @@ export default function NotesPageContent() {
                   <span className="hd-type-option-icon" aria-hidden="true">
                     {option.icon}
                   </span>
-                  {option.choiceLabel}
+                  <span><strong>{t(`typeSelector.${option.type}Title`)}</strong><small>{t(`typeSelector.${option.type}Description`)}</small></span>
                 </button>
               ))}
             </div>

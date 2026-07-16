@@ -9,35 +9,33 @@ import {
   QrCode,
   UserRoundPlus,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const MENU_ITEMS = [
   {
+    key: "import",
     icon: Contact,
-    title: "Importuj z kontaktów",
-    description: "Wybierz osoby z telefonu",
     href: "/people/add?mode=contacts",
   },
   {
+    key: "manual",
     icon: Pencil,
-    title: "Dodaj ręcznie",
-    description: "Wpisz dane samodzielnie",
     href: "/people/add?mode=manual",
   },
   {
+    key: "card",
     icon: QrCode,
-    title: "Zeskanuj wizytówkę",
-    description: "Dodaj zdjęcie i dane",
     href: "/people/add?mode=card",
   },
   {
+    key: "link",
     icon: LinkIcon,
-    title: "Link / QR",
-    description: "Dodaj z linku lub QR",
     href: "/people/add?mode=link",
   },
-];
+] as const;
 
 export function AddPersonMenu() {
+  const t = useTranslations("people");
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -63,7 +61,7 @@ export function AddPersonMenu() {
         aria-haspopup="menu"
       >
         <UserRoundPlus className="h-[18px] w-[18px]" strokeWidth={2.6} />
-        Dodaj osobę
+        {t("actions.addPerson")}
       </button>
 
       {open && (
@@ -79,6 +77,7 @@ export function AddPersonMenu() {
 }
 
 export function AddPersonMenuItems() {
+  const t = useTranslations("people");
   return (
     <div className="grid gap-0.5">
       {MENU_ITEMS.map((item) => {
@@ -86,7 +85,7 @@ export function AddPersonMenuItems() {
 
         return (
           <Link
-            key={item.title}
+            key={item.key}
             href={item.href}
             className="flex min-h-14 w-full items-center gap-3 rounded-[0.9rem] px-2.5 py-2 text-left transition hover:bg-sky-50"
           >
@@ -95,10 +94,10 @@ export function AddPersonMenuItems() {
             </span>
             <span className="min-w-0">
               <span className="block truncate text-[0.82rem] font-extrabold leading-4 text-slate-950">
-                {item.title}
+                {t(`actions.${item.key}Title`)}
               </span>
               <span className="mt-0.5 block truncate text-[0.7rem] font-semibold leading-3.5 text-slate-500">
-                {item.description}
+                {t(`actions.${item.key}Description`)}
               </span>
             </span>
           </Link>

@@ -8,8 +8,8 @@ import {
   type PeopleSort,
   type ProfileFilter,
   type RelationFilter,
-  pluralizePeoplePl,
 } from "@/components/people/peopleFilters";
+import { useTranslations } from "next-intl";
 
 interface PeopleFilterSheetProps {
   open: boolean;
@@ -65,13 +65,14 @@ export function PeopleFilterSheet({
   onApply,
   onClose,
 }: PeopleFilterSheetProps) {
+  const t = useTranslations("people");
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[120]">
       <button
         type="button"
-        aria-label="Zamknij filtry"
+        aria-label={t("accessibility.closeFilters")}
         className="absolute inset-0 bg-slate-950/25"
         onClick={onClose}
       />
@@ -79,13 +80,13 @@ export function PeopleFilterSheet({
         <div className="shrink-0 px-4 pt-3">
           <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-slate-200" />
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-black text-slate-950">Filtruj osoby</h2>
+            <h2 className="text-lg font-black text-slate-950">{t("filters.title")}</h2>
             <button
               type="button"
               onClick={onClose}
               className="text-sm font-black text-slate-400"
             >
-              Zamknij
+              {t("filters.close")}
             </button>
           </div>
         </div>
@@ -158,14 +159,14 @@ export function PeopleFilterSheet({
             onClick={() => onDraftChange(DEFAULT_PEOPLE_FILTERS)}
             className="min-h-11 rounded-[0.9rem] bg-slate-50 px-4 text-sm font-black text-slate-600"
           >
-            Wyczyść
+            {t("filters.clear")}
           </button>
           <button
             type="button"
             onClick={onApply}
             className="min-h-11 rounded-[0.9rem] bg-gradient-to-r from-sky-500 to-cyan-500 px-4 text-sm font-black text-white shadow-[0_10px_24px_rgba(14,165,233,0.24)]"
           >
-            Pokaż {pluralizePeoplePl(resultCount)}
+            {t("filters.show", { count: resultCount })}
           </button>
         </div>
       </section>
@@ -199,6 +200,14 @@ function ChipGrid<T extends string>({
   value: T;
   onChange: (value: T) => void;
 }) {
+  const t = useTranslations("people");
+  const labelKeys: Record<string, "all" | "family" | "partner" | "friends" | "work" | "other" | "today" | "sevenDays" | "thirtyDays" | "missingDate" | "women" | "men" | "genderOther" | "unspecified" | "missingRelation" | "missingMemories" | "incomplete" | "default" | "az" | "birthday" | "recent"> = {
+    Wszystkie: "all", Rodzina: "family", Partner: "partner", Przyjaciele: "friends", Praca: "work", Inne: "other",
+    Dzisiaj: "today", "W ciągu 7 dni": "sevenDays", "W ciągu 30 dni": "thirtyDays", "Brak daty": "missingDate",
+    Kobiety: "women", Mężczyźni: "men", Inna: "genderOther", "Nie podano": "unspecified",
+    "Brak relacji": "missingRelation", "Brak wspomnień": "missingMemories", "Do uzupełnienia": "incomplete",
+    Domyślne: "default", "A-Z": "az", "Najbliższe urodziny": "birthday", "Ostatnio dodane": "recent",
+  };
   return (
     <div className="flex flex-wrap gap-1.5">
       {options.map((option) => {
@@ -215,7 +224,7 @@ function ChipGrid<T extends string>({
                 : "bg-slate-50 text-slate-600"
             }`}
           >
-            {option.label}
+            {t(`filters.${labelKeys[option.label]}`)}
           </button>
         );
       })}

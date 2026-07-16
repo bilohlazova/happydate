@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import {
   createMemoryEditorInitialState,
-  getMemoryEditorHeader,
   getNotesTypeDisplayConfig,
   validateMemoryEditorState,
 } from "@/lib/memories/notesMemoryTypes";
@@ -53,6 +53,7 @@ export default function MemoryEditorSheet({
   onCancel,
   onSubmit,
 }: MemoryEditorSheetProps) {
+  const t = useTranslations("notes");
   const [state, setState] = useState(() =>
     createMemoryEditorInitialState({ mode, type, memory })
   );
@@ -78,7 +79,12 @@ export default function MemoryEditorSheet({
   }, []);
 
   const config = getNotesTypeDisplayConfig(state.rawType);
-  const header = getMemoryEditorHeader(mode, state.rawType);
+  const createHeaderKeys = { note: "editor.addNote", memory: "editor.addMemory", gift: "editor.addGift", journal: "editor.addJournal", other: "editor.editOther" } as const;
+  const editHeaderKeys = { note: "editor.editNote", memory: "editor.editMemory", gift: "editor.editGift", journal: "editor.editJournal", other: "editor.editOther" } as const;
+  const headerTitle = t((mode === "create" ? createHeaderKeys : editHeaderKeys)[state.editorType]);
+  const headerSubtitle = mode === "create" && state.editorType !== "other"
+    ? t(`typeSelector.${state.editorType}Description`)
+    : null;
   const showTitle = state.editorType !== "gift";
   const showDate =
     state.editorType === "memory" || state.editorType === "journal";
@@ -116,7 +122,14 @@ export default function MemoryEditorSheet({
   async function submit() {
     const validation = validateMemoryEditorState(state);
     if (!validation.isValid) {
-      setErrors(validation.errors);
+      const localized: Partial<Record<MemoryEditorField, string>> = {};
+      if (validation.errors.personId) localized.personId = t("validation.giftPersonRequired");
+      if (validation.errors.valueText) localized.valueText = t("validation.giftIdeaRequired");
+      if (validation.errors.contentText) localized.contentText = t(
+        state.editorType === "journal" ? "validation.journalContentRequired" :
+        state.editorType === "memory" ? "validation.memoryContentRequired" : "validation.noteTitleOrContent"
+      );
+      setErrors(localized);
       return;
     }
 
@@ -131,17 +144,13 @@ export default function MemoryEditorSheet({
       });
 
       if (result.uploadErrors.length > 0) {
-        setUploadErrors(result.uploadErrors);
+      setUploadErrors(result.uploadErrors.map(() => t("upload.failed")));
         setSavedWithUploadErrors(true);
         pendingImages.forEach((image) => URL.revokeObjectURL(image.previewUrl));
         setPendingImages([]);
       }
-    } catch (error) {
-      setFormError(
-        error instanceof Error
-          ? error.message
-          : "Nie udało się zapisać. Spróbuj ponownie."
-      );
+    } catch {
+      setFormError(t("upload.saveFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -149,30 +158,30 @@ export default function MemoryEditorSheet({
 
   const contentLabel =
     state.editorType === "gift"
-      ? "Dodatkowa notatka (opcjonalnie)"
+      ? t("fields.giftNote")
       : state.editorType === "memory"
-        ? "Opis"
+        ? t("fields.memoryContent")
         : state.editorType === "journal"
-          ? "Treść wpisu"
-          : "Treść";
+          ? t("fields.journalContent")
+          : t("fields.noteContent");
   const contentPlaceholder =
     state.editorType === "note"
-      ? "Co chcesz zapisać?"
+      ? t("placeholders.noteContent")
       : state.editorType === "memory"
-        ? "Co się wydarzyło?"
+        ? t("placeholders.memoryContent")
         : state.editorType === "gift"
-          ? "Dlaczego to może być dobry pomysł?"
+          ? t("placeholders.giftNote")
           : state.editorType === "journal"
-            ? "Co dziś chodzi Ci po głowie?"
-            : "Co chcesz zapisać?";
+            ? t("placeholders.journalContent")
+            : t("placeholders.otherContent");
   const titlePlaceholder =
     state.editorType === "memory"
-      ? "Nazwij to wspomnienie"
+      ? t("placeholders.memoryTitle")
       : state.editorType === "journal"
-        ? "Tytuł wpisu"
+        ? t("placeholders.journalTitle")
         : state.editorType === "other"
-          ? "Tytuł zapisu"
-          : "Tytuł notatki";
+          ? t("placeholders.otherTitle")
+          : t("placeholders.noteTitle");
 
   return (
     <div
@@ -191,17 +200,17 @@ export default function MemoryEditorSheet({
         <div className="hd-modal-hdr">
           <div className="hd-modal-heading">
             <div className="hd-modal-title" id="memory-editor-title">
-              <span aria-hidden="true">{config.icon}</span> {header.title}
+              <span aria-hidden="true">{config.icon}</span> {headerTitle}
             </div>
-            {header.subtitle && (
-              <div className="hd-modal-subtitle">{header.subtitle}</div>
+            {headerSubtitle && (
+              <div className="hd-modal-subtitle">{headerSubtitle}</div>
             )}
           </div>
           <button
             type="button"
             className="hd-modal-close"
             onClick={onCancel}
-            aria-label="Zamknij edytor"
+            aria-label={t("editor.close")}
           >
             ✕
           </button>
@@ -211,7 +220,7 @@ export default function MemoryEditorSheet({
           {showTitle && (
             <div className="hd-field">
               <label className="hd-label" htmlFor="memory-editor-title-input">
-                Tytuł (opcjonalnie)
+                {t("fields.title")}
               </label>
               <input
                 id="memory-editor-title-input"
@@ -227,7 +236,7 @@ export default function MemoryEditorSheet({
           {showDate && (
             <div className="hd-field">
               <label className="hd-label" htmlFor="memory-editor-date">
-                {state.editorType === "journal" ? "Data wpisu" : "Kiedy to było?"}
+                {t(state.editorType === "journal" ? "fields.journalDate" : "fields.memoryDate")}
               </label>
               <input
                 id="memory-editor-date"
@@ -245,7 +254,7 @@ export default function MemoryEditorSheet({
           {showPerson && (
             <div className="hd-field">
               <label className="hd-label" htmlFor="memory-editor-person">
-                {state.editorType === "gift" ? "Dla kogo?" : "Osoba (opcjonalnie)"}
+                {t(state.editorType === "gift" ? "fields.giftPerson" : "fields.person")}
               </label>
               <select
                 id="memory-editor-person"
@@ -256,7 +265,7 @@ export default function MemoryEditorSheet({
                 disabled={savedWithUploadErrors}
               >
                 <option value="">
-                  {state.editorType === "gift" ? "Wybierz osobę" : "Bez przypisanej osoby"}
+                  {t(state.editorType === "gift" ? "fields.choosePerson" : "fields.noAssignedPerson")}
                 </option>
                 {people.map((person) => (
                   <option key={person.id} value={person.id}>{person.name}</option>
@@ -269,14 +278,14 @@ export default function MemoryEditorSheet({
           {showGiftValue && (
             <div className="hd-field">
               <label className="hd-label" htmlFor="memory-editor-value">
-                Pomysł na prezent
+                {t("fields.giftIdea")}
               </label>
               <input
                 id="memory-editor-value"
                 className="hd-input"
                 value={state.valueText}
                 onChange={(event) => updateField("valueText", event.target.value)}
-                placeholder="Np. książka o fotografii"
+                placeholder={t("placeholders.giftIdea")}
                 aria-invalid={Boolean(errors.valueText)}
                 disabled={savedWithUploadErrors}
               />
@@ -301,7 +310,7 @@ export default function MemoryEditorSheet({
           </div>
 
           <div className="hd-field">
-            <label className="hd-label">Zdjęcia</label>
+            <label className="hd-label">{t("fields.images")}</label>
 
             {(state.existingImages.length > 0 || pendingImages.length > 0) && (
               <div className="hd-previews">
@@ -311,9 +320,9 @@ export default function MemoryEditorSheet({
                     <div key={`${storedValue}-${index}`} className="hd-preview-item">
                       {displayUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={displayUrl} alt={`Istniejące zdjęcie ${index + 1}`} />
+                        <img src={displayUrl} alt={t("accessibility.existingImage", { index: index + 1 })} />
                       ) : (
-                        <span className="hd-preview-placeholder" aria-label="Zdjęcie bez podglądu">📷</span>
+                        <span className="hd-preview-placeholder" aria-label={t("accessibility.imageUnavailable")}>📷</span>
                       )}
                       <button
                         type="button"
@@ -326,7 +335,7 @@ export default function MemoryEditorSheet({
                             )
                           )
                         }
-                        aria-label={`Usuń istniejące zdjęcie ${index + 1}`}
+                        aria-label={t("accessibility.removeExistingImage", { index: index + 1 })}
                         disabled={savedWithUploadErrors}
                       >
                         ✕
@@ -338,12 +347,12 @@ export default function MemoryEditorSheet({
                 {pendingImages.map((image, index) => (
                   <div key={image.previewUrl} className="hd-preview-item">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={image.previewUrl} alt={`Nowe zdjęcie ${index + 1}`} />
+                    <img src={image.previewUrl} alt={t("accessibility.newImage", { index: index + 1 })} />
                     <button
                       type="button"
                       className="hd-preview-remove"
                       onClick={() => removePendingImage(index)}
-                      aria-label={`Usuń nowe zdjęcie ${index + 1}`}
+                      aria-label={t("accessibility.removeNewImage", { index: index + 1 })}
                       disabled={savedWithUploadErrors}
                     >
                       ✕
@@ -364,7 +373,7 @@ export default function MemoryEditorSheet({
                 <circle cx="10.5" cy="8.5" r="1.5" />
                 <path d="M1 10l3-3 2 2 3-3 3 3" />
               </svg>
-              Dodaj zdjęcie
+              {t("actions.addImage")}
             </button>
             <input
               ref={fileInputRef}
@@ -381,7 +390,7 @@ export default function MemoryEditorSheet({
 
           {uploadErrors.length > 0 && (
             <div className="hd-upload-errors" role="status">
-              <strong>Zapisano bez części zdjęć:</strong>
+              <strong>{t("upload.partialFailure")}</strong>
               {uploadErrors.map((error, index) => <div key={`${error}-${index}`}>{error}</div>)}
             </div>
           )}
@@ -390,7 +399,7 @@ export default function MemoryEditorSheet({
 
         <div className="hd-modal-actions">
           <button type="button" className="hd-btn-cancel" onClick={onCancel}>
-            {savedWithUploadErrors ? "Zamknij" : "Anuluj"}
+            {t(savedWithUploadErrors ? "actions.close" : "actions.cancel")}
           </button>
           <button
             type="button"
@@ -399,12 +408,12 @@ export default function MemoryEditorSheet({
             disabled={submitting || savedWithUploadErrors}
           >
             {submitting
-              ? "Zapisuję..."
+              ? t("actions.saving")
               : savedWithUploadErrors
-                ? "Zapisano"
+                ? t("actions.saved")
                 : mode === "create"
-                  ? "Dodaj"
-                  : "Zapisz"}
+                  ? t("actions.add")
+                  : t("actions.save")}
           </button>
         </div>
       </section>

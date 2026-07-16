@@ -1,0 +1,155 @@
+{
+  "page": {
+    "title": "Notatki",
+    "resultCount": "{count, plural, one {# zapis} few {# zapisy} many {# zapisów} other {# zapisu}}"
+  },
+  "search": {
+    "placeholder": "Szukaj wspomnień, osób, tagów…",
+    "clear": "Wyczyść wyszukiwanie",
+    "noResults": "Brak wyników dla „{query}”",
+    "results": "{count, plural, one {# wynik} few {# wyniki} many {# wyników} other {# wyniku}} dla „{query}”"
+  },
+  "filters": {
+    "all": "Wszystkie",
+    "people": "O osobach",
+    "memory": "Wspomnienia",
+    "gift": "Pomysły",
+    "journal": "Dziennik",
+    "note": "Notatki",
+    "person": "Osoba",
+    "allPeople": "Wszystkie osoby",
+    "noPerson": "Bez przypisanej osoby",
+    "journalHint": "Filtr osoby jest niedostępny dla dziennika."
+  },
+  "types": {
+    "note": "Notatka",
+    "memory": "Wspomnienie",
+    "gift": "Pomysł na prezent",
+    "journal": "Dziennik",
+    "other": "Inny zapis"
+  },
+  "typeSelector": {
+    "title": "Co chcesz zapisać?",
+    "noteTitle": "Notatkę",
+    "noteDescription": "Zapisz coś, do czego chcesz wrócić.",
+    "memoryTitle": "Wspomnienie",
+    "memoryDescription": "Zachowaj ważny moment, osobę lub wydarzenie.",
+    "giftTitle": "Pomysł na prezent",
+    "giftDescription": "Zapisz pomysł dla wybranej osoby.",
+    "journalTitle": "Wpis do dziennika",
+    "journalDescription": "To prywatna przestrzeń tylko dla Ciebie."
+  },
+  "card": {
+    "giftFallback": "Pomysł na prezent",
+    "journalFallback": "Mój dzień",
+    "noNoteContent": "Brak treści notatki",
+    "noMemoryContent": "Brak opisu wspomnienia",
+    "noGiftContent": "Brak opisu pomysłu",
+    "noJournalContent": "Brak treści wpisu",
+    "noContent": "Brak treści",
+    "imageCount": "{count, plural, one {# zdjęcie} few {# zdjęcia} many {# zdjęć} other {# zdjęcia}}",
+    "options": "Opcje zapisu",
+    "personMeta": "O osobie: {name}"
+  },
+  "editor": {
+    "addNote": "Dodaj notatkę",
+    "editNote": "Edytuj notatkę",
+    "addMemory": "Dodaj wspomnienie",
+    "editMemory": "Edytuj wspomnienie",
+    "addGift": "Dodaj pomysł na prezent",
+    "editGift": "Edytuj pomysł",
+    "addJournal": "Dodaj wpis do dziennika",
+    "editJournal": "Edytuj wpis",
+    "editOther": "Edytuj zapis",
+    "close": "Zamknij edytor"
+  },
+  "fields": {
+    "title": "Tytuł (opcjonalnie)",
+    "memoryDate": "Kiedy to było?",
+    "journalDate": "Data wpisu",
+    "person": "Osoba (opcjonalnie)",
+    "giftPerson": "Dla kogo?",
+    "giftIdea": "Pomysł na prezent",
+    "noteContent": "Treść",
+    "memoryContent": "Opis",
+    "giftNote": "Dodatkowa notatka (opcjonalnie)",
+    "journalContent": "Treść wpisu",
+    "images": "Zdjęcia",
+    "choosePerson": "Wybierz osobę",
+    "noAssignedPerson": "Bez przypisanej osoby"
+  },
+  "placeholders": {
+    "noteTitle": "Tytuł notatki",
+    "noteContent": "Co chcesz zapisać?",
+    "memoryTitle": "Nazwij to wspomnienie",
+    "memoryContent": "Co się wydarzyło?",
+    "giftIdea": "Np. książka o fotografii",
+    "giftNote": "Dlaczego to może być dobry pomysł?",
+    "journalTitle": "Tytuł wpisu",
+    "journalContent": "Co dziś chodzi Ci po głowie?",
+    "otherTitle": "Tytuł zapisu",
+    "otherContent": "Co chcesz zapisać?"
+  },
+  "actions": {
+    "add": "Dodaj",
+    "save": "Zapisz",
+    "saving": "Zapisuję...",
+    "saved": "Zapisano",
+    "cancel": "Anuluj",
+    "close": "Zamknij",
+    "edit": "Edytuj",
+    "delete": "Usuń",
+    "addImage": "Dodaj zdjęcie"
+  },
+  "validation": {
+    "noteTitleOrContent": "Dodaj tytuł lub treść zapisu.",
+    "memoryContentRequired": "Opis wspomnienia jest wymagany.",
+    "giftPersonRequired": "Wybierz osobę.",
+    "giftIdeaRequired": "Wpisz pomysł na prezent.",
+    "journalContentRequired": "Treść wpisu jest wymagana."
+  },
+  "upload": {
+    "partialFailure": "Zapisano bez części zdjęć:",
+    "failed": "Nie udało się przesłać zdjęcia.",
+    "saveFailed": "Nie udało się zapisać. Spróbuj ponownie.",
+    "signIn": "Zaloguj się ponownie przed zapisaniem."
+  },
+  "states": {
+    "loading": "Ładowanie wspomnień...",
+    "emptyAll": "Nie masz jeszcze żadnych zapisów.",
+    "emptyPeople": "Nie masz jeszcze informacji powiązanych z osobami.",
+    "emptyMemory": "Nie masz jeszcze żadnych wspomnień.",
+    "emptyGift": "Nie masz jeszcze zapisanych pomysłów na prezent.",
+    "emptyJournal": "Nie masz jeszcze wpisów w dzienniku.",
+    "emptyNote": "Nie masz jeszcze zwykłych notatek.",
+    "noMatches": "Nie znaleziono pasujących zapisów.",
+    "tryAgain": "Nic nie pasuje do „{query}”. Spróbuj inaczej.",
+    "chooseOther": "Wybierz inną osobę albo dodaj nowy zapis.",
+    "addOrFilter": "Dodaj nowy zapis lub wybierz inny filtr."
+  },
+  "dates": {
+    "today": "Dzisiaj",
+    "yesterday": "Wczoraj",
+    "daysAgo": "{count, plural, one {# dzień temu} few {# dni temu} many {# dni temu} other {# dnia temu}}",
+    "unknown": "Nieznana data"
+  },
+  "insights": {
+    "title": "AI zauważyło",
+    "topPerson": "pojawia się najczęściej — {count, plural, one {# wspomnienie} few {# wspomnienia} many {# wspomnień} other {# wspomnienia}}",
+    "topics": "Powtarzające się tematy:",
+    "gifts": "Masz <strong>{count, plural, one {# pomysł} few {# pomysły} many {# pomysłów} other {# pomysłu}}</strong> na prezenty zapisane w notatkach"
+  },
+  "accessibility": {
+    "add": "Dodaj notatkę",
+    "openImage": "Otwórz zdjęcie {index} z {count}",
+    "imageAlt": "Zdjęcie do zapisu „{title}”",
+    "existingImage": "Istniejące zdjęcie {index}",
+    "newImage": "Nowe zdjęcie {index}",
+    "imageUnavailable": "Zdjęcie bez podglądu",
+    "removeExistingImage": "Usuń istniejące zdjęcie {index}",
+    "removeNewImage": "Usuń nowe zdjęcie {index}",
+    "closeLightbox": "Zamknij podgląd",
+    "previousImage": "Poprzednie zdjęcie",
+    "nextImage": "Następne zdjęcie"
+  }
+}

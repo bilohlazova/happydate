@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Camera,
@@ -104,6 +105,7 @@ const MODE_COPY: Record<
 };
 
 export default function AddPersonPage() {
+  const t = useTranslations("personForm");
   const router = useRouter();
   const [mode, setMode] = useState<AddMode>("manual");
   const [userId, setUserId] = useState<string | null>(null);
@@ -205,12 +207,12 @@ export default function AddPersonPage() {
     event.preventDefault();
 
     if (!userId) {
-      setError("Musisz być zalogowany, aby dodać osobę.");
+      setError(mode === "manual" ? t("validation.unauthorized") : "Musisz być zalogowany, aby dodać osobę.");
       return;
     }
 
     if (!name.trim()) {
-      setError("Imię jest wymagane.");
+      setError(mode === "manual" ? t("validation.nameRequired") : "Imię jest wymagane.");
       return;
     }
 
@@ -238,7 +240,7 @@ export default function AddPersonPage() {
       router.push("/people");
     } catch (submitError) {
       console.error("[AddPersonPage] createPerson failed:", submitError);
-      setError("Nie udało się zapisać osoby. Spróbuj ponownie.");
+      setError(mode === "manual" ? t("states.saveError") : "Nie udało się zapisać osoby. Spróbuj ponownie.");
     } finally {
       setIsSaving(false);
     }
@@ -394,16 +396,16 @@ export default function AddPersonPage() {
             type="button"
             onClick={() => router.back()}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-slate-600 shadow-[0_6px_18px_rgba(15,23,42,0.06)] ring-1 ring-slate-100"
-            aria-label="Wróć"
+            aria-label={mode === "manual" ? t("actions.back") : "Wróć"}
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="min-w-0">
             <h1 className="truncate text-[1.5rem] font-black leading-none text-slate-950">
-              {modeCopy.title}
+              {mode === "manual" ? t("title.add") : modeCopy.title}
             </h1>
             <p className="mt-0.5 text-[0.82rem] font-semibold leading-4 text-slate-500">
-              {modeCopy.description}
+              {mode === "manual" ? t("subtitle.add") : modeCopy.description}
             </p>
           </div>
         </header>
@@ -471,6 +473,7 @@ export default function AddPersonPage() {
             onParseSource={handleParseSource}
             onCardImageChange={handleCardImageChange}
             onSubmit={handleSubmit}
+            localized={mode === "manual"}
           />
         )}
       </div>
@@ -711,6 +714,7 @@ function SinglePersonFlow({
   onParseSource,
   onCardImageChange,
   onSubmit,
+  localized,
 }: {
   mode: AddMode;
   ModeIcon: typeof Contact;
@@ -734,7 +738,9 @@ function SinglePersonFlow({
   onParseSource: () => void;
   onCardImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  localized: boolean;
 }) {
+  const t = useTranslations("personForm");
   return (
     <section className="rounded-[1rem] bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.055)] ring-1 ring-slate-100">
       <div className="mb-3 flex items-center gap-2">
@@ -742,7 +748,7 @@ function SinglePersonFlow({
           <ModeIcon className="h-5 w-5" />
         </span>
         <p className="text-xs font-semibold leading-5 text-slate-500">
-          {getModeHint(mode)}
+          {localized ? t("hint") : getModeHint(mode)}
         </p>
       </div>
 
@@ -793,8 +799,8 @@ function SinglePersonFlow({
         </div>
       )}
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-3">
-        <Field label="Imię" htmlFor="name">
+      <form aria-label={localized ? t("accessibility.form") : undefined} onSubmit={onSubmit} className="flex flex-col gap-3">
+        <Field label={localized ? t("fields.name") : "Imię"} htmlFor="name">
           <input
             id="name"
             type="text"
@@ -805,25 +811,27 @@ function SinglePersonFlow({
           />
         </Field>
 
-        <GenderSelectField value={gender} onChange={onGenderChange} />
+        <GenderSelectField value={gender} onChange={onGenderChange} localized={localized} />
 
         <RelationPickerField
           value={relationship}
           valueKey={relationKey}
           gender={gender}
+          localized={localized}
           onChange={(value, category, key) => {
             onRelationshipChange(value, category);
             onRelationKeyChange(key);
           }}
         />
 
-        <Field label="Urodziny" htmlFor="birthday">
+        <Field label={localized ? t("fields.birthday") : "Urodziny"} htmlFor="birthday">
           <input
             id="birthday"
             type="date"
             value={birthday}
             onChange={(event) => onBirthdayChange(event.target.value)}
             className={MobileUI.input}
+            aria-label={localized ? t("accessibility.birthdayInput") : undefined}
           />
         </Field>
 
@@ -844,7 +852,7 @@ function SinglePersonFlow({
           disabled={!canSave}
           className="min-h-11 rounded-[0.9rem] bg-gradient-to-r from-sky-500 to-cyan-500 px-4 text-sm font-black text-white shadow-[0_10px_24px_rgba(14,165,233,0.24)] transition active:scale-[0.98] disabled:opacity-50"
         >
-          {isSaving ? "Zapisywanie..." : "Zapisz osobę"}
+          {localized ? (isSaving ? t("states.saving") : t("actions.save")) : isSaving ? "Zapisywanie..." : "Zapisz osobę"}
         </button>
       </form>
     </section>

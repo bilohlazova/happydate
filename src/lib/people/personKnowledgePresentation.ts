@@ -1,4 +1,7 @@
 import type { PersonKnowledge } from "@/lib/brain/types";
+import { format } from "date-fns";
+import type { AppLocale } from "../../i18n/config.ts";
+import { getDateFnsLocale } from "../../i18n/dateLocales.ts";
 
 export interface PersonKnowledgeChip {
   icon: string;
@@ -79,19 +82,15 @@ export function getPersonKnowledgeChips(
   };
 }
 
-export function formatPersonKnowledgeDate(value: string): string | null {
+export function formatPersonKnowledgeDate(value: string, locale: AppLocale = "pl"): string | null {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return null;
-  return new Intl.DateTimeFormat("pl-PL", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(date);
+  return format(date, "d MMMM yyyy", { locale: getDateFnsLocale(locale) });
 }
 
 export function getPersonKnowledgeCardModel(
   knowledge: PersonKnowledge,
+  locale: AppLocale = "pl",
 ): PersonKnowledgeCardModel {
   const { chips, remainingCount } = getPersonKnowledgeChips(knowledge);
   return {
@@ -105,7 +104,7 @@ export function getPersonKnowledgeCardModel(
     showGiftSummary: knowledge.giftIdeas.length > 0,
     latestMemoryDateLabel:
       knowledge.memoriesCount > 0 && knowledge.latestMemoryDate
-        ? formatPersonKnowledgeDate(knowledge.latestMemoryDate)
+        ? formatPersonKnowledgeDate(knowledge.latestMemoryDate, locale)
         : null,
   };
 }

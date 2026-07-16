@@ -1,5 +1,6 @@
 import { Cake, Heart, MessageCircleHeart } from "lucide-react";
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 interface PeopleSummaryCardProps {
   peopleCount: number;
@@ -12,11 +13,12 @@ export function PeopleSummaryCard({
   birthdaysThisWeek,
   waitingForContact,
 }: PeopleSummaryCardProps) {
+  const t = useTranslations("people");
   return (
     <section className="rounded-[0.95rem] bg-white px-3.5 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.045)] ring-1 ring-slate-100">
       <div className="flex items-center justify-between gap-3">
         <p className="text-base font-black leading-5 text-slate-950">
-          {peopleCount} ważne osoby
+          {t("summary.importantPeople", { count: peopleCount })}
         </p>
         <Heart className="h-[18px] w-[18px] shrink-0 fill-blue-600 text-blue-600" />
       </div>
@@ -26,13 +28,13 @@ export function PeopleSummaryCard({
           tone="pink"
           icon={<Cake className="h-3.5 w-3.5" />}
           value={birthdaysThisWeek}
-          label="urodziny"
+          label={t("summary.birthdays")}
         />
         <StatPill
           tone="blue"
           icon={<MessageCircleHeart className="h-3.5 w-3.5" />}
           value={waitingForContact}
-          label="czekają na kontakt"
+          label={t("summary.waitingForContact")}
         />
       </div>
     </section>

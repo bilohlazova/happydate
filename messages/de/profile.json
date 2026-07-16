@@ -1,0 +1,24 @@
+{
+  "title": "Profil",
+  "hero": { "defaultName": "Dein Name", "points": "{points} Punkte", "care": "Care", "surveyComplete": "Umfrage", "surveyReward": "+100 Punkte" },
+  "avatar": { "alt": "Profilfoto" },
+  "membership": { "memberSince": "Dabei seit {date}" },
+  "care": {
+    "activeTitle": "HappyDate Care — aktiv",
+    "activeDescription": "Alle Erinnerungen und KI-Vorschläge sind aktiviert",
+    "manage": "Abonnement verwalten",
+    "upsellTitle": "Jemand erinnert sich für dich",
+    "perks": { "reminders": "Intelligente Erinnerungen", "gifts": "KI-Geschenkvorschläge", "notifications": "Priorisierte Benachrichtigungen" },
+    "tryCare": "Ab 29 zł/Monat testen"
+  },
+  "account": { "title": "Persönliche Daten", "name": "Vor- und Nachname", "namePlaceholder": "Wie heißt du?", "save": "Änderungen speichern", "saving": "Wird gespeichert…" },
+  "settings": {
+    "title": "Einstellungen", "notifications": "Push-Benachrichtigungen", "enabled": "Aktiviert", "reminders": "Erinnerungen", "threeDaysBefore": "3 Tage vorher", "aiSuggestions": "KI-Vorschläge", "active": "Aktiv",
+    "language": { "title": "Anwendungssprache", "description": "Wähle die Sprache der HappyDate-Oberfläche." }
+  },
+  "security": { "title": "Sicherheit und Datenschutz", "changePassword": "Passwort ändern", "activeSessions": "Aktive Sitzungen", "privacy": "Datenschutzerklärung", "exportData": "Daten exportieren", "deleteAccount": "Konto löschen" },
+  "actions": { "logout": "Abmelden" },
+  "states": { "saved": "Gespeichert ✅", "avatarSaved": "Foto aktualisiert ✅" },
+  "errors": { "saveFailed": "Die Änderungen konnten nicht gespeichert werden. Bitte versuche es erneut.", "avatarSaveFailed": "Das Foto wurde hochgeladen, aber das Profil konnte nicht aktualisiert werden.", "uploadFailed": "Das Foto konnte nicht hochgeladen werden. Bitte versuche es erneut." },
+  "accessibility": { "pageLabel": "Benutzerprofil", "changeAvatar": "Profilfoto ändern" }
+}

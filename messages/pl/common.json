@@ -1,0 +1,30 @@
+{
+  "actions": {
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "close": "Zamknij",
+    "back": "Wstecz",
+    "add": "Dodaj",
+    "edit": "Edytuj",
+    "delete": "Usuń"
+  },
+  "states": {
+    "loading": "Ładowanie…",
+    "error": "Wystąpił błąd.",
+    "empty": "Brak danych."
+  },
+  "language": {
+    "selectorLabel": "Zmień język aplikacji",
+    "current": "Aktualny język: {language}",
+    "changeSuccess": "Język został zmieniony.",
+    "changeError": "Nie udało się zmienić języka.",
+    "syncError": "Język zmieniono na tym urządzeniu, ale nie udało się zapisać go na innych urządzeniach. Spróbuj ponownie.",
+    "options": { "pl": "Polski", "uk": "Українська", "en": "English", "ru": "Русский", "de": "Deutsch" },
+    "label": "Język",
+    "polish": "Polski",
+    "ukrainian": "Ukraiński",
+    "english": "Angielski",
+    "russian": "Rosyjski",
+    "german": "Niemiecki"
+  }
+}

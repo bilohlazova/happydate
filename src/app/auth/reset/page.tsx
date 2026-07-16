@@ -4,8 +4,11 @@ export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useTranslations } from "next-intl";
+import { mapAuthError } from "@/lib/auth/mapAuthError";
 
 export default function ResetPasswordPage() {
+  const translate = useTranslations("auth");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -26,9 +29,9 @@ export default function ResetPasswordPage() {
     setLoading(false);
 
     if (error) {
-      setErr(error.message);
+      setErr(translate(`errors.${mapAuthError(error)}`));
     } else {
-      setMsg("✅ Sprawdź swoją skrzynkę e-mail — wysłaliśmy link do ustawienia nowego hasła.");
+      setMsg(translate("reset.success"));
       setTimeout(() => setMsg(null), 5000);
     }
   };
@@ -36,9 +39,9 @@ export default function ResetPasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-6">
-        <h1 className="text-2xl font-bold mb-1 text-sky-600">Reset hasła</h1>
+        <h1 className="text-2xl font-bold mb-1 text-sky-600">{translate("reset.title")}</h1>
         <p className="text-sm text-gray-500 mb-6">
-          Podaj adres e-mail. Wyślemy do Ciebie link do ustawienia nowego hasła.
+          {translate("reset.subtitle")}
         </p>
 
         {err && (
@@ -52,15 +55,16 @@ export default function ResetPasswordPage() {
           </div>
         )}
 
-        <form onSubmit={handleReset} className="space-y-4">
+        <form onSubmit={handleReset} className="space-y-4" aria-label={translate("accessibility.resetForm")}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              E-mail
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="auth-reset-email">
+              {translate("common.email")}
             </label>
             <input
+              id="auth-reset-email"
               type="email"
               required
-              placeholder="nazwa@domena.pl"
+              placeholder={translate("common.emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full border rounded-md p-2"
@@ -72,13 +76,13 @@ export default function ResetPasswordPage() {
             disabled={loading}
             className="w-full bg-sky-600 text-white py-2 rounded-md hover:bg-sky-700 transition disabled:opacity-60"
           >
-            {loading ? "Wysyłanie…" : "Wyślij link resetujący"}
+            {loading ? translate("reset.submitting") : translate("reset.submit")}
           </button>
         </form>
 
         <div className="mt-4 text-sm">
           <a href="/auth/login" className="text-sky-600 hover:underline">
-            ← Powrót do logowania
+            ← {translate("reset.backToLogin")}
           </a>
         </div>
       </div>

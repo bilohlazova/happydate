@@ -7,6 +7,10 @@ import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { useAvatar } from "@/hooks/useAvatar";
 import { useAvatarUpload } from "@/hooks/useAvatarUpload";
+import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
+import { useLocale, useTranslations } from "next-intl";
+import { isSupportedLocale } from "@/i18n/config";
+import { formatProfileMemberSince } from "@/lib/profile/profilePresentation";
 
 /* ═══════════════════════════════════════════════════════════
    PROFILE PAGE — Account Center
@@ -36,6 +40,10 @@ function ProfileHero({
   avatarLoading: boolean;
   onPickAvatar: () => void;
 }) {
+  const translate = useTranslations("profile");
+  const localeValue = useLocale();
+  const locale = isSupportedLocale(localeValue) ? localeValue : "pl";
+  const memberSince = createdAt ? formatProfileMemberSince(createdAt, locale) : null;
   return (
     <section className="pr-hero">
       <div className="pr-hero__glow" aria-hidden="true" />
@@ -46,7 +54,7 @@ function ProfileHero({
           {avatarUrl ? (
             <Image
               src={avatarUrl}
-              alt="Zdjęcie profilowe"
+              alt={translate("avatar.alt")}
               width={84}
               height={84}
               className={`pr-avatar-img${avatarLoading ? " pr-avatar-img--loading" : ""}`}
@@ -66,7 +74,7 @@ function ProfileHero({
           <button
             type="button"
             className="pr-avatar-edit"
-            aria-label="Zmień zdjęcie profilowe"
+            aria-label={translate("accessibility.changeAvatar")}
             onClick={onPickAvatar}
             disabled={avatarLoading}
           >
@@ -75,23 +83,23 @@ function ProfileHero({
         </div>
 
         <div className="pr-hero__identity">
-          <h1 className="pr-hero__name">{fullName || "Twoje imię"}</h1>
+          <h1 className="pr-hero__name">{fullName || translate("hero.defaultName")}</h1>
           {email    && <p className="pr-hero__email">{email}</p>}
-          {createdAt && (
+          {memberSince && (
             <p className="pr-hero__since">
-              Z nami od {new Date(createdAt).toLocaleDateString("pl-PL", { month: "long", year: "numeric" })}
+              {translate("membership.memberSince", { date: memberSince })}
             </p>
           )}
         </div>
       </div>
 
       <div className="pr-badges">
-        <span className="pr-badge pr-badge--points">⭐ {points} pkt</span>
-        {hasCare && <span className="pr-badge pr-badge--care">💛 Care</span>}
+        <span className="pr-badge pr-badge--points">⭐ {translate("hero.points", { points })}</span>
+        {hasCare && <span className="pr-badge pr-badge--care">💛 {translate("hero.care")}</span>}
         {surveyCompleted ? (
-          <span className="pr-badge pr-badge--done">✅ Ankieta</span>
+          <span className="pr-badge pr-badge--done">✅ {translate("hero.surveyComplete")}</span>
         ) : (
-          <Link href="/survey" className="pr-badge pr-badge--cta">+100 pkt →</Link>
+          <Link href="/survey" className="pr-badge pr-badge--cta">{translate("hero.surveyReward")} →</Link>
         )}
       </div>
     </section>
@@ -102,6 +110,7 @@ function ProfileHero({
    CARE CARD
 ───────────────────────────────────────── */
 function CareCard({ hasCare }: { hasCare: boolean }) {
+  const translate = useTranslations("profile.care");
   if (hasCare) {
     return (
       <section className="pr-care-active">
@@ -109,11 +118,11 @@ function CareCard({ hasCare }: { hasCare: boolean }) {
         <div className="pr-care-active__row">
           <div className="pr-care-active__icon">💛</div>
           <div>
-            <p className="pr-care-active__title">HappyDate Care — aktywne</p>
-            <p className="pr-care-active__sub">Wszystkie przypomnienia i AI podpowiedzi włączone</p>
+            <p className="pr-care-active__title">{translate("activeTitle")}</p>
+            <p className="pr-care-active__sub">{translate("activeDescription")}</p>
           </div>
         </div>
-        <Link href="/care/manage" className="pr-care-active__manage">Zarządzaj subskrypcją →</Link>
+        <Link href="/care/manage" className="pr-care-active__manage">{translate("manage")} →</Link>
       </section>
     );
   }
@@ -122,13 +131,13 @@ function CareCard({ hasCare }: { hasCare: boolean }) {
       <div className="pr-care-upsell__glow" aria-hidden="true" />
       <div className="pr-care-upsell__content">
         <p className="pr-care-upsell__label">HappyDate Care</p>
-        <p className="pr-care-upsell__title">Ktoś pamięta za Ciebie 💛</p>
+        <p className="pr-care-upsell__title">{translate("upsellTitle")} 💛</p>
         <ul className="pr-care-upsell__perks">
-          <li>✨ Inteligentne przypomnienia</li>
-          <li>🎁 Podpowiedzi prezentów AI</li>
-          <li>📅 Priorytetowe powiadomienia</li>
+          <li>✨ {translate("perks.reminders")}</li>
+          <li>🎁 {translate("perks.gifts")}</li>
+          <li>📅 {translate("perks.notifications")}</li>
         </ul>
-        <Link href="/care" className="pr-care-upsell__cta">Wypróbuj od 29 zł/mies →</Link>
+        <Link href="/care" className="pr-care-upsell__cta">{translate("tryCare")} →</Link>
       </div>
     </section>
   );
@@ -143,27 +152,28 @@ function PersonalDataCard({
   fullName: string; saving: boolean; message: string | null;
   onChange: (v: string) => void; onSubmit: (e: React.FormEvent) => void;
 }) {
+  const translate = useTranslations("profile.account");
   return (
     <section className="pr-card">
       <div className="pr-card__header">
         <span className="pr-card__icon">👤</span>
-        <p className="pr-card__title">Dane osobowe</p>
+        <p className="pr-card__title">{translate("title")}</p>
       </div>
       <form onSubmit={onSubmit} className="pr-form">
         <div className="pr-field">
-          <label className="pr-field__label" htmlFor="pr-name">Imię i nazwisko</label>
+          <label className="pr-field__label" htmlFor="pr-name">{translate("name")}</label>
           <input
             id="pr-name"
             className="pr-input"
             type="text"
-            placeholder="Jak masz na imię?"
+            placeholder={translate("namePlaceholder")}
             value={fullName}
             onChange={e => onChange(e.target.value)}
             /* font-size: 16px via .pr-input CSS — prevents iOS Safari zoom */
           />
         </div>
         <button className="pr-btn-primary" type="submit" disabled={saving}>
-          {saving ? "Zapisywanie…" : "Zapisz zmiany"}
+          {saving ? translate("saving") : translate("save")}
         </button>
       </form>
       {message && <p className="pr-feedback">{message}</p>}
@@ -175,17 +185,17 @@ function PersonalDataCard({
    SETTINGS CARD
 ───────────────────────────────────────── */
 function SettingsCard() {
+  const translate = useTranslations("profile.settings");
   const rows: SettingRow[] = [
-    { icon: "🔔", label: "Powiadomienia push",  value: "Włączone",    href: "/settings/notifications" },
-    { icon: "⏰", label: "Przypomnienia",        value: "3 dni przed", href: "/settings/reminders" },
-    { icon: "✨", label: "Podpowiedzi AI",       value: "Aktywne",     href: "/settings/ai" },
-    { icon: "🌍", label: "Język aplikacji",      value: "Polski",      href: "/settings/language" },
+    { icon: "🔔", label: translate("notifications"), value: translate("enabled"), href: "/settings/notifications" },
+    { icon: "⏰", label: translate("reminders"), value: translate("threeDaysBefore"), href: "/settings/reminders" },
+    { icon: "✨", label: translate("aiSuggestions"), value: translate("active"), href: "/settings/ai" },
   ];
   return (
     <section className="pr-card">
       <div className="pr-card__header">
         <span className="pr-card__icon">⚙️</span>
-        <p className="pr-card__title">Preferencje</p>
+        <p className="pr-card__title">{translate("title")}</p>
       </div>
       <ul className="pr-rows">
         {rows.map(row => (
@@ -198,6 +208,9 @@ function SettingsCard() {
             </Link>
           </li>
         ))}
+        <li>
+          <LanguageSwitcher isAuthenticated variant="profile" />
+        </li>
       </ul>
     </section>
   );
@@ -207,25 +220,26 @@ function SettingsCard() {
    SECURITY CARD
 ───────────────────────────────────────── */
 function SecurityCard() {
+  const translate = useTranslations("profile.security");
   const rows: SettingRow[] = [
-    { icon: "🔑", label: "Zmień hasło",          href: "/settings/password" },
-    { icon: "📱", label: "Aktywne sesje",         href: "/settings/sessions" },
-    { icon: "🔒", label: "Polityka prywatności",  href: "/privacy" },
-    { icon: "📦", label: "Eksportuj dane",        href: "/settings/export" },
-    { icon: "🗑️", label: "Usuń konto",           href: "/settings/delete" },
+    { icon: "🔑", label: translate("changePassword"), href: "/settings/password" },
+    { icon: "📱", label: translate("activeSessions"), href: "/settings/sessions" },
+    { icon: "🔒", label: translate("privacy"), href: "/privacy" },
+    { icon: "📦", label: translate("exportData"), href: "/settings/export" },
+    { icon: "🗑️", label: translate("deleteAccount"), href: "/settings/delete" },
   ];
   return (
     <section className="pr-card">
       <div className="pr-card__header">
         <span className="pr-card__icon">🔐</span>
-        <p className="pr-card__title">Bezpieczeństwo i prywatność</p>
+        <p className="pr-card__title">{translate("title")}</p>
       </div>
       <ul className="pr-rows">
         {rows.map(row => (
           <li key={row.label}>
             <Link
               href={row.href ?? "#"}
-              className={`pr-row${row.label === "Usuń konto" ? " pr-row--danger" : ""}`}
+              className={`pr-row${row.href === "/settings/delete" ? " pr-row--danger" : ""}`}
             >
               <span className="pr-row__icon">{row.icon}</span>
               <span className="pr-row__label">{row.label}</span>
@@ -242,9 +256,10 @@ function SecurityCard() {
    LOGOUT
 ───────────────────────────────────────── */
 function LogoutButton({ onLogout }: { onLogout: () => void }) {
+  const translate = useTranslations("profile.actions");
   return (
     <div className="pr-logout">
-      <button className="pr-btn-ghost" onClick={onLogout}>🚪 Wyloguj się</button>
+      <button className="pr-btn-ghost" onClick={onLogout}>🚪 {translate("logout")}</button>
     </div>
   );
 }
@@ -254,6 +269,7 @@ function LogoutButton({ onLogout }: { onLogout: () => void }) {
 ═══════════════════════════════════════════════════════════ */
 export default function ProfilePage() {
   const router = useRouter();
+  const translate = useTranslations("profile");
 
   const [userId,    setUserId]    = useState<string | null>(null);
   const [email,     setEmail]     = useState<string | null>(null);
@@ -281,12 +297,12 @@ export default function ProfilePage() {
           .update({ avatar_url: filePath })
           .eq("id", userId)
           .then(({ error }) => {
-            setMessage(error ? error.message : "Zdjęcie zaktualizowane ✅");
+            setMessage(error ? translate("errors.avatarSaveFailed") : translate("states.avatarSaved"));
             refresh(); // re-fetch signed URL via useAvatar
           });
       }
     },
-    onError: (msg) => setMessage(msg),
+    onError: () => setMessage(translate("errors.uploadFailed")),
   });
 
   /* ── Load profile ─────────────────────────────────────────── */
@@ -330,7 +346,7 @@ export default function ProfilePage() {
     const { error } = await supabase.from("profiles")
       .update({ full_name: fullName, avatar_url: avatarPath }).eq("id", userId);
     setSaving(false);
-    setMessage(error ? error.message : "Zapisano ✅");
+    setMessage(error ? translate("errors.saveFailed") : translate("states.saved"));
     refresh();
   };
 
@@ -343,7 +359,7 @@ export default function ProfilePage() {
   const avatarLoading  = avatarState.status === "loading";
 
   return (
-    <main className="safe-container pr-shell">
+    <main className="safe-container pr-shell" aria-label={translate("accessibility.pageLabel")}>
       <ProfileHero
         avatarUrl={avatarUrl}
         avatarFallback={avatarFallback}

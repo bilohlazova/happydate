@@ -1,0 +1,30 @@
+{
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "back": "Back",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "states": {
+    "loading": "Loading…",
+    "error": "Something went wrong.",
+    "empty": "No data."
+  },
+  "language": {
+    "selectorLabel": "Change application language",
+    "current": "Current language: {language}",
+    "changeSuccess": "Language changed.",
+    "changeError": "The language could not be changed.",
+    "syncError": "The language changed on this device, but cross-device saving failed. Please try again.",
+    "options": { "pl": "Polski", "uk": "Українська", "en": "English", "ru": "Русский", "de": "Deutsch" },
+    "label": "Language",
+    "polish": "Polish",
+    "ukrainian": "Ukrainian",
+    "english": "English",
+    "russian": "Russian",
+    "german": "German"
+  }
+}

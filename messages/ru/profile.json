@@ -1,0 +1,24 @@
+{
+  "title": "Профиль",
+  "hero": { "defaultName": "Ваше имя", "points": "{points} баллов", "care": "Care", "surveyComplete": "Опрос", "surveyReward": "+100 баллов" },
+  "avatar": { "alt": "Фото профиля" },
+  "membership": { "memberSince": "С нами с {date}" },
+  "care": {
+    "activeTitle": "HappyDate Care — активно",
+    "activeDescription": "Все напоминания и AI-подсказки включены",
+    "manage": "Управлять подпиской",
+    "upsellTitle": "Кто-то помнит за вас",
+    "perks": { "reminders": "Умные напоминания", "gifts": "AI-подсказки для подарков", "notifications": "Приоритетные уведомления" },
+    "tryCare": "Попробовать от 29 zł/мес."
+  },
+  "account": { "title": "Личные данные", "name": "Имя и фамилия", "namePlaceholder": "Как вас зовут?", "save": "Сохранить изменения", "saving": "Сохранение…" },
+  "settings": {
+    "title": "Настройки", "notifications": "Push-уведомления", "enabled": "Включены", "reminders": "Напоминания", "threeDaysBefore": "За 3 дня", "aiSuggestions": "AI-подсказки", "active": "Активны",
+    "language": { "title": "Язык приложения", "description": "Выберите язык интерфейса HappyDate." }
+  },
+  "security": { "title": "Безопасность и конфиденциальность", "changePassword": "Изменить пароль", "activeSessions": "Активные сеансы", "privacy": "Политика конфиденциальности", "exportData": "Экспортировать данные", "deleteAccount": "Удалить аккаунт" },
+  "actions": { "logout": "Выйти" },
+  "states": { "saved": "Сохранено ✅", "avatarSaved": "Фото обновлено ✅" },
+  "errors": { "saveFailed": "Не удалось сохранить изменения. Попробуйте ещё раз.", "avatarSaveFailed": "Фото загружено, но обновить профиль не удалось.", "uploadFailed": "Не удалось загрузить фото. Попробуйте ещё раз." },
+  "accessibility": { "pageLabel": "Профиль пользователя", "changeAvatar": "Изменить фото профиля" }
+}

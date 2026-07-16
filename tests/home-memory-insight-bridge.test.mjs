@@ -83,6 +83,25 @@ test("journal-shaped insight cannot map", () => {
   assert.equal(result, null);
 });
 
+test("insight without a linked person cannot map", () => {
+  assert.equal(
+    mapInsightToHappyCard(insight("gift_saved", { personId: undefined })),
+    null,
+  );
+});
+
+test("person route must belong to the linked person", () => {
+  assert.equal(
+    mapInsightToHappyCard(
+      insight("gift_saved", {
+        personId: "olek",
+        action: { label: "Ignored", action: "/people/kasia" },
+      }),
+    ),
+    null,
+  );
+});
+
 test("highest-priority supported insight wins", () => {
   const selected = selectHomeMemoryInsight([
     insight("recent_memory", { id: "recent", priority: 50 }),
@@ -134,6 +153,18 @@ test("event insight is not rendered again as same-person secondary content", () 
   assert.deepEqual(result, [primary]);
 });
 
+test("same-person duplicate copy falls back to current Home recommendations", () => {
+  const primary = card("birthday-olek", { personId: "olek" });
+  const existing = card("legacy-memory", { type: "memory" });
+  const duplicate = mapInsightToHappyCard(
+    insight("gift_saved", { title: primary.title }),
+  );
+  assert.deepEqual(composeHomeCards([primary], [existing], duplicate), [
+    primary,
+    existing,
+  ]);
+});
+
 test("no insight preserves the current Home cards", () => {
   const primary = card("birthday-olek");
   const existing = card("legacy-memory", { type: "memory" });
@@ -142,9 +173,9 @@ test("no insight preserves the current Home cards", () => {
 
 test("mapper preserves the canonical action URL", () => {
   const result = mapInsightToHappyCard(
-    insight("gift_saved", { action: { label: "Ignored", action: "/people/kasia" } }),
+    insight("gift_saved", { action: { label: "Ignored", action: "/people/olek" } }),
   );
-  assert.equal(result?.actionRoute, "/people/kasia");
+  assert.equal(result?.actionRoute, "/people/olek");
 });
 
 test("reason, source insight id and source memory ids are preserved", () => {

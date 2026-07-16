@@ -1,0 +1,24 @@
+{
+  "title": "Профіль",
+  "hero": { "defaultName": "Ваше ім’я", "points": "{points} балів", "care": "Care", "surveyComplete": "Опитування", "surveyReward": "+100 балів" },
+  "avatar": { "alt": "Фото профілю" },
+  "membership": { "memberSince": "З нами від {date}" },
+  "care": {
+    "activeTitle": "HappyDate Care — активно",
+    "activeDescription": "Усі нагадування та AI-підказки ввімкнені",
+    "manage": "Керувати підпискою",
+    "upsellTitle": "Хтось пам’ятає за вас",
+    "perks": { "reminders": "Розумні нагадування", "gifts": "AI-підказки для подарунків", "notifications": "Пріоритетні сповіщення" },
+    "tryCare": "Спробувати від 29 zł/міс."
+  },
+  "account": { "title": "Особисті дані", "name": "Ім’я та прізвище", "namePlaceholder": "Як вас звати?", "save": "Зберегти зміни", "saving": "Збереження…" },
+  "settings": {
+    "title": "Налаштування", "notifications": "Push-сповіщення", "enabled": "Увімкнено", "reminders": "Нагадування", "threeDaysBefore": "За 3 дні", "aiSuggestions": "AI-підказки", "active": "Активні",
+    "language": { "title": "Мова застосунку", "description": "Виберіть мову інтерфейсу HappyDate." }
+  },
+  "security": { "title": "Безпека та конфіденційність", "changePassword": "Змінити пароль", "activeSessions": "Активні сеанси", "privacy": "Політика конфіденційності", "exportData": "Експортувати дані", "deleteAccount": "Видалити обліковий запис" },
+  "actions": { "logout": "Вийти" },
+  "states": { "saved": "Збережено ✅", "avatarSaved": "Фото оновлено ✅" },
+  "errors": { "saveFailed": "Не вдалося зберегти зміни. Спробуйте ще раз.", "avatarSaveFailed": "Фото завантажено, але профіль не вдалося оновити.", "uploadFailed": "Не вдалося завантажити фото. Спробуйте ще раз." },
+  "accessibility": { "pageLabel": "Профіль користувача", "changeAvatar": "Змінити фото профілю" }
+}

@@ -1,0 +1,45 @@
+{
+  "header": {
+    "home": "Strona główna",
+    "services": "Usługi",
+    "reviews": "Opinie",
+    "about": "O nas",
+    "people": "Osoby",
+    "notes": "Notatki",
+    "calendar": "Kalendarz",
+    "profile": "Profil",
+    "login": "Zaloguj się",
+    "register": "Zarejestruj się",
+    "logout": "Wyloguj",
+    "openMenu": "Otwórz menu",
+    "closeMenu": "Zamknij menu",
+    "account": "Konto",
+    "navigationLabel": "Główna nawigacja"
+  },
+  "bottom": {
+    "navigationLabel": "Główna nawigacja",
+    "home": "Start",
+    "people": "Osoby",
+    "notes": "Notatki",
+    "calendar": "Kalendarz",
+    "profile": "Profil"
+  },
+  "footer": {
+    "navigationLabel": "Dokumenty prawne",
+    "about": "O nas",
+    "privacy": "Polityka prywatności",
+    "terms": "Regulamin",
+    "returns": "Zwroty",
+    "contact": "Kontakt",
+    "copyright": "© {year} HappyDate"
+  },
+  "cookie": {
+    "title": "Ustawienia cookies",
+    "description": "Używamy cookies zgodnie z",
+    "privacyLink": "Polityką Prywatności",
+    "accept": "Akceptuję",
+    "reject": "Odrzuć",
+    "settings": "Ustawienia",
+    "bannerLabel": "Informacja o cookies"
+  }
+}

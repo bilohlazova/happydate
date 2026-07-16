@@ -1,40 +1,72 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabaseClient";
+import { HEADER_NAV_ITEMS } from "@/i18n/shellNavigation";
+import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
+import { getLocaleCookie, setLocaleCookie } from "@/i18n/localeCookie";
+import { shouldSynchronizeProfileLocale } from "@/i18n/profileLocaleSync";
+import { getPreferredLocaleForUser } from "@/lib/repositories/profile/profileLocale.repository";
 
 function cx(...cls: Array<string | false | null | undefined>) {
   return cls.filter(Boolean).join(" ");
 }
 
-// Тільки публічні сторінки — без дублів з Bottom Nav
-const NAV = [
-  { href: "/services", label: "Usługi",  match: (p: string) => p.startsWith("/services") },
-  { href: "/reviews",  label: "Opinie",  match: (p: string) => p.startsWith("/reviews")  },
-  { href: "/about",    label: "O nas",   match: (p: string) => p.startsWith("/about")    },
-];
-
 export default function Header() {
+  const translate = useTranslations("navigation");
   const pathname = usePathname();
+  const router = useRouter();
   const [isLoggedIn,    setIsLoggedIn]    = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const synchronizedProfileRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!cancelled) setIsLoggedIn(!!data?.user);
-    })();
+    const applyUser = async (user: { id: string } | null | undefined) => {
+      if (cancelled) return;
+      setIsLoggedIn(Boolean(user));
+      if (!user) {
+        synchronizedProfileRef.current = null;
+        return;
+      }
+      const loadingKey = `loading:${user.id}`;
+      if (synchronizedProfileRef.current === loadingKey) return;
+      synchronizedProfileRef.current = loadingKey;
+      try {
+        const preferredLocale = await getPreferredLocaleForUser(user.id);
+        if (cancelled || !preferredLocale) return;
+        const synchronizationKey = `${user.id}:${preferredLocale}`;
+        synchronizedProfileRef.current = synchronizationKey;
+        if (shouldSynchronizeProfileLocale(preferredLocale, getLocaleCookie())) {
+          setLocaleCookie(preferredLocale);
+          router.refresh();
+        }
+      } catch {
+        synchronizedProfileRef.current = null;
+        // Authentication and navigation remain usable if preference loading fails.
+      }
+    };
+    void supabase.auth.getUser().then(({ data }) => applyUser(data.user));
     const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (!cancelled) setIsLoggedIn(!!session?.user);
+      void applyUser(session?.user);
     });
     return () => {
       cancelled = true;
       listener?.subscription?.unsubscribe();
     };
-  }, []);
+  }, [router]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileMenuOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [mobileMenuOpen]);
 
   return (
     <>
@@ -50,40 +82,48 @@ export default function Header() {
           </Link>
 
           {/* DESKTOP NAV — тільки публічні сторінки */}
-          <nav className="hidden sm:flex gap-6 text-white text-sm">
-            {NAV.map((item) => (
+          <nav
+            className="hidden gap-6 text-sm text-white sm:flex"
+            aria-label={translate("header.navigationLabel")}
+          >
+            {HEADER_NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cx(
                   "transition",
-                  item.match(pathname)
+                  pathname.startsWith(item.href)
                     ? "underline font-semibold"
                     : "opacity-90 hover:opacity-100"
                 )}
               >
-                {item.label}
+                {translate(`header.${item.labelKey}`)}
               </Link>
             ))}
           </nav>
 
           {/* RIGHT SIDE */}
           <div className="flex items-center gap-3">
+            <LanguageSwitcher isAuthenticated={isLoggedIn} />
             {/* Login — тільки якщо не залогінений */}
             {!isLoggedIn && (
               <Link
                 href="/auth/login"
                 className="hd-button min-h-9 bg-white/18 px-3 text-sm font-bold text-white"
               >
-                Login
+                {translate("header.login")}
               </Link>
             )}
 
             {/* HAMBURGER — тільки мобільний */}
             <button
               onClick={() => setMobileMenuOpen((v) => !v)}
-              className="hd-icon-button sm:hidden text-xl text-white"
-              aria-label="Toggle menu"
+              className="hd-icon-button hd-mobile-menu-button text-xl text-white"
+              aria-label={translate(
+                mobileMenuOpen ? "header.closeMenu" : "header.openMenu",
+              )}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="happydate-mobile-menu"
             >
               ☰
             </button>
@@ -92,20 +132,23 @@ export default function Header() {
 
         {/* MOBILE MENU — тільки публічні сторінки */}
         {mobileMenuOpen && (
-          <div className="sm:hidden bg-white/96 shadow-lg backdrop-blur-xl">
-            {NAV.map((item) => (
+          <div
+            id="happydate-mobile-menu"
+            className="bg-white/96 shadow-lg backdrop-blur-xl sm:hidden"
+          >
+            {HEADER_NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
                 className={cx(
                   "block min-h-11 px-4 py-3 text-sm font-semibold",
-                  item.match(pathname)
+                  pathname.startsWith(item.href)
                     ? "bg-blue-100 font-semibold"
                     : "hover:bg-gray-100"
                 )}
               >
-                {item.label}
+                {translate(`header.${item.labelKey}`)}
               </Link>
             ))}
 
@@ -121,7 +164,7 @@ export default function Header() {
                 }}
                 className="block min-h-11 w-full px-4 py-3 text-left text-sm font-semibold text-red-500 hover:bg-gray-100"
               >
-                🚪 Wyloguj
+                🚪 {translate("header.logout")}
               </button>
             )}
           </div>

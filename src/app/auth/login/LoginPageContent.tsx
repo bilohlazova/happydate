@@ -5,10 +5,13 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { MobileUI } from "@/lib/theme/mobile";
+import { useTranslations } from "next-intl";
+import { mapAuthError } from "@/lib/auth/mapAuthError";
 
 export default function LoginPage() {
   const router = useRouter();
   const params = useSearchParams();
+  const translate = useTranslations("auth");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -56,11 +59,11 @@ export default function LoginPage() {
   const validate = () => {
     setErrorMsg(null);
     if (!email.match(/^\S+@\S+\.\S+$/)) {
-      setErrorMsg("Podaj poprawny adres e-mail.");
+      setErrorMsg(translate("validation.emailInvalid"));
       return false;
     }
     if (password.length < 6) {
-      setErrorMsg("Hasło musi mieć co najmniej 6 znaków.");
+      setErrorMsg(translate("validation.passwordTooShort"));
       return false;
     }
     return true;
@@ -82,18 +85,11 @@ export default function LoginPage() {
     setLoading(false);
 
     if (error) {
-      // дружні повідомлення
-      if (error.message.toLowerCase().includes("invalid login credentials")) {
-        setErrorMsg("Nieprawidłowy e-mail lub hasło.");
-      } else if (error.message.toLowerCase().includes("rate limit")) {
-        setErrorMsg("Zbyt wiele prób. Spróbuj ponownie za chwilę.");
-      } else {
-        setErrorMsg(error.message);
-      }
+      setErrorMsg(translate(`errors.${mapAuthError(error)}`));
       return;
     }
 
-    setInfoMsg("Zalogowano pomyślnie ✅");
+    setInfoMsg(translate("login.success"));
     // редірект виконає useEffect (onAuthStateChange), але зробимо і тут
     await routeAfterAuth();
   };
@@ -101,8 +97,8 @@ export default function LoginPage() {
   return (
     <main className={`${MobileUI.screen} flex items-center justify-center px-4 py-6`}>
       <div className={`${MobileUI.card} w-full max-w-[430px] p-5`}>
-        <h1 className="mb-1 text-[2rem] font-black leading-tight text-sky-600">Zaloguj się</h1>
-        <p className="mb-5 text-sm font-semibold leading-5 text-gray-500">Witaj ponownie! Wpisz e-mail i hasło.</p>
+        <h1 className="mb-1 text-[2rem] font-black leading-tight text-sky-600">{translate("login.title")}</h1>
+        <p className="mb-5 text-sm font-semibold leading-5 text-gray-500">{translate("login.subtitle")}</p>
 
         {errorMsg && (
           <div className="mb-4 rounded-[0.95rem] border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
@@ -115,13 +111,14 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4" aria-label={translate("accessibility.loginForm")}>
           <div>
-            <label className="mb-1.5 block text-sm font-bold text-gray-700">E-mail</label>
+            <label className="mb-1.5 block text-sm font-bold text-gray-700" htmlFor="auth-login-email">{translate("common.email")}</label>
             <input
+              id="auth-login-email"
               type="email"
               autoComplete="email"
-              placeholder="nazwa@domena.pl"
+              placeholder={translate("common.emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={MobileUI.input}
@@ -131,9 +128,10 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-bold text-gray-700">Hasło</label>
+            <label className="mb-1.5 block text-sm font-bold text-gray-700" htmlFor="auth-login-password">{translate("common.password")}</label>
             <div className="relative">
               <input
+                id="auth-login-password"
                 type={showPwd ? "text" : "password"}
                 autoComplete="current-password"
                 placeholder="••••••••"
@@ -147,7 +145,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPwd((v) => !v)}
                 className="absolute inset-y-0 right-0 min-w-11 px-3 text-gray-500 hover:text-gray-700"
-                aria-label={showPwd ? "Ukryj hasło" : "Pokaż hasło"}
+                aria-label={translate(showPwd ? "common.hidePassword" : "common.showPassword")}
               >
                 {showPwd ? "🙈" : "👁️"}
               </button>
@@ -159,16 +157,16 @@ export default function LoginPage() {
             disabled={loading}
             className={`${MobileUI.button} w-full bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-60`}
           >
-            {loading ? "Logowanie…" : "Zaloguj"}
+            {loading ? translate("login.submitting") : translate("login.submit")}
           </button>
         </form>
 
-        <div className="mt-4 flex items-center justify-between text-sm">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
           <a href="/auth/reset" className="text-sky-600 hover:underline">
-            Zapomniałeś hasła?
+            {translate("login.forgotPassword")}
           </a>
           <a href="/auth/register" className="text-sky-600 hover:underline">
-            Nie masz konta? Zarejestruj się
+            {translate("login.noAccount")} {translate("login.register")}
           </a>
         </div>
 

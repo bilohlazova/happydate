@@ -5,9 +5,11 @@ export const dynamic = "force-dynamic";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { useTranslations } from "next-intl";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
+  const translate = useTranslations("auth.callback");
 
   useEffect(() => {
     const run = async () => {
@@ -59,7 +61,7 @@ export default function AuthCallbackPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center">
-      <p className="text-lg text-gray-700">Ładowanie…</p>
+      <p className="text-lg text-gray-700" role="status">{translate("loading")}</p>
     </main>
   );
 }

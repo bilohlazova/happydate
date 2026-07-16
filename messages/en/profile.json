@@ -1,0 +1,24 @@
+{
+  "title": "Profile",
+  "hero": { "defaultName": "Your name", "points": "{points} points", "care": "Care", "surveyComplete": "Survey", "surveyReward": "+100 points" },
+  "avatar": { "alt": "Profile photo" },
+  "membership": { "memberSince": "With us since {date}" },
+  "care": {
+    "activeTitle": "HappyDate Care — active",
+    "activeDescription": "All reminders and AI suggestions are enabled",
+    "manage": "Manage subscription",
+    "upsellTitle": "Someone remembers for you",
+    "perks": { "reminders": "Smart reminders", "gifts": "AI gift suggestions", "notifications": "Priority notifications" },
+    "tryCare": "Try from 29 zł/month"
+  },
+  "account": { "title": "Personal details", "name": "Full name", "namePlaceholder": "What is your name?", "save": "Save changes", "saving": "Saving…" },
+  "settings": {
+    "title": "Preferences", "notifications": "Push notifications", "enabled": "Enabled", "reminders": "Reminders", "threeDaysBefore": "3 days before", "aiSuggestions": "AI suggestions", "active": "Active",
+    "language": { "title": "Application language", "description": "Choose the HappyDate interface language." }
+  },
+  "security": { "title": "Security and privacy", "changePassword": "Change password", "activeSessions": "Active sessions", "privacy": "Privacy policy", "exportData": "Export data", "deleteAccount": "Delete account" },
+  "actions": { "logout": "Log out" },
+  "states": { "saved": "Saved ✅", "avatarSaved": "Photo updated ✅" },
+  "errors": { "saveFailed": "Changes could not be saved. Please try again.", "avatarSaveFailed": "The photo was uploaded, but the profile could not be updated.", "uploadFailed": "The photo could not be uploaded. Please try again." },
+  "accessibility": { "pageLabel": "User profile", "changeAvatar": "Change profile photo" }
+}

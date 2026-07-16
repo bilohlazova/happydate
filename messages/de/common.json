@@ -1,0 +1,30 @@
+{
+  "actions": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "back": "Zurück",
+    "add": "Hinzufügen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen"
+  },
+  "states": {
+    "loading": "Wird geladen…",
+    "error": "Ein Fehler ist aufgetreten.",
+    "empty": "Keine Daten."
+  },
+  "language": {
+    "selectorLabel": "Anwendungssprache ändern",
+    "current": "Aktuelle Sprache: {language}",
+    "changeSuccess": "Sprache geändert.",
+    "changeError": "Die Sprache konnte nicht geändert werden.",
+    "syncError": "Die Sprache wurde auf diesem Gerät geändert, konnte aber nicht geräteübergreifend gespeichert werden. Bitte versuche es erneut.",
+    "options": { "pl": "Polski", "uk": "Українська", "en": "English", "ru": "Русский", "de": "Deutsch" },
+    "label": "Sprache",
+    "polish": "Polnisch",
+    "ukrainian": "Ukrainisch",
+    "english": "Englisch",
+    "russian": "Russisch",
+    "german": "Deutsch"
+  }
+}

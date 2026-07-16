@@ -71,6 +71,37 @@ export interface BrainPerson {
   name: string;
 }
 
+export interface PersonKnowledgeGiftIdea {
+  memoryId: string;
+  value: string;
+  createdAt?: string | null;
+}
+
+/** Serializable, computed profile context derived from explicit user records. */
+export interface PersonKnowledge {
+  personId: string;
+  personName?: string;
+  interests: string[];
+  favoritePlaces: string[];
+  favoriteFood: string[];
+  favoriteDrinks: string[];
+  hobbies: string[];
+  books: string[];
+  movies: string[];
+  music: string[];
+  pets: string[];
+  perfumes: string[];
+  flowers: string[];
+  travel: string[];
+  sports: string[];
+  giftIdeas: PersonKnowledgeGiftIdea[];
+  memoriesCount: number;
+  latestMemoryDate: string | null;
+  knownFactsCount: number;
+  completenessScore: number;
+  sourceMemoryIds: string[];
+}
+
 /**
  * Internal Brain representation of a memory.
  * Independent from the database schema.

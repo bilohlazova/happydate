@@ -5,9 +5,12 @@ export const dynamic = "force-dynamic";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { useTranslations } from "next-intl";
+import { mapAuthError } from "@/lib/auth/mapAuthError";
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
+  const translate = useTranslations("auth");
 
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
@@ -20,10 +23,10 @@ export default function UpdatePasswordPage() {
     (async () => {
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
-        setErr("Brak aktywnej sesji resetu. Kliknij ponownie link z e-maila.");
+        setErr(translate("updatePassword.noSession"));
       }
     })();
-  }, []);
+  }, [translate]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,11 +34,11 @@ export default function UpdatePasswordPage() {
     setErr(null);
 
     if (password.length < 6) {
-      setErr("Hasło musi mieć co najmniej 6 znaków.");
+      setErr(translate("validation.passwordTooShort"));
       return;
     }
     if (password !== password2) {
-      setErr("Hasła nie są identyczne.");
+      setErr(translate("validation.passwordMismatch"));
       return;
     }
 
@@ -44,9 +47,9 @@ export default function UpdatePasswordPage() {
     setLoading(false);
 
     if (error) {
-      setErr(error.message);
+      setErr(translate(`errors.${mapAuthError(error)}`));
     } else {
-      setMsg("✅ Hasło zostało pomyślnie zmienione. Zaloguj się ponownie.");
+      setMsg(translate("updatePassword.success"));
       // przekierowanie do logowania po 2 sekundach
       setTimeout(() => router.replace("/auth/login"), 2000);
     }
@@ -55,9 +58,9 @@ export default function UpdatePasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-6">
-        <h1 className="text-2xl font-bold mb-1 text-sky-600">Ustaw nowe hasło</h1>
+        <h1 className="text-2xl font-bold mb-1 text-sky-600">{translate("updatePassword.title")}</h1>
         <p className="text-sm text-gray-500 mb-6">
-          Wprowadź nowe hasło do swojego konta.
+          {translate("updatePassword.subtitle")}
         </p>
 
         {err && (
@@ -71,12 +74,13 @@ export default function UpdatePasswordPage() {
           </div>
         )}
 
-        <form onSubmit={handleUpdate} className="space-y-4">
+        <form onSubmit={handleUpdate} className="space-y-4" aria-label={translate("accessibility.updatePasswordForm")}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nowe hasło
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="auth-new-password">
+              {translate("updatePassword.newPassword")}
             </label>
             <input
+              id="auth-new-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -88,10 +92,11 @@ export default function UpdatePasswordPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Powtórz hasło
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="auth-confirm-password">
+              {translate("updatePassword.confirmPassword")}
             </label>
             <input
+              id="auth-confirm-password"
               type="password"
               value={password2}
               onChange={(e) => setPassword2(e.target.value)}
@@ -107,7 +112,7 @@ export default function UpdatePasswordPage() {
             disabled={loading}
             className="w-full bg-sky-600 text-white py-2 rounded-md hover:bg-sky-700 transition disabled:opacity-60"
           >
-            {loading ? "Zapisywanie…" : "Zmień hasło"}
+            {loading ? translate("updatePassword.submitting") : translate("updatePassword.submit")}
           </button>
         </form>
       </div>

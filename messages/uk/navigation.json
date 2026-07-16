@@ -1,0 +1,45 @@
+{
+  "header": {
+    "home": "Головна",
+    "services": "Послуги",
+    "reviews": "Відгуки",
+    "about": "Про нас",
+    "people": "Люди",
+    "notes": "Нотатки",
+    "calendar": "Календар",
+    "profile": "Профіль",
+    "login": "Увійти",
+    "register": "Зареєструватися",
+    "logout": "Вийти",
+    "openMenu": "Відкрити меню",
+    "closeMenu": "Закрити меню",
+    "account": "Обліковий запис",
+    "navigationLabel": "Головна навігація"
+  },
+  "bottom": {
+    "navigationLabel": "Головна навігація",
+    "home": "Головна",
+    "people": "Люди",
+    "notes": "Нотатки",
+    "calendar": "Календар",
+    "profile": "Профіль"
+  },
+  "footer": {
+    "navigationLabel": "Правова інформація",
+    "about": "Про нас",
+    "privacy": "Політика конфіденційності",
+    "terms": "Умови використання",
+    "returns": "Повернення",
+    "contact": "Контакти",
+    "copyright": "© {year} HappyDate"
+  },
+  "cookie": {
+    "title": "Налаштування cookie",
+    "description": "Ми використовуємо cookie відповідно до",
+    "privacyLink": "Політики конфіденційності",
+    "accept": "Прийняти",
+    "reject": "Відхилити",
+    "settings": "Налаштування",
+    "bannerLabel": "Інформація про cookie"
+  }
+}

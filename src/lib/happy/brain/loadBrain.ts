@@ -78,8 +78,10 @@ async function getMemoriesForCurrentUser(): Promise<BrainMemory[]> {
         );
       })
       .map(mapMemory);
-  } catch (error) {
-    console.error("[happy.loadBrain] getActiveMemories failed:", error);
+  } catch {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[happy.loadBrain] Memory data unavailable.");
+    }
     return [];
   }
 }

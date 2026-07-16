@@ -37,12 +37,16 @@ function actionLabel(type: Insight["type"]): string | null {
 export function mapInsightToHappyCard(insight: Insight): HappyCard | null {
   const label = actionLabel(insight.type);
   const route = insight.action?.action;
+  const expectedPersonRoute = insight.personId
+    ? `/people/${encodeURIComponent(insight.personId)}`
+    : null;
 
   if (
     !SUPPORTED_MEMORY_INSIGHT_TYPES.has(insight.type) ||
     !label ||
     !route ||
-    !route.startsWith("/people/")
+    !expectedPersonRoute ||
+    route !== expectedPersonRoute
   ) {
     return null;
   }
@@ -129,8 +133,20 @@ export function composeHomeCards(
   existingRecommendationCards: HappyCard[],
   memoryRecommendation: HappyCard | null,
 ): HappyCard[] {
-  return memoryRecommendation
-    ? [...primaryCards, memoryRecommendation]
+  const duplicatesPrimary = memoryRecommendation
+    ? primaryCards.some(
+        (primaryCard) =>
+          primaryCard.personId === memoryRecommendation.personId &&
+          (primaryCard.title === memoryRecommendation.title ||
+            primaryCard.description === memoryRecommendation.description),
+      )
+    : false;
+  const usefulMemoryRecommendation = duplicatesPrimary
+    ? null
+    : memoryRecommendation;
+
+  return usefulMemoryRecommendation
+    ? [...primaryCards, usefulMemoryRecommendation]
     : [...primaryCards, ...existingRecommendationCards];
 }
 

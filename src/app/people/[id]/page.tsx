@@ -4,7 +4,7 @@
 // Shows a single person's profile, HappyDate insights,
 // highlights and memories.
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { supabase } from "@/lib/supabaseClient";
@@ -15,11 +15,14 @@ import type { MemoryRow } from "@/lib/repositories/memory.types";
 
 import PersonCard from "@/components/people/PersonCard";
 import PersonHighlights from "@/components/people/PersonHighlights";
+import PersonKnowledgeCard from "@/components/people/PersonKnowledgeCard";
 import HappyDateAdvisor from "@/components/advisor/HappyDateAdvisor";
 import MemoryList from "@/components/memories/MemoryList";
 
 import { getPersonAdvisorTips } from "@/lib/advisors/personAdvisor";
 import { MobileUI } from "@/lib/theme/mobile";
+import { mapMemory } from "@/lib/brain/mappers/mapMemory";
+import { buildPersonKnowledge } from "@/lib/brain/engines/personKnowledgeEngine";
 
 export default function PersonDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -143,6 +146,17 @@ export default function PersonDetailsPage() {
     personLoading ||
     memoriesLoading;
 
+  const personKnowledge = useMemo(
+    () =>
+      person
+        ? buildPersonKnowledge({
+            person: { id: person.id, name: person.name },
+            memories: memories.map(mapMemory),
+          })
+        : null,
+    [memories, person]
+  );
+
   if (loading) {
     return (
       <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-4`}>
@@ -178,6 +192,8 @@ export default function PersonDetailsPage() {
       <PersonCard person={person} />
 
       <HappyDateAdvisor tips={advisorTips} />
+
+      {personKnowledge && <PersonKnowledgeCard knowledge={personKnowledge} />}
 
       <PersonHighlights memories={memories} />
 

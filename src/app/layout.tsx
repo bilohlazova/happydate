@@ -1,26 +1,28 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages, getTimeZone } from "next-intl/server";
 import "./globals.css";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
+import { getAppMetadata } from "@/i18n/metadata";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext", "cyrillic"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext", "cyrillic"],
 });
 
-export const metadata: Metadata = {
-  title: "HappyDate",
-  description: "Twój ciepły asystent prezentowy",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return getAppMetadata(await getLocale());
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -28,13 +30,17 @@ export const viewport: Viewport = {
   viewportFit: "cover", // ✅ дозволяє контенту заходити під notch/Dynamic Island
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+  const timeZone = await getTimeZone();
+
   return (
-    <html lang="pl" className="h-full">
+    <html lang={locale} className="h-full">
       <body
         className={`
           ${geistSans.variable}
@@ -43,7 +49,12 @@ export default function RootLayout({
           hd-app-shell
         `}
       >
-        <div className="flex min-h-screen flex-col">
+        <NextIntlClientProvider
+          locale={locale}
+          messages={messages}
+          timeZone={timeZone}
+        >
+          <div className="flex min-h-screen flex-col">
 
           {/* HEADER — сам розтягується під статус-бар через paddingTop у Header.tsx */}
           <Header />
@@ -63,7 +74,8 @@ export default function RootLayout({
             <Footer />
           </div>
 
-        </div>
+          </div>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

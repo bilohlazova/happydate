@@ -1,23 +1,21 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { BOTTOM_NAV_ITEMS } from "@/i18n/shellNavigation";
 
 export default function BottomNav() {
+  const translate = useTranslations("navigation");
   const pathname = usePathname();
   const router = useRouter();
 
-  const items = [
-    { href: "/",          label: "Start",    icon: "🏠" },
-    { href: "/people",    label: "Osoby",    icon: "👥" },
-    { href: "/notes",     label: "Notatki",  icon: "📝" },
-    { href: "/dashboard", label: "Kalendarz", icon: "📅" },
-    { href: "/profile",   label: "Profil",   icon: "👤" },
-  ];
-
   return (
-    <nav className="hd-bottom-nav" aria-label="Główna nawigacja">
+    <nav
+      className="hd-bottom-nav"
+      aria-label={translate("bottom.navigationLabel")}
+    >
       <div className="hd-bottom-nav__inner">
-        {items.map((item) => {
+        {BOTTOM_NAV_ITEMS.map((item) => {
           // Точне порівняння для "/" щоб не підсвічувати все підряд
           const active = item.href === "/"
             ? pathname === "/"
@@ -34,7 +32,7 @@ export default function BottomNav() {
                 {item.icon}
               </span>
               <span className="hd-bottom-nav__label">
-                {item.label}
+                {translate(`bottom.${item.labelKey}`)}
               </span>
             </button>
           );

@@ -1,0 +1,45 @@
+{
+  "header": {
+    "home": "Главная",
+    "services": "Услуги",
+    "reviews": "Отзывы",
+    "about": "О нас",
+    "people": "Люди",
+    "notes": "Заметки",
+    "calendar": "Календарь",
+    "profile": "Профиль",
+    "login": "Войти",
+    "register": "Регистрация",
+    "logout": "Выйти",
+    "openMenu": "Открыть меню",
+    "closeMenu": "Закрыть меню",
+    "account": "Аккаунт",
+    "navigationLabel": "Главная навигация"
+  },
+  "bottom": {
+    "navigationLabel": "Главная навигация",
+    "home": "Главная",
+    "people": "Люди",
+    "notes": "Заметки",
+    "calendar": "Календарь",
+    "profile": "Профиль"
+  },
+  "footer": {
+    "navigationLabel": "Правовая информация",
+    "about": "О нас",
+    "privacy": "Политика конфиденциальности",
+    "terms": "Условия использования",
+    "returns": "Возвраты",
+    "contact": "Контакты",
+    "copyright": "© {year} HappyDate"
+  },
+  "cookie": {
+    "title": "Настройки cookie",
+    "description": "Мы используем cookie в соответствии с",
+    "privacyLink": "Политикой конфиденциальности",
+    "accept": "Принять",
+    "reject": "Отклонить",
+    "settings": "Настройки",
+    "bannerLabel": "Информация о cookie"
+  }
+}

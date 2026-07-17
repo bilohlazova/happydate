@@ -17,6 +17,7 @@ import {
 import { getAssistantEnvironmentStatus, getMissingAssistantConfiguration } from "../src/lib/assistant/chatEnvironment.ts";
 import { readFile } from "node:fs/promises";
 import { buildAssistantPeopleContext } from "../src/lib/assistant/peopleContext.ts";
+import { buildAssistantMemoryContext } from "../src/lib/assistant/memoryContext.ts";
 
 function validRequest(overrides = {}) {
   return {
@@ -124,6 +125,101 @@ test("PEOPLE prompt is non-JSON, omits IDs, and works for every locale", () => {
     assert.match(buildAssistantSystemPrompt(locale), /PEOPLE context/);
   }
   assert.doesNotMatch(formatAssistantContext({ ...context, people: [] }) ?? "", /PEOPLE/);
+});
+
+function brainMemory(id, personId, overrides = {}) {
+  return {
+    id,
+    personId,
+    type: "preference",
+    title: null,
+    value: `Fact ${id}`,
+    content: null,
+    importance: 0,
+    occurredOn: null,
+    createdAt: "2026-07-01",
+    isActive: true,
+    eventId: null,
+    ...overrides,
+  };
+}
+
+function assistantPerson(id, name) {
+  return { id, name, relation: null, birthday: null, gender: null };
+}
+
+test("memory context supports zero and one memory without a title", () => {
+  assert.deepEqual(buildAssistantMemoryContext([assistantPerson("p1", "Anna")], []), []);
+  assert.deepEqual(buildAssistantMemoryContext(
+    [assistantPerson("p1", "Anna")],
+    [brainMemory("m1", "p1", { value: null, content: "Lubi kawę speciality" })],
+  ), [{
+    personName: "Anna",
+    memories: [{ title: null, content: "Lubi kawę speciality", occurredOn: null, importance: 0 }],
+  }]);
+});
+
+test("memories sort by importance then newest date and cap at five per person", () => {
+  const result = buildAssistantMemoryContext([assistantPerson("p1", "Anna")], [
+    brainMemory("old-important", "p1", { importance: 3, occurredOn: "2025-01-01" }),
+    brainMemory("new-important", "p1", { importance: 3, occurredOn: "2026-06-01" }),
+    brainMemory("new-low", "p1", { importance: 1, occurredOn: "2026-07-01" }),
+    brainMemory("m4", "p1"), brainMemory("m5", "p1"), brainMemory("m6", "p1"),
+  ]);
+  assert.equal(result[0].memories.length, 5);
+  assert.deepEqual(result[0].memories.slice(0, 3).map((memory) => memory.content), [
+    "Fact new-important", "Fact old-important", "Fact new-low",
+  ]);
+});
+
+test("memory context caps ten people and fifty memories total", () => {
+  const people = Array.from({ length: 12 }, (_, index) => assistantPerson(`p${index}`, `Person ${index}`));
+  const memories = people.flatMap((person) => Array.from(
+    { length: 6 },
+    (_, index) => brainMemory(`${person.id}-m${index}`, person.id),
+  ));
+  const result = buildAssistantMemoryContext(people, memories);
+  assert.equal(result.length, 10);
+  assert.equal(result.reduce((count, group) => count + group.memories.length, 0), 50);
+});
+
+test("people without memories are omitted and identical names remain distinct groups", () => {
+  const result = buildAssistantMemoryContext([
+    assistantPerson("p1", "Alex"), assistantPerson("p2", "Alex"), assistantPerson("p3", "Maria"),
+  ], [brainMemory("m1", "p1"), brainMemory("m2", "p2")]);
+  assert.equal(result.length, 2);
+  assert.deepEqual(result.map((group) => group.personName), ["Alex", "Alex"]);
+});
+
+test("MEMORIES prompt is non-JSON, excludes technical fields, and is locale-safe", () => {
+  const context = {
+    userName: null, insight: null, events: [], people: [],
+    memories: [{
+      personName: "Anna",
+      memories: [{ title: null, content: "Nie lubi perfum", occurredOn: "2026-01-02", importance: 2 }],
+    }],
+  };
+  const formatted = formatAssistantContext(context);
+  assert.match(formatted, /MEMORIES[\s\S]*Anna[\s\S]*• Nie lubi perfum/);
+  assert.doesNotMatch(formatted, /personId|memoryId|user_id|createdAt|\{"/);
+  assert.doesNotMatch(formatAssistantContext({ ...context, memories: [] }) ?? "", /MEMORIES/);
+  for (const locale of ["pl", "uk", "ru", "en", "de"]) {
+    assert.match(buildAssistantSystemPrompt(locale), /MEMORIES section/);
+  }
+});
+
+test("memory request validation enforces group and item limits", () => {
+  const item = { title: null, content: "Fact", occurredOn: null, importance: 0 };
+  const tooManyGroups = Array.from({ length: ASSISTANT_CHAT_LIMITS.memoryPeople + 1 }, (_, index) => ({
+    personName: `Person ${index}`, memories: [item],
+  }));
+  assert.equal(parseAssistantChatRequest(validRequest({ context: {
+    userName: null, insight: null, events: [], people: [], memories: tooManyGroups,
+  } })).success, false);
+  const tooManyItems = Array.from({ length: ASSISTANT_CHAT_LIMITS.memoriesPerPerson + 1 }, () => item);
+  assert.equal(parseAssistantChatRequest(validRequest({ context: {
+    userName: null, insight: null, events: [], people: [], memories: [{ personName: "Anna", memories: tooManyItems }],
+  } })).success, false);
 });
 
 test("formatted context omits IDs and marks user values as untrusted data", () => {

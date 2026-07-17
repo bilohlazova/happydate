@@ -1,9 +1,14 @@
 import type {
   BrainEvent,
-  BrainMemory,
   BrainPerson,
   Insight,
 } from "../types";
+import {
+  consumerIsActive,
+  consumerStoredType,
+  consumerValue,
+  type KnowledgeItem,
+} from "../../knowledge/index.ts";
 
 const GIFT_WINDOW_DAYS = 30;
 const MISSING_CONTEXT_WINDOW_DAYS = 14;
@@ -40,12 +45,12 @@ export const MEMORY_INSIGHT_PRIORITY = {
 export interface MemoryInsightInput {
   person: BrainPerson;
   event?: BrainEvent | null;
-  memories: BrainMemory[];
+  memories: KnowledgeItem[];
   currentDate: Date;
 }
 
-function normalizedType(memory: BrainMemory): string {
-  return memory.type?.trim().toLowerCase() ?? "";
+function normalizedType(memory: KnowledgeItem): string {
+  return consumerStoredType(memory)?.trim().toLowerCase() ?? "";
 }
 
 function meaningfulValue(value: string | null): value is string {
@@ -58,48 +63,48 @@ function timestamp(value: string | null): number {
   return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
 }
 
-function memoryTimestamp(memory: BrainMemory): number {
+function memoryTimestamp(memory: KnowledgeItem): number {
   const occurredAt = timestamp(memory.occurredOn);
   return Number.isFinite(occurredAt)
     ? occurredAt
     : timestamp(memory.createdAt);
 }
 
-function newestFirst(first: BrainMemory, second: BrainMemory): number {
+function newestFirst(first: KnowledgeItem, second: KnowledgeItem): number {
   const dateDifference = memoryTimestamp(second) - memoryTimestamp(first);
   return dateDifference || first.id.localeCompare(second.id);
 }
 
-function createdNewestFirst(first: BrainMemory, second: BrainMemory): number {
+function createdNewestFirst(first: KnowledgeItem, second: KnowledgeItem): number {
   const dateDifference = timestamp(second.createdAt) - timestamp(first.createdAt);
   return dateDifference || first.id.localeCompare(second.id);
 }
 
 /** Active, person-owned gift ideas with a meaningful saved value. */
 export function getGiftIdeasForPerson(
-  memories: BrainMemory[],
+  memories: KnowledgeItem[],
   personId: string,
-): BrainMemory[] {
+): KnowledgeItem[] {
   return memories
     .filter(
       (memory) =>
-        memory.isActive === true &&
+        consumerIsActive(memory) &&
         memory.personId === personId &&
         normalizedType(memory) === "gift" &&
-        meaningfulValue(memory.value),
+        meaningfulValue(consumerValue(memory)),
     )
     .sort(createdNewestFirst);
 }
 
 /** Active, person-owned memories, including the compatible legacy story type. */
 export function getMemoriesForPerson(
-  memories: BrainMemory[],
+  memories: KnowledgeItem[],
   personId: string,
-): BrainMemory[] {
+): KnowledgeItem[] {
   return memories
     .filter(
       (memory) =>
-        memory.isActive === true &&
+        consumerIsActive(memory) &&
         memory.personId === personId &&
         MEMORY_TYPES.has(normalizedType(memory)),
     )
@@ -111,16 +116,16 @@ export function getMemoriesForPerson(
  * raw types are deliberately excluded.
  */
 export function getPersonContextRecords(
-  memories: BrainMemory[],
+  memories: KnowledgeItem[],
   personId: string,
-): BrainMemory[] {
+): KnowledgeItem[] {
   return memories
     .filter(
       (memory) =>
-        memory.isActive === true &&
+        consumerIsActive(memory) &&
         memory.personId === personId &&
         CONTEXT_TYPES.has(normalizedType(memory)) &&
-        meaningfulValue(memory.value),
+        meaningfulValue(consumerValue(memory)),
     )
     .sort(createdNewestFirst);
 }
@@ -192,10 +197,10 @@ function eventPriority(daysUntil: number): number {
 }
 
 function recentMemory(
-  memories: BrainMemory[],
+  memories: KnowledgeItem[],
   personId: string,
   currentDate: Date,
-): BrainMemory | null {
+): KnowledgeItem | null {
   return (
     getMemoriesForPerson(memories, personId).find((memory) => {
       const relevantDate = memory.occurredOn ?? memory.createdAt;
@@ -238,7 +243,7 @@ export function buildMemoryInsightForPerson({
         priority: eventPriority(daysUntilEvent),
         icon: "🎁",
         title: `Masz już pomysł dla ${personName}`,
-        description: compact(gift.value!.trim()),
+        description: compact(consumerValue(gift)!.trim()),
         reason: "upcoming_event_and_saved_gift",
         personId: person.id,
         eventId: event!.id,
@@ -249,7 +254,7 @@ export function buildMemoryInsightForPerson({
 
     if (contextRecords.length > 0) {
       const safeValues = Array.from(
-        new Set(contextRecords.map((record) => compact(record.value!.trim(), 48))),
+        new Set(contextRecords.map((record) => compact(consumerValue(record)!.trim(), 48))),
       ).slice(0, 2);
       const contextSuffix = safeValues.length > 0 ? ` ${safeValues.join(" · ")}` : "";
 

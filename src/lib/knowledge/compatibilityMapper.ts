@@ -1,0 +1,173 @@
+import {
+  normalizeStoredMemoryType,
+  type MemoryRow,
+} from "../repositories/memory.types.ts";
+import type {
+  KnowledgeItem,
+  KnowledgeKind,
+  LegacyMemoryKnowledgeDto,
+  KnowledgePolarity,
+  KnowledgeState,
+} from "./domain.ts";
+
+interface LegacySemantics {
+  kind: KnowledgeKind;
+  category: string | null;
+  polarity: KnowledgePolarity | null;
+}
+
+const PREFERENCE_CATEGORIES: Readonly<Record<string, string>> = {
+  preference: "general",
+  interest: "interest",
+  flower: "flower",
+  coffee: "coffee",
+  drink: "drink",
+  restaurant: "restaurant",
+  place: "place",
+  food: "food",
+  movie: "movie",
+  book: "book",
+  music: "music",
+  hobby: "hobby",
+  perfume: "perfume",
+  travel: "travel",
+  sport: "sport",
+  pet: "pet",
+};
+
+const FACT_CATEGORIES: Readonly<Record<string, string>> = {
+  family: "family",
+  work: "work",
+  birthday: "important_date",
+  holiday: "important_date",
+};
+
+function legacySemantics(type: string): LegacySemantics {
+  if (type === "memory" || type === "story") {
+    return { kind: "experience", category: null, polarity: null };
+  }
+
+  if (type === "gift") {
+    // Existing records represent ideas, not proof of purchase or giving.
+    return { kind: "gift", category: "idea", polarity: null };
+  }
+
+  if (type === "dream") {
+    return { kind: "wish", category: "dream", polarity: null };
+  }
+
+  if (type === "journal") {
+    return { kind: "journal", category: null, polarity: null };
+  }
+
+  const preferenceCategory = PREFERENCE_CATEGORIES[type];
+  if (preferenceCategory) {
+    return {
+      kind: "preference",
+      category: preferenceCategory,
+      // Legacy records do not encode positive/negative intent reliably.
+      polarity: null,
+    };
+  }
+
+  const factCategory = FACT_CATEGORIES[type];
+  if (factCategory) {
+    return { kind: "fact", category: factCategory, polarity: null };
+  }
+
+  return { kind: "note", category: null, polarity: null };
+}
+
+function cleanText(value: string | null): string | null {
+  const cleaned = value?.trim() ?? "";
+  return cleaned || null;
+}
+
+function canonicalValue(row: MemoryRow): string | null {
+  return (
+    cleanText(row.value_text) ??
+    cleanText(row.content_text) ??
+    cleanText(row.transcript_text) ??
+    cleanText(row.title)
+  );
+}
+
+function knowledgeState(row: MemoryRow): KnowledgeState {
+  return row.is_active ? "active" : "archived";
+}
+
+/**
+ * Convert one current/legacy database row into the Knowledge 1.0 read model.
+ * This is intentionally lossless with respect to legacy type and evidence and
+ * never mutates the supplied row.
+ */
+export function mapLegacyMemoryToKnowledge(row: MemoryRow): KnowledgeItem {
+  const type = normalizeStoredMemoryType(row.type);
+  const semantics = legacySemantics(type);
+  const originalText =
+    cleanText(row.content_text) ??
+    cleanText(row.transcript_text) ??
+    cleanText(row.value_text) ??
+    cleanText(row.title);
+
+  return {
+    id: row.id,
+    personId: row.person_id,
+    eventId: row.event_id,
+    kind: semantics.kind,
+    category: semantics.category,
+    polarity: semantics.polarity,
+    title: cleanText(row.title),
+    value: canonicalValue(row),
+    occurredOn: row.occurred_on,
+    importance: Number.isFinite(row.importance) ? row.importance : 0,
+    tags: [...(row.ai_tags ?? [])],
+    summary: cleanText(row.ai_summary),
+    state: knowledgeState(row),
+    // Journals are private by default. Other inactive records are not eligible.
+    aiEligible: row.is_active && semantics.kind !== "journal",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    legacyType: type,
+    evidence: {
+      sourceKind: row.source || "legacy",
+      sourceId: row.id,
+      originalText,
+      capturedAt: row.created_at,
+    },
+    // Existing AI fields have no confidence/version/confirmation provenance.
+    classification: null,
+    compatibility: {
+      valueText: row.value_text,
+      contentText: row.content_text,
+    },
+  };
+}
+
+export function mapLegacyMemoriesToKnowledge(
+  rows: readonly MemoryRow[]
+): KnowledgeItem[] {
+  return rows.map(mapLegacyMemoryToKnowledge);
+}
+
+/**
+ * Preserve the current Brain-shaped payload without creating a Repository →
+ * Brain dependency. This adapter can be removed when Brain adopts Knowledge.
+ */
+export function mapLegacyMemoryToCompatibilityDto(
+  row: MemoryRow
+): LegacyMemoryKnowledgeDto {
+  return {
+    id: row.id,
+    personId: row.person_id,
+    type: row.type,
+    title: row.title,
+    value: row.value_text,
+    content: row.content_text,
+    importance: Number.isFinite(row.importance) ? row.importance : 0,
+    occurredOn: row.occurred_on,
+    createdAt: row.created_at,
+    isActive: row.is_active,
+    eventId: row.event_id,
+  };
+}

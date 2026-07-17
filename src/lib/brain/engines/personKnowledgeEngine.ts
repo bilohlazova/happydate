@@ -1,6 +1,12 @@
 import { normalizeStoredMemoryType } from "../../repositories/memory.types.ts";
+import {
+  consumerContent,
+  consumerIsActive,
+  consumerStoredType,
+  consumerValue,
+  type KnowledgeItem,
+} from "../../knowledge/index.ts";
 import type {
-  BrainMemory,
   BrainPerson,
   PersonKnowledge,
   PersonKnowledgeGiftIdea,
@@ -71,13 +77,13 @@ export const PERSON_KNOWLEDGE_COMPLETENESS_WEIGHTS = Object.freeze({
 
 export interface BuildPersonKnowledgeInput {
   person: BrainPerson;
-  memories: BrainMemory[];
+  memories: KnowledgeItem[];
   currentDate?: Date;
 }
 
 export interface BuildAllPeopleKnowledgeInput {
   people: BrainPerson[];
-  memories: BrainMemory[];
+  memories: KnowledgeItem[];
   currentDate?: Date;
 }
 
@@ -93,15 +99,15 @@ function meaningful(value: string | null | undefined): string | null {
 
 /** Extract explicit user text only for already-approved structured types. */
 export function extractPersonKnowledgeValue(
-  memory: BrainMemory,
-  normalizedType = normalizeStoredMemoryType(memory.type),
+  memory: KnowledgeItem,
+  normalizedType = normalizeStoredMemoryType(consumerStoredType(memory)),
 ): string | null {
-  const value = meaningful(memory.value);
+  const value = meaningful(consumerValue(memory));
   if (value) return value;
   const title = meaningful(memory.title);
   if (title) return title;
   if (normalizedType === "gift" || TYPE_TO_CATEGORY[normalizedType]) {
-    return meaningful(memory.content);
+    return meaningful(consumerContent(memory));
   }
   return null;
 }
@@ -112,11 +118,11 @@ function dateTimestamp(value: string | null): number {
   return Number.isFinite(timestamp) ? timestamp : Number.NEGATIVE_INFINITY;
 }
 
-function newestRecordTimestamp(memory: BrainMemory): number {
+function newestRecordTimestamp(memory: KnowledgeItem): number {
   return dateTimestamp(memory.createdAt);
 }
 
-function newestFirst(first: BrainMemory, second: BrainMemory): number {
+function newestFirst(first: KnowledgeItem, second: KnowledgeItem): number {
   return (
     newestRecordTimestamp(second) - newestRecordTimestamp(first) ||
     first.id.localeCompare(second.id)
@@ -206,14 +212,14 @@ export function buildPersonKnowledge({
   let latestMemoryTimestamp = Number.NEGATIVE_INFINITY;
 
   const eligible = memories
-    .filter((memory) => memory.isActive && memory.personId === person.id)
+    .filter((memory) => consumerIsActive(memory) && memory.personId === person.id)
     .slice()
     .sort(newestFirst);
 
   for (const memory of eligible) {
-    const type = normalizeStoredMemoryType(memory.type);
+    const type = normalizeStoredMemoryType(consumerStoredType(memory));
     if (MEMORY_RECORD_TYPES.has(type)) {
-      if (!meaningful(memory.value) && !meaningful(memory.title) && !meaningful(memory.content)) {
+      if (!meaningful(consumerValue(memory)) && !meaningful(memory.title) && !meaningful(consumerContent(memory))) {
         continue;
       }
       knowledge.memoriesCount += 1;
@@ -265,7 +271,7 @@ export function buildAllPeopleKnowledge({
   memories,
   currentDate,
 }: BuildAllPeopleKnowledgeInput): PersonKnowledge[] {
-  const memoriesByPerson = new Map<string, BrainMemory[]>();
+  const memoriesByPerson = new Map<string, KnowledgeItem[]>();
   for (const memory of memories) {
     if (!memory.personId) continue;
     const group = memoriesByPerson.get(memory.personId) ?? [];

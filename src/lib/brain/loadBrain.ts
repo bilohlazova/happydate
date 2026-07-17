@@ -1,5 +1,5 @@
 import { buildInsights } from "./buildInsights";
-import { getBrainMemories } from "@/lib/repositories/memoryRepository";
+import { listKnowledge } from "@/lib/repositories/knowledgeRepository";
 import type { BrainEvent, BrainPerson, Insight } from "./types";
 
 export interface LoadBrainParams {
@@ -23,7 +23,7 @@ export async function loadBrain({
   notes,
   currentDate,
 }: LoadBrainParams): Promise<Insight[]> {
-  const memories = await getBrainMemories(userId);
+  const memories = await listKnowledge({ userId });
 
   return buildInsights({
     profile,

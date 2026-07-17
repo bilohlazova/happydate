@@ -162,6 +162,10 @@ export interface MemoryRow {
   is_active: boolean;
 }
 
+/** Explicit full-row projection shared by canonical client/server repositories. */
+export const MEMORY_ROW_COLUMNS =
+  "id, user_id, person_id, event_id, content_text, audio_url, transcript_text, images, ai_summary, ai_tags, ai_emotional_score, created_at, updated_at, type, title, value_text, occurred_on, importance, source, is_active";
+
 /**
  * Projection used by the Notes screen. Kept separate from MemoryRow because
  * the screen intentionally fetches only the columns it renders.

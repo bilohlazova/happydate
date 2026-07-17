@@ -1,4 +1,5 @@
 import type { AppLocale } from "@/i18n/config";
+import type { HomeKnowledgeProjection } from "@/lib/knowledge";
 
 export type HomeEventSource = "event" | "birthday";
 
@@ -22,18 +23,7 @@ export interface HomeStoredEvent {
   notes: string | null;
 }
 
-export interface HomeMemory {
-  id: string;
-  personId: string | null;
-  eventId: string | null;
-  type: string | null;
-  title: string | null;
-  value: string | null;
-  content: string | null;
-  occurredOn: string | null;
-  createdAt: string | null;
-  isActive: boolean;
-}
+export type HomeMemory = HomeKnowledgeProjection;
 
 export type HomeDataSection = "profile" | "people" | "events" | "memories";
 

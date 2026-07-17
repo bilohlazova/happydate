@@ -5,8 +5,12 @@
 // no aggregation, no scoring — that belongs to Brain/services, not here.
 // ─────────────────────────────────────────────────────────────────────────────
 import { supabase } from "@/lib/supabaseClient";
-import { mapMemory } from "@/lib/brain/mappers/mapMemory";
-import type { BrainMemory } from "@/lib/brain/types";
+import { mapLegacyMemoryToCompatibilityDto } from "@/lib/knowledge";
+import type { LegacyMemoryKnowledgeDto } from "@/lib/knowledge";
+import {
+  listKnowledgeRows,
+  listKnowledgeRowsForPerson,
+} from "./knowledgeRepository";
 import type {
   FilterNotesMemoriesInput,
   MemoryRow,
@@ -313,18 +317,11 @@ export async function deleteMemory(memoryId: string): Promise<void> {
 export async function getMemoriesForPerson(
   personId: string
 ): Promise<MemoryRow[]> {
-  const { data, error } = await supabase
-    .from("memories")
-    .select("*")
-    .eq("person_id", personId)
-    .order("created_at", { ascending: false })
-    .returns<MemoryRow[]>();
-
-  if (error) {
-    throw new Error(`[memoryRepository] getMemoriesForPerson failed: ${error.message}`);
-  }
-
-  return data ?? [];
+  return listKnowledgeRowsForPerson({
+    personId,
+    // Preserve the existing behavior of returning inactive records too.
+    includeArchived: true,
+  });
 }
 
 /**
@@ -335,19 +332,7 @@ export async function getMemoriesForPerson(
 export async function getActiveMemories(
   userId: string
 ): Promise<MemoryRow[]> {
-  const { data, error } = await supabase
-    .from("memories")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .order("created_at", { ascending: false })
-    .returns<MemoryRow[]>();
-
-  if (error) {
-    throw new Error(`[memoryRepository] getActiveMemories failed: ${error.message}`);
-  }
-
-  return data ?? [];
+  return listKnowledgeRows({ userId });
 }
 
 /**
@@ -355,9 +340,9 @@ export async function getActiveMemories(
  */
 export async function getBrainMemories(
   userId: string
-): Promise<BrainMemory[]> {
+): Promise<LegacyMemoryKnowledgeDto[]> {
   const rows = await getActiveMemories(userId);
-  return rows.map(mapMemory);
+  return rows.map(mapLegacyMemoryToCompatibilityDto);
 }
 
 /**

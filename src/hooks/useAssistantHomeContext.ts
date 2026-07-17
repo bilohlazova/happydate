@@ -10,6 +10,10 @@ import { getHomeData } from "@/lib/repositories/home/home.repository";
 import type { AssistantEventContext } from "@/lib/assistant/chatContract";
 import type { AssistantPersonContext } from "@/lib/assistant/chatContract";
 import { buildAssistantPeopleContext } from "@/lib/assistant/peopleContext";
+import type { AssistantMemoryGroupContext } from "@/lib/assistant/chatContract";
+import { buildAssistantMemoryContext } from "@/lib/assistant/memoryContext";
+import { getCurrentMemoryUserId } from "@/lib/repositories/memoryRepository";
+import { listKnowledge } from "@/lib/repositories/knowledgeRepository";
 
 export type GreetingPeriod = "morning" | "afternoon" | "evening" | "night";
 
@@ -19,6 +23,7 @@ export type AssistantHomeContext = {
   insight: AssistantCardData | null;
   events: AssistantEventContext[];
   people: AssistantPersonContext[];
+  memories: AssistantMemoryGroupContext[];
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
@@ -77,6 +82,7 @@ const INITIAL_CONTEXT: AssistantHomeContext = {
   insight: null,
   events: [],
   people: [],
+  memories: [],
   isAuthenticated: false,
   loading: true,
   error: null,
@@ -101,8 +107,18 @@ export function useAssistantHomeContext(open: boolean): AssistantHomeContext {
       error: null,
     }));
 
-    void getHomeData()
-      .then((data) => {
+    const loadMemories = async () => {
+      const userId = await getCurrentMemoryUserId();
+      // Preserve the existing Assistant ordering/limit behavior in
+      // buildAssistantMemoryContext; purpose-specific retrieval comes later.
+      return userId ? listKnowledge({ userId }) : [];
+    };
+
+    void Promise.all([
+      getHomeData(),
+      loadMemories().catch(() => []),
+    ])
+      .then(([data, brainMemories]) => {
         if (requestId !== requestIdRef.current) return;
 
         if (!data.isAuthenticated) {
@@ -112,6 +128,7 @@ export function useAssistantHomeContext(open: boolean): AssistantHomeContext {
             insight: null,
             events: [],
             people: [],
+            memories: [],
             isAuthenticated: false,
             loading: false,
             error: null,
@@ -128,6 +145,7 @@ export function useAssistantHomeContext(open: boolean): AssistantHomeContext {
             insight: null,
             events: [],
             people: [],
+            memories: [],
             isAuthenticated: true,
             loading: false,
             error: "assistant-home-context-unavailable",
@@ -142,14 +160,16 @@ export function useAssistantHomeContext(open: boolean): AssistantHomeContext {
           eventTranslate: (key, values) => insightT(key, values),
         });
 
+        const assistantPeople = data.errors.some((error) => error.section === "people")
+          ? []
+          : buildAssistantPeopleContext(data.people);
         setContext({
           userName: resolveHomeUserName(data),
           greetingPeriod: getGreetingPeriod(),
           insight: mapInsightToAssistant(nextInsight ?? null),
           events: toAssistantEvents(data.events),
-          people: data.errors.some((error) => error.section === "people")
-            ? []
-            : buildAssistantPeopleContext(data.people),
+          people: assistantPeople,
+          memories: buildAssistantMemoryContext(assistantPeople, brainMemories),
           isAuthenticated: true,
           loading: false,
           error: null,
@@ -164,6 +184,7 @@ export function useAssistantHomeContext(open: boolean): AssistantHomeContext {
           insight: null,
           events: [],
           people: [],
+          memories: [],
           isAuthenticated: false,
           loading: false,
           error: "assistant-home-context-unavailable",

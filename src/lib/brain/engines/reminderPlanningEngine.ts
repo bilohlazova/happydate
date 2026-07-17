@@ -4,10 +4,10 @@ import {
 } from "./personKnowledgeEngine.ts";
 import type {
   BrainEvent,
-  BrainMemory,
   BrainPerson,
   PersonKnowledge,
 } from "../types.ts";
+import { consumerIsActive, type KnowledgeItem } from "../../knowledge/index.ts";
 
 export const REMINDER_STAGE_DAYS = [30, 14, 7, 3, 1, 0] as const;
 export type ReminderStage = (typeof REMINDER_STAGE_DAYS)[number];
@@ -50,7 +50,7 @@ export interface PlannedReminder extends ReminderMessageDescriptor {
 export interface ReminderPlanningInput {
   people: BrainPerson[];
   events: BrainEvent[];
-  memories: BrainMemory[];
+  memories: KnowledgeItem[];
   personKnowledge?: PersonKnowledge[];
   currentDate: Date;
 }
@@ -71,7 +71,7 @@ export interface BuildReminderForEventInput {
   currentDate: Date;
   person?: BrainPerson | null;
   knowledge?: PersonKnowledge | null;
-  memories?: BrainMemory[];
+  memories?: KnowledgeItem[];
 }
 
 const DAY_MS = 86_400_000;
@@ -181,11 +181,11 @@ function contextValues(knowledge: PersonKnowledge | null | undefined): string[] 
   return values;
 }
 
-function contextSourceIds(memories: BrainMemory[], personId: string, values: string[]): string[] {
+function contextSourceIds(memories: KnowledgeItem[], personId: string, values: string[]): string[] {
   const wanted = new Set(values.map((value) => value.toLocaleLowerCase()));
   const result: string[] = [];
   for (const memory of memories) {
-    if (!memory.isActive || memory.personId !== personId) continue;
+    if (!consumerIsActive(memory) || memory.personId !== personId) continue;
     const value = extractPersonKnowledgeValue(memory);
     if (value && wanted.has(value.toLocaleLowerCase()) && !result.includes(memory.id)) result.push(memory.id);
   }
@@ -292,7 +292,7 @@ export function planReminders(input: ReminderPlanningInput): PlannedReminder[] {
     peopleByName.set(key, peopleByName.has(key) ? null : person);
   }
   const knowledgeByPerson = new Map(knowledge.map((item) => [item.personId, item]));
-  const memoriesByPerson = new Map<string, BrainMemory[]>();
+  const memoriesByPerson = new Map<string, KnowledgeItem[]>();
   for (const memory of input.memories) {
     if (!memory.personId) continue;
     const group = memoriesByPerson.get(memory.personId) ?? [];

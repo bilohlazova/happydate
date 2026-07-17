@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
+import { listKnowledge } from "@/lib/repositories/knowledgeRepository";
+import { projectKnowledgeForHome } from "@/lib/knowledge";
 import type {
   HomeDataError,
   HomeDataSection,
@@ -54,25 +56,14 @@ async function loadEvents(userId: string): Promise<HomeStoredEvent[]> {
 }
 
 async function loadMemories(userId: string): Promise<HomeMemory[]> {
-  const { data, error } = await supabase
-    .from("memories")
-    .select("id, person_id, event_id, type, title, value_text, content_text, occurred_on, created_at, is_active")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .order("created_at", { ascending: false });
-  if (error) throw new HomeRepositoryError("memories", error.message);
-  return (data ?? []).map((memory) => ({
-    id: memory.id,
-    personId: memory.person_id,
-    eventId: memory.event_id,
-    type: memory.type,
-    title: memory.title,
-    value: memory.value_text,
-    content: memory.content_text,
-    occurredOn: memory.occurred_on,
-    createdAt: memory.created_at,
-    isActive: memory.is_active === true,
-  }));
+  try {
+    return projectKnowledgeForHome(await listKnowledge({ userId }));
+  } catch (error) {
+    throw new HomeRepositoryError(
+      "memories",
+      error instanceof Error ? error.message : "Knowledge unavailable",
+    );
+  }
 }
 
 function errorFrom(reason: unknown, fallbackSection: HomeDataSection): HomeDataError {

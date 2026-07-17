@@ -1,6 +1,20 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { createClient } from "@supabase/supabase-js";
+import {
+  getCachedGiftIdeas,
+  findOwnedGiftPerson,
+  loadLegacyGiftNotes,
+  loadGiftIntelligenceSource,
+  saveGiftIdeas,
+} from "@/lib/repositories/giftIntelligenceRepository.server";
+import {
+  authenticateGiftRequest,
+  resolveGiftAccess,
+} from "@/lib/gifts/giftApiSecurity";
+import {
+  buildGiftKnowledgeContext,
+  formatGiftContextAsLegacyNotes,
+} from "@/lib/gifts/giftKnowledgeContext";
 
 /* ================= TYPES ================= */
 
@@ -18,26 +32,12 @@ type AiResponse = {
 /* ================= ENV ================= */
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_ROLE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 /* ================= CLIENTS ================= */
 
 const openai = new OpenAI({
   apiKey: OPENAI_API_KEY,
 });
-
-const supabase = createClient(
-  SUPABASE_URL,
-  SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  }
-);
 
 /* ================= SCHEMA ================= */
 
@@ -88,41 +88,36 @@ export async function POST(req: Request) {
 
     /* ================= CACHE CHECK ================= */
 
-    const { data: cached, error: cacheError } =
-      await supabase
-        .from("ai_gift_cache")
-        .select("ideas")
-        .eq("person_id", personId)
-        .eq("occasion", occasion)
-        .maybeSingle();
+    const access = await resolveGiftAccess(req, personId, {
+      authenticate: authenticateGiftRequest,
+      findOwnedPerson: findOwnedGiftPerson,
+    });
+    if (!access.ok) {
+      return NextResponse.json(
+        { ideas: [], error: access.error },
+        { status: access.status },
+      );
+    }
+    const ownedPerson = access.person;
 
-    if (!cacheError && cached?.ideas) {
+    const cached = await getCachedGiftIdeas(ownedPerson, occasion);
+
+    if (cached) {
       return NextResponse.json({
-        ideas: cached.ideas,
+        ideas: cached,
         cached: true,
       });
     }
 
     /* ================= LOAD PERSON ================= */
 
-    const { data: person } = await supabase
-      .from("people")
-      .select("name, relation")
-      .eq("id", personId)
-      .maybeSingle();
-
-    /* ================= LOAD NOTES ================= */
-
-    const { data: notes } = await supabase
-      .from("notes")
-      .select("content")
-      .eq("person_id", personId)
-      .order("created_at", { ascending: false });
-
-    const notesText =
-      notes && notes.length > 0
-        ? notes.map((n) => `- ${n.content}`).join("\n")
-        : "No notes provided.";
+    const { person, knowledge } =
+      await loadGiftIntelligenceSource(ownedPerson);
+    const giftContext = buildGiftKnowledgeContext(ownedPerson.id, knowledge);
+    const legacyNotes = giftContext.facts.length
+      ? []
+      : await loadLegacyGiftNotes(ownedPerson);
+    const notesText = formatGiftContextAsLegacyNotes(giftContext, legacyNotes);
 
     /* ================= PROMPT ================= */
 
@@ -173,17 +168,7 @@ Return ONLY valid JSON matching schema.
 
     /* ================= SAVE CACHE ================= */
 
-    await supabase.from("ai_gift_cache").upsert(
-      {
-        person_id: personId,
-        occasion,
-        ideas: parsed.ideas,
-        created_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "person_id,occasion",
-      }
-    );
+    await saveGiftIdeas(ownedPerson, occasion, parsed.ideas);
 
     /* ================= RETURN ================= */
 

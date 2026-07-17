@@ -106,26 +106,3 @@ export interface PersonKnowledge {
  * Internal Brain representation of a memory.
  * Independent from the database schema.
  */
-export interface BrainMemory {
-  id: string;
-
-  personId: string | null;
-
-  type: string | null;
-
-  title: string | null;
-
-  value: string | null;
-
-  content: string | null;
-
-  importance: number;
-
-  occurredOn: string | null;
-
-  createdAt: string | null;
-
-  isActive: boolean;
-
-  eventId: string | null;
-}

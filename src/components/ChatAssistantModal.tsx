@@ -204,6 +204,7 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
               : null,
             events: homeContext.isAuthenticated ? homeContext.events : [],
             people: homeContext.isAuthenticated ? homeContext.people : [],
+            memories: homeContext.isAuthenticated ? homeContext.memories : [],
           },
         }),
         signal: controller.signal,

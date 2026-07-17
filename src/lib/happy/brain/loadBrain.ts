@@ -1,21 +1,19 @@
 import { getPeople } from "@/lib/repositories/people";
 import { getEvents } from "@/lib/repositories/events";
 import {
-  getActiveMemories,
   getCurrentMemoryUserId,
 } from "@/lib/repositories/memoryRepository";
-import { mapMemory } from "@/lib/brain/mappers/mapMemory";
+import { listKnowledge } from "@/lib/repositories/knowledgeRepository";
 
 import type { PersonSummary } from "@/lib/repositories/people";
 import type { EventSummary } from "@/lib/repositories/events";
-import type { BrainMemory } from "@/lib/brain/types";
-import type { MemoryRow } from "@/lib/repositories/memory.types";
+import { consumerIsActive, type KnowledgeItem } from "@/lib/knowledge";
 import type { HappyContext } from "../context";
 
 export interface HappyBrain {
   people: PersonSummary[];
   upcomingBirthdays: PersonSummary[];
-  importantMemories: BrainMemory[];
+  importantMemories: KnowledgeItem[];
   recentNotes: unknown[];
   upcomingEvents: EventSummary[];
 }
@@ -50,23 +48,23 @@ function getDaysUntilBirthday(
   );
 }
 
-function getMemoryCreatedAtValue(memory: MemoryRow): number {
-  if (!memory.created_at) {
+function getMemoryCreatedAtValue(memory: KnowledgeItem): number {
+  if (!memory.createdAt) {
     return 0;
   }
 
-  return new Date(memory.created_at).getTime();
+  return new Date(memory.createdAt).getTime();
 }
 
-async function getMemoriesForCurrentUser(): Promise<BrainMemory[]> {
+async function getMemoriesForCurrentUser(): Promise<KnowledgeItem[]> {
   try {
     const userId = await getCurrentMemoryUserId();
     if (!userId) return [];
 
-    const memories = await getActiveMemories(userId);
+    const memories = await listKnowledge({ userId });
 
     return memories
-      .filter((memory) => memory.is_active)
+      .filter(consumerIsActive)
       .sort((firstMemory, secondMemory) => {
         if (firstMemory.importance !== secondMemory.importance) {
           return secondMemory.importance - firstMemory.importance;
@@ -76,8 +74,7 @@ async function getMemoriesForCurrentUser(): Promise<BrainMemory[]> {
           getMemoryCreatedAtValue(secondMemory) -
           getMemoryCreatedAtValue(firstMemory)
         );
-      })
-      .map(mapMemory);
+      });
   } catch {
     if (process.env.NODE_ENV === "development") {
       console.warn("[happy.loadBrain] Memory data unavailable.");

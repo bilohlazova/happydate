@@ -43,17 +43,16 @@ test("regular events never inherit a person by matching the title", () => {
   assert.equal(model.featuredEvent?.metrics.length, 0);
 });
 
-test("birthday metrics count only active memories using approved semantics", () => {
+test("birthday metrics count active projected knowledge and exclude journal", () => {
   const model = buildHomeViewModel(data({
     people: [{ id: "p1", name: "Ola", birthday: "1990-07-20", relationLabel: "Siostra" }],
     memories: [
-      { id: "g", personId: "p1", eventId: null, type: "gift", title: null, value: "Book", content: null, occurredOn: null, createdAt: null, isActive: true },
-      { id: "n", personId: "p1", eventId: null, type: "legacy", title: null, value: null, content: "Note", occurredOn: null, createdAt: null, isActive: true },
-      { id: "m", personId: "p1", eventId: null, type: "journal", title: "Trip", value: null, content: null, occurredOn: null, createdAt: null, isActive: true },
-      { id: "off", personId: "p1", eventId: null, type: "gift", title: null, value: "Hidden", content: null, occurredOn: null, createdAt: null, isActive: false },
+      { id: "g", personId: "p1", eventId: null, category: "gift", title: null, value: "Book", occurredOn: null, createdAt: null, isActive: true },
+      { id: "n", personId: "p1", eventId: null, category: "note", title: null, value: "Note", occurredOn: null, createdAt: null, isActive: true },
+      { id: "off", personId: "p1", eventId: null, category: "gift", title: null, value: "Hidden", occurredOn: null, createdAt: null, isActive: false },
     ],
   }), "pl", t, new Date(2026, 6, 17));
-  assert.deepEqual(model.featuredEvent?.metrics.map((metric) => [metric.id, metric.count]), [["gifts", 1], ["notes", 1], ["memories", 1]]);
+  assert.deepEqual(model.featuredEvent?.metrics.map((metric) => [metric.id, metric.count]), [["gifts", 1], ["notes", 1]]);
 });
 
 test("profile name falls back to auth metadata and then email", () => {

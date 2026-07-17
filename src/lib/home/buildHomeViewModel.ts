@@ -1,4 +1,3 @@
-import { getMemoryKind, normalizeStoredMemoryType } from "../repositories/memory.types.ts";
 import type {
   HomeEvent,
   HomeFeaturedEvent,
@@ -13,11 +12,6 @@ import type {
 import type { AppLocale } from "@/i18n/config";
 
 const IMPORTANT_CATEGORIES = new Set(["birthday", "anniversary"]);
-const PREFERENCE_TYPES = new Set([
-  "interest", "preference", "place", "restaurant", "food", "coffee",
-  "drink", "hobby", "book", "movie", "music", "pet", "perfume",
-  "flower", "travel", "sport",
-]);
 
 function localDate(value: string): Date | null {
   const dateOnly = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
@@ -132,7 +126,7 @@ function personMemories(memories: HomeMemory[], personId: string): HomeMemory[] 
 }
 
 function memoryValue(memory: HomeMemory): string | null {
-  const value = memory.value ?? memory.title ?? memory.content;
+  const value = memory.value ?? memory.title;
   return value?.replace(/\s+/g, " ").trim() || null;
 }
 
@@ -144,18 +138,14 @@ function classifyMemories(memories: HomeMemory[]) {
 
   for (const memory of memories) {
     if (!memory.isActive) continue;
-    const type = normalizeStoredMemoryType(memory.type);
-    const kind = getMemoryKind(type);
-    if (type === "gift") {
+    if (memory.category === "gift") {
       if (memoryValue(memory)) gifts.push(memory);
-    } else if (type === "memory" || type === "story" || kind === "memory" || kind === "journal") {
+    } else if (memory.category === "memory") {
       remembered.push(memory);
-    } else if (kind === "person_info") {
-      if (PREFERENCE_TYPES.has(type)) {
-        const value = memoryValue(memory);
-        if (value && !preferences.includes(value)) preferences.push(value);
-      }
-    } else {
+    } else if (memory.category === "preference") {
+      const value = memoryValue(memory);
+      if (value && !preferences.includes(value)) preferences.push(value);
+    } else if (memory.category === "note") {
       notes.push(memory);
     }
   }

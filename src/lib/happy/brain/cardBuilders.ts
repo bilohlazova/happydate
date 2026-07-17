@@ -1,6 +1,10 @@
 import type { PersonSummary } from "@/lib/repositories/people";
 import type { EventSummary } from "@/lib/repositories/events";
-import type { BrainMemory } from "@/lib/brain/types";
+import {
+  consumerContent,
+  consumerValue,
+  type KnowledgeItem,
+} from "@/lib/knowledge";
 import type { HappyCard } from "../types";
 
 function formatCardDate(date: Date): string {
@@ -81,17 +85,19 @@ export function createEventCard(
 }
 
 export function createMemoryCard(
-  memory: BrainMemory
+  memory: KnowledgeItem
 ): HappyCard {
+  const value = consumerValue(memory);
+  const content = consumerContent(memory);
   const title =
     memory.title ??
-    memory.value ??
-    memory.content ??
+    value ??
+    content ??
     "Ważne wspomnienie";
 
   const description =
-    memory.content ??
-    memory.value ??
+    content ??
+    value ??
     memory.title ??
     "Zapisana informacja z pamięci HappyDate.";
 

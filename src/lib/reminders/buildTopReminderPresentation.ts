@@ -7,10 +7,10 @@ import type {
 } from "../brain/engines/reminderPlanningEngine.ts";
 import type {
   BrainEvent,
-  BrainMemory,
   BrainPerson,
   PersonKnowledge,
 } from "../brain/types.ts";
+import type { KnowledgeItem } from "../knowledge/index.ts";
 import {
   presentReminder,
 } from "./presentReminder.ts";
@@ -22,7 +22,7 @@ import type {
 export interface BuildTopReminderPresentationInput {
   people: BrainPerson[];
   events: BrainEvent[];
-  memories: BrainMemory[];
+  memories: KnowledgeItem[];
   personKnowledge?: PersonKnowledge[];
   currentDate: Date;
   translate: ReminderTranslate;

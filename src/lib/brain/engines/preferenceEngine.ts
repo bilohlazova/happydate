@@ -1,8 +1,10 @@
 import { PRIORITY } from "../priorities";
-import { BrainMemory, Insight } from "../types";
+import type { KnowledgeItem } from "../../knowledge/index.ts";
+import { consumerStoredType, consumerValue } from "../../knowledge/index.ts";
+import { Insight } from "../types";
 
 export interface PreferenceEngineParams {
-  memories?: BrainMemory[];
+  memories?: KnowledgeItem[];
 }
 
 const PREFERENCE_TYPES = [
@@ -24,10 +26,10 @@ export function buildPreferenceInsight({
   const preference = memories.find(
     (memory) =>
       PREFERENCE_TYPES.includes(
-        memory.type as (typeof PREFERENCE_TYPES)[number]
+        consumerStoredType(memory) as (typeof PREFERENCE_TYPES)[number]
       ) &&
       memory.title?.trim() &&
-      memory.value?.trim(),
+      consumerValue(memory)?.trim(),
   );
 
   if (!preference) {
@@ -44,6 +46,6 @@ export function buildPreferenceInsight({
     // Replace emoji with unified icon system.
     icon: "⭐",
     title: "Preferencje",
-    description: `${preference.title}: ${preference.value}`,
+    description: `${preference.title}: ${consumerValue(preference)}`,
   };
 }

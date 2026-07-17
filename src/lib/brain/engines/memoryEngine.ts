@@ -1,8 +1,10 @@
 import { PRIORITY } from "../priorities";
-import { BrainMemory, Insight } from "../types";
+import type { KnowledgeItem } from "../../knowledge/index.ts";
+import { consumerStoredType, consumerValue } from "../../knowledge/index.ts";
+import { Insight } from "../types";
 
 export interface MemoryEngineParams {
-  memories?: BrainMemory[];
+  memories?: KnowledgeItem[];
 }
 
 // Memory Engine owns genuine memories and notes — not structured
@@ -17,10 +19,10 @@ export function buildMemoryInsight({
   const memory = memories.find(
     (memory) =>
       MEMORY_TYPES.includes(
-        memory.type as (typeof MEMORY_TYPES)[number]
+        consumerStoredType(memory) as (typeof MEMORY_TYPES)[number]
       ) &&
       memory.title?.trim() &&
-      memory.value?.trim(),
+      consumerValue(memory)?.trim(),
   );
 
   if (!memory) {
@@ -35,6 +37,6 @@ export function buildMemoryInsight({
     // Replace emoji with unified icon system.
     icon: "💭",
     title: "Pamiętam",
-    description: `${memory.title}: ${memory.value}`,
+    description: `${memory.title}: ${consumerValue(memory)}`,
   };
 }

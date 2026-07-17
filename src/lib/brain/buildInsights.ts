@@ -1,24 +1,24 @@
-import { buildEventInsight, type EventEngineParams } from "./engines/eventEngine";
-import { buildMemoryInsight } from "./engines/memoryEngine";
+import { buildEventInsight, type EventEngineParams } from "./engines/eventEngine.ts";
+import { buildMemoryInsight } from "./engines/memoryEngine.ts";
 import {
   buildMemoryInsightForPerson,
   getMemoryInsightEventDaysUntil,
-} from "./engines/memoryInsightEngine";
-import { buildPreferenceInsight } from "./engines/preferenceEngine";
-import { selectInsights } from "./selectInsights";
+} from "./engines/memoryInsightEngine.ts";
+import { buildPreferenceInsight } from "./engines/preferenceEngine.ts";
+import { selectInsights } from "./selectInsights.ts";
 import {
   BrainEvent,
-  BrainMemory,
   BrainPerson,
   Insight,
-} from "./types";
+} from "./types.ts";
+import type { KnowledgeItem } from "../knowledge/index.ts";
 
 export interface BuildInsightsParams {
   profile?: unknown;
   people?: BrainPerson[];
   events?: BrainEvent[];
   notes?: unknown[];
-  memories?: BrainMemory[];
+  memories?: KnowledgeItem[];
   currentDate?: Date;
   eventTranslate?: EventEngineParams["translate"];
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ChatLauncherGiftTag from "@/components/ChatLauncherGiftTag";
-import ChatBotModal from "@/components/ChatBotModal";
+import ChatAssistantModal from "@/components/ChatAssistantModal";
 
 export default function ChatUIMount() {
   const [open, setOpen] = useState(false);
@@ -21,15 +21,8 @@ export default function ChatUIMount() {
 
   return (
     <>
-      {/* тепер без onClick */}
       <ChatLauncherGiftTag />
-
-      <ChatBotModal
-        open={open}
-        onClose={() => setOpen(false)}
-        loading={false}
-        handleAskAI={() => {}}
-      />
+      <ChatAssistantModal open={open} onClose={() => setOpen(false)} />
     </>
   );
 }

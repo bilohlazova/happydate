@@ -3,7 +3,7 @@
 import HomeDashboard from "@/components/home-dashboard/HomeDashboard";
 import HomeSkeleton from "@/components/home-dashboard/HomeSkeleton";
 import HomeErrorState from "@/components/home-dashboard/HomeErrorState";
-import ChatBotModal from "@/components/ChatBotModal";
+import ChatAssistantModal from "@/components/ChatAssistantModal";
 import { getHomeData } from "@/lib/repositories/home/home.repository";
 import { buildHomeViewModel } from "@/lib/home/buildHomeViewModel";
 import type { HomeViewModel } from "@/lib/home/home.types";
@@ -122,7 +122,7 @@ export default function HomePageClient() {
       )}
       {viewModel && <HomeDashboard viewModel={viewModel} onRetry={reload} onAskHappy={() => setChatOpen(true)} />}
       <CookieConsent />
-      <ChatBotModal open={chatOpen} onClose={() => setChatOpen(false)} loading={false} handleAskAI={() => {}} />
+      <ChatAssistantModal open={chatOpen} onClose={() => setChatOpen(false)} />
     </>
   );
 }

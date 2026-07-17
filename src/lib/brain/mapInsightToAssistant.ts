@@ -17,7 +17,7 @@ export function mapInsightToAssistant(
   }
 
   return {
-    state: "active",
+    state: insight.priority >= 900 ? "urgent" : "active",
     title: insight.title,
     description: insight.description ?? "",
     icon: insight.icon,

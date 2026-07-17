@@ -756,6 +756,31 @@ label[for], summary {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes assistant-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes assistant-slide-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes assistant-home-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes assistant-home-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8px); }
+}
+
+@keyframes assistant-conversation-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes hd-sway {
   0%,100% { transform: rotate3d(0,0,1,-1.5deg) translateZ(0); }
   50%     { transform: rotate3d(0,0,1, 1.5deg) translateZ(0); }
@@ -842,13 +867,6 @@ label[for], summary {
   background: linear-gradient(90deg,transparent,#d4d4d8,transparent);
 }
 
-.hd-chat-panel {
-  background: rgba(255,255,255,.98);
-  backdrop-filter: saturate(1.05) blur(8px);
-  -webkit-backdrop-filter: saturate(1.05) blur(8px);
-  box-shadow: 0 18px 45px rgba(0,0,0,.18);
-}
-
 /* ═══════════════════════════════════════════════════════════
    REDUCED MOTION
 ═══════════════════════════════════════════════════════════ */
@@ -860,6 +878,11 @@ label[for], summary {
 
   @keyframes hd-pop      { from { opacity:1; transform:none; } to { opacity:1; transform:none; } }
   @keyframes hd-slide-up { from { opacity:1; transform:none; } to { opacity:1; transform:none; } }
+  @keyframes assistant-fade-in { from { opacity:1; } to { opacity:1; } }
+  @keyframes assistant-slide-up { from { opacity:1; transform:none; } to { opacity:1; transform:none; } }
+  @keyframes assistant-home-in { from { opacity:1; transform:none; } to { opacity:1; transform:none; } }
+  @keyframes assistant-home-out { from { opacity:1; transform:none; } to { opacity:0; transform:none; } }
+  @keyframes assistant-conversation-in { from { opacity:1; transform:none; } to { opacity:1; transform:none; } }
 }
 
 /* ═══════════════════════════════════════════════════════════

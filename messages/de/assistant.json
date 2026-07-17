@@ -1,0 +1,72 @@
+{
+  "title": "Happy",
+  "subtitle": "Dein persönlicher Assistent",
+  "status": "Bereit zu helfen",
+  "newConversation": "Neue Unterhaltung",
+  "close": "Assistenten schließen",
+  "home": {
+    "question": "Wie kann ich dir heute helfen?",
+    "loading": "Deine Zusammenfassung wird geladen.",
+    "empty": {
+      "title": "Heute stehen keine dringenden Aufgaben an.",
+      "description": "Ich erinnere dich an wichtige Ereignisse."
+    },
+    "error": {
+      "title": "Die Zusammenfassung konnte nicht geladen werden.",
+      "description": "Du kannst trotzdem mit Happy sprechen."
+    },
+    "guest": {
+      "title": "Melde dich an, um persönliche Hinweise zu erhalten.",
+      "description": "Happy kann dir in diesem Gespräch weiterhin helfen."
+    }
+  },
+  "greeting": {
+    "morning": "Guten Morgen",
+    "afternoon": "Guten Tag",
+    "evening": "Guten Abend",
+    "night": "Guten Abend",
+    "named": "{greeting}, {name}"
+  },
+  "insight": {
+    "today": "Es ist bereits heute.",
+    "tomorrow": "Es ist bereits morgen.",
+    "days": "{count, plural, one {Noch # Tag.} other {Noch # Tage.}}",
+    "action": "Ereignis ansehen"
+  },
+  "actionsLabel": "Vorgeschlagene Aktionen",
+  "placeholder": "Nachricht schreiben...",
+  "messageLabel": "Nachricht an Happy",
+  "send": "Nachricht senden",
+  "typing": "Happy schreibt...",
+  "keyboardHint": "Enter — senden, Shift+Enter — neue Zeile",
+  "error": "Eine Antwort war nicht möglich. Bitte versuche es erneut.",
+  "conversation": {
+    "error": "Gerade konnte keine Antwort abgerufen werden. Bitte versuche es erneut.",
+    "retry": "Erneut versuchen",
+    "rateLimited": "Es wurden zu viele Nachrichten gesendet. Bitte versuche es später erneut.",
+    "retryIn": "In {seconds} Sek. erneut versuchen",
+    "cancelled": "Die Antwort wurde unterbrochen."
+  },
+  "actions": {
+    "gift": {
+      "title": "Geschenk finden",
+      "description": "Ideen passend zur jeweiligen Person",
+      "prompt": "Finde ein Geschenk für..."
+    },
+    "event": {
+      "title": "Ereignis hinzufügen",
+      "description": "Kein wichtiges Datum mehr vergessen",
+      "prompt": "Ich möchte ein Ereignis planen..."
+    },
+    "people": {
+      "title": "Meine Personen",
+      "description": "Wichtige Kontakte im Überblick",
+      "prompt": "Zeige mir meine Personen..."
+    },
+    "inspiration": {
+      "title": "Inspiration",
+      "description": "Neue Ideen und Anregungen",
+      "prompt": "Zeige mir Inspiration für..."
+    }
+  }
+}

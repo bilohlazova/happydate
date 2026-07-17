@@ -1,4 +1,4 @@
-import { buildEventInsight } from "./engines/eventEngine";
+import { buildEventInsight, type EventEngineParams } from "./engines/eventEngine";
 import { buildMemoryInsight } from "./engines/memoryEngine";
 import {
   buildMemoryInsightForPerson,
@@ -20,6 +20,7 @@ export interface BuildInsightsParams {
   notes?: unknown[];
   memories?: BrainMemory[];
   currentDate?: Date;
+  eventTranslate?: EventEngineParams["translate"];
 }
 
 function eventBelongsToPerson(event: BrainEvent, person: BrainPerson): boolean {
@@ -41,6 +42,7 @@ export function buildInsights({
   events = [],
   memories = [],
   currentDate = new Date(),
+  eventTranslate,
 }: BuildInsightsParams): Insight[] {
   const insights: Insight[] = [];
 
@@ -48,6 +50,7 @@ export function buildInsights({
   const eventInsight = buildEventInsight({
     events,
     currentDate,
+    translate: eventTranslate,
   });
 
   if (eventInsight) {

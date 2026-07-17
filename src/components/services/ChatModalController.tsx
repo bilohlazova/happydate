@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import ChatBotModal from "@/components/ChatBotModal";
+import ChatAssistantModal from "@/components/ChatAssistantModal";
 
-/** Глобальний контролер для головної (відкриває старий ChatBotModal). */
+/** Глобальний контролер, який відкриває новий AI-асистент. */
 export default function ChatModalController() {
   const [open, setOpen] = useState(false);
 
@@ -14,11 +14,6 @@ export default function ChatModalController() {
   }, []);
 
   return (
-    <ChatBotModal
-      open={open}
-      onClose={() => setOpen(false)}
-      loading={false}
-      handleAskAI={() => {}}
-    />
+    <ChatAssistantModal open={open} onClose={() => setOpen(false)} />
   );
 }

@@ -5,11 +5,16 @@ import { PRIORITY } from "../priorities";
 export interface EventEngineParams {
   events: BrainEvent[];
   currentDate?: Date;
+  translate?: (
+    key: "today" | "tomorrow" | "days" | "action",
+    values?: { count: number },
+  ) => string;
 }
 
 export function buildEventInsight({
   events,
   currentDate = new Date(),
+  translate,
 }: EventEngineParams): Insight | null {
   if (events.length === 0) {
     return null;
@@ -41,11 +46,11 @@ export function buildEventInsight({
   let message: string;
 
   if (daysUntil === 0) {
-    message = "To już dzisiaj.";
+    message = translate?.("today") ?? "To już dzisiaj.";
   } else if (daysUntil === 1) {
-    message = "To już jutro.";
+    message = translate?.("tomorrow") ?? "To już jutro.";
   } else {
-    message = `Pozostało ${daysUntil} dni.`;
+    message = translate?.("days", { count: daysUntil }) ?? `Pozostało ${daysUntil} dni.`;
   }
 
   let priority: number = PRIORITY.DEFAULT;
@@ -68,8 +73,8 @@ export function buildEventInsight({
     title: event.title,
     description: message,
     action: {
-      label: "Pokaż wydarzenie",
-      action: "/calendar",
+      label: translate?.("action") ?? "Pokaż wydarzenie",
+      action: "/dashboard",
     },
   };
 }

@@ -1,17 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { burstAt, gentleOnceNearLauncher } from "@/utils/confetti";
-
 export default function ChatLauncherGiftTag() {
-  useEffect(() => {
-    gentleOnceNearLauncher();
-  }, []);
-
-  async function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
-    await burstAt(e.clientX, e.clientY, { particleCount: 44 });
-
-    // 🔥 Викликаємо глобальну подію
+  function handleClick() {
     window.dispatchEvent(new CustomEvent("happydate:open-chat"));
   }
 

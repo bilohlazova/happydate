@@ -1,0 +1,72 @@
+{
+  "title": "Happy",
+  "subtitle": "Your personal assistant",
+  "status": "Ready to help",
+  "newConversation": "New conversation",
+  "close": "Close assistant",
+  "home": {
+    "question": "How can I help you today?",
+    "loading": "Loading your summary.",
+    "empty": {
+      "title": "You have nothing urgent today.",
+      "description": "I’ll remind you about important events."
+    },
+    "error": {
+      "title": "Your summary couldn’t be loaded.",
+      "description": "You can still talk with Happy."
+    },
+    "guest": {
+      "title": "Sign in to receive personal suggestions.",
+      "description": "Happy can still help you in this conversation."
+    }
+  },
+  "greeting": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening",
+    "night": "Good evening",
+    "named": "{greeting}, {name}"
+  },
+  "insight": {
+    "today": "It’s today.",
+    "tomorrow": "It’s tomorrow.",
+    "days": "{count, plural, one {# day remaining.} other {# days remaining.}}",
+    "action": "View event"
+  },
+  "actionsLabel": "Suggested actions",
+  "placeholder": "Write a message...",
+  "messageLabel": "Message to Happy",
+  "send": "Send message",
+  "typing": "Happy is typing...",
+  "keyboardHint": "Enter — send, Shift+Enter — new line",
+  "error": "I couldn’t respond. Please try again.",
+  "conversation": {
+    "error": "I couldn’t get a response right now. Please try again.",
+    "retry": "Try again",
+    "rateLimited": "Too many messages were sent. Please try again shortly.",
+    "retryIn": "Try again in {seconds}s",
+    "cancelled": "The response was interrupted."
+  },
+  "actions": {
+    "gift": {
+      "title": "Find a gift",
+      "description": "Ideas matched to the person",
+      "prompt": "Find a gift for..."
+    },
+    "event": {
+      "title": "Add an event",
+      "description": "Never forget an important date",
+      "prompt": "I want to plan an event..."
+    },
+    "people": {
+      "title": "My people",
+      "description": "Review important contacts",
+      "prompt": "Show me my people..."
+    },
+    "inspiration": {
+      "title": "Inspiration",
+      "description": "Fresh ideas and suggestions",
+      "prompt": "Show me inspiration for..."
+    }
+  }
+}

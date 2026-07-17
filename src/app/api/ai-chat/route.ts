@@ -1,32 +1,46 @@
-import { NextRequest } from "next/server";
-export const runtime = "edge";
+import OpenAI from "openai";
+import { ASSISTANT_CHAT_CONFIG } from "@/lib/assistant/chatConfig";
+import { getAssistantRequestIdentity } from "@/lib/assistant/chatIdentity";
+import { createConfiguredAssistantRateLimiter } from "@/lib/assistant/rateLimiter";
+import { createAssistantChatResponse, type AssistantProviderMessage } from "@/lib/assistant/chatServer";
 
-export async function POST(req: NextRequest) {
-  const { message } = await req.json();
+export const runtime = "nodejs";
 
-  // TODO: підстав твій реальний стрім з LLM
-  const encoder = new TextEncoder();
-  const answer =
-    `Oto 3 szybkie propozycje na "${message}":\n` +
-    `• Personalizowana książka wspomnień (80–120 zł)\n` +
-    `• Voucher na mini-spa / masaż (150–250 zł)\n` +
-    `• Zestaw „kawa + kubek z grawerem” (70–110 zł)\n` +
-    `Chcesz od razu linki do zakupu?`;
+export async function POST(request: Request) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "invalid_request" }, { status: 400 });
+  }
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      for (const chunk of answer.match(/.{1,14}/g) ?? []) {
-        controller.enqueue(encoder.encode(chunk));
-        await new Promise(r => setTimeout(r, 40));
-      }
-      controller.close();
+  const identity = await getAssistantRequestIdentity(request);
+  const rateLimiter = createConfiguredAssistantRateLimiter();
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+
+  return createAssistantChatResponse(
+    body,
+    async (messages: AssistantProviderMessage[], signal?: AbortSignal) => {
+      if (!apiKey) throw Object.assign(new Error("OpenAI is not configured"), { code: "missing_api_key" });
+      const openai = new OpenAI({ apiKey });
+      const stream = await openai.chat.completions.create(
+        {
+          model: ASSISTANT_CHAT_CONFIG.model,
+          temperature: ASSISTANT_CHAT_CONFIG.temperature,
+          max_completion_tokens: ASSISTANT_CHAT_CONFIG.maxOutputTokens,
+          stream: true,
+          messages,
+        },
+        { signal },
+      );
+
+      return (async function* () {
+        for await (const chunk of stream) {
+          const content = chunk.choices[0]?.delta?.content;
+          if (content) yield content;
+        }
+      })();
     },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-cache",
-    },
-  });
+    { signal: request.signal, identity, rateLimiter },
+  );
 }

@@ -1,0 +1,72 @@
+{
+  "title": "Happy",
+  "subtitle": "Twój osobisty asystent",
+  "status": "Gotowy do pomocy",
+  "newConversation": "Nowa rozmowa",
+  "close": "Zamknij asystenta",
+  "home": {
+    "question": "Jak mogę Ci dziś pomóc?",
+    "loading": "Pobieram Twoje podsumowanie.",
+    "empty": {
+      "title": "Na dziś nie masz pilnych spraw.",
+      "description": "Przypomnę Ci o ważnych wydarzeniach."
+    },
+    "error": {
+      "title": "Nie udało się pobrać podsumowania.",
+      "description": "Nadal możesz porozmawiać z Happy."
+    },
+    "guest": {
+      "title": "Zaloguj się, aby otrzymywać osobiste podpowiedzi.",
+      "description": "Happy może nadal pomóc Ci w tej rozmowie."
+    }
+  },
+  "greeting": {
+    "morning": "Dzień dobry",
+    "afternoon": "Dzień dobry",
+    "evening": "Dobry wieczór",
+    "night": "Dobry wieczór",
+    "named": "{greeting}, {name}"
+  },
+  "insight": {
+    "today": "To już dzisiaj.",
+    "tomorrow": "To już jutro.",
+    "days": "{count, plural, one {Pozostał # dzień.} few {Pozostały # dni.} other {Pozostało # dni.}}",
+    "action": "Zobacz wydarzenie"
+  },
+  "actionsLabel": "Proponowane działania",
+  "placeholder": "Napisz wiadomość...",
+  "messageLabel": "Wiadomość do Happy",
+  "send": "Wyślij wiadomość",
+  "typing": "Happy pisze...",
+  "keyboardHint": "Enter — wyślij, Shift+Enter — nowa linia",
+  "error": "Nie udało się odpowiedzieć. Spróbuj ponownie.",
+  "conversation": {
+    "error": "Nie udało się teraz uzyskać odpowiedzi. Spróbuj ponownie.",
+    "retry": "Spróbuj ponownie",
+    "rateLimited": "Wysłano zbyt wiele wiadomości. Spróbuj ponownie za chwilę.",
+    "retryIn": "Spróbuj ponownie za {seconds} s",
+    "cancelled": "Odpowiedź została przerwana."
+  },
+  "actions": {
+    "gift": {
+      "title": "Znajdź prezent",
+      "description": "Pomysły dopasowane do osoby",
+      "prompt": "Znajdź prezent dla..."
+    },
+    "event": {
+      "title": "Dodaj wydarzenie",
+      "description": "Nigdy nie zapomnij o ważnej dacie",
+      "prompt": "Chcę zaplanować wydarzenie..."
+    },
+    "people": {
+      "title": "Moje osoby",
+      "description": "Przegląd ważnych kontaktów",
+      "prompt": "Pokaż mi moje osoby..."
+    },
+    "inspiration": {
+      "title": "Inspiracje",
+      "description": "Nowe pomysły i podpowiedzi",
+      "prompt": "Pokaż mi inspiracje dotyczące..."
+    }
+  }
+}

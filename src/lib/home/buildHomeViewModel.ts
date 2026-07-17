@@ -107,7 +107,7 @@ function selectFeatured(events: HomeEvent[]): HomeEvent | null {
   return important[0] ?? events[0] ?? null;
 }
 
-function resolveName(data: HomeRepositoryData): string | null {
+export function resolveHomeUserName(data: HomeRepositoryData): string | null {
   const emailName = data.email?.split("@")[0] ?? null;
   for (const candidate of [data.profile?.fullName, data.authMetadataName, emailName]) {
     const normalized = candidate?.replace(/\s+/g, " ").trim();
@@ -231,7 +231,7 @@ function buildRecommendations(featured: HomeEvent | null, memories: HomeMemory[]
 }
 
 export function buildHomeViewModel(data: HomeRepositoryData, locale: AppLocale, t: HomeTranslate, now = new Date()): HomeViewModel {
-  const name = resolveName(data);
+  const name = resolveHomeUserName(data);
   const events = normalizeEvents(data.people, data.events, now);
   const featured = selectFeatured(events);
   const featuredCard = buildFeatured(featured, data.memories, locale, t);

@@ -1,5 +1,7 @@
 import OpenAI from "openai";
 import { ASSISTANT_CHAT_CONFIG } from "@/lib/assistant/chatConfig";
+import { getAssistantEnvironmentStatus, getMissingAssistantConfiguration } from "@/lib/assistant/chatEnvironment";
+import { parseAssistantChatRequest } from "@/lib/assistant/chatContract";
 import { getAssistantRequestIdentity } from "@/lib/assistant/chatIdentity";
 import { createConfiguredAssistantRateLimiter } from "@/lib/assistant/rateLimiter";
 import { createAssistantChatResponse, type AssistantProviderMessage } from "@/lib/assistant/chatServer";
@@ -12,6 +14,21 @@ export async function POST(request: Request) {
     body = await request.json();
   } catch {
     return Response.json({ error: "invalid_request" }, { status: 400 });
+  }
+
+  if (!parseAssistantChatRequest(body).success) {
+    return Response.json({ error: "invalid_request" }, { status: 400 });
+  }
+
+  const environmentStatus = getAssistantEnvironmentStatus();
+  if (process.env.NODE_ENV === "production" && !environmentStatus.productionReady) {
+    console.error("[assistant-chat] configuration missing", {
+      missing: getMissingAssistantConfiguration(),
+    });
+    return Response.json(
+      { error: "service_unavailable" },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   const identity = await getAssistantRequestIdentity(request);

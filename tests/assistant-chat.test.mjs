@@ -9,7 +9,13 @@ import {
 import { createAssistantChatResponse } from "../src/lib/assistant/chatServer.ts";
 import { buildConversationHistory } from "../src/lib/assistant/chatClient.ts";
 import { ASSISTANT_CHAT_CONFIG, ASSISTANT_RATE_LIMITS } from "../src/lib/assistant/chatConfig.ts";
-import { MemoryAssistantRateLimiter } from "../src/lib/assistant/rateLimiter.ts";
+import {
+  createConfiguredAssistantRateLimiter,
+  MemoryAssistantRateLimiter,
+  UpstashAssistantRateLimiter,
+} from "../src/lib/assistant/rateLimiter.ts";
+import { getAssistantEnvironmentStatus, getMissingAssistantConfiguration } from "../src/lib/assistant/chatEnvironment.ts";
+import { readFile } from "node:fs/promises";
 
 function validRequest(overrides = {}) {
   return {
@@ -179,6 +185,52 @@ test("chat cost and validation limits remain centralized", () => {
   assert.equal(ASSISTANT_CHAT_LIMITS.messageLength, ASSISTANT_CHAT_CONFIG.maxMessageLength);
   assert.equal(ASSISTANT_CHAT_LIMITS.conversationItems, ASSISTANT_CHAT_CONFIG.maxConversationMessages);
   assert.equal(ASSISTANT_CHAT_LIMITS.events, ASSISTANT_CHAT_CONFIG.maxEvents);
+});
+
+test("production environment status requires OpenAI and both Upstash REST values", () => {
+  assert.deepEqual(getAssistantEnvironmentStatus({}), {
+    openAiConfigured: false, upstashConfigured: false, productionReady: false,
+  });
+  assert.deepEqual(getMissingAssistantConfiguration({ OPENAI_API_KEY: "key", UPSTASH_REDIS_REST_URL: "url" }), [
+    "upstash_token_missing",
+  ]);
+  assert.deepEqual(getMissingAssistantConfiguration({ OPENAI_API_KEY: "key", UPSTASH_REDIS_REST_TOKEN: "token" }), [
+    "upstash_url_missing",
+  ]);
+  assert.deepEqual(getAssistantEnvironmentStatus({
+    OPENAI_API_KEY: "key", UPSTASH_REDIS_REST_URL: "url", UPSTASH_REDIS_REST_TOKEN: "token",
+  }), { openAiConfigured: true, upstashConfigured: true, productionReady: true });
+});
+
+test("production limiter fails closed while development can use memory", () => {
+  assert.equal(createConfiguredAssistantRateLimiter({}, "production"), null);
+  assert.equal(createConfiguredAssistantRateLimiter({ UPSTASH_REDIS_REST_URL: "url" }, "production"), null);
+  assert.equal(createConfiguredAssistantRateLimiter({ UPSTASH_REDIS_REST_TOKEN: "token" }, "production"), null);
+  assert.ok(createConfiguredAssistantRateLimiter({}, "development") instanceof MemoryAssistantRateLimiter);
+  assert.ok(createConfiguredAssistantRateLimiter({
+    UPSTASH_REDIS_REST_URL: "https://example.invalid", UPSTASH_REDIS_REST_TOKEN: "token",
+  }, "production") instanceof UpstashAssistantRateLimiter);
+});
+
+test("missing production limiter returns a safe 503 without secret log values", async () => {
+  const logs = [];
+  const response = await createAssistantChatResponse(validRequest(), async () => (async function* () {})(), {
+    identity: { kind: "guest", key: "hashed-key" }, rateLimiter: null,
+    logger: (message, diagnostic) => logs.push({ message, diagnostic }),
+  });
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { error: "service_unavailable" });
+  assert.deepEqual(logs[0].diagnostic.missing, ["upstash_url_missing", "upstash_token_missing"]);
+  assert.doesNotMatch(JSON.stringify(logs), /hashed-key|secret|https:\/\//);
+});
+
+test("chat frontend uses the same-origin relative endpoint without localhost or permissive CORS", async () => {
+  const modalSource = await readFile(new URL("../src/components/ChatAssistantModal.tsx", import.meta.url), "utf8");
+  const routeSource = await readFile(new URL("../src/app/api/ai-chat/route.ts", import.meta.url), "utf8");
+  assert.match(modalSource, /fetch\("\/api\/ai-chat"/);
+  assert.doesNotMatch(modalSource, /localhost|https?:\/\//);
+  assert.doesNotMatch(routeSource, /Access-Control-Allow-Origin/);
+  assert.doesNotMatch(routeSource, /NEXT_PUBLIC_(?:OPENAI|UPSTASH)/);
 });
 
 test("abort stops stream without adding an error payload", async () => {

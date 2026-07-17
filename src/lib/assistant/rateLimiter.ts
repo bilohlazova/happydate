@@ -107,11 +107,19 @@ export class UpstashAssistantRateLimiter implements AssistantRateLimiter {
 
 let developmentLimiter: MemoryAssistantRateLimiter | undefined;
 
-export function createConfiguredAssistantRateLimiter(): AssistantRateLimiter | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+type RateLimiterEnvironment = Partial<Record<
+  "UPSTASH_REDIS_REST_URL" | "UPSTASH_REDIS_REST_TOKEN",
+  string | undefined
+>>;
+
+export function createConfiguredAssistantRateLimiter(
+  environment: RateLimiterEnvironment = process.env as RateLimiterEnvironment,
+  nodeEnvironment = process.env.NODE_ENV,
+): AssistantRateLimiter | null {
+  const url = environment.UPSTASH_REDIS_REST_URL?.trim();
+  const token = environment.UPSTASH_REDIS_REST_TOKEN?.trim();
   if (url && token) return new UpstashAssistantRateLimiter(url, token);
-  if (process.env.NODE_ENV !== "production") {
+  if (nodeEnvironment !== "production") {
     developmentLimiter ??= new MemoryAssistantRateLimiter();
     return developmentLimiter;
   }

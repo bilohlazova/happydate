@@ -20,6 +20,14 @@ export type AssistantProviderErrorCode =
 
 type SafeProviderDiagnostic = {
   errorType: AssistantProviderErrorCode;
+  category:
+    | "openai_key_missing"
+    | "provider_auth_failed"
+    | "provider_rate_limited"
+    | "provider_unavailable"
+    | "provider_timeout"
+    | "invalid_provider_response"
+    | "provider_unknown";
   status: number | null;
   requestId: string | null;
 };
@@ -28,7 +36,7 @@ type ChatResponseOptions = {
   signal?: AbortSignal;
   identity?: { kind: AssistantIdentityKind; key: string };
   rateLimiter?: AssistantRateLimiter | null;
-  logger?: (message: string, diagnostic?: SafeProviderDiagnostic) => void;
+  logger?: (message: string, diagnostic?: unknown) => void;
   timeoutMs?: number;
 };
 
@@ -37,7 +45,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export function classifyAssistantProviderError(error: unknown, timedOut = false): SafeProviderDiagnostic {
-  if (timedOut) return { errorType: "timeout", status: null, requestId: null };
+  if (timedOut) return { errorType: "timeout", category: "provider_timeout", status: null, requestId: null };
   const value = isRecord(error) ? error : {};
   const status = typeof value.status === "number" ? value.status : null;
   const code = typeof value.code === "string" ? value.code : "";
@@ -56,7 +64,14 @@ export function classifyAssistantProviderError(error: unknown, timedOut = false)
   else if (constructorName === "APIConnectionError") errorType = "provider_unavailable";
   else if (name === "AbortError") errorType = "timeout";
   else if (status === 400 || status === 422) errorType = "invalid_provider_response";
-  return { errorType, status, requestId };
+  let category: SafeProviderDiagnostic["category"] = "provider_unknown";
+  if (errorType === "missing_api_key") category = "openai_key_missing";
+  else if (errorType === "authentication_failed") category = "provider_auth_failed";
+  else if (errorType === "rate_limited") category = "provider_rate_limited";
+  else if (errorType === "provider_unavailable") category = "provider_unavailable";
+  else if (errorType === "timeout") category = "provider_timeout";
+  else if (errorType === "invalid_provider_response") category = "invalid_provider_response";
+  return { errorType, category, status, requestId };
 }
 
 function providerFailureResponse(diagnostic: SafeProviderDiagnostic): Response {
@@ -99,7 +114,7 @@ export async function createAssistantChatResponse(
   let release: (() => Promise<void>) | undefined;
   if (options.identity) {
     if (!options.rateLimiter) {
-      logger("rate limiter unavailable");
+      logger("configuration missing", { missing: ["upstash_url_missing", "upstash_token_missing"] });
       return Response.json({ error: "service_unavailable" }, { status: 503 });
     }
     try {
@@ -116,7 +131,7 @@ export async function createAssistantChatResponse(
         return Response.json({ error: "too_many_concurrent_requests" }, { status: 429, headers: { "Retry-After": "5" } });
       }
     } catch {
-      logger("rate limiter unavailable");
+      logger("infrastructure unavailable", { category: "upstash_unavailable" });
       return Response.json({ error: "service_unavailable" }, { status: 503 });
     }
   }

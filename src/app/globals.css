@@ -149,6 +149,12 @@ label[for], summary {
   padding-bottom: calc(var(--hd-nav-height) + env(safe-area-inset-bottom));
 }
 
+@media (min-width: 768px) {
+  .hd-main {
+    padding-bottom: 0;
+  }
+}
+
 .hd-screen {
   min-height: 100dvh;
   width: 100%;

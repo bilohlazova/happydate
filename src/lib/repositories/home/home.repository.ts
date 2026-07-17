@@ -28,7 +28,7 @@ async function loadProfile(userId: string): Promise<HomeProfile | null> {
 async function loadPeople(userId: string): Promise<HomePerson[]> {
   const { data, error } = await supabase
     .from("people")
-    .select("id, name, birthday, relationship, relation_label")
+    .select("id, name, birthday, relationship, relation_label, gender")
     .eq("user_id", userId)
     .order("name", { ascending: true });
   if (error) throw new HomeRepositoryError("people", error.message);
@@ -37,6 +37,9 @@ async function loadPeople(userId: string): Promise<HomePerson[]> {
     name: person.name,
     birthday: person.birthday ?? null,
     relationLabel: person.relation_label ?? person.relationship ?? null,
+    gender: person.gender === "female" || person.gender === "male" || person.gender === "other" || person.gender === "unspecified"
+      ? person.gender
+      : null,
   }));
 }
 

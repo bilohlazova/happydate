@@ -5,6 +5,7 @@ export const ASSISTANT_CHAT_CONFIG = {
   maxConversationCharacters: 8_000,
   maxConversationContentLength: 2_000,
   maxEvents: 10,
+  maxPeople: 20,
   maxMessageLength: 2_000,
   maxOutputTokens: 700,
   requestTimeoutMs: 30_000,

@@ -8,6 +8,8 @@ import type { BrainEvent } from "@/lib/brain/types";
 import { resolveHomeUserName } from "@/lib/home/buildHomeViewModel";
 import { getHomeData } from "@/lib/repositories/home/home.repository";
 import type { AssistantEventContext } from "@/lib/assistant/chatContract";
+import type { AssistantPersonContext } from "@/lib/assistant/chatContract";
+import { buildAssistantPeopleContext } from "@/lib/assistant/peopleContext";
 
 export type GreetingPeriod = "morning" | "afternoon" | "evening" | "night";
 
@@ -16,6 +18,7 @@ export type AssistantHomeContext = {
   greetingPeriod: GreetingPeriod;
   insight: AssistantCardData | null;
   events: AssistantEventContext[];
+  people: AssistantPersonContext[];
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
@@ -73,6 +76,7 @@ const INITIAL_CONTEXT: AssistantHomeContext = {
   greetingPeriod: "morning",
   insight: null,
   events: [],
+  people: [],
   isAuthenticated: false,
   loading: true,
   error: null,
@@ -107,6 +111,7 @@ export function useAssistantHomeContext(open: boolean): AssistantHomeContext {
             greetingPeriod: getGreetingPeriod(),
             insight: null,
             events: [],
+            people: [],
             isAuthenticated: false,
             loading: false,
             error: null,
@@ -122,6 +127,7 @@ export function useAssistantHomeContext(open: boolean): AssistantHomeContext {
             greetingPeriod: getGreetingPeriod(),
             insight: null,
             events: [],
+            people: [],
             isAuthenticated: true,
             loading: false,
             error: "assistant-home-context-unavailable",
@@ -141,6 +147,9 @@ export function useAssistantHomeContext(open: boolean): AssistantHomeContext {
           greetingPeriod: getGreetingPeriod(),
           insight: mapInsightToAssistant(nextInsight ?? null),
           events: toAssistantEvents(data.events),
+          people: data.errors.some((error) => error.section === "people")
+            ? []
+            : buildAssistantPeopleContext(data.people),
           isAuthenticated: true,
           loading: false,
           error: null,
@@ -154,6 +163,7 @@ export function useAssistantHomeContext(open: boolean): AssistantHomeContext {
           greetingPeriod: getGreetingPeriod(),
           insight: null,
           events: [],
+          people: [],
           isAuthenticated: false,
           loading: false,
           error: "assistant-home-context-unavailable",

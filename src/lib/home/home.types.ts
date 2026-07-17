@@ -11,6 +11,7 @@ export interface HomePerson {
   name: string;
   birthday: string | null;
   relationLabel: string | null;
+  gender: "female" | "male" | "other" | "unspecified" | null;
 }
 
 export interface HomeStoredEvent {

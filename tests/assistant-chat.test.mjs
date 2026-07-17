@@ -16,6 +16,7 @@ import {
 } from "../src/lib/assistant/rateLimiter.ts";
 import { getAssistantEnvironmentStatus, getMissingAssistantConfiguration } from "../src/lib/assistant/chatEnvironment.ts";
 import { readFile } from "node:fs/promises";
+import { buildAssistantPeopleContext } from "../src/lib/assistant/peopleContext.ts";
 
 function validRequest(overrides = {}) {
   return {
@@ -50,6 +51,79 @@ test("events are limited and field lengths are validated", () => {
   const events = Array.from({ length: ASSISTANT_CHAT_LIMITS.events + 1 }, (_, index) => ({ ...event, id: String(index) }));
   assert.equal(parseAssistantChatRequest(validRequest({ context: { userName: null, insight: null, events } })).success, false);
   assert.equal(parseAssistantChatRequest(validRequest({ context: { userName: null, insight: null, events: [{ ...event, title: "x".repeat(181) }] } })).success, false);
+});
+
+function personSource(index, overrides = {}) {
+  return {
+    id: `person-${index}`,
+    name: `Person ${String(index).padStart(2, "0")}`,
+    relationLabel: null,
+    birthday: null,
+    gender: "unspecified",
+    ...overrides,
+  };
+}
+
+test("people context supports zero and one safe person", () => {
+  assert.deepEqual(buildAssistantPeopleContext([]), []);
+  assert.deepEqual(buildAssistantPeopleContext([
+    personSource(1, { name: "Anna", relationLabel: "Mama", birthday: "1990-07-21", gender: "female" }),
+  ]), [{ id: "person-1", name: "Anna", relation: "Mama", birthday: "1990-07-21", gender: "female" }]);
+});
+
+test("people context is capped at twenty and prioritizes nearest birthdays", () => {
+  const people = Array.from({ length: 24 }, (_, index) => personSource(index));
+  people.push(personSource(30, { name: "Nearest", birthday: "1991-07-18" }));
+  const result = buildAssistantPeopleContext(people, new Set(), new Date(2026, 6, 17));
+  assert.equal(result.length, 20);
+  assert.equal(result[0].name, "Nearest");
+});
+
+test("people with linked future events precede the remaining alphabetical people", () => {
+  const result = buildAssistantPeopleContext([
+    personSource(1, { name: "Zofia" }),
+    personSource(2, { name: "Anna" }),
+    personSource(3, { name: "Maria" }),
+  ], new Set(["person-1"]));
+  assert.deepEqual(result.map((person) => person.name), ["Zofia", "Anna", "Maria"]);
+});
+
+test("same names remain separate and missing birthdays or unspecified gender stay absent", () => {
+  const result = buildAssistantPeopleContext([
+    personSource(1, { name: "Alex", relationLabel: "Friend" }),
+    personSource(2, { name: "Alex", relationLabel: "Sibling" }),
+  ]);
+  assert.equal(result.length, 2);
+  assert.deepEqual(result.map(({ id, relation, birthday, gender }) => ({ id, relation, birthday, gender })), [
+    { id: "person-1", relation: "Friend", birthday: null, gender: null },
+    { id: "person-2", relation: "Sibling", birthday: null, gender: null },
+  ]);
+});
+
+test("people validation rejects more than twenty and unsafe field values", () => {
+  const person = { id: "1", name: "Anna", relation: null, birthday: null, gender: null };
+  const tooMany = Array.from({ length: ASSISTANT_CHAT_LIMITS.people + 1 }, (_, index) => ({ ...person, id: String(index) }));
+  assert.equal(parseAssistantChatRequest(validRequest({ context: { userName: null, insight: null, events: [], people: tooMany } })).success, false);
+  assert.equal(parseAssistantChatRequest(validRequest({ context: {
+    userName: null, insight: null, events: [], people: [{ ...person, gender: "invented" }],
+  } })).success, false);
+});
+
+test("PEOPLE prompt is non-JSON, omits IDs, and works for every locale", () => {
+  const context = {
+    userName: null,
+    insight: null,
+    events: [],
+    people: [{ id: "private-id", name: "Anna", relation: "Mama", birthday: "1990-07-21", gender: "female" }],
+  };
+  const formatted = formatAssistantContext(context);
+  assert.match(formatted, /PEOPLE/);
+  assert.match(formatted, /Anna\nrelation: Mama\nbirthday: 1990-07-21\ngender: female/);
+  assert.doesNotMatch(formatted, /private-id|\{"id"/);
+  for (const locale of ["pl", "uk", "ru", "en", "de"]) {
+    assert.match(buildAssistantSystemPrompt(locale), /PEOPLE context/);
+  }
+  assert.doesNotMatch(formatAssistantContext({ ...context, people: [] }) ?? "", /PEOPLE/);
 });
 
 test("formatted context omits IDs and marks user values as untrusted data", () => {

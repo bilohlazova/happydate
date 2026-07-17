@@ -12,6 +12,7 @@ type PersonMessages = typeof import("../../messages/pl/person.json");
 type PersonFormMessages = typeof import("../../messages/pl/personForm.json");
 type NotesMessages = typeof import("../../messages/pl/notes.json");
 type RemindersMessages = typeof import("../../messages/pl/reminders.json");
+type HomeMessages = typeof import("../../messages/pl/home.json");
 
 export interface AppMessages extends AbstractIntlMessages {
   common: CommonMessages;
@@ -23,6 +24,7 @@ export interface AppMessages extends AbstractIntlMessages {
   personForm: PersonFormMessages;
   notes: NotesMessages;
   reminders: RemindersMessages;
+  home: HomeMessages;
 }
 
 type CommonMessageLoader = () => Promise<CommonMessages>;
@@ -34,6 +36,7 @@ type PersonMessageLoader = () => Promise<PersonMessages>;
 type PersonFormMessageLoader = () => Promise<PersonFormMessages>;
 type NotesMessageLoader = () => Promise<NotesMessages>;
 type RemindersMessageLoader = () => Promise<RemindersMessages>;
+type HomeMessageLoader = () => Promise<HomeMessages>;
 
 const COMMON_MESSAGE_LOADERS: Record<AppLocale, CommonMessageLoader> = {
   pl: () => import("../../messages/pl/common.json").then((module) => module.default),
@@ -100,6 +103,13 @@ const REMINDERS_MESSAGE_LOADERS: Record<AppLocale, RemindersMessageLoader> = {
   en: () => import("../../messages/en/reminders.json").then((module) => module.default),
   ru: () => import("../../messages/ru/reminders.json").then((module) => module.default),
   de: () => import("../../messages/de/reminders.json").then((module) => module.default),
+};
+const HOME_MESSAGE_LOADERS: Record<AppLocale, HomeMessageLoader> = {
+  pl: () => import("../../messages/pl/home.json").then((module) => module.default),
+  uk: () => import("../../messages/uk/home.json").then((module) => module.default),
+  en: () => import("../../messages/en/home.json").then((module) => module.default),
+  ru: () => import("../../messages/ru/home.json").then((module) => module.default),
+  de: () => import("../../messages/de/home.json").then((module) => module.default),
 };
 
 async function loadCommonMessages(locale: AppLocale): Promise<CommonMessages> {
@@ -186,7 +196,7 @@ async function loadPersonFormMessages(locale: AppLocale): Promise<PersonFormMess
 }
 
 export async function loadMessages(locale: AppLocale): Promise<AppMessages> {
-  const [common, navigation, profile, auth, people, person, personForm, notes, reminders] = await Promise.all([
+  const [common, navigation, profile, auth, people, person, personForm, notes, reminders, home] = await Promise.all([
     loadCommonMessages(locale),
     loadNavigationMessages(locale),
     loadProfileMessages(locale),
@@ -196,6 +206,7 @@ export async function loadMessages(locale: AppLocale): Promise<AppMessages> {
     loadPersonFormMessages(locale),
     NOTES_MESSAGE_LOADERS[locale](),
     REMINDERS_MESSAGE_LOADERS[locale](),
+    HOME_MESSAGE_LOADERS[locale](),
   ]);
-  return { common, navigation, profile, auth, people, person, personForm, notes, reminders };
+  return { common, navigation, profile, auth, people, person, personForm, notes, reminders, home };
 }

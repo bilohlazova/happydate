@@ -1,0 +1,267 @@
+import { getMemoryKind, normalizeStoredMemoryType } from "../repositories/memory.types.ts";
+import type {
+  HomeEvent,
+  HomeFeaturedEvent,
+  HomeMemory,
+  HomePerson,
+  HomeRecommendation,
+  HomeRepositoryData,
+  HomeTranslate,
+  HomeUpcomingEvent,
+  HomeViewModel,
+} from "./home.types";
+import type { AppLocale } from "@/i18n/config";
+
+const IMPORTANT_CATEGORIES = new Set(["birthday", "anniversary"]);
+const PREFERENCE_TYPES = new Set([
+  "interest", "preference", "place", "restaurant", "food", "coffee",
+  "drink", "hobby", "book", "movie", "music", "pet", "perfume",
+  "flower", "travel", "sport",
+]);
+
+function localDate(value: string): Date | null {
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  const date = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(value);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function toDateOnly(date: Date): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function daysUntil(date: Date, now: Date): number {
+  return Math.round((startOfDay(date).getTime() - startOfDay(now).getTime()) / 86_400_000);
+}
+
+function nextBirthday(value: string, now: Date): Date | null {
+  const birthday = localDate(value);
+  if (!birthday) return null;
+  const today = startOfDay(now);
+  let occurrence = new Date(today.getFullYear(), birthday.getMonth(), birthday.getDate());
+  if (occurrence < today) {
+    occurrence = new Date(today.getFullYear() + 1, birthday.getMonth(), birthday.getDate());
+  }
+  return occurrence;
+}
+
+function normalizeEvents(people: HomePerson[], storedEvents: HomeRepositoryData["events"], now: Date): HomeEvent[] {
+  const birthdayEvents = people.flatMap((person): HomeEvent[] => {
+    if (!person.birthday) return [];
+    const date = nextBirthday(person.birthday, now);
+    if (!date) return [];
+    return [{
+      id: `birthday-${person.id}`,
+      source: "birthday",
+      title: person.name,
+      date: toDateOnly(date),
+      category: "birthday",
+      personId: person.id,
+      personName: person.name,
+      relationLabel: person.relationLabel,
+      isImportant: true,
+      href: `/people/${encodeURIComponent(person.id)}`,
+      daysUntil: daysUntil(date, now),
+    }];
+  });
+
+  const regularEvents = storedEvents.flatMap((event): HomeEvent[] => {
+    const date = localDate(event.date);
+    if (!date) return [];
+    const remaining = daysUntil(date, now);
+    if (remaining < 0) return [];
+    const category = event.category?.trim().toLowerCase() || null;
+    return [{
+      id: event.id,
+      source: "event",
+      title: event.title,
+      date: toDateOnly(date),
+      category,
+      personId: null,
+      personName: null,
+      relationLabel: null,
+      isImportant: category ? IMPORTANT_CATEGORIES.has(category) : false,
+      href: "/dashboard",
+      daysUntil: remaining,
+    }];
+  });
+
+  return [...regularEvents, ...birthdayEvents].sort(
+    (first, second) => first.daysUntil - second.daysUntil || first.title.localeCompare(second.title),
+  );
+}
+
+function selectFeatured(events: HomeEvent[]): HomeEvent | null {
+  const inSevenDays = events.filter((event) => event.isImportant && event.daysUntil <= 7);
+  if (inSevenDays.length) return inSevenDays[0];
+  const important = events.filter((event) => event.isImportant);
+  return important[0] ?? events[0] ?? null;
+}
+
+function resolveName(data: HomeRepositoryData): string | null {
+  const emailName = data.email?.split("@")[0] ?? null;
+  for (const candidate of [data.profile?.fullName, data.authMetadataName, emailName]) {
+    const normalized = candidate?.replace(/\s+/g, " ").trim();
+    if (normalized) return normalized.split(" ")[0] ?? normalized;
+  }
+  return null;
+}
+
+function formatCountdown(t: HomeTranslate, value: number): string {
+  if (value === 0) return t("countdown.today");
+  if (value === 1) return t("countdown.tomorrow");
+  return t("countdown.days", { count: value });
+}
+
+function formatDate(locale: AppLocale, value: string, options: Intl.DateTimeFormatOptions): string {
+  const date = localDate(value);
+  return date ? new Intl.DateTimeFormat(locale, options).format(date) : value;
+}
+
+function personMemories(memories: HomeMemory[], personId: string): HomeMemory[] {
+  return memories.filter((memory) => memory.isActive && memory.personId === personId);
+}
+
+function memoryValue(memory: HomeMemory): string | null {
+  const value = memory.value ?? memory.title ?? memory.content;
+  return value?.replace(/\s+/g, " ").trim() || null;
+}
+
+function classifyMemories(memories: HomeMemory[]) {
+  const gifts: HomeMemory[] = [];
+  const notes: HomeMemory[] = [];
+  const remembered: HomeMemory[] = [];
+  const preferences: string[] = [];
+
+  for (const memory of memories) {
+    if (!memory.isActive) continue;
+    const type = normalizeStoredMemoryType(memory.type);
+    const kind = getMemoryKind(type);
+    if (type === "gift") {
+      if (memoryValue(memory)) gifts.push(memory);
+    } else if (type === "memory" || type === "story" || kind === "memory" || kind === "journal") {
+      remembered.push(memory);
+    } else if (kind === "person_info") {
+      if (PREFERENCE_TYPES.has(type)) {
+        const value = memoryValue(memory);
+        if (value && !preferences.includes(value)) preferences.push(value);
+      }
+    } else {
+      notes.push(memory);
+    }
+  }
+  return { gifts, notes, memories: remembered, preferences };
+}
+
+function buildFeatured(event: HomeEvent | null, memories: HomeMemory[], locale: AppLocale, t: HomeTranslate): HomeFeaturedEvent | null {
+  if (!event) return null;
+  const classified = event.personId
+    ? classifyMemories(personMemories(memories, event.personId))
+    : { gifts: [], notes: [], memories: [], preferences: [] };
+  const metrics = [
+    classified.gifts.length ? { id: "gifts" as const, icon: "🎁", label: t("metrics.savedGifts", { count: classified.gifts.length }), count: classified.gifts.length, href: event.href } : null,
+    classified.notes.length ? { id: "notes" as const, icon: "📝", label: t("metrics.notes", { count: classified.notes.length }), count: classified.notes.length, href: "/notes" } : null,
+    classified.memories.length ? { id: "memories" as const, icon: "🖼️", label: t("metrics.memories", { count: classified.memories.length }), count: classified.memories.length, href: event.href } : null,
+  ].filter((metric): metric is NonNullable<typeof metric> => Boolean(metric));
+
+  return {
+    ...event,
+    label: event.isImportant ? t("featured.importantLabel") : t("featured.nextLabel"),
+    title: event.source === "birthday" ? t("events.birthdayTitle", { name: event.title }) : event.title,
+    dateLabel: formatDate(locale, event.date, { weekday: "long", day: "numeric", month: "long" }),
+    countdownLabel: formatCountdown(t, event.daysUntil),
+    preferences: classified.preferences.slice(0, 2),
+    metrics,
+    ctaLabel: event.source === "birthday" ? t("featured.personCta") : t("featured.eventCta"),
+  };
+}
+
+function categoryLabel(event: HomeEvent, t: HomeTranslate): string | null {
+  if (event.source === "birthday") return event.relationLabel || t("categories.birthday");
+  if (!event.category) return null;
+  const supported: Record<string, string> = {
+    birthday: t("categories.birthday"),
+    anniversary: t("categories.anniversary"),
+    work: t("categories.work"),
+    personal: t("categories.personal"),
+  };
+  return supported[event.category] ?? event.category;
+}
+
+function buildUpcoming(events: HomeEvent[], locale: AppLocale, t: HomeTranslate): HomeUpcomingEvent[] {
+  return events.slice(0, 3).map((event) => ({
+    ...event,
+    title: event.source === "birthday" ? t("events.birthdayTitle", { name: event.title }) : event.title,
+    dayLabel: formatDate(locale, event.date, { day: "2-digit" }),
+    monthLabel: formatDate(locale, event.date, { month: "short" }).replace(".", "").toUpperCase(),
+    dateLabel: formatDate(locale, event.date, { weekday: "long", day: "numeric", month: "long" }),
+    countdownLabel: formatCountdown(t, event.daysUntil),
+    categoryLabel: categoryLabel(event, t),
+  }));
+}
+
+function buildRecommendations(featured: HomeEvent | null, memories: HomeMemory[], t: HomeTranslate): HomeRecommendation[] {
+  if (!featured?.personId) return [];
+  const classified = classifyMemories(personMemories(memories, featured.personId));
+  const personHref = `/people/${encodeURIComponent(featured.personId)}`;
+  const recommendations: HomeRecommendation[] = [];
+
+  if (featured.daysUntil <= 30 && classified.gifts.length > 0) {
+    recommendations.push({ id: `saved-gifts-${featured.id}`, icon: "🎁", title: t("recommendations.reviewGiftsTitle"), description: t("recommendations.reviewGiftsDescription", { count: classified.gifts.length }), href: personHref });
+  } else if (featured.daysUntil <= 30) {
+    recommendations.push({ id: `add-gift-${featured.id}`, icon: "💡", title: t("recommendations.addGiftTitle"), description: t("recommendations.addGiftDescription", { name: featured.personName ?? "" }), href: personHref });
+  }
+
+  if (classified.preferences.length === 0 && featured.daysUntil <= 14) {
+    recommendations.push({ id: `context-${featured.id}`, icon: "✨", title: t("recommendations.addContextTitle"), description: t("recommendations.addContextDescription", { name: featured.personName ?? "" }), href: personHref });
+  }
+  if (classified.memories.length > 0) {
+    recommendations.push({ id: `memories-${featured.id}`, icon: "💜", title: t("recommendations.memoriesTitle"), description: t("recommendations.memoriesDescription", { count: classified.memories.length }), href: personHref });
+  }
+  return recommendations.slice(0, 3);
+}
+
+export function buildHomeViewModel(data: HomeRepositoryData, locale: AppLocale, t: HomeTranslate, now = new Date()): HomeViewModel {
+  const name = resolveName(data);
+  const events = normalizeEvents(data.people, data.events, now);
+  const featured = selectFeatured(events);
+  const featuredCard = buildFeatured(featured, data.memories, locale, t);
+  const recommendations = buildRecommendations(featured, data.memories, t);
+  const insights = [];
+  if (featured) {
+    insights.push({ id: `event-${featured.id}`, icon: featured.source === "birthday" ? "🎂" : "📅", title: featured.source === "birthday" ? t("insights.birthday", { name: featured.personName ?? featured.title, countdown: formatCountdown(t, featured.daysUntil) }) : t("insights.event", { title: featured.title, countdown: formatCountdown(t, featured.daysUntil) }) });
+  }
+  if (featured?.personId) {
+    const classified = classifyMemories(personMemories(data.memories, featured.personId));
+    if (classified.gifts.length) insights.push({ id: `gift-${featured.id}`, icon: "🎁", title: t("insights.savedGifts", { count: classified.gifts.length }) });
+    if (classified.preferences.length) insights.push({ id: `preferences-${featured.id}`, icon: "✨", title: t("insights.hasPreferences", { name: featured.personName ?? "" }), description: classified.preferences.slice(0, 2).join(" · ") });
+  }
+
+  const todayInsights = insights.slice(0, 3);
+  const importantCount = todayInsights.length;
+  const briefParts = [t("brief.intro", { count: importantCount })];
+  if (featuredCard) briefParts.push(t("brief.featured", { title: featuredCard.title, countdown: featuredCard.countdownLabel }));
+
+  return {
+    locale,
+    isAuthenticated: data.isAuthenticated,
+    greeting: { name, title: name ? t("greeting.named", { name }) : t("greeting.fallback"), subtitle: t("greeting.subtitle") },
+    todayInsights,
+    stats: { importantCount },
+    assistantActions: { briefText: briefParts.join(" ") },
+    featuredEvent: featuredCard,
+    upcomingEvents: buildUpcoming(events, locale, t),
+    recommendations,
+    isEmpty: data.people.length === 0 && data.events.length === 0 && data.memories.length === 0,
+    errors: data.errors,
+  };
+}

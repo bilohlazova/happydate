@@ -1,0 +1,5 @@
+function Bar({ className }: { className: string }) { return <div className={`animate-pulse rounded-full bg-slate-200 ${className}`} />; }
+
+export default function HomeSkeleton() {
+  return <div className="mx-auto w-full max-w-[980px] px-4 pb-10 pt-5 sm:px-6" role="status" aria-label="Loading"><Bar className="h-8 w-56" /><Bar className="mt-3 h-4 w-72 max-w-full" /><div className="mt-5 grid gap-3 md:grid-cols-[1fr_180px]"><div className="grid gap-2">{[1,2,3].map((id) => <div key={id} className="h-16 animate-pulse rounded-2xl bg-white ring-1 ring-slate-100" />)}</div><div className="h-32 animate-pulse rounded-2xl bg-sky-50" /></div><div className="mt-4 grid gap-2 sm:grid-cols-2"><div className="h-12 animate-pulse rounded-2xl bg-white" /><div className="h-12 animate-pulse rounded-2xl bg-white" /></div><div className="mt-7 h-60 animate-pulse rounded-3xl bg-white" /><div className="mt-7 grid gap-2">{[1,2,3].map((id) => <div key={id} className="h-16 animate-pulse rounded-2xl bg-white" />)}</div></div>;
+}

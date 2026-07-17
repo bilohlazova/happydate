@@ -1,0 +1,17 @@
+{
+  "greeting": { "named": "Cześć, {name}!", "fallback": "Cześć!", "subtitle": "Oto to, co dziś jest dla Ciebie ważne." },
+  "stats": { "label": "ważne sprawy", "description": "Happy śledzi ważne osoby i daty, aby niczego nie przegapić." },
+  "summary": { "empty": "Na dziś nie masz pilnych spraw." },
+  "assistant": { "ask": "Zapytaj Happy", "listen": "Posłuchaj krótkiego briefu", "stop": "Zatrzymaj brief", "read": "Przeczytaj krótki brief", "sectionLabel": "Działania Happy", "close": "Zamknij", "speechError": "Nie udało się odtworzyć głosu. Brief możesz przeczytać poniżej." },
+  "countdown": { "today": "dzisiaj", "tomorrow": "jutro", "days": "za {count} dni" },
+  "events": { "birthdayTitle": "Urodziny: {name}" },
+  "categories": { "birthday": "Urodziny", "anniversary": "Rocznica", "work": "Praca", "personal": "Osobiste" },
+  "insights": { "birthday": "Urodziny {name} — {countdown}", "event": "{title} — {countdown}", "savedGifts": "Masz {count} zapisane pomysły na prezent", "hasPreferences": "Happy zna już kilka upodobań {name}" },
+  "brief": { "intro": "Dzisiaj masz {count} ważne sprawy.", "featured": "Najbliżej: {title}, {countdown}." },
+  "featured": { "importantLabel": "Najbliższa ważna data", "nextLabel": "Najbliższe wydarzenie", "preferences": "Zapisane upodobania", "personCta": "Zobacz profil osoby", "eventCta": "Zobacz w kalendarzu" },
+  "metrics": { "savedGifts": "{count} zapisane pomysły", "notes": "{count} notatki", "memories": "{count} wspomnienia" },
+  "upcoming": { "title": "Najbliższe wydarzenia", "all": "Zobacz wszystkie" },
+  "recommendations": { "title": "Happy rekomenduje", "reviewGiftsTitle": "Przejrzyj zapisane pomysły", "reviewGiftsDescription": "Masz {count} zapisane pomysły na prezent.", "addGiftTitle": "Zapisz pomysł na prezent", "addGiftDescription": "Dodaj prawdziwy pomysł dla {name}, aby wrócić do niego później.", "addContextTitle": "Dodaj informacje o osobie", "addContextDescription": "Kilka upodobań {name} pomoże lepiej przygotować się do daty.", "memoriesTitle": "Wróć do wspólnych wspomnień", "memoriesDescription": "Masz {count} zapisane wspomnienia." },
+  "empty": { "title": "Zacznij od ważnej osoby lub wydarzenia", "description": "Dodaj pierwszą osobę albo datę. Happy pokaże tutaj tylko informacje oparte na Twoich danych.", "addPerson": "Dodaj osobę", "addEvent": "Dodaj wydarzenie" },
+  "error": { "title": "Część danych jest chwilowo niedostępna", "description": "Pokazujemy sekcje, które udało się bezpiecznie pobrać.", "retry": "Spróbuj ponownie" }
+}

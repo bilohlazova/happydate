@@ -1,0 +1,17 @@
+{
+  "greeting": { "named": "Привіт, {name}!", "fallback": "Привіт!", "subtitle": "Ось що сьогодні для тебе важливо." },
+  "stats": { "label": "важливі справи", "description": "Happy стежить за важливими людьми й датами, щоб нічого не пропустити." },
+  "summary": { "empty": "На сьогодні термінових справ немає." },
+  "assistant": { "ask": "Запитати Happy", "listen": "Послухати короткий бриф", "stop": "Зупинити бриф", "read": "Прочитати короткий бриф", "sectionLabel": "Дії Happy", "close": "Закрити", "speechError": "Не вдалося відтворити голос. Бриф можна прочитати нижче." },
+  "countdown": { "today": "сьогодні", "tomorrow": "завтра", "days": "через {count} днів" },
+  "events": { "birthdayTitle": "День народження: {name}" },
+  "categories": { "birthday": "День народження", "anniversary": "Річниця", "work": "Робота", "personal": "Особисте" },
+  "insights": { "birthday": "День народження {name} — {countdown}", "event": "{title} — {countdown}", "savedGifts": "У тебе є {count} збережені ідеї подарунків", "hasPreferences": "Happy вже знає деякі вподобання {name}" },
+  "brief": { "intro": "Сьогодні в тебе {count} важливі справи.", "featured": "Найближче: {title}, {countdown}." },
+  "featured": { "importantLabel": "Найближча важлива дата", "nextLabel": "Найближча подія", "preferences": "Збережені вподобання", "personCta": "Переглянути профіль", "eventCta": "Переглянути в календарі" },
+  "metrics": { "savedGifts": "{count} збережені ідеї", "notes": "{count} нотатки", "memories": "{count} спогади" },
+  "upcoming": { "title": "Найближчі події", "all": "Переглянути всі" },
+  "recommendations": { "title": "Happy рекомендує", "reviewGiftsTitle": "Переглянь збережені ідеї", "reviewGiftsDescription": "У тебе є {count} збережені ідеї подарунків.", "addGiftTitle": "Збережи ідею подарунка", "addGiftDescription": "Додай реальну ідею для {name}, щоб повернутися до неї пізніше.", "addContextTitle": "Додай інформацію про людину", "addContextDescription": "Кілька вподобань {name} допоможуть підготуватися до дати.", "memoriesTitle": "Повернися до спільних спогадів", "memoriesDescription": "У тебе є {count} збережені спогади." },
+  "empty": { "title": "Почни з важливої людини або події", "description": "Додай першу людину або дату. Happy покаже лише інформацію з твоїх даних.", "addPerson": "Додати людину", "addEvent": "Додати подію" },
+  "error": { "title": "Частина даних тимчасово недоступна", "description": "Показуємо секції, які вдалося безпечно завантажити.", "retry": "Спробувати знову" }
+}

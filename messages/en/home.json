@@ -1,0 +1,17 @@
+{
+  "greeting": { "named": "Hi, {name}!", "fallback": "Hi!", "subtitle": "Here is what matters to you today." },
+  "stats": { "label": "important items", "description": "Happy follows important people and dates so nothing gets missed." },
+  "summary": { "empty": "You have no urgent items today." },
+  "assistant": { "ask": "Ask Happy", "listen": "Listen to a short brief", "stop": "Stop the brief", "read": "Read the short brief", "sectionLabel": "Happy actions", "close": "Close", "speechError": "Voice playback failed. You can read the brief below." },
+  "countdown": { "today": "today", "tomorrow": "tomorrow", "days": "in {count} days" },
+  "events": { "birthdayTitle": "Birthday: {name}" },
+  "categories": { "birthday": "Birthday", "anniversary": "Anniversary", "work": "Work", "personal": "Personal" },
+  "insights": { "birthday": "{name}'s birthday — {countdown}", "event": "{title} — {countdown}", "savedGifts": "You have {count} saved gift ideas", "hasPreferences": "Happy already knows some of {name}'s preferences" },
+  "brief": { "intro": "You have {count} important items today.", "featured": "Coming up: {title}, {countdown}." },
+  "featured": { "importantLabel": "Nearest important date", "nextLabel": "Next event", "preferences": "Saved preferences", "personCta": "View person profile", "eventCta": "View in calendar" },
+  "metrics": { "savedGifts": "{count} saved ideas", "notes": "{count} notes", "memories": "{count} memories" },
+  "upcoming": { "title": "Upcoming events", "all": "View all" },
+  "recommendations": { "title": "Happy recommends", "reviewGiftsTitle": "Review saved ideas", "reviewGiftsDescription": "You have {count} saved gift ideas.", "addGiftTitle": "Save a gift idea", "addGiftDescription": "Add a real idea for {name} to revisit later.", "addContextTitle": "Add information about this person", "addContextDescription": "A few preferences for {name} will help you prepare.", "memoriesTitle": "Revisit shared memories", "memoriesDescription": "You have {count} saved memories." },
+  "empty": { "title": "Start with an important person or event", "description": "Add your first person or date. Happy will only show information based on your data.", "addPerson": "Add person", "addEvent": "Add event" },
+  "error": { "title": "Some data is temporarily unavailable", "description": "We are showing the sections that loaded safely.", "retry": "Try again" }
+}

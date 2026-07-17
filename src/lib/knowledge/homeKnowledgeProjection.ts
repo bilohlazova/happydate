@@ -45,7 +45,7 @@ export function projectKnowledgeForHome(
 ): HomeKnowledgeProjection[] {
   const result: HomeKnowledgeProjection[] = [];
   for (const item of items) {
-    if (!consumerIsActive(item)) continue;
+    if (!consumerIsActive(item) || item.aiEligible === false) continue;
     const category = homeCategory(item);
     if (!category) continue;
     result.push({
@@ -62,4 +62,3 @@ export function projectKnowledgeForHome(
   }
   return result;
 }
-

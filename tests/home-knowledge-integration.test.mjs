@@ -93,11 +93,14 @@ test("preference deduplication and missing-context recommendation remain unchang
   assert.equal(missing.recommendations.some((item) => item.id.startsWith("context-")), true);
 });
 
-test("archived and journal knowledge are excluded from Home projection", () => {
-  const projected = projectKnowledgeForHome(mapLegacyMemoriesToKnowledge([
+test("archived, journal and AI-ineligible knowledge are excluded from Home projection", () => {
+  const items = mapLegacyMemoriesToKnowledge([
     row("archived", "gift", "Hidden", { is_active: false }),
     row("journal", "journal", "PRIVATE"),
-  ]));
+    row("private", "coffee", "Secret"),
+  ]);
+  items[2].aiEligible = false;
+  const projected = projectKnowledgeForHome(items);
   assert.deepEqual(projected, []);
 });
 
@@ -114,6 +117,7 @@ test("AI-ineligible knowledge is excluded from Home Assistant Context", () => {
 test("Home production dependency guard rejects legacy Memory access and interpretation", async () => {
   const paths = [
     "../src/lib/repositories/home/home.repository.ts",
+    "../src/lib/home/loadHome.ts",
     "../src/lib/home/buildHomeViewModel.ts",
     "../src/lib/home/home.types.ts",
     "../src/components/HomePageClient.tsx",
@@ -126,4 +130,19 @@ test("Home production dependency guard rejects legacy Memory access and interpre
       "normalizeStoredMemoryType", "getMemoryKind(", ".type as",
     ]) assert.equal(source.includes(forbidden), false, forbidden);
   }
+});
+
+test("Home Loader is the single Knowledge and Brain orchestration boundary", async () => {
+  const loader = await readFile(new URL("../src/lib/home/loadHome.ts", import.meta.url), "utf8");
+  const repository = await readFile(new URL("../src/lib/repositories/home/home.repository.ts", import.meta.url), "utf8");
+  const assistant = await readFile(new URL("../src/hooks/useAssistantHomeContext.ts", import.meta.url), "utf8");
+  assert.match(loader, /getHomeRepositoryData/);
+  assert.match(loader, /buildAllPeopleKnowledge/);
+  assert.match(loader, /buildInsights/);
+  assert.equal((repository.match(/listKnowledge\(/g) ?? []).length, 1);
+  assert.equal(assistant.includes("listKnowledge"), false);
+  assert.equal(assistant.includes("getCurrentMemoryUserId"), false);
+  assert.match(assistant, /data\.brainInsights/);
+  assert.equal(assistant.includes("KnowledgeItem"), false);
+  assert.match(assistant, /data\.assistantMemories/);
 });

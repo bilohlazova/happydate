@@ -4,7 +4,7 @@ import HomeDashboard from "@/components/home-dashboard/HomeDashboard";
 import HomeSkeleton from "@/components/home-dashboard/HomeSkeleton";
 import HomeErrorState from "@/components/home-dashboard/HomeErrorState";
 import ChatAssistantModal from "@/components/ChatAssistantModal";
-import { getHomeData } from "@/lib/repositories/home/home.repository";
+import { loadHome } from "@/lib/home/loadHome";
 import { buildHomeViewModel } from "@/lib/home/buildHomeViewModel";
 import type { HomeViewModel } from "@/lib/home/home.types";
 import { isSupportedLocale } from "@/i18n/config";
@@ -95,7 +95,7 @@ export default function HomePageClient() {
     setFatalError(false);
     setViewModel(null);
 
-    void getHomeData()
+    void loadHome()
       .then((data) => {
         if (cancelled) return;
         setViewModel(buildHomeViewModel(

@@ -1,5 +1,10 @@
 import type { AppLocale } from "@/i18n/config";
 import type { HomeKnowledgeProjection } from "@/lib/knowledge";
+import type { Insight, PersonKnowledge } from "@/lib/brain/types";
+import type {
+  AssistantMemoryGroupContext,
+  AssistantPersonContext,
+} from "@/lib/assistant/chatContract";
 
 export type HomeEventSource = "event" | "birthday";
 
@@ -41,6 +46,14 @@ export interface HomeRepositoryData {
   events: HomeStoredEvent[];
   memories: HomeMemory[];
   errors: HomeDataError[];
+}
+
+/** Canonical loader result. Knowledge stays in the data layer and never reaches React UI. */
+export interface HomeLoaderData extends HomeRepositoryData {
+  brainInsights: Insight[];
+  personKnowledge: PersonKnowledge[];
+  assistantPeople: AssistantPersonContext[];
+  assistantMemories: AssistantMemoryGroupContext[];
 }
 
 export interface HomeEvent {

@@ -29,21 +29,21 @@ Knowledge and Brain.
 ```text
 HomePageClient / Assistant Home Context
     ↓
-home.repository
-    ├── profiles / people / events
-    └── Knowledge Repository
+Home Loader (single orchestration boundary)
+    ├── Home Repository (profile / people / events)
+    ├── Knowledge Repository (one canonical read)
+    ├── Knowledge Layer Home projection
+    └── Brain (person knowledge + insights)
             ↓
-       KnowledgeItem[]
-            ↓
-       Knowledge Layer Home projection
-            ↓
-       Home presentation model
+       Home ViewModel / bounded Assistant context
             ↓
        unchanged React UI
 ```
 
-`home.repository.ts` no longer queries `memories`. Home presentation no longer
-imports or interprets stored types.
+`home.repository.ts` no longer queries `memories`. It owns the single canonical
+Knowledge Repository read, while `loadHome.ts` owns all orchestration. Home and
+Assistant therefore share one request result instead of fetching Knowledge
+independently. Home presentation no longer imports or interprets stored types.
 
 ## Canonical projection
 
@@ -60,9 +60,9 @@ ordering. Facts, wishes and unsupported legacy person-info records remain absent
 because current Home did not render them. Adding those is a product change, not
 part of source migration.
 
-Journal and archived records are excluded. AI-ineligible records are also
-excluded from Assistant Home Context; non-AI Home presentation does not use AI
-eligibility as a display score.
+Journal, archived and AI-ineligible records are excluded from both the Home
+projection and Assistant Home Context. Repository reads are scoped by the
+authenticated user id.
 
 ## Unchanged behavior
 
@@ -76,7 +76,6 @@ reimplemented in Home.
 
 - `HomeMemory` remains as a type alias for the stable Home projection so UI
   contracts do not churn.
-- The projection uses audited compatibility accessors until legacy fields are
+- The Knowledge Repository and projection use audited compatibility accessors until legacy fields are
   retired in Stage 8/9.
 - People and Notes continue to use their legacy paths until their own stages.
-

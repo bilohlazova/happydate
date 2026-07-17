@@ -2,18 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { buildInsights } from "@/lib/brain/buildInsights";
 import { mapInsightToAssistant, type AssistantCardData } from "@/lib/brain/mapInsightToAssistant";
-import type { BrainEvent } from "@/lib/brain/types";
 import { resolveHomeUserName } from "@/lib/home/buildHomeViewModel";
-import { getHomeData } from "@/lib/repositories/home/home.repository";
+import { loadHome } from "@/lib/home/loadHome";
 import type { AssistantEventContext } from "@/lib/assistant/chatContract";
 import type { AssistantPersonContext } from "@/lib/assistant/chatContract";
-import { buildAssistantPeopleContext } from "@/lib/assistant/peopleContext";
 import type { AssistantMemoryGroupContext } from "@/lib/assistant/chatContract";
-import { buildAssistantMemoryContext } from "@/lib/assistant/memoryContext";
-import { getCurrentMemoryUserId } from "@/lib/repositories/memoryRepository";
-import { listKnowledge } from "@/lib/repositories/knowledgeRepository";
 
 export type GreetingPeriod = "morning" | "afternoon" | "evening" | "night";
 
@@ -38,24 +32,8 @@ function getGreetingPeriod(date = new Date()): GreetingPeriod {
   return "night";
 }
 
-function toBrainEvents(
-  events: Awaited<ReturnType<typeof getHomeData>>["events"],
-): BrainEvent[] {
-  return events.map((event) => {
-    const category = event.category?.trim().toLowerCase() || null;
-    return {
-      id: event.id,
-      title: event.title,
-      date: event.date,
-      is_important: category === "birthday" || category === "anniversary",
-      person_name: null,
-      category,
-    };
-  });
-}
-
 function toAssistantEvents(
-  events: Awaited<ReturnType<typeof getHomeData>>["events"],
+  events: Awaited<ReturnType<typeof loadHome>>["events"],
   now = new Date(),
 ): AssistantEventContext[] {
   const today = [
@@ -107,18 +85,10 @@ export function useAssistantHomeContext(open: boolean): AssistantHomeContext {
       error: null,
     }));
 
-    const loadMemories = async () => {
-      const userId = await getCurrentMemoryUserId();
-      // Preserve the existing Assistant ordering/limit behavior in
-      // buildAssistantMemoryContext; purpose-specific retrieval comes later.
-      return userId ? listKnowledge({ userId }) : [];
-    };
-
-    void Promise.all([
-      getHomeData(),
-      loadMemories().catch(() => []),
-    ])
-      .then(([data, brainMemories]) => {
+    void loadHome({
+      eventTranslate: (key, values) => insightT(key, values),
+    })
+      .then((data) => {
         if (requestId !== requestIdRef.current) return;
 
         if (!data.isAuthenticated) {
@@ -154,22 +124,15 @@ export function useAssistantHomeContext(open: boolean): AssistantHomeContext {
           return;
         }
 
-        const [nextInsight] = buildInsights({
-          events: toBrainEvents(data.events),
-          currentDate: new Date(),
-          eventTranslate: (key, values) => insightT(key, values),
-        });
+        const [nextInsight] = data.brainInsights;
 
-        const assistantPeople = data.errors.some((error) => error.section === "people")
-          ? []
-          : buildAssistantPeopleContext(data.people);
         setContext({
           userName: resolveHomeUserName(data),
           greetingPeriod: getGreetingPeriod(),
           insight: mapInsightToAssistant(nextInsight ?? null),
           events: toAssistantEvents(data.events),
-          people: assistantPeople,
-          memories: buildAssistantMemoryContext(assistantPeople, brainMemories),
+          people: data.assistantPeople,
+          memories: data.assistantMemories,
           isAuthenticated: true,
           loading: false,
           error: null,

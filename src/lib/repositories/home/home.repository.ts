@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
 import { listKnowledge } from "@/lib/repositories/knowledgeRepository";
 import { projectKnowledgeForHome } from "@/lib/knowledge";
+import type { KnowledgeItem } from "@/lib/knowledge";
 import type {
   HomeDataError,
   HomeDataSection,
@@ -10,6 +11,11 @@ import type {
   HomeRepositoryData,
   HomeStoredEvent,
 } from "@/lib/home/home.types";
+
+export interface HomeRepositoryResult extends HomeRepositoryData {
+  userId: string | null;
+  knowledge: KnowledgeItem[];
+}
 
 class HomeRepositoryError extends Error {
   constructor(readonly section: HomeDataSection, message: string) {
@@ -55,9 +61,13 @@ async function loadEvents(userId: string): Promise<HomeStoredEvent[]> {
   return (data ?? []) as HomeStoredEvent[];
 }
 
-async function loadMemories(userId: string): Promise<HomeMemory[]> {
+async function loadKnowledge(userId: string): Promise<{
+  knowledge: KnowledgeItem[];
+  memories: HomeMemory[];
+}> {
   try {
-    return projectKnowledgeForHome(await listKnowledge({ userId }));
+    const knowledge = await listKnowledge({ userId });
+    return { knowledge, memories: projectKnowledgeForHome(knowledge) };
   } catch (error) {
     throw new HomeRepositoryError(
       "memories",
@@ -76,7 +86,7 @@ function errorFrom(reason: unknown, fallbackSection: HomeDataSection): HomeDataE
   };
 }
 
-export async function getHomeData(): Promise<HomeRepositoryData> {
+export async function getHomeRepositoryData(): Promise<HomeRepositoryResult> {
   const { data: authData, error: authError } = await supabase.auth.getUser();
   const user = authData.user;
   if (!user) {
@@ -85,6 +95,7 @@ export async function getHomeData(): Promise<HomeRepositoryData> {
       throw new Error(`[home.repository] Authentication failed: ${authError.message}`);
     }
     return {
+      userId: null,
       isAuthenticated: false,
       profile: null,
       authMetadataName: null,
@@ -92,24 +103,26 @@ export async function getHomeData(): Promise<HomeRepositoryData> {
       people: [],
       events: [],
       memories: [],
+      knowledge: [],
       errors: [],
     };
   }
 
-  const [profileResult, peopleResult, eventsResult, memoriesResult] = await Promise.all([
+  const [profileResult, peopleResult, eventsResult, knowledgeResult] = await Promise.all([
     loadProfile(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadPeople(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadEvents(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
-    loadMemories(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
+    loadKnowledge(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
   ]);
 
   const errors: HomeDataError[] = [];
   if (!profileResult.ok) errors.push(errorFrom(profileResult.reason, "profile"));
   if (!peopleResult.ok) errors.push(errorFrom(peopleResult.reason, "people"));
   if (!eventsResult.ok) errors.push(errorFrom(eventsResult.reason, "events"));
-  if (!memoriesResult.ok) errors.push(errorFrom(memoriesResult.reason, "memories"));
+  if (!knowledgeResult.ok) errors.push(errorFrom(knowledgeResult.reason, "memories"));
 
   return {
+    userId: user.id,
     isAuthenticated: true,
     profile: profileResult.ok ? profileResult.value : null,
     authMetadataName:
@@ -119,7 +132,8 @@ export async function getHomeData(): Promise<HomeRepositoryData> {
     email: user.email ?? null,
     people: peopleResult.ok ? peopleResult.value : [],
     events: eventsResult.ok ? eventsResult.value : [],
-    memories: memoriesResult.ok ? memoriesResult.value : [],
+    memories: knowledgeResult.ok ? knowledgeResult.value.memories : [],
+    knowledge: knowledgeResult.ok ? knowledgeResult.value.knowledge : [],
     errors,
   };
 }

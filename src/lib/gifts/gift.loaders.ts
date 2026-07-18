@@ -4,7 +4,10 @@ import {
   loadGiftsForEvent,
   loadGiftsForPerson,
 } from "./gift.repository.ts";
-import { buildGiftCollectionViewModel } from "./gift.mapper.ts";
+import {
+  buildGiftCollectionViewModel,
+  buildGiftWorkspaceViewModel,
+} from "./gift.mapper.ts";
 import type {
   EventGiftsViewModel,
   GiftWorkspaceViewModel,
@@ -38,16 +41,5 @@ export async function loadEventGifts(
 export async function loadGiftWorkspace(): Promise<GiftWorkspaceViewModel> {
   const userId = await authenticatedUserId();
   const gifts = userId ? await loadAllGifts(userId) : [];
-  const collection = buildGiftCollectionViewModel(gifts);
-  return {
-    isAuthenticated: Boolean(userId),
-    ...collection,
-    personIds: uniqueIds(gifts.map((gift) => gift.personId)),
-    eventIds: uniqueIds(gifts.map((gift) => gift.eventId)),
-  };
+  return buildGiftWorkspaceViewModel(gifts, Boolean(userId));
 }
-
-function uniqueIds(ids: Array<string | null>): string[] {
-  return [...new Set(ids.filter((id): id is string => Boolean(id)))].sort();
-}
-

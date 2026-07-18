@@ -264,6 +264,7 @@ function buildRecommendation(
     message: `${person.name} ma urodziny za ${recommendation.daysUntil} dni 🎂`,
     actionLabel: "Zobacz pomysły na prezent →",
     icon: "🎁",
+    href: `/gift/start?personId=${encodeURIComponent(person.id)}`,
   };
 }
 

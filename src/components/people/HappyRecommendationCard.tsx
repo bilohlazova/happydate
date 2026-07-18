@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 export interface HappyRecommendation {
@@ -7,6 +8,7 @@ export interface HappyRecommendation {
   message: string;
   actionLabel: string;
   icon: string;
+  href?: string;
 }
 
 interface HappyRecommendationCardProps {
@@ -36,12 +38,18 @@ export function HappyRecommendationCard({
         <p className="truncate text-sm font-bold leading-5 text-slate-950">
           {message}
         </p>
-        <button
-          type="button"
-          className="text-left text-xs font-extrabold leading-4 text-blue-600 transition hover:text-blue-500"
-        >
-          {actionLabel}
-        </button>
+        {recommendation.href ? (
+          <Link
+            href={recommendation.href}
+            className="text-left text-xs font-extrabold leading-4 text-blue-600 transition hover:text-blue-500"
+          >
+            {actionLabel}
+          </Link>
+        ) : (
+          <span className="text-left text-xs font-extrabold leading-4 text-blue-600">
+            {actionLabel}
+          </span>
+        )}
       </div>
 
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-xl shadow-[0_6px_14px_rgba(37,99,235,0.07)]">

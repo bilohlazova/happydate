@@ -4,8 +4,10 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import type { GiftWorkspaceViewModel } from "@/lib/gifts/gift.types";
+import { submitLegacyGiftRequest } from "@/lib/gifts/giftRequestCompatibility";
 import { MobileUI } from "@/lib/theme/mobile";
+import { GiftWorkspacePanel } from "./GiftWorkspacePanel";
 
 type FormState = {
   eventId: string | null;
@@ -30,7 +32,13 @@ function formatPL(ymd?: string | null) {
   );
 }
 
-export default function GiftStartPage() {
+export default function GiftStartPage({
+  workspace,
+  workspaceError,
+}: {
+  workspace: GiftWorkspaceViewModel | null;
+  workspaceError: boolean;
+}) {
   const sp = useSearchParams();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -83,12 +91,7 @@ export default function GiftStartPage() {
     setSaving(true);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
       const payload = {
-        user_id: user?.id ?? null,
         event_id: form.eventId,
         event_title: form.eventTitle || form.occasion,
         event_date: form.eventDate,
@@ -102,27 +105,13 @@ export default function GiftStartPage() {
         split_payment: form.splitPayment,
         delivery: form.delivery,
         notes: form.notes || null,
-        status: "new" as const,
-        created_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase.from("gift_requests").insert([payload]);
-      if (error) {
-        console.warn("gift_requests insert error:", error.message);
+      const result = await submitLegacyGiftRequest(payload);
+      if (!result.ok) {
+        console.warn("gift_requests insert error:", result.error);
         setMsg("Nie udało się zapisać zgłoszenia. Sprawdź połączenie lub tabelę.");
       } else {
-        // 🔔 спроба відправити e-mail нотифікацію (не блокує UX)
-        try {
-          await fetch("/api/notify-gift", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            cache: "no-store",
-          });
-        } catch {
-          // ignore
-        }
-
         setMsg("Zgłoszenie wysłane ✅ — konsultant wkrótce się odezwie.");
         setTimeout(() => router.push("/dashboard"), 900);
       }
@@ -148,6 +137,8 @@ export default function GiftStartPage() {
             Podaj kilka szczegółów — doradzimy, zaprojektujemy i dostarczymy idealny prezent.
           </p>
         </header>
+
+        <GiftWorkspacePanel workspace={workspace} hasError={workspaceError} />
 
         {/* Wydarzenie */}
         <section className={`${MobileUI.card} mb-4 border-white/60 bg-white/80 p-4 backdrop-blur`}>

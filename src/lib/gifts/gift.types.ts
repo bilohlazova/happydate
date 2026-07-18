@@ -48,5 +48,13 @@ export interface GiftWorkspaceViewModel extends GiftCollectionViewModel {
   isAuthenticated: boolean;
   personIds: string[];
   eventIds: string[];
+  recommendationContext: GiftRecommendationContextViewModel;
 }
 
+/** Read-only projection reserved for a future AI recommender. */
+export interface GiftRecommendationContextViewModel {
+  activeIdeas: GiftItemViewModel[];
+  confirmedHistory: GiftItemViewModel[];
+  personIds: string[];
+  eventIds: string[];
+}

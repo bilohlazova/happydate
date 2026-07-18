@@ -4,6 +4,7 @@ import type {
   GiftItemViewModel,
   GiftLifecycle,
   GiftRecord,
+  GiftWorkspaceViewModel,
 } from "./gift.types.ts";
 
 const ACTIVE_LIFECYCLE = new Set<GiftLifecycle>([
@@ -86,6 +87,27 @@ export function buildGiftCollectionViewModel(
   };
 }
 
+export function buildGiftWorkspaceViewModel(
+  gifts: readonly GiftRecord[],
+  isAuthenticated: boolean
+): GiftWorkspaceViewModel {
+  const collection = buildGiftCollectionViewModel(gifts);
+  const personIds = uniqueIds(gifts.map((gift) => gift.personId));
+  const eventIds = uniqueIds(gifts.map((gift) => gift.eventId));
+  return {
+    isAuthenticated,
+    ...collection,
+    personIds,
+    eventIds,
+    recommendationContext: {
+      activeIdeas: collection.activeIdeas,
+      confirmedHistory: collection.history,
+      personIds,
+      eventIds,
+    },
+  };
+}
+
 function toViewModel(gift: GiftRecord): GiftItemViewModel {
   return {
     id: gift.id,
@@ -103,3 +125,6 @@ function compareGiftRecords(first: GiftRecord, second: GiftRecord): number {
   return secondDate.localeCompare(firstDate) || first.id.localeCompare(second.id);
 }
 
+function uniqueIds(ids: Array<string | null>): string[] {
+  return [...new Set(ids.filter((id): id is string => Boolean(id)))].sort();
+}

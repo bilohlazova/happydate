@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   buildGiftCollectionViewModel,
+  buildGiftWorkspaceViewModel,
   mapKnowledgeToGiftLifecycle,
   mapKnowledgeToGifts,
 } from "../src/lib/gifts/gift.mapper.ts";
@@ -67,7 +68,21 @@ test("Gift Repository hides persistence and loaders remain UI-independent", asyn
     assert.equal(repository.includes(forbidden), false, forbidden);
   }
   assert.equal((loaders.match(/auth\.getUser\(\)/g) ?? []).length, 1);
-  assert.equal(uiFiles.includes("gift.loaders"), false);
+  assert.equal(uiFiles.includes("gift.repository"), false);
+  assert.equal(uiFiles.includes("supabase"), false);
+});
+
+test("Gift Workspace exposes lifecycle, relations and future recommendation context", () => {
+  const gifts = mapKnowledgeToGifts([
+    item({ id: "idea", personId: "person-2", eventId: "event-1" }),
+    item({ id: "given", personId: "person-1", category: "given", classification: { userConfirmed: true } }),
+  ]);
+  const workspace = buildGiftWorkspaceViewModel(gifts, true);
+  assert.equal(workspace.isAuthenticated, true);
+  assert.deepEqual(workspace.personIds, ["person-1", "person-2"]);
+  assert.deepEqual(workspace.eventIds, ["event-1"]);
+  assert.deepEqual(workspace.recommendationContext.activeIdeas.map((gift) => gift.id), ["idea"]);
+  assert.deepEqual(workspace.recommendationContext.confirmedHistory.map((gift) => gift.id), ["given"]);
 });
 
 test("AI Gift Cache compatibility paths remain present and unchanged", async () => {

@@ -176,7 +176,7 @@ function buildFeatured(event: HomeEvent | null, memories: HomeMemory[], locale: 
 }
 
 function categoryLabel(event: HomeEvent, t: HomeTranslate): string | null {
-  if (event.source === "birthday") return event.relationLabel || t("categories.birthday");
+  if (event.source === "birthday") return t("categories.birthday");
   if (!event.category) return null;
   const supported: Record<string, string> = {
     birthday: t("categories.birthday"),
@@ -184,7 +184,7 @@ function categoryLabel(event: HomeEvent, t: HomeTranslate): string | null {
     work: t("categories.work"),
     personal: t("categories.personal"),
   };
-  return supported[event.category] ?? event.category;
+  return supported[event.category] ?? t("categories.other");
 }
 
 function buildUpcoming(events: HomeEvent[], locale: AppLocale, t: HomeTranslate): HomeUpcomingEvent[] {

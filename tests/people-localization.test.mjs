@@ -53,12 +53,13 @@ test("People presentation preserves user values and unprefixed routes", async ()
   assert.doesNotMatch(menu, /href: `\/$\{locale\}/);
 });
 
-test("recommendation compatibility keeps unknown copy as a safe fallback", async () => {
+test("recommendation uses semantic localization while unknown copy remains a safe fallback", async () => {
   const source = await readFile(path.join(root, "src/components/people/HappyRecommendationCard.tsx"), "utf8");
   assert.match(source, /recommendation\.title/);
   assert.match(source, /recommendation\.message/);
   assert.match(source, /recommendation\.actionLabel/);
-  assert.match(source, /Happy poleca dziś/);
+  assert.match(source, /recommendation\.translation/);
+  assert.doesNotMatch(source, /Happy poleca dziś/);
 });
 
 test("German mobile-critical controls remain fluid", async () => {

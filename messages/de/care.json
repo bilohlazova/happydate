@@ -1,0 +1,69 @@
+{
+  "page": {
+    "title": "Manchmal reicht es, wenn jemand einfach da ist.",
+    "subtitle": "HappyDate Care ist ein Ort für Unterstützung, Ruhe und einen menschlichen Umgang — auch in einer digitalen Welt.",
+    "intro": "Hier kannst du Fragen stellen, Bedenken teilen oder schreiben, wenn etwas unklar ist. Uns ist nicht nur wichtig, dass die Plattform funktioniert, sondern auch, dass sich die Menschen damit wohlfühlen.",
+    "aboutTitle": "Was ist HappyDate Care?",
+    "helpTitle": "Wobei können wir helfen?",
+    "approachTitle": "Unser Ansatz",
+    "approach": "Wir verlassen uns nicht nur auf automatische Antworten. Wir lesen Nachrichten, verstehen den Kontext und antworten menschlich. Technologie ist wichtig — Beziehungen sind wichtiger.",
+    "closing": "Wenn dich etwas beschäftigt, du Fragen hast oder einfach Hilfe brauchst, sind wir da.",
+    "response": "Wir antworten so schnell wie möglich, aufmerksam und respektvoll.",
+    "contactTitle": "Schreib an HappyDate Care"
+  },
+  "topics": {
+    "technical": {
+      "title": "Technischer Support",
+      "description": "Ereigniskalender, Erinnerungen und Kontoeinstellungen."
+    },
+    "gift": {
+      "title": "Geschenkauswahl",
+      "description": "Wie Empfehlungen, KI-Vorschläge und Personalisierung funktionieren."
+    },
+    "questions": {
+      "title": "Fragen und Anliegen",
+      "description": "Wenn etwas unklar ist oder du einfach fragen möchtest."
+    }
+  },
+  "memory": {
+    "title": "Erinnerung hinzufügen",
+    "subtitle": "Speichere ein Detail, das später hilfreich sein kann.",
+    "type": "Typ",
+    "types": {
+      "memory": "Erinnerung",
+      "flower": "Lieblingsblumen",
+      "coffee": "Lieblingskaffee",
+      "restaurant": "Restaurant",
+      "food": "Lieblingsessen",
+      "movie": "Film",
+      "book": "Buch",
+      "music": "Musik",
+      "hobby": "Hobby"
+    },
+    "fields": {
+      "title": "Titel",
+      "titlePlaceholder": "Zum Beispiel Lieblingscafé",
+      "value": "Wert",
+      "valuePlaceholder": "Zum Beispiel Cappuccino ohne Zucker",
+      "date": "Datum",
+      "note": "Notiz",
+      "notePlaceholder": "Weitere Details..."
+    },
+    "save": "Speichern",
+    "saving": "Wird gespeichert...",
+    "errors": {
+      "auth": "Der Benutzer konnte nicht ermittelt werden. Bitte erneut anmelden.",
+      "person": "Wähle eine Person.",
+      "title": "Gib einen Titel ein.",
+      "value": "Gib einen Wert ein.",
+      "save": "Speichern fehlgeschlagen. Versuche es erneut."
+    }
+  },
+  "peopleSelect": {
+    "label": "Person",
+    "loading": "Wird geladen...",
+    "empty": "Keine Personen",
+    "choose": "Person auswählen",
+    "error": "Personen konnten nicht geladen werden."
+  }
+}

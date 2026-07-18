@@ -17,6 +17,7 @@ export interface HomePerson {
   name: string;
   birthday: string | null;
   relationLabel: string | null;
+  relationKey: import("@/lib/repositories/person.types").PersonRelationKey | null;
   gender: "female" | "male" | "other" | "unspecified" | null;
 }
 

@@ -1,0 +1,89 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "add": "Add",
+    "save": "Save"
+  },
+  "categories": {
+    "birthday": "Birthday",
+    "work": "Work",
+    "personal": "Personal",
+    "other": "Other"
+  },
+  "form": {
+    "new": "New event",
+    "edit": "Edit event",
+    "titlePlaceholder": "Event title",
+    "notePlaceholder": "Note (optional)",
+    "delete": "Delete event"
+  },
+  "day": {
+    "today": "Today",
+    "empty": "No events",
+    "addFirst": "Add the first one",
+    "auto": "automatic",
+    "giftIdea": "Gift idea"
+  },
+  "countdown": {
+    "today": "Today 🎉",
+    "tomorrow": "Tomorrow",
+    "future": "In {days} days",
+    "past": "{days} days ago"
+  },
+  "search": {
+    "label": "Search",
+    "placeholder": "Search events, people and notes…",
+    "start": "Start typing to search",
+    "empty": "No results for “{query}”"
+  },
+  "navigation": {
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "today": "Today",
+    "month": "Month",
+    "week": "Week",
+    "day": "Day",
+    "addEvent": "Add event",
+    "upcoming": "Upcoming · 30 days",
+    "import": "Import",
+    "export": "Export .ics",
+    "birthdays": "{count, plural, one {# birthday} other {# birthdays}}"
+  },
+  "empty": {
+    "title": "No events",
+    "description": "Add your first event to see it in the calendar.",
+    "action": "Add event"
+  },
+  "validation": { "required": "Enter a title and date." },
+  "confirm": { "saveTitle": "Save changes?", "deleteTitle": "Delete event?" },
+  "toast": {
+    "loadError": "Events could not be loaded.",
+    "addError": "The event could not be added.",
+    "added": "Event added 🎉",
+    "saveError": "Changes could not be saved.",
+    "updated": "Updated ✅",
+    "deleteError": "The event could not be deleted.",
+    "deleted": "Deleted 🗑️",
+    "noImportEvents": "No events were found.",
+    "importError": "Import failed.",
+    "imported": "Imported {count} events 📥",
+    "fileError": "The file could not be read."
+  },
+  "insight": {
+    "note": "Note: {value}",
+    "topics": {
+      "coffee": "likes coffee",
+      "travel": "likes travelling",
+      "reading": "likes reading",
+      "watches": "collects watches",
+      "photography": "enjoys photography",
+      "music": "likes music",
+      "sport": "is physically active",
+      "relax": "values time to relax",
+      "gaming": "plays games",
+      "cooking": "likes cooking"
+    }
+  },
+  "accessibility": { "loading": "Loading calendar" }
+}

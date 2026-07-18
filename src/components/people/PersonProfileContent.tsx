@@ -99,7 +99,14 @@ function ProfileHero({
   t: Translator;
 }) {
   const hero = model.hero!;
+  const peopleT = useTranslations("people");
   const healthLabel = model.health ? t(`profileUi.health.${model.health.level}`) : null;
+  const relationVariant = hero.gender === "female" || hero.gender === "male"
+    ? hero.gender
+    : "neutral";
+  const relationLabel = hero.relationKey && hero.relationKey !== "other"
+    ? peopleT(`relationships.${hero.relationKey}.${relationVariant}`)
+    : hero.relationLabel;
   return (
     <section className="relative overflow-hidden rounded-[1.4rem] border border-white/80 bg-white/85 p-4 shadow-[0_16px_44px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:p-5">
       <div className="absolute -right-12 -top-16 h-40 w-40 rounded-full bg-gradient-to-br from-sky-200/60 to-blue-100/10 blur-2xl" aria-hidden="true" />
@@ -107,7 +114,7 @@ function ProfileHero({
         <Avatar name={hero.name} className="!h-16 !w-16 !shrink-0 !text-xl !shadow-lg sm:!h-20 sm:!w-20 sm:!text-2xl" />
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{hero.name}</h1>
-          {hero.relationLabel && <p className="mt-0.5 truncate text-sm font-bold text-slate-500">{hero.relationLabel}</p>}
+          {relationLabel && <p className="mt-0.5 truncate text-sm font-bold text-slate-500">{relationLabel}</p>}
           <div className="mt-2 flex flex-wrap gap-1.5">
             {hero.daysUntilBirthday !== null && (
               <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[0.7rem] font-extrabold text-rose-600">

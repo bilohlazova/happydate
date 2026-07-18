@@ -3,6 +3,7 @@ import { buildMemoryInsightForPerson } from "../brain/engines/memoryInsightEngin
 import type { Insight, PersonKnowledge } from "../brain/types.ts";
 import { getAiEligibleKnowledge, type KnowledgeItem } from "../knowledge/index.ts";
 import type { PersonRow } from "../repositories/person.types.ts";
+import { canonicalRelationKey } from "./canonicalRelation.ts";
 import type {
   PeoplePageViewModel,
   PersonBrainInsightViewModel,
@@ -26,6 +27,10 @@ function meaningful(value: string | null | undefined): string | null {
 
 function relationLabel(person: PersonRow): string | null {
   return meaningful(person.relation_label) ?? meaningful(person.relationship);
+}
+
+function relationKey(person: PersonRow) {
+  return canonicalRelationKey(person.relation_key, relationLabel(person));
 }
 
 function localDate(value: string): Date | null {
@@ -172,7 +177,7 @@ export function buildPeoplePageViewModel({
       name: person.name,
       relationship: person.relationship,
       relationLabel: relationLabel(person),
-      relationKey: person.relation_key,
+      relationKey: relationKey(person),
       relationCategory: person.relation_category,
       gender: person.gender,
       birthday: person.birthday,
@@ -241,7 +246,15 @@ export function buildPersonProfileViewModel({
   return {
     isAuthenticated,
     found: true,
-    hero: { id: person.id, name: person.name, relationLabel: relationLabel(person), birthday: person.birthday, daysUntilBirthday: daysUntilBirthday(person.birthday, currentDate) },
+    hero: {
+      id: person.id,
+      name: person.name,
+      relationLabel: relationLabel(person),
+      relationKey: relationKey(person),
+      gender: person.gender,
+      birthday: person.birthday,
+      daysUntilBirthday: daysUntilBirthday(person.birthday, currentDate),
+    },
     likes: values(preferences.filter((item) => item.polarity === "likes" || item.polarity === "prefers")),
     dislikes: values(preferences.filter((item) => item.polarity === "dislikes" || item.polarity === "avoids")),
     interests: values(interestRecords),

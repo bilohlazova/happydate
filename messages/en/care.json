@@ -1,0 +1,69 @@
+{
+  "page": {
+    "title": "Sometimes it is enough for someone simply to be there.",
+    "subtitle": "HappyDate Care is a space for support, calm and a human approach — even in a world of technology.",
+    "intro": "Here you can ask a question, share a concern or write whenever something is unclear. We care not only about how the platform works, but also about the comfort of the people using it.",
+    "aboutTitle": "What is HappyDate Care?",
+    "helpTitle": "How can we help?",
+    "approachTitle": "Our approach",
+    "approach": "We do not rely on automatic replies. We read messages, understand context and respond like people. Technology matters — but relationships matter more.",
+    "closing": "If something worries you, makes you wonder or you simply need help, we are here.",
+    "response": "We reply as quickly as possible, with care and respect.",
+    "contactTitle": "Write to HappyDate Care"
+  },
+  "topics": {
+    "technical": {
+      "title": "Technical support",
+      "description": "Event calendar, reminders and account settings."
+    },
+    "gift": {
+      "title": "Choosing a gift",
+      "description": "How recommendations, AI suggestions and personalization work."
+    },
+    "questions": {
+      "title": "Questions and concerns",
+      "description": "When something is unclear or you simply want to ask."
+    }
+  },
+  "memory": {
+    "title": "Add a memory",
+    "subtitle": "Save a detail that may be useful later.",
+    "type": "Type",
+    "types": {
+      "memory": "Memory",
+      "flower": "Favorite flowers",
+      "coffee": "Favorite coffee",
+      "restaurant": "Restaurant",
+      "food": "Favorite food",
+      "movie": "Movie",
+      "book": "Book",
+      "music": "Music",
+      "hobby": "Hobby"
+    },
+    "fields": {
+      "title": "Title",
+      "titlePlaceholder": "For example, favorite café",
+      "value": "Value",
+      "valuePlaceholder": "For example, sugar-free cappuccino",
+      "date": "Date",
+      "note": "Note",
+      "notePlaceholder": "Additional details..."
+    },
+    "save": "Save",
+    "saving": "Saving...",
+    "errors": {
+      "auth": "The user could not be identified. Sign in again.",
+      "person": "Choose a person.",
+      "title": "Enter a title.",
+      "value": "Enter a value.",
+      "save": "Could not save. Try again."
+    }
+  },
+  "peopleSelect": {
+    "label": "Person",
+    "loading": "Loading...",
+    "empty": "No people",
+    "choose": "Choose a person",
+    "error": "People could not be loaded."
+  }
+}

@@ -77,6 +77,8 @@ export interface PersonProfileViewModel {
     id: string;
     name: string;
     relationLabel: string | null;
+    relationKey: import("@/lib/repositories/person.types").PersonRelationKey | null;
+    gender: import("@/lib/repositories/person.types").PersonGender;
     birthday: string | null;
     daysUntilBirthday: number | null;
   } | null;

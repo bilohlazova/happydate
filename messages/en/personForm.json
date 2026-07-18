@@ -1,1 +1,105 @@
-{"title":{"add":"Add manually","edit":"Edit person"},"subtitle":{"add":"Enter the important person's basic details.","edit":"Update the person's details."},"hint":"The simplest way to add someone.","fields":{"name":"Name","gender":"Gender","relationship":"Relationship","birthday":"Birthday"},"gender":{"optional":"Optional","female":"Woman","male":"Man","other":"Other","unspecified":"Prefer not to say","unspecifiedClosed":"Not specified","choose":"Choose gender","change":"Change","title":"Choose gender","close":"Close gender selection"},"relationship":{"choose":"Choose relationship","change":"Change","title":"Choose relationship","clear":"Clear","close":"Close relationship selection","customLabel":"Enter a custom relationship","customPlaceholder":"e.g. Coach, Hairdresser, Carer","useCustom":"Use this relationship"},"actions":{"back":"Back","save":"Save person","update":"Save changes","cancel":"Cancel"},"validation":{"nameRequired":"Name is required.","unauthorized":"You must be signed in to add a person."},"states":{"saving":"Saving...","saveError":"Could not save the person. Try again."},"accessibility":{"form":"Add person form","editForm":"Edit person form","genderGroup":"Gender selection","relationshipSelect":"Relationship selection","birthdayInput":"Birthday date","save":"Save person","update":"Save changes"}}
+{
+  "title": { "add": "Add manually", "edit": "Edit person" },
+  "subtitle": {
+    "add": "Enter the important person's basic details.",
+    "edit": "Update the person's details."
+  },
+  "hint": "The simplest way to add someone.",
+  "capture": {
+    "addCardImage": "Add a business card photo",
+    "cardPreview": "Business card preview",
+    "linkPlaceholder": "Paste a vCard, MECARD, link or QR text...",
+    "parseLink": "Fill from link / QR"
+  },
+  "fields": {
+    "name": "Name",
+    "gender": "Gender",
+    "relationship": "Relationship",
+    "birthday": "Birthday"
+  },
+  "gender": {
+    "optional": "Optional",
+    "female": "Woman",
+    "male": "Man",
+    "other": "Other",
+    "unspecified": "Prefer not to say",
+    "unspecifiedClosed": "Not specified",
+    "choose": "Choose gender",
+    "change": "Change",
+    "title": "Choose gender",
+    "close": "Close gender selection"
+  },
+  "relationship": {
+    "choose": "Choose relationship",
+    "change": "Change",
+    "title": "Choose relationship",
+    "clear": "Clear",
+    "close": "Close relationship selection",
+    "customLabel": "Enter a custom relationship",
+    "customPlaceholder": "e.g. Coach, Hairdresser, Carer",
+    "useCustom": "Use this relationship"
+  },
+  "actions": {
+    "back": "Back",
+    "save": "Save person",
+    "update": "Save changes",
+    "cancel": "Cancel"
+  },
+  "validation": {
+    "nameRequired": "Name is required.",
+    "unauthorized": "You must be signed in to add a person."
+  },
+  "states": {
+    "saving": "Saving...",
+    "saveError": "Could not save the person. Try again.",
+    "deleteError": "Could not delete the person.",
+    "deleting": "Deleting..."
+  },
+  "contact": {
+    "unauthorizedAdd": "You must be signed in to add a person.",
+    "nameRequired": "Name is required.",
+    "saveError": "Could not save the person. Try again.",
+    "unsupported": "This WebView does not support contact selection, but you can add a person manually.",
+    "denied": "Allow HappyDate to access contacts in settings or add a person manually.",
+    "noneSelected": "No person was selected. You can try again.",
+    "unauthorizedImport": "You must be signed in to import contacts.",
+    "noNew": "There are no new people to import.",
+    "importError": "Could not import people. Try again.",
+    "imageAdded": "Photo added. Complete the business card details and save the person.",
+    "parseFailed": "Could not recognize the details. Enter them in the fields below.",
+    "parsed": "The details were filled from the link / QR code.",
+    "success": "Done! Added {count} people 🎉",
+    "missing": "Without a birthday: {birthdays}. Without a relationship: {relations}.",
+    "duplicatesSkipped": "Existing contacts skipped: {count}.",
+    "completeData": "Complete details",
+    "goPeople": "Go to people",
+    "selected": "Selected: {count}",
+    "review": "Review the list before importing. Nothing is saved without your confirmation.",
+    "exists": "Already exists",
+    "hidden": "+{count} more",
+    "willAdd": "To be added: {count}",
+    "alreadyExists": "Already in HappyDate: {count}",
+    "importing": "Importing...",
+    "import": "Import: {count}",
+    "change": "Change selection",
+    "chooseTitle": "Choose important contacts",
+    "privacy": "Only selected people are imported. Other contacts will not be saved in HappyDate.",
+    "settings": "Settings",
+    "manual": "Add manually"
+  },
+  "delete": {
+    "action": "Delete",
+    "confirm": "Remove this person from HappyDate? This action cannot be undone.",
+    "confirmAction": "Delete person",
+    "close": "Close person actions"
+  },
+  "accessibility": {
+    "form": "Add person form",
+    "editForm": "Edit person form",
+    "genderGroup": "Gender selection",
+    "relationshipSelect": "Relationship selection",
+    "birthdayInput": "Birthday date",
+    "save": "Save person",
+    "update": "Save changes"
+  }
+}

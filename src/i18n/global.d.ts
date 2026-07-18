@@ -9,6 +9,9 @@ import type notesMessages from "../../messages/pl/notes.json";
 import type remindersMessages from "../../messages/pl/reminders.json";
 import type homeMessages from "../../messages/pl/home.json";
 import type assistantMessages from "../../messages/pl/assistant.json";
+import type giftMessages from "../../messages/pl/gift.json";
+import type dashboardMessages from "../../messages/pl/dashboard.json";
+import type careMessages from "../../messages/pl/care.json";
 import type { AppLocale } from "./config";
 
 declare module "next-intl" {
@@ -26,6 +29,9 @@ declare module "next-intl" {
       reminders: typeof remindersMessages;
       home: typeof homeMessages;
       assistant: typeof assistantMessages;
+      gift: typeof giftMessages;
+      dashboard: typeof dashboardMessages;
+      care: typeof careMessages;
     };
   }
 }

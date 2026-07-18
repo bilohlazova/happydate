@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { getPeople } from "@/lib/repositories/personRepository";
 import type { PersonRow } from "@/lib/repositories/person.types";
 import { MobileUI } from "@/lib/theme/mobile";
+import { useTranslations } from "next-intl";
 
 export interface PeopleSelectProps {
   userId: string;
@@ -21,8 +22,10 @@ export default function PeopleSelect({
   onChange,
   disabled = false,
 }: PeopleSelectProps) {
+  const t = useTranslations("care.peopleSelect");
   const [people, setPeople] = useState<PersonRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     if (!userId) {
@@ -36,6 +39,7 @@ export default function PeopleSelect({
     async function loadPeople() {
       try {
         setLoading(true);
+        setHasError(false);
 
         const rows = await getPeople(userId);
 
@@ -44,6 +48,7 @@ export default function PeopleSelect({
         }
       } catch (error) {
         console.error("[PeopleSelect] getPeople failed:", error);
+        if (isMounted) setHasError(true);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -60,11 +65,8 @@ export default function PeopleSelect({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label
-        htmlFor={SELECT_ID}
-        className="text-sm font-bold text-gray-700"
-      >
-        Osoba
+      <label htmlFor={SELECT_ID} className="text-sm font-bold text-gray-700">
+        {t("label")}
       </label>
 
       <select
@@ -75,11 +77,13 @@ export default function PeopleSelect({
         className={`${MobileUI.input} disabled:bg-gray-100`}
       >
         <option value="">
-          {loading
-            ? "Ładowanie..."
+          {hasError
+            ? t("error")
+            : loading
+            ? t("loading")
             : people.length === 0
-              ? "Brak osób"
-              : "Wybierz osobę"}
+            ? t("empty")
+            : t("choose")}
         </option>
 
         {people.map((person) => (
@@ -88,6 +92,7 @@ export default function PeopleSelect({
           </option>
         ))}
       </select>
+      {hasError && <p className="text-xs text-rose-600">{t("error")}</p>}
     </div>
   );
 }

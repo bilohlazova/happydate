@@ -14,6 +14,9 @@ type NotesMessages = typeof import("../../messages/pl/notes.json");
 type RemindersMessages = typeof import("../../messages/pl/reminders.json");
 type HomeMessages = typeof import("../../messages/pl/home.json");
 type AssistantMessages = typeof import("../../messages/pl/assistant.json");
+type GiftMessages = typeof import("../../messages/pl/gift.json");
+type DashboardMessages = typeof import("../../messages/pl/dashboard.json");
+type CareMessages = typeof import("../../messages/pl/care.json");
 
 export interface AppMessages extends AbstractIntlMessages {
   common: CommonMessages;
@@ -27,6 +30,9 @@ export interface AppMessages extends AbstractIntlMessages {
   reminders: RemindersMessages;
   home: HomeMessages;
   assistant: AssistantMessages;
+  gift: GiftMessages;
+  dashboard: DashboardMessages;
+  care: CareMessages;
 }
 
 type CommonMessageLoader = () => Promise<CommonMessages>;
@@ -40,6 +46,9 @@ type NotesMessageLoader = () => Promise<NotesMessages>;
 type RemindersMessageLoader = () => Promise<RemindersMessages>;
 type HomeMessageLoader = () => Promise<HomeMessages>;
 type AssistantMessageLoader = () => Promise<AssistantMessages>;
+type GiftMessageLoader = () => Promise<GiftMessages>;
+type DashboardMessageLoader = () => Promise<DashboardMessages>;
+type CareMessageLoader = () => Promise<CareMessages>;
 
 const COMMON_MESSAGE_LOADERS: Record<AppLocale, CommonMessageLoader> = {
   pl: () => import("../../messages/pl/common.json").then((module) => module.default),
@@ -120,6 +129,27 @@ const ASSISTANT_MESSAGE_LOADERS: Record<AppLocale, AssistantMessageLoader> = {
   en: () => import("../../messages/en/assistant.json").then((module) => module.default),
   ru: () => import("../../messages/ru/assistant.json").then((module) => module.default),
   de: () => import("../../messages/de/assistant.json").then((module) => module.default),
+};
+const GIFT_MESSAGE_LOADERS: Record<AppLocale, GiftMessageLoader> = {
+  pl: () => import("../../messages/pl/gift.json").then((module) => module.default),
+  uk: () => import("../../messages/uk/gift.json").then((module) => module.default),
+  en: () => import("../../messages/en/gift.json").then((module) => module.default),
+  ru: () => import("../../messages/ru/gift.json").then((module) => module.default),
+  de: () => import("../../messages/de/gift.json").then((module) => module.default),
+};
+const DASHBOARD_MESSAGE_LOADERS: Record<AppLocale, DashboardMessageLoader> = {
+  pl: () => import("../../messages/pl/dashboard.json").then((module) => module.default),
+  uk: () => import("../../messages/uk/dashboard.json").then((module) => module.default),
+  en: () => import("../../messages/en/dashboard.json").then((module) => module.default),
+  ru: () => import("../../messages/ru/dashboard.json").then((module) => module.default),
+  de: () => import("../../messages/de/dashboard.json").then((module) => module.default),
+};
+const CARE_MESSAGE_LOADERS: Record<AppLocale, CareMessageLoader> = {
+  pl: () => import("../../messages/pl/care.json").then((module) => module.default),
+  uk: () => import("../../messages/uk/care.json").then((module) => module.default),
+  en: () => import("../../messages/en/care.json").then((module) => module.default),
+  ru: () => import("../../messages/ru/care.json").then((module) => module.default),
+  de: () => import("../../messages/de/care.json").then((module) => module.default),
 };
 
 async function loadCommonMessages(locale: AppLocale): Promise<CommonMessages> {
@@ -206,7 +236,7 @@ async function loadPersonFormMessages(locale: AppLocale): Promise<PersonFormMess
 }
 
 export async function loadMessages(locale: AppLocale): Promise<AppMessages> {
-  const [common, navigation, profile, auth, people, person, personForm, notes, reminders, home, assistant] = await Promise.all([
+  const [common, navigation, profile, auth, people, person, personForm, notes, reminders, home, assistant, gift, dashboard, care] = await Promise.all([
     loadCommonMessages(locale),
     loadNavigationMessages(locale),
     loadProfileMessages(locale),
@@ -218,6 +248,9 @@ export async function loadMessages(locale: AppLocale): Promise<AppMessages> {
     REMINDERS_MESSAGE_LOADERS[locale](),
     HOME_MESSAGE_LOADERS[locale](),
     ASSISTANT_MESSAGE_LOADERS[locale](),
+    GIFT_MESSAGE_LOADERS[locale](),
+    DASHBOARD_MESSAGE_LOADERS[locale](),
+    CARE_MESSAGE_LOADERS[locale](),
   ]);
-  return { common, navigation, profile, auth, people, person, personForm, notes, reminders, home, assistant };
+  return { common, navigation, profile, auth, people, person, personForm, notes, reminders, home, assistant, gift, dashboard, care };
 }

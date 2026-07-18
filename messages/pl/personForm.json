@@ -1,1 +1,105 @@
-{"title":{"add":"Dodaj ręcznie","edit":"Edytuj osobę"},"subtitle":{"add":"Wpisz podstawowe dane ważnej osoby.","edit":"Zaktualizuj dane osoby."},"hint":"Najprostsza ścieżka dodawania.","fields":{"name":"Imię","gender":"Płeć","relationship":"Relacja","birthday":"Urodziny"},"gender":{"optional":"Opcjonalnie","female":"Kobieta","male":"Mężczyzna","other":"Inna","unspecified":"Wolę nie podawać","unspecifiedClosed":"Nie podano","choose":"Wybierz płeć","change":"Zmień","title":"Wybierz płeć","close":"Zamknij wybór płci"},"relationship":{"choose":"Wybierz relację","change":"Zmień","title":"Wybierz relację","clear":"Wyczyść","close":"Zamknij wybór relacji","customLabel":"Wpisz własną relację","customPlaceholder":"np. Trener, Fryzjerka, Opiekunka","useCustom":"Użyj tej relacji"},"actions":{"back":"Wróć","save":"Zapisz osobę","update":"Zapisz zmiany","cancel":"Anuluj"},"validation":{"nameRequired":"Imię jest wymagane.","unauthorized":"Musisz być zalogowany, aby dodać osobę."},"states":{"saving":"Zapisywanie...","saveError":"Nie udało się zapisać osoby. Spróbuj ponownie."},"accessibility":{"form":"Formularz dodawania osoby","editForm":"Formularz edycji osoby","genderGroup":"Wybór płci","relationshipSelect":"Wybór relacji","birthdayInput":"Data urodzin","save":"Zapisz osobę","update":"Zapisz zmiany"}}
+{
+  "title": { "add": "Dodaj ręcznie", "edit": "Edytuj osobę" },
+  "subtitle": {
+    "add": "Wpisz podstawowe dane ważnej osoby.",
+    "edit": "Zaktualizuj dane osoby."
+  },
+  "hint": "Najprostsza ścieżka dodawania.",
+  "capture": {
+    "addCardImage": "Dodaj zdjęcie wizytówki",
+    "cardPreview": "Podgląd wizytówki",
+    "linkPlaceholder": "Wklej vCard, MECARD, link lub tekst z QR...",
+    "parseLink": "Uzupełnij z linku / QR"
+  },
+  "fields": {
+    "name": "Imię",
+    "gender": "Płeć",
+    "relationship": "Relacja",
+    "birthday": "Urodziny"
+  },
+  "gender": {
+    "optional": "Opcjonalnie",
+    "female": "Kobieta",
+    "male": "Mężczyzna",
+    "other": "Inna",
+    "unspecified": "Wolę nie podawać",
+    "unspecifiedClosed": "Nie podano",
+    "choose": "Wybierz płeć",
+    "change": "Zmień",
+    "title": "Wybierz płeć",
+    "close": "Zamknij wybór płci"
+  },
+  "relationship": {
+    "choose": "Wybierz relację",
+    "change": "Zmień",
+    "title": "Wybierz relację",
+    "clear": "Wyczyść",
+    "close": "Zamknij wybór relacji",
+    "customLabel": "Wpisz własną relację",
+    "customPlaceholder": "np. Trener, Fryzjerka, Opiekunka",
+    "useCustom": "Użyj tej relacji"
+  },
+  "actions": {
+    "back": "Wróć",
+    "save": "Zapisz osobę",
+    "update": "Zapisz zmiany",
+    "cancel": "Anuluj"
+  },
+  "validation": {
+    "nameRequired": "Imię jest wymagane.",
+    "unauthorized": "Musisz być zalogowany, aby dodać osobę."
+  },
+  "states": {
+    "saving": "Zapisywanie...",
+    "saveError": "Nie udało się zapisać osoby. Spróbuj ponownie.",
+    "deleteError": "Nie udało się usunąć osoby.",
+    "deleting": "Usuwanie..."
+  },
+  "contact": {
+    "unauthorizedAdd": "Musisz być zalogowany, aby dodać osobę.",
+    "nameRequired": "Imię jest wymagane.",
+    "saveError": "Nie udało się zapisać osoby. Spróbuj ponownie.",
+    "unsupported": "Ten WebView nie udostępnia wyboru kontaktów, ale możesz dodać osobę ręcznie.",
+    "denied": "Zezwól HappyDate na dostęp do kontaktów w ustawieniach albo dodaj osobę ręcznie.",
+    "noneSelected": "Nie wybrano żadnej osoby. Możesz spróbować ponownie.",
+    "unauthorizedImport": "Musisz być zalogowany, aby importować kontakty.",
+    "noNew": "Nie ma nowych osób do importu.",
+    "importError": "Nie udało się zaimportować osób. Spróbuj ponownie.",
+    "imageAdded": "Zdjęcie dodane. Uzupełnij dane z wizytówki i zapisz osobę.",
+    "parseFailed": "Nie udało się rozpoznać danych. Wpisz je w polach poniżej.",
+    "parsed": "Dane zostały uzupełnione z linku / QR.",
+    "success": "Gotowe! Dodano {count} osób 🎉",
+    "missing": "Bez daty urodzin: {birthdays}. Bez relacji: {relations}.",
+    "duplicatesSkipped": "Pominięto istniejące kontakty: {count}.",
+    "completeData": "Uzupełnij dane",
+    "goPeople": "Przejdź do osób",
+    "selected": "Wybrano: {count}",
+    "review": "Sprawdź listę przed importem. Nic nie zapisujemy bez Twojego potwierdzenia.",
+    "exists": "Już istnieje",
+    "hidden": "+{count} więcej",
+    "willAdd": "Do dodania: {count}",
+    "alreadyExists": "Już istnieje w HappyDate: {count}",
+    "importing": "Importowanie...",
+    "import": "Importuj: {count}",
+    "change": "Zmień wybór",
+    "chooseTitle": "Wybierz ważne kontakty",
+    "privacy": "Importujemy tylko wybrane osoby. Pozostałe kontakty nie zostaną zapisane w HappyDate.",
+    "settings": "Ustawienia",
+    "manual": "Dodaj ręcznie"
+  },
+  "delete": {
+    "action": "Usuń",
+    "confirm": "Usunąć tę osobę z HappyDate? Tej akcji nie da się cofnąć.",
+    "confirmAction": "Usuń osobę",
+    "close": "Zamknij akcje osoby"
+  },
+  "accessibility": {
+    "form": "Formularz dodawania osoby",
+    "editForm": "Formularz edycji osoby",
+    "genderGroup": "Wybór płci",
+    "relationshipSelect": "Wybór relacji",
+    "birthdayInput": "Data urodzin",
+    "save": "Zapisz osobę",
+    "update": "Zapisz zmiany"
+  }
+}

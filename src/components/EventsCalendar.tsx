@@ -16,7 +16,8 @@ import {
   isSameMonth,
   isToday,
 } from "date-fns";
-import { pl } from "date-fns/locale";
+import { de, enUS, pl, ru, uk } from "date-fns/locale";
+import { useLocale, useTranslations } from "next-intl";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import CalendarToolbar from "./CalendarToolbar";
 
@@ -46,21 +47,18 @@ type EventsCalendarProps = {
 
 /* ================= LOCALIZER ================= */
 
-const LOCALIZER = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }),
-  getDay,
-  locales: { pl },
-});
+const DATE_LOCALES = { pl, uk, en: enUS, ru, de } as const;
 
 /* ================= CATEGORY STYLES ================= */
 
-const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
+const CATEGORY_STYLES: Record<
+  string,
+  { bg: string; text: string; border: string }
+> = {
   birthday: { bg: "#fce7f3", text: "#9d174d", border: "#fbcfe8" },
-  work:     { bg: "#fef3c7", text: "#92400e", border: "#fde68a" },
+  work: { bg: "#fef3c7", text: "#92400e", border: "#fde68a" },
   personal: { bg: "#d1fae5", text: "#065f46", border: "#a7f3d0" },
-  default:  { bg: "#e0f2fe", text: "#0369a1", border: "#bae6fd" },
+  default: { bg: "#e0f2fe", text: "#0369a1", border: "#bae6fd" },
 };
 
 /* ================= COMPONENTS MAP ================= */
@@ -78,23 +76,6 @@ function toYMD(d: Date): string {
 
 /* ================= MESSAGES & FORMATS ================= */
 
-const MESSAGES = {
-  next: "→",
-  previous: "←",
-  today: "Dziś",
-  month: "Miesiąc",
-  week: "Tydzień",
-  day: "Dzień",
-  agenda: "Agenda",
-  showMore: (count: number) => `+${count}`,
-};
-
-const FORMATS = {
-  dayFormat: (date: Date) => format(date, "dd", { locale: pl }),
-  weekdayFormat: (date: Date) => format(date, "EEE", { locale: pl }).toUpperCase(),
-  monthHeaderFormat: (date: Date) => format(date, "LLLL yyyy", { locale: pl }),
-};
-
 /* ================= INNER CLIENT COMPONENT ================= */
 // Винесено в окремий компонент щоб уникнути помилки серіалізації props
 
@@ -103,17 +84,54 @@ function EventsCalendarInner({
   onDayClick,
   onEventClick,
 }: EventsCalendarProps) {
+  const locale = useLocale();
+  const t = useTranslations("dashboard.navigation");
+  const dateLocale = DATE_LOCALES[locale as keyof typeof DATE_LOCALES] ?? pl;
+  const localizer = useMemo(
+    () =>
+      dateFnsLocalizer({
+        format,
+        parse,
+        startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }),
+        getDay,
+        locales: DATE_LOCALES,
+      }),
+    []
+  );
+  const messages = useMemo(
+    () => ({
+      next: "→",
+      previous: "←",
+      today: t("today"),
+      month: t("month"),
+      week: t("week"),
+      day: t("day"),
+      agenda: "Agenda",
+      showMore: (count: number) => `+${count}`,
+    }),
+    [t]
+  );
+  const formats = useMemo(
+    () => ({
+      dayFormat: (date: Date) => format(date, "dd", { locale: dateLocale }),
+      weekdayFormat: (date: Date) =>
+        format(date, "EEE", { locale: dateLocale }).toUpperCase(),
+      monthHeaderFormat: (date: Date) =>
+        format(date, "LLLL yyyy", { locale: dateLocale }),
+    }),
+    [dateLocale]
+  );
   const [view, setView] = useState<View>(Views.MONTH);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
-  const handleView     = useCallback((v: View) => setView(v), []);
+  const handleView = useCallback((v: View) => setView(v), []);
   const handleNavigate = useCallback((date: Date) => setCurrentDate(date), []);
 
   const events: CalendarEvent[] = useMemo(
     () =>
       (items || []).map((e) => {
         const start = new Date(`${e.date}T00:00:00`);
-        const end   = new Date(start);
+        const end = new Date(start);
         end.setDate(end.getDate() + 1);
         return {
           id: e.id,
@@ -148,18 +166,18 @@ function EventsCalendarInner({
 
   const eventPropGetter = useCallback((event: CalendarEvent) => {
     const cat = event.resource?.category ?? "default";
-    const c   = CATEGORY_STYLES[cat] ?? CATEGORY_STYLES.default;
+    const c = CATEGORY_STYLES[cat] ?? CATEGORY_STYLES.default;
     return {
       style: {
         backgroundColor: c.bg,
-        color:            c.text,
-        border:           `1px solid ${c.border}`,
-        borderRadius:     "999px",
-        fontWeight:       600,
-        fontSize:         "11px",
-        padding:          "1px 7px",
-        boxShadow:        "none",
-        cursor:           "pointer",
+        color: c.text,
+        border: `1px solid ${c.border}`,
+        borderRadius: "999px",
+        fontWeight: 600,
+        fontSize: "11px",
+        padding: "1px 7px",
+        boxShadow: "none",
+        cursor: "pointer",
       },
     };
   }, []);
@@ -167,13 +185,13 @@ function EventsCalendarInner({
   const dayPropGetter = useCallback(
     (date: Date) => {
       const inMonth = isSameMonth(date, currentDate);
-      const today   = isToday(date);
+      const today = isToday(date);
       return {
         className: today ? "hd-today" : "",
         style: {
-          cursor:          inMonth ? "pointer" : "default",
-          opacity:         inMonth ? 1 : 0.35,
-          pointerEvents:   inMonth ? ("auto" as const) : ("none" as const),
+          cursor: inMonth ? "pointer" : "default",
+          opacity: inMonth ? 1 : 0.35,
+          pointerEvents: inMonth ? ("auto" as const) : ("none" as const),
           backgroundColor: today ? "rgba(14,165,233,0.06)" : undefined,
         },
       };
@@ -188,7 +206,7 @@ function EventsCalendarInner({
     >
       <div style={{ height: 380 }}>
         <Calendar
-          localizer={LOCALIZER}
+          localizer={localizer}
           events={events}
           view={view}
           onView={handleView}
@@ -203,8 +221,8 @@ function EventsCalendarInner({
           views={[Views.MONTH, Views.WEEK, Views.DAY]}
           defaultView={Views.MONTH}
           popup
-          messages={MESSAGES}
-          formats={FORMATS}
+          messages={messages}
+          formats={formats}
           eventPropGetter={eventPropGetter}
           dayPropGetter={dayPropGetter}
           components={CALENDAR_COMPONENTS}

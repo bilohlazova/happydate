@@ -1,0 +1,69 @@
+{
+  "page": {
+    "title": "Czasem wystarczy, że ktoś po prostu jest.",
+    "subtitle": "HappyDate Care to miejsce stworzone z myślą o wsparciu, spokoju i ludzkim podejściu — nawet w świecie technologii.",
+    "intro": "To przestrzeń, w której możesz zadać pytanie, podzielić się wątpliwością lub napisać wtedy, gdy coś jest dla Ciebie niejasne. Dbamy nie tylko o działanie platformy, ale też o komfort osób, które z niej korzystają.",
+    "aboutTitle": "Czym jest HappyDate Care?",
+    "helpTitle": "W czym możemy pomóc?",
+    "approachTitle": "Nasze podejście",
+    "approach": "Nie działamy na zasadzie automatycznych odpowiedzi. Czytamy wiadomości, rozumiemy kontekst i odpowiadamy po ludzku. Technologia jest ważna — ale relacje są ważniejsze.",
+    "closing": "Jeśli coś Cię martwi, zastanawia lub po prostu potrzebujesz pomocy — jesteśmy tutaj.",
+    "response": "Odpowiadamy możliwie szybko, z uważnością i szacunkiem.",
+    "contactTitle": "Napisz do HappyDate Care"
+  },
+  "topics": {
+    "technical": {
+      "title": "Wsparcie techniczne",
+      "description": "Kalendarz wydarzeń, przypomnienia, ustawienia konta."
+    },
+    "gift": {
+      "title": "Wybór prezentu",
+      "description": "Jak działają rekomendacje, sugestie AI i personalizacja."
+    },
+    "questions": {
+      "title": "Pytania i wątpliwości",
+      "description": "Jeśli coś jest niejasne lub po prostu chcesz zapytać."
+    }
+  },
+  "memory": {
+    "title": "Dodaj pamięć",
+    "subtitle": "Zapisz detal, który przyda się później.",
+    "type": "Typ",
+    "types": {
+      "memory": "Wspomnienie",
+      "flower": "Ulubione kwiaty",
+      "coffee": "Ulubiona kawa",
+      "restaurant": "Restauracja",
+      "food": "Ulubione jedzenie",
+      "movie": "Film",
+      "book": "Książka",
+      "music": "Muzyka",
+      "hobby": "Hobby"
+    },
+    "fields": {
+      "title": "Tytuł",
+      "titlePlaceholder": "Np. Ulubiona kawiarnia",
+      "value": "Wartość",
+      "valuePlaceholder": "Np. Cappuccino bez cukru",
+      "date": "Data",
+      "note": "Notatka",
+      "notePlaceholder": "Dodatkowe szczegóły..."
+    },
+    "save": "Zapisz",
+    "saving": "Zapisywanie...",
+    "errors": {
+      "auth": "Nie udało się ustalić użytkownika. Zaloguj się ponownie.",
+      "person": "Wybierz osobę.",
+      "title": "Podaj tytuł.",
+      "value": "Podaj wartość.",
+      "save": "Nie udało się zapisać. Spróbuj ponownie."
+    }
+  },
+  "peopleSelect": {
+    "label": "Osoba",
+    "loading": "Ładowanie...",
+    "empty": "Brak osób",
+    "choose": "Wybierz osobę",
+    "error": "Nie udało się wczytać osób."
+  }
+}

@@ -5,7 +5,7 @@
   "assistant": { "ask": "Ask Happy", "listen": "Listen to a short brief", "stop": "Stop the brief", "read": "Read the short brief", "sectionLabel": "Happy actions", "close": "Close", "speechError": "Voice playback failed. You can read the brief below." },
   "countdown": { "today": "today", "tomorrow": "tomorrow", "days": "in {count} days" },
   "events": { "birthdayTitle": "Birthday: {name}" },
-  "categories": { "birthday": "Birthday", "anniversary": "Anniversary", "work": "Work", "personal": "Personal" },
+  "categories": { "birthday": "Birthday", "anniversary": "Anniversary", "work": "Work", "personal": "Personal", "other": "Other" },
   "insights": { "birthday": "{name}'s birthday — {countdown}", "event": "{title} — {countdown}", "savedGifts": "You have {count} saved gift ideas", "hasPreferences": "Happy already knows some of {name}'s preferences" },
   "brief": { "intro": "You have {count} important items today.", "featured": "Coming up: {title}, {countdown}." },
   "featured": { "importantLabel": "Nearest important date", "nextLabel": "Next event", "preferences": "Saved preferences", "personCta": "View person profile", "eventCta": "View in calendar" },

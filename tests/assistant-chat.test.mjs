@@ -69,7 +69,7 @@ test("people context supports zero and one safe person", () => {
   assert.deepEqual(buildAssistantPeopleContext([]), []);
   assert.deepEqual(buildAssistantPeopleContext([
     personSource(1, { name: "Anna", relationLabel: "Mama", birthday: "1990-07-21", gender: "female" }),
-  ]), [{ id: "person-1", name: "Anna", relation: "Mama", birthday: "1990-07-21", gender: "female" }]);
+  ]), [{ id: "person-1", name: "Anna", relation: "parent", birthday: "1990-07-21", gender: "female" }]);
 });
 
 test("people context is capped at twenty and prioritizes nearest birthdays", () => {
@@ -96,8 +96,8 @@ test("same names remain separate and missing birthdays or unspecified gender sta
   ]);
   assert.equal(result.length, 2);
   assert.deepEqual(result.map(({ id, relation, birthday, gender }) => ({ id, relation, birthday, gender })), [
-    { id: "person-1", relation: "Friend", birthday: null, gender: null },
-    { id: "person-2", relation: "Sibling", birthday: null, gender: null },
+    { id: "person-1", relation: "friend", birthday: null, gender: null },
+    { id: "person-2", relation: "sibling", birthday: null, gender: null },
   ]);
 });
 

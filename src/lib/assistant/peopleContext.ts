@@ -1,10 +1,13 @@
 import { ASSISTANT_CHAT_CONFIG } from "./chatConfig.ts";
 import type { AssistantPersonContext } from "./chatContract.ts";
+import { canonicalRelationKey } from "../people/canonicalRelation.ts";
+import type { PersonRelationKey } from "../repositories/person.types.ts";
 
 export type AssistantPeopleSource = {
   id: string;
   name: string;
   relationLabel: string | null;
+  relationKey?: PersonRelationKey | null;
   birthday: string | null;
   gender: "female" | "male" | "other" | "unspecified" | null;
 };
@@ -41,7 +44,10 @@ export function buildAssistantPeopleContext(
       person: {
         id: person.id.trim(),
         name: person.name.trim(),
-        relation: person.relationLabel?.trim() || null,
+        relation: (() => {
+          const key = canonicalRelationKey(person.relationKey, person.relationLabel);
+          return key && key !== "other" ? key : person.relationLabel?.trim() || null;
+        })(),
         birthday: normalizedDateOnly(person.birthday),
         gender: person.gender && person.gender !== "unspecified" ? person.gender : null,
       },

@@ -91,7 +91,7 @@ function getActiveFilterChips(filters: PeopleFilters) {
 
 function relationLabel(value: PeopleFilters["relation"]) {
   return {
-    all: "Wszystkie",
+    all: "all",
     family: "family", partner: "partner", friends: "friends", work: "work", other: "other",
   }[value];
 }
@@ -105,7 +105,7 @@ function dateLabel(value: PeopleFilters["importantDate"]) {
 
 function genderLabel(value: PeopleFilters["gender"]) {
   return {
-    all: "Wszystkie",
+    all: "all",
     female: "women", male: "men", other: "genderOther", unspecified: "unspecified",
   }[value];
 }

@@ -1,1 +1,105 @@
-{"title":{"add":"Manuell hinzufügen","edit":"Person bearbeiten"},"subtitle":{"add":"Gib die grundlegenden Daten einer wichtigen Person ein.","edit":"Aktualisiere die Daten der Person."},"hint":"Der einfachste Weg, eine Person hinzuzufügen.","fields":{"name":"Name","gender":"Geschlecht","relationship":"Beziehung","birthday":"Geburtstag"},"gender":{"optional":"Optional","female":"Frau","male":"Mann","other":"Andere Angabe","unspecified":"Möchte ich nicht angeben","unspecifiedClosed":"Nicht angegeben","choose":"Geschlecht auswählen","change":"Ändern","title":"Geschlecht auswählen","close":"Geschlechtsauswahl schließen"},"relationship":{"choose":"Beziehung auswählen","change":"Ändern","title":"Beziehung auswählen","clear":"Löschen","close":"Beziehungsauswahl schließen","customLabel":"Eigene Beziehung eingeben","customPlaceholder":"z. B. Trainer, Friseurin, Betreuungsperson","useCustom":"Diese Beziehung verwenden"},"actions":{"back":"Zurück","save":"Person speichern","update":"Änderungen speichern","cancel":"Abbrechen"},"validation":{"nameRequired":"Name ist erforderlich.","unauthorized":"Du musst angemeldet sein, um eine Person hinzuzufügen."},"states":{"saving":"Wird gespeichert...","saveError":"Die Person konnte nicht gespeichert werden. Versuche es erneut."},"accessibility":{"form":"Formular zum Hinzufügen einer Person","editForm":"Formular zum Bearbeiten einer Person","genderGroup":"Geschlechtsauswahl","relationshipSelect":"Beziehungsauswahl","birthdayInput":"Geburtsdatum","save":"Person speichern","update":"Änderungen speichern"}}
+{
+  "title": { "add": "Manuell hinzufügen", "edit": "Person bearbeiten" },
+  "subtitle": {
+    "add": "Gib die grundlegenden Daten einer wichtigen Person ein.",
+    "edit": "Aktualisiere die Daten der Person."
+  },
+  "hint": "Der einfachste Weg, eine Person hinzuzufügen.",
+  "capture": {
+    "addCardImage": "Visitenkartenfoto hinzufügen",
+    "cardPreview": "Vorschau der Visitenkarte",
+    "linkPlaceholder": "vCard, MECARD, Link oder QR-Text einfügen...",
+    "parseLink": "Aus Link / QR übernehmen"
+  },
+  "fields": {
+    "name": "Name",
+    "gender": "Geschlecht",
+    "relationship": "Beziehung",
+    "birthday": "Geburtstag"
+  },
+  "gender": {
+    "optional": "Optional",
+    "female": "Frau",
+    "male": "Mann",
+    "other": "Andere Angabe",
+    "unspecified": "Möchte ich nicht angeben",
+    "unspecifiedClosed": "Nicht angegeben",
+    "choose": "Geschlecht auswählen",
+    "change": "Ändern",
+    "title": "Geschlecht auswählen",
+    "close": "Geschlechtsauswahl schließen"
+  },
+  "relationship": {
+    "choose": "Beziehung auswählen",
+    "change": "Ändern",
+    "title": "Beziehung auswählen",
+    "clear": "Löschen",
+    "close": "Beziehungsauswahl schließen",
+    "customLabel": "Eigene Beziehung eingeben",
+    "customPlaceholder": "z. B. Trainer, Friseurin, Betreuungsperson",
+    "useCustom": "Diese Beziehung verwenden"
+  },
+  "actions": {
+    "back": "Zurück",
+    "save": "Person speichern",
+    "update": "Änderungen speichern",
+    "cancel": "Abbrechen"
+  },
+  "validation": {
+    "nameRequired": "Name ist erforderlich.",
+    "unauthorized": "Du musst angemeldet sein, um eine Person hinzuzufügen."
+  },
+  "states": {
+    "saving": "Wird gespeichert...",
+    "saveError": "Die Person konnte nicht gespeichert werden. Versuche es erneut.",
+    "deleteError": "Die Person konnte nicht gelöscht werden.",
+    "deleting": "Wird gelöscht..."
+  },
+  "contact": {
+    "unauthorizedAdd": "Du musst angemeldet sein, um eine Person hinzuzufügen.",
+    "nameRequired": "Name ist erforderlich.",
+    "saveError": "Die Person konnte nicht gespeichert werden. Versuche es erneut.",
+    "unsupported": "Diese WebView unterstützt keine Kontaktauswahl. Du kannst eine Person manuell hinzufügen.",
+    "denied": "Erlaube HappyDate den Kontaktzugriff in den Einstellungen oder füge eine Person manuell hinzu.",
+    "noneSelected": "Keine Person ausgewählt. Versuche es erneut.",
+    "unauthorizedImport": "Du musst angemeldet sein, um Kontakte zu importieren.",
+    "noNew": "Es gibt keine neuen Personen zum Importieren.",
+    "importError": "Personen konnten nicht importiert werden. Versuche es erneut.",
+    "imageAdded": "Foto hinzugefügt. Ergänze die Visitenkartendaten und speichere die Person.",
+    "parseFailed": "Die Daten konnten nicht erkannt werden. Trage sie unten ein.",
+    "parsed": "Die Daten wurden aus dem Link / QR-Code übernommen.",
+    "success": "Fertig! {count} Personen hinzugefügt 🎉",
+    "missing": "Ohne Geburtstag: {birthdays}. Ohne Beziehung: {relations}.",
+    "duplicatesSkipped": "Vorhandene Kontakte übersprungen: {count}.",
+    "completeData": "Daten ergänzen",
+    "goPeople": "Zu Personen",
+    "selected": "Ausgewählt: {count}",
+    "review": "Prüfe die Liste vor dem Import. Ohne deine Bestätigung wird nichts gespeichert.",
+    "exists": "Bereits vorhanden",
+    "hidden": "+{count} weitere",
+    "willAdd": "Werden hinzugefügt: {count}",
+    "alreadyExists": "Bereits in HappyDate: {count}",
+    "importing": "Wird importiert...",
+    "import": "Importieren: {count}",
+    "change": "Auswahl ändern",
+    "chooseTitle": "Wichtige Kontakte auswählen",
+    "privacy": "Nur ausgewählte Personen werden importiert. Andere Kontakte werden nicht in HappyDate gespeichert.",
+    "settings": "Einstellungen",
+    "manual": "Manuell hinzufügen"
+  },
+  "delete": {
+    "action": "Löschen",
+    "confirm": "Diese Person aus HappyDate entfernen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "confirmAction": "Person löschen",
+    "close": "Personenaktionen schließen"
+  },
+  "accessibility": {
+    "form": "Formular zum Hinzufügen einer Person",
+    "editForm": "Formular zum Bearbeiten einer Person",
+    "genderGroup": "Geschlechtsauswahl",
+    "relationshipSelect": "Beziehungsauswahl",
+    "birthdayInput": "Geburtsdatum",
+    "save": "Person speichern",
+    "update": "Änderungen speichern"
+  }
+}

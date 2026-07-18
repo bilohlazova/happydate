@@ -1,0 +1,92 @@
+{
+  "common": {
+    "cancel": "Abbrechen",
+    "confirm": "Bestätigen",
+    "add": "Hinzufügen",
+    "save": "Speichern"
+  },
+  "categories": {
+    "birthday": "Geburtstag",
+    "work": "Arbeit",
+    "personal": "Persönlich",
+    "other": "Sonstiges"
+  },
+  "form": {
+    "new": "Neues Ereignis",
+    "edit": "Ereignis bearbeiten",
+    "titlePlaceholder": "Titel des Ereignisses",
+    "notePlaceholder": "Notiz (optional)",
+    "delete": "Ereignis löschen"
+  },
+  "day": {
+    "today": "Heute",
+    "empty": "Keine Ereignisse",
+    "addFirst": "Erstes hinzufügen",
+    "auto": "automatisch",
+    "giftIdea": "Geschenkidee"
+  },
+  "countdown": {
+    "today": "Heute 🎉",
+    "tomorrow": "Morgen",
+    "future": "In {days} Tagen",
+    "past": "Vor {days} Tagen"
+  },
+  "search": {
+    "label": "Suchen",
+    "placeholder": "Ereignisse, Personen und Notizen suchen…",
+    "start": "Tippe, um zu suchen",
+    "empty": "Keine Ergebnisse für „{query}“"
+  },
+  "navigation": {
+    "previousMonth": "Vorheriger Monat",
+    "nextMonth": "Nächster Monat",
+    "today": "Heute",
+    "month": "Monat",
+    "week": "Woche",
+    "day": "Tag",
+    "addEvent": "Ereignis hinzufügen",
+    "upcoming": "Demnächst · 30 Tage",
+    "import": "Import",
+    "export": "Export .ics",
+    "birthdays": "{count, plural, one {# Geburtstag} other {# Geburtstage}}"
+  },
+  "empty": {
+    "title": "Keine Ereignisse",
+    "description": "Füge das erste Ereignis hinzu, um es im Kalender zu sehen.",
+    "action": "Ereignis hinzufügen"
+  },
+  "validation": { "required": "Titel und Datum ausfüllen." },
+  "confirm": {
+    "saveTitle": "Änderungen speichern?",
+    "deleteTitle": "Ereignis löschen?"
+  },
+  "toast": {
+    "loadError": "Ereignisse konnten nicht geladen werden.",
+    "addError": "Das Ereignis konnte nicht hinzugefügt werden.",
+    "added": "Ereignis hinzugefügt 🎉",
+    "saveError": "Änderungen konnten nicht gespeichert werden.",
+    "updated": "Aktualisiert ✅",
+    "deleteError": "Das Ereignis konnte nicht gelöscht werden.",
+    "deleted": "Gelöscht 🗑️",
+    "noImportEvents": "Keine Ereignisse gefunden.",
+    "importError": "Import fehlgeschlagen.",
+    "imported": "{count} Ereignisse importiert 📥",
+    "fileError": "Die Datei konnte nicht gelesen werden."
+  },
+  "insight": {
+    "note": "Notiz: {value}",
+    "topics": {
+      "coffee": "mag Kaffee",
+      "travel": "reist gern",
+      "reading": "liest gern",
+      "watches": "sammelt Uhren",
+      "photography": "fotografiert gern",
+      "music": "mag Musik",
+      "sport": "ist sportlich aktiv",
+      "relax": "schätzt entspannte Momente",
+      "gaming": "spielt Games",
+      "cooking": "kocht gern"
+    }
+  },
+  "accessibility": { "loading": "Kalender wird geladen" }
+}

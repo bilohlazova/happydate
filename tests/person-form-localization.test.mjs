@@ -29,11 +29,11 @@ test("manual relationship UI reuses localized People mapping", async () => {
 test("manual mode is isolated from contacts, scanner, and link copy", async () => {
   const source = await readFile(path.join(root, "src/app/people/add/page.tsx"), "utf8");
   assert.match(source, /localized=\{mode === "manual"\}/);
-  assert.match(source, /mode === "manual" \? t\("title\.add"\) : modeCopy\.title/);
+  assert.match(source, /mode === "manual"\s*\? t\("title\.add"\)\s*: peopleT\(`actions\.\$\{modeCopy\.titleKey\}`\)/);
   assert.match(source, /contactSource: mode/);
   assert.match(source, /contactSource: "contacts"/);
-  assert.match(source, /Dodaj zdjęcie wizytówki/);
-  assert.match(source, /Uzupełnij z linku \/ QR/);
+  assert.match(source, /t\("capture\.addCardImage"\)/);
+  assert.match(source, /t\("capture\.parseLink"\)/);
 });
 
 test("locale changes cannot reset entered form state", async () => {

@@ -4,6 +4,9 @@ import type {
   PersonRelationKey,
   PersonRow,
 } from "@/lib/repositories/person.types";
+import {
+  canonicalRelationKey,
+} from "@/lib/people/canonicalRelation";
 
 export type RelationCategory = PersonRelationCategory;
 export type RelationKey = PersonRelationKey;
@@ -157,7 +160,10 @@ export function getRelationCategoryForKey(
 }
 
 export function getPersonRelationKey(person: PersonRow): RelationKey | null {
-  return person.relation_key ?? inferRelationKey(person);
+  return canonicalRelationKey(
+    person.relation_key,
+    person.relation_label ?? person.relationship,
+  );
 }
 
 export function getPersonRelationLabel(person: PersonRow) {
@@ -220,39 +226,5 @@ export function inferRelationKey(person: PersonRow): RelationKey | null {
 }
 
 export function inferRelationKeyFromLabel(label: string | null | undefined): RelationKey | null {
-  const normalized = normalizeSearchValue(label ?? "");
-
-  if (!normalized) return null;
-
-  for (const option of RELATION_OPTIONS) {
-    const labels = [
-      option.label,
-      option.labels.female,
-      option.labels.male,
-      option.labels.neutral,
-      ...option.aliases,
-    ].filter(Boolean) as string[];
-
-    if (labels.some((candidate) => normalizeSearchValue(candidate) === normalized)) {
-      return option.key;
-    }
-  }
-
-  for (const option of RELATION_OPTIONS) {
-    if (option.aliases.some((alias) => normalized.includes(alias))) {
-      return option.key;
-    }
-  }
-
-  return "other";
-}
-
-function normalizeSearchValue(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/ł/g, "l")
-    .replace(/\s+/g, " ");
+  return canonicalRelationKey(null, label);
 }

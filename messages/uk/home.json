@@ -5,7 +5,7 @@
   "assistant": { "ask": "Запитати Happy", "listen": "Послухати короткий бриф", "stop": "Зупинити бриф", "read": "Прочитати короткий бриф", "sectionLabel": "Дії Happy", "close": "Закрити", "speechError": "Не вдалося відтворити голос. Бриф можна прочитати нижче." },
   "countdown": { "today": "сьогодні", "tomorrow": "завтра", "days": "через {count} днів" },
   "events": { "birthdayTitle": "День народження: {name}" },
-  "categories": { "birthday": "День народження", "anniversary": "Річниця", "work": "Робота", "personal": "Особисте" },
+  "categories": { "birthday": "День народження", "anniversary": "Річниця", "work": "Робота", "personal": "Особисте", "other": "Інше" },
   "insights": { "birthday": "День народження {name} — {countdown}", "event": "{title} — {countdown}", "savedGifts": "У тебе є {count} збережені ідеї подарунків", "hasPreferences": "Happy вже знає деякі вподобання {name}" },
   "brief": { "intro": "Сьогодні в тебе {count} важливі справи.", "featured": "Найближче: {title}, {countdown}." },
   "featured": { "importantLabel": "Найближча важлива дата", "nextLabel": "Найближча подія", "preferences": "Збережені вподобання", "personCta": "Переглянути профіль", "eventCta": "Переглянути в календарі" },

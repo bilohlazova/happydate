@@ -17,10 +17,7 @@ import {
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabaseClient";
-import {
-  createPerson,
-  getPeople,
-} from "@/lib/repositories/personRepository";
+import { createPerson, getPeople } from "@/lib/repositories/personRepository";
 import type {
   PersonGender,
   PersonRelationKey,
@@ -77,35 +74,40 @@ type ContactPickerNavigator = Navigator & {
 const MODE_COPY: Record<
   AddMode,
   {
-    title: string;
-    description: string;
+    titleKey: "importTitle" | "manualTitle" | "cardTitle" | "linkTitle";
+    descriptionKey:
+      | "importDescription"
+      | "manualDescription"
+      | "cardDescription"
+      | "linkDescription";
     icon: typeof Contact;
   }
 > = {
   contacts: {
-    title: "Importuj z kontaktów",
-    description: "Wybierz tylko osoby, które są dla Ciebie ważne.",
+    titleKey: "importTitle",
+    descriptionKey: "importDescription",
     icon: Contact,
   },
   manual: {
-    title: "Dodaj ręcznie",
-    description: "Wpisz podstawowe dane ważnej osoby.",
+    titleKey: "manualTitle",
+    descriptionKey: "manualDescription",
     icon: Pencil,
   },
   card: {
-    title: "Zeskanuj wizytówkę",
-    description: "Dodaj zdjęcie wizytówki i uzupełnij dane.",
+    titleKey: "cardTitle",
+    descriptionKey: "cardDescription",
     icon: QrCode,
   },
   link: {
-    title: "Link / QR",
-    description: "Wklej vCard, MECARD, link lub tekst z QR.",
+    titleKey: "linkTitle",
+    descriptionKey: "linkDescription",
     icon: LinkIcon,
   },
 };
 
 export default function AddPersonPage() {
   const t = useTranslations("personForm");
+  const peopleT = useTranslations("people");
   const router = useRouter();
   const [mode, setMode] = useState<AddMode>("manual");
   const [userId, setUserId] = useState<string | null>(null);
@@ -113,7 +115,9 @@ export default function AddPersonPage() {
   const [authLoading, setAuthLoading] = useState(true);
   const [name, setName] = useState("");
   const [relationship, setRelationship] = useState("");
-  const [relationKey, setRelationKey] = useState<PersonRelationKey | null>(null);
+  const [relationKey, setRelationKey] = useState<PersonRelationKey | null>(
+    null
+  );
   const [relationCategory, setRelationCategory] =
     useState<RelationCategory | null>(null);
   const [birthday, setBirthday] = useState("");
@@ -128,6 +132,7 @@ export default function AddPersonPage() {
   const [importedCount, setImportedCount] = useState(0);
   const [skippedDuplicateCount, setSkippedDuplicateCount] = useState(0);
   const [status, setStatus] = useState<string | null>(null);
+  const [showContactSettings, setShowContactSettings] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -207,12 +212,20 @@ export default function AddPersonPage() {
     event.preventDefault();
 
     if (!userId) {
-      setError(mode === "manual" ? t("validation.unauthorized") : "Musisz być zalogowany, aby dodać osobę.");
+      setError(
+        mode === "manual"
+          ? t("validation.unauthorized")
+          : t("contact.unauthorizedAdd")
+      );
       return;
     }
 
     if (!name.trim()) {
-      setError(mode === "manual" ? t("validation.nameRequired") : "Imię jest wymagane.");
+      setError(
+        mode === "manual"
+          ? t("validation.nameRequired")
+          : t("contact.nameRequired")
+      );
       return;
     }
 
@@ -220,7 +233,11 @@ export default function AddPersonPage() {
     setIsSaving(true);
 
     try {
-      const resolvedRelation = getRelationLabel(relationKey, gender, relationship);
+      const resolvedRelation = getRelationLabel(
+        relationKey,
+        gender,
+        relationship
+      );
 
       await createPerson({
         userId,
@@ -228,7 +245,8 @@ export default function AddPersonPage() {
         relationship: resolvedRelation || undefined,
         relationLabel: resolvedRelation || undefined,
         relationKey,
-        relationCategory: getRelationCategoryForKey(relationKey) ?? relationCategory,
+        relationCategory:
+          getRelationCategoryForKey(relationKey) ?? relationCategory,
         birthday: birthday || undefined,
         phone: normalizePhone(phone),
         email: normalizeEmail(email),
@@ -240,7 +258,9 @@ export default function AddPersonPage() {
       router.push("/people");
     } catch (submitError) {
       console.error("[AddPersonPage] createPerson failed:", submitError);
-      setError(mode === "manual" ? t("states.saveError") : "Nie udało się zapisać osoby. Spróbuj ponownie.");
+      setError(
+        mode === "manual" ? t("states.saveError") : t("contact.saveError")
+      );
     } finally {
       setIsSaving(false);
     }
@@ -249,13 +269,13 @@ export default function AddPersonPage() {
   async function handleContactPick() {
     setError(null);
     setStatus(null);
+    setShowContactSettings(false);
 
     const contactNavigator = navigator as ContactPickerNavigator;
 
     if (!contactNavigator.contacts?.select) {
-      setStatus(
-        "Brak dostępu do kontaktów. Ten WebView nie udostępnia wyboru kontaktów, ale możesz dodać osobę ręcznie."
-      );
+      setStatus(t("contact.unsupported"));
+      setShowContactSettings(true);
       return;
     }
 
@@ -264,7 +284,8 @@ export default function AddPersonPage() {
         ["name", "tel", "email"],
         { multiple: true }
       );
-      const drafts = contacts.reduce<ContactDraft[]>((drafts, contact, index) => {
+      const drafts = contacts.reduce<ContactDraft[]>(
+        (drafts, contact, index) => {
           const [contactName] = contact.name ?? [];
 
           if (!contactName?.trim()) {
@@ -272,7 +293,9 @@ export default function AddPersonPage() {
           }
 
           drafts.push({
-            key: `${contactName}-${contact.id ?? contact.tel?.[0] ?? contact.email?.[0] ?? index}`,
+            key: `${contactName}-${
+              contact.id ?? contact.tel?.[0] ?? contact.email?.[0] ?? index
+            }`,
             name: contactName.trim(),
             phone: normalizePhone(contact.tel?.[0]),
             email: normalizeEmail(contact.email?.[0]),
@@ -280,10 +303,12 @@ export default function AddPersonPage() {
           });
 
           return drafts;
-        }, []);
+        },
+        []
+      );
 
       if (drafts.length === 0) {
-        setStatus("Nie wybrano żadnej osoby. Możesz spróbować ponownie.");
+        setStatus(t("contact.noneSelected"));
         return;
       }
 
@@ -291,20 +316,19 @@ export default function AddPersonPage() {
       setContactStep("confirm");
     } catch (pickError) {
       console.error("[AddPersonPage] contact pick failed:", pickError);
-      setStatus(
-        "Brak dostępu do kontaktów. Zezwól HappyDate na dostęp w ustawieniach albo dodaj osobę ręcznie."
-      );
+      setStatus(t("contact.denied"));
+      setShowContactSettings(true);
     }
   }
 
   async function handleImportContacts() {
     if (!userId) {
-      setError("Musisz być zalogowany, aby importować kontakty.");
+      setError(t("contact.unauthorizedImport"));
       return;
     }
 
     if (contactsToImport.length === 0) {
-      setError("Nie ma nowych osób do importu.");
+      setError(t("contact.noNew"));
       return;
     }
 
@@ -342,7 +366,7 @@ export default function AddPersonPage() {
       setContactStep("success");
     } catch (importError) {
       console.error("[AddPersonPage] import contacts failed:", importError);
-      setError("Nie udało się zaimportować osób. Spróbuj ponownie.");
+      setError(t("contact.importError"));
     } finally {
       setIsSaving(false);
     }
@@ -362,14 +386,14 @@ export default function AddPersonPage() {
 
       return URL.createObjectURL(file);
     });
-    setStatus("Zdjęcie dodane. Uzupełnij dane z wizytówki i zapisz osobę.");
+    setStatus(t("contact.imageAdded"));
   }
 
   function handleParseSource() {
     const parsed = parseContactSource(sourceText);
 
     if (!parsed.name && !parsed.relationship && !parsed.birthday) {
-      setStatus("Nie udało się rozpoznać danych. Wpisz je w polach poniżej.");
+      setStatus(t("contact.parseFailed"));
       return;
     }
 
@@ -377,15 +401,18 @@ export default function AddPersonPage() {
     if (parsed.relationship) {
       const nextRelationKey = inferRelationKeyFromLabel(parsed.relationship);
 
-      setRelationship(getRelationLabel(nextRelationKey, gender, parsed.relationship));
+      setRelationship(
+        getRelationLabel(nextRelationKey, gender, parsed.relationship)
+      );
       setRelationKey(nextRelationKey);
       setRelationCategory(getRelationCategoryForKey(nextRelationKey));
     }
     if (parsed.birthday) setBirthday(parsed.birthday);
     if (parsed.phone) setPhone(parsed.phone);
     if (parsed.email) setEmail(parsed.email);
-    if (parsed.externalContactId) setExternalContactId(parsed.externalContactId);
-    setStatus("Dane zostały uzupełnione z linku / QR.");
+    if (parsed.externalContactId)
+      setExternalContactId(parsed.externalContactId);
+    setStatus(t("contact.parsed"));
   }
 
   return (
@@ -396,16 +423,20 @@ export default function AddPersonPage() {
             type="button"
             onClick={() => router.back()}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-slate-600 shadow-[0_6px_18px_rgba(15,23,42,0.06)] ring-1 ring-slate-100"
-            aria-label={mode === "manual" ? t("actions.back") : "Wróć"}
+            aria-label={t("actions.back")}
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="min-w-0">
             <h1 className="truncate text-[1.5rem] font-black leading-none text-slate-950">
-              {mode === "manual" ? t("title.add") : modeCopy.title}
+              {mode === "manual"
+                ? t("title.add")
+                : peopleT(`actions.${modeCopy.titleKey}`)}
             </h1>
             <p className="mt-0.5 text-[0.82rem] font-semibold leading-4 text-slate-500">
-              {mode === "manual" ? t("subtitle.add") : modeCopy.description}
+              {mode === "manual"
+                ? t("subtitle.add")
+                : peopleT(`actions.${modeCopy.descriptionKey}`)}
             </p>
           </div>
         </header>
@@ -421,6 +452,7 @@ export default function AddPersonPage() {
             missingBirthdayCount={missingBirthdayCount}
             missingRelationCount={missingRelationCount}
             status={status}
+            showContactSettings={showContactSettings}
             error={error}
             isSaving={isSaving}
             onPickContacts={handleContactPick}
@@ -434,6 +466,7 @@ export default function AddPersonPage() {
               setContactStep("intro");
               setError(null);
               setStatus(null);
+              setShowContactSettings(false);
             }}
             onPeople={() => router.push("/people")}
             onSettings={() => {
@@ -491,6 +524,7 @@ function ContactsFlow({
   missingBirthdayCount,
   missingRelationCount,
   status,
+  showContactSettings,
   error,
   isSaving,
   onPickContacts,
@@ -509,6 +543,7 @@ function ContactsFlow({
   missingBirthdayCount: number;
   missingRelationCount: number;
   status: string | null;
+  showContactSettings: boolean;
   error: string | null;
   isSaving: boolean;
   onPickContacts: () => void;
@@ -518,6 +553,7 @@ function ContactsFlow({
   onPeople: () => void;
   onSettings: () => void;
 }) {
+  const t = useTranslations("personForm.contact");
   if (contactStep === "success") {
     return (
       <section className="rounded-[1rem] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.055)] ring-1 ring-slate-100">
@@ -527,19 +563,20 @@ function ContactsFlow({
           </span>
           <div>
             <h2 className="text-lg font-black text-slate-950">
-              Gotowe! Dodano {importedCount} {getPeopleWord(importedCount)} 🎉
+              {t("success", { count: importedCount })}
             </h2>
             <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-              {missingBirthdayCount} {getPeopleWord(missingBirthdayCount)} nie
-              ma daty urodzin, a {missingRelationCount} nie ma określonej relacji.
+              {t("missing", {
+                birthdays: missingBirthdayCount,
+                relations: missingRelationCount,
+              })}
             </p>
           </div>
         </div>
 
         {skippedDuplicateCount > 0 && (
           <p className="mt-3 rounded-[0.8rem] bg-slate-50 px-3 py-2 text-xs font-bold leading-5 text-slate-600">
-            {skippedDuplicateCount} {getPeopleWord(skippedDuplicateCount)} już
-            istnieje w HappyDate i nie została dodana ponownie.
+            {t("duplicatesSkipped", { count: skippedDuplicateCount })}
           </p>
         )}
 
@@ -549,14 +586,14 @@ function ContactsFlow({
             onClick={onPeople}
             className="min-h-11 rounded-[0.9rem] bg-gradient-to-r from-sky-500 to-cyan-500 px-4 text-sm font-black text-white shadow-[0_10px_24px_rgba(14,165,233,0.24)]"
           >
-            Uzupełnij dane
+            {t("completeData")}
           </button>
           <button
             type="button"
             onClick={onPeople}
             className="min-h-10 rounded-[0.9rem] bg-slate-50 px-4 text-sm font-black text-slate-600"
           >
-            Przejdź do osób
+            {t("goPeople")}
           </button>
         </div>
       </section>
@@ -565,15 +602,18 @@ function ContactsFlow({
 
   if (contactStep === "confirm") {
     const previewContacts = selectedContacts.slice(0, 4);
-    const hiddenCount = Math.max(0, selectedContacts.length - previewContacts.length);
+    const hiddenCount = Math.max(
+      0,
+      selectedContacts.length - previewContacts.length
+    );
 
     return (
       <section className="rounded-[1rem] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.055)] ring-1 ring-slate-100">
         <h2 className="text-lg font-black text-slate-950">
-          Wybrano {selectedContacts.length} {getPeopleWord(selectedContacts.length)}
+          {t("selected", { count: selectedContacts.length })}
         </h2>
         <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-          Sprawdź listę przed importem. Nic nie zapisujemy bez Twojego potwierdzenia.
+          {t("review")}
         </p>
 
         <div className="mt-3 grid gap-1">
@@ -585,24 +625,26 @@ function ContactsFlow({
               <span className="truncate text-sm font-black text-slate-950">
                 {contact.name}
               </span>
-              {duplicateContacts.some((duplicate) => duplicate.key === contact.key) && (
+              {duplicateContacts.some(
+                (duplicate) => duplicate.key === contact.key
+              ) && (
                 <span className="ml-2 shrink-0 text-[0.65rem] font-black text-slate-400">
-                  Już istnieje
+                  {t("exists")}
                 </span>
               )}
             </div>
           ))}
           {hiddenCount > 0 && (
             <p className="px-3 py-1 text-xs font-black text-slate-400">
-              +{hiddenCount} osoby
+              {t("hidden", { count: hiddenCount })}
             </p>
           )}
         </div>
 
         <div className="mt-3 grid gap-1.5 rounded-[0.9rem] bg-sky-50 px-3 py-2 text-xs font-bold leading-5 text-sky-700">
-          <p>{contactsToImport.length} osób zostanie dodanych.</p>
+          <p>{t("willAdd", { count: contactsToImport.length })}</p>
           {duplicateContacts.length > 0 && (
-            <p>{duplicateContacts.length} osób już istnieje w HappyDate.</p>
+            <p>{t("alreadyExists", { count: duplicateContacts.length })}</p>
           )}
         </div>
 
@@ -620,17 +662,15 @@ function ContactsFlow({
             className="min-h-11 rounded-[0.9rem] bg-gradient-to-r from-sky-500 to-cyan-500 px-4 text-sm font-black text-white shadow-[0_10px_24px_rgba(14,165,233,0.24)] disabled:opacity-50"
           >
             {isSaving
-              ? "Importowanie..."
-              : `Importuj ${contactsToImport.length} ${getPeopleWord(
-                  contactsToImport.length
-                )}`}
+              ? t("importing")
+              : t("import", { count: contactsToImport.length })}
           </button>
           <button
             type="button"
             onClick={onChangeChoice}
             className="min-h-10 rounded-[0.9rem] bg-slate-50 px-4 text-sm font-black text-slate-600"
           >
-            Zmień wybór
+            {t("change")}
           </button>
         </div>
       </section>
@@ -645,11 +685,10 @@ function ContactsFlow({
         </span>
         <div>
           <h2 className="text-base font-black text-slate-950">
-            Wybierz ważne kontakty
+            {t("chooseTitle")}
           </h2>
           <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-            Importujemy tylko wybrane osoby. Pozostałe kontakty nie zostaną
-            zapisane w HappyDate.
+            {t("privacy")}
           </p>
         </div>
       </div>
@@ -660,13 +699,13 @@ function ContactsFlow({
         className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-[0.9rem] bg-gradient-to-r from-sky-500 to-cyan-500 px-4 text-sm font-black text-white shadow-[0_10px_24px_rgba(14,165,233,0.24)] transition active:scale-[0.98]"
       >
         <Contact className="h-4 w-4" />
-        Wybierz ważne kontakty
+        {t("chooseTitle")}
       </button>
 
       {status && (
         <div className="mt-3 rounded-[0.9rem] bg-slate-50 px-3 py-2">
           <p className="text-xs font-bold leading-5 text-slate-600">{status}</p>
-          {status.startsWith("Brak dostępu") && (
+          {showContactSettings && (
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -674,14 +713,14 @@ function ContactsFlow({
                 className="flex min-h-9 items-center justify-center gap-1 rounded-[0.75rem] bg-white px-2 text-xs font-black text-sky-700 ring-1 ring-sky-100"
               >
                 <Settings className="h-3.5 w-3.5" />
-                Ustawienia
+                {t("settings")}
               </button>
               <button
                 type="button"
                 onClick={onManualMode}
                 className="min-h-9 rounded-[0.75rem] bg-white px-2 text-xs font-black text-slate-600 ring-1 ring-slate-100"
               >
-                Dodaj ręcznie
+                {t("manual")}
               </button>
             </div>
           )}
@@ -730,7 +769,10 @@ function SinglePersonFlow({
   canSave: boolean;
   isSaving: boolean;
   onNameChange: (value: string) => void;
-  onRelationshipChange: (value: string, category: RelationCategory | null) => void;
+  onRelationshipChange: (
+    value: string,
+    category: RelationCategory | null
+  ) => void;
   onRelationKeyChange: (value: PersonRelationKey | null) => void;
   onBirthdayChange: (value: string) => void;
   onGenderChange: (value: PersonGender) => void;
@@ -748,7 +790,7 @@ function SinglePersonFlow({
           <ModeIcon className="h-5 w-5" />
         </span>
         <p className="text-xs font-semibold leading-5 text-slate-500">
-          {localized ? t("hint") : getModeHint(mode)}
+          {t("hint")}
         </p>
       </div>
 
@@ -756,7 +798,7 @@ function SinglePersonFlow({
         <div className="mb-3 grid gap-2">
           <label className="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[0.9rem] bg-sky-50 text-sm font-black text-sky-700 transition active:scale-[0.98]">
             <Camera className="h-4 w-4" />
-            Dodaj zdjęcie wizytówki
+            {t("capture.addCardImage")}
             <input
               type="file"
               accept="image/*"
@@ -769,7 +811,7 @@ function SinglePersonFlow({
             <div className="relative h-28 overflow-hidden rounded-[0.9rem] bg-slate-100">
               <Image
                 src={cardImageUrl}
-                alt="Podgląd wizytówki"
+                alt={t("capture.cardPreview")}
                 fill
                 className="object-cover"
                 unoptimized
@@ -785,7 +827,7 @@ function SinglePersonFlow({
             value={sourceText}
             onChange={(event) => onSourceTextChange(event.target.value)}
             rows={4}
-            placeholder="Wklej vCard, MECARD, link z parametrami name/relationship/birthday albo tekst z QR..."
+            placeholder={t("capture.linkPlaceholder")}
             className="w-full resize-none rounded-[0.9rem] border border-slate-100 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-sky-200 focus:ring-4 focus:ring-sky-100"
           />
           <button
@@ -794,13 +836,17 @@ function SinglePersonFlow({
             className="flex min-h-10 items-center justify-center gap-2 rounded-[0.9rem] bg-sky-50 text-sm font-black text-sky-700 transition active:scale-[0.98]"
           >
             <Sparkles className="h-4 w-4" />
-            Uzupełnij z linku / QR
+            {t("capture.parseLink")}
           </button>
         </div>
       )}
 
-      <form aria-label={localized ? t("accessibility.form") : undefined} onSubmit={onSubmit} className="flex flex-col gap-3">
-        <Field label={localized ? t("fields.name") : "Imię"} htmlFor="name">
+      <form
+        aria-label={t("accessibility.form")}
+        onSubmit={onSubmit}
+        className="flex flex-col gap-3"
+      >
+        <Field label={t("fields.name")} htmlFor="name">
           <input
             id="name"
             type="text"
@@ -811,7 +857,11 @@ function SinglePersonFlow({
           />
         </Field>
 
-        <GenderSelectField value={gender} onChange={onGenderChange} localized={localized} />
+        <GenderSelectField
+          value={gender}
+          onChange={onGenderChange}
+          localized={localized}
+        />
 
         <RelationPickerField
           value={relationship}
@@ -824,14 +874,14 @@ function SinglePersonFlow({
           }}
         />
 
-        <Field label={localized ? t("fields.birthday") : "Urodziny"} htmlFor="birthday">
+        <Field label={t("fields.birthday")} htmlFor="birthday">
           <input
             id="birthday"
             type="date"
             value={birthday}
             onChange={(event) => onBirthdayChange(event.target.value)}
             className={MobileUI.input}
-            aria-label={localized ? t("accessibility.birthdayInput") : undefined}
+            aria-label={t("accessibility.birthdayInput")}
           />
         </Field>
 
@@ -852,7 +902,7 @@ function SinglePersonFlow({
           disabled={!canSave}
           className="min-h-11 rounded-[0.9rem] bg-gradient-to-r from-sky-500 to-cyan-500 px-4 text-sm font-black text-white shadow-[0_10px_24px_rgba(14,165,233,0.24)] transition active:scale-[0.98] disabled:opacity-50"
         >
-          {localized ? (isSaving ? t("states.saving") : t("actions.save")) : isSaving ? "Zapisywanie..." : "Zapisz osobę"}
+          {t(isSaving ? "states.saving" : "actions.save")}
         </button>
       </form>
     </section>
@@ -876,30 +926,6 @@ function Field({
       {children}
     </div>
   );
-}
-
-function getModeHint(mode: AddMode) {
-  if (mode === "card") return "Zdjęcie jest tylko podglądem. Dane zapisujesz po uzupełnieniu pól.";
-  if (mode === "link") return "Obsługuje vCard, MECARD i proste linki.";
-
-  return "Najprostsza ścieżka dodawania.";
-}
-
-function getPeopleWord(count: number) {
-  if (count === 1) return "osoba";
-
-  const lastDigit = count % 10;
-  const lastTwoDigits = count % 100;
-
-  if (
-    lastDigit >= 2 &&
-    lastDigit <= 4 &&
-    (lastTwoDigits < 12 || lastTwoDigits > 14)
-  ) {
-    return "osoby";
-  }
-
-  return "osób";
 }
 
 function normalizeName(value: string) {
@@ -1059,16 +1085,14 @@ function parseContactUrl(text: string) {
 
 function getContactLine(text: string, key: string) {
   const normalizedKey = key.toUpperCase();
-  const line = text
-    .split(/\r?\n/)
-    .find((item) => {
-      const normalizedLine = item.toUpperCase();
+  const line = text.split(/\r?\n/).find((item) => {
+    const normalizedLine = item.toUpperCase();
 
-      return (
-        normalizedLine.startsWith(`${normalizedKey}:`) ||
-        normalizedLine.startsWith(`${normalizedKey};`)
-      );
-    });
+    return (
+      normalizedLine.startsWith(`${normalizedKey}:`) ||
+      normalizedLine.startsWith(`${normalizedKey};`)
+    );
+  });
 
   return line?.split(":").slice(1).join(":").replaceAll(";", " ").trim();
 }
@@ -1091,7 +1115,10 @@ function normalizeBirthday(value?: string | null) {
   }
 
   if (/^\d{8}$/.test(trimmed)) {
-    return `${trimmed.slice(0, 4)}-${trimmed.slice(4, 6)}-${trimmed.slice(6, 8)}`;
+    return `${trimmed.slice(0, 4)}-${trimmed.slice(4, 6)}-${trimmed.slice(
+      6,
+      8
+    )}`;
   }
 
   return undefined;

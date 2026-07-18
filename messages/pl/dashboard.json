@@ -1,0 +1,92 @@
+{
+  "common": {
+    "cancel": "Anuluj",
+    "confirm": "Potwierdź",
+    "add": "Dodaj",
+    "save": "Zapisz"
+  },
+  "categories": {
+    "birthday": "Urodziny",
+    "work": "Praca",
+    "personal": "Osobiste",
+    "other": "Inne"
+  },
+  "form": {
+    "new": "Nowe wydarzenie",
+    "edit": "Edytuj wydarzenie",
+    "titlePlaceholder": "Tytuł wydarzenia",
+    "notePlaceholder": "Notatka (opcjonalnie)",
+    "delete": "Usuń wydarzenie"
+  },
+  "day": {
+    "today": "Dziś",
+    "empty": "Brak wydarzeń",
+    "addFirst": "Dodaj pierwsze",
+    "auto": "automatyczne",
+    "giftIdea": "Pomysł na prezent"
+  },
+  "countdown": {
+    "today": "Dziś 🎉",
+    "tomorrow": "Jutro",
+    "future": "Za {days} dni",
+    "past": "{days} dni temu"
+  },
+  "search": {
+    "label": "Szukaj",
+    "placeholder": "Szukaj wydarzeń, osób, notatek…",
+    "start": "Zacznij pisać, aby szukać",
+    "empty": "Brak wyników dla „{query}”"
+  },
+  "navigation": {
+    "previousMonth": "Poprzedni miesiąc",
+    "nextMonth": "Następny miesiąc",
+    "today": "Dziś",
+    "month": "Miesiąc",
+    "week": "Tydzień",
+    "day": "Dzień",
+    "addEvent": "Dodaj wydarzenie",
+    "upcoming": "Nadchodzące · 30 dni",
+    "import": "Import",
+    "export": "Eksport .ics",
+    "birthdays": "{count, plural, one {# urodziny} other {# urodzin}}"
+  },
+  "empty": {
+    "title": "Brak wydarzeń",
+    "description": "Dodaj pierwsze wydarzenie, aby zobaczyć je w kalendarzu.",
+    "action": "Dodaj wydarzenie"
+  },
+  "validation": { "required": "Uzupełnij tytuł i datę." },
+  "confirm": {
+    "saveTitle": "Zapisać zmiany?",
+    "deleteTitle": "Usunąć wydarzenie?"
+  },
+  "toast": {
+    "loadError": "Nie udało się pobrać wydarzeń.",
+    "addError": "Nie udało się dodać.",
+    "added": "Dodano wydarzenie 🎉",
+    "saveError": "Nie udało się zapisać.",
+    "updated": "Zaktualizowano ✅",
+    "deleteError": "Nie udało się usunąć.",
+    "deleted": "Usunięto 🗑️",
+    "noImportEvents": "Nie znaleziono wydarzeń.",
+    "importError": "Import nie powiódł się.",
+    "imported": "Zaimportowano {count} wydarzeń 📥",
+    "fileError": "Błąd odczytu pliku."
+  },
+  "insight": {
+    "note": "Notatka: {value}",
+    "topics": {
+      "coffee": "lubi kawę",
+      "travel": "lubi podróże",
+      "reading": "lubi czytać",
+      "watches": "kolekcjonuje zegarki",
+      "photography": "pasjonuje się fotografią",
+      "music": "lubi muzykę",
+      "sport": "jest aktywny sportowo",
+      "relax": "ceni chwile relaksu",
+      "gaming": "gra w gry",
+      "cooking": "lubi gotować"
+    }
+  },
+  "accessibility": { "loading": "Ładowanie kalendarza" }
+}

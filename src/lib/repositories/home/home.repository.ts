@@ -11,6 +11,7 @@ import type {
   HomeRepositoryData,
   HomeStoredEvent,
 } from "@/lib/home/home.types";
+import { canonicalRelationKey } from "@/lib/people/canonicalRelation";
 
 export interface HomeRepositoryResult extends HomeRepositoryData {
   userId: string | null;
@@ -36,7 +37,7 @@ async function loadProfile(userId: string): Promise<HomeProfile | null> {
 async function loadPeople(userId: string): Promise<HomePerson[]> {
   const { data, error } = await supabase
     .from("people")
-    .select("id, name, birthday, relationship, relation_label, gender")
+    .select("id, name, birthday, relationship, relation_label, relation_key, gender")
     .eq("user_id", userId)
     .order("name", { ascending: true });
   if (error) throw new HomeRepositoryError("people", error.message);
@@ -45,6 +46,10 @@ async function loadPeople(userId: string): Promise<HomePerson[]> {
     name: person.name,
     birthday: person.birthday ?? null,
     relationLabel: person.relation_label ?? person.relationship ?? null,
+    relationKey: canonicalRelationKey(
+      person.relation_key,
+      person.relation_label ?? person.relationship,
+    ),
     gender: person.gender === "female" || person.gender === "male" || person.gender === "other" || person.gender === "unspecified"
       ? person.gender
       : null,

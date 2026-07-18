@@ -260,11 +260,16 @@ function buildRecommendation(
   const person = viewModel.people.find((item) => item.id === recommendation.personId);
   if (!person) return null;
   return {
-    title: "Happy poleca dziś ✨",
-    message: `${person.name} ma urodziny za ${recommendation.daysUntil} dni 🎂`,
-    actionLabel: "Zobacz pomysły na prezent →",
+    title: "",
+    message: "",
+    actionLabel: "",
     icon: "🎁",
     href: `/gift/start?personId=${encodeURIComponent(person.id)}`,
+    translation: {
+      type: "birthday",
+      name: person.name,
+      days: recommendation.daysUntil,
+    },
   };
 }
 
@@ -497,6 +502,7 @@ function PersonActionsSheet({
   onDeleted: (personId: string) => void;
 }) {
   const formT = useTranslations("personForm");
+  const peopleT = useTranslations("people");
   const [mode, setMode] = useState<"actions" | "edit" | "delete">("actions");
   const [name, setName] = useState("");
   const [relationship, setRelationship] = useState("");
@@ -573,7 +579,7 @@ function PersonActionsSheet({
       onDeleted(person.id);
     } catch (deleteError) {
       console.error("[PersonActionsSheet] deletePerson failed:", deleteError);
-      setError("Nie udało się usunąć osoby.");
+      setError(formT("states.deleteError"));
     } finally {
       setSaving(false);
     }
@@ -583,7 +589,7 @@ function PersonActionsSheet({
     <div className="fixed inset-0 z-50">
       <button
         type="button"
-        aria-label="Zamknij akcje osoby"
+        aria-label={formT("delete.close")}
         className="absolute inset-0 bg-slate-950/25"
         onClick={onClose}
       />
@@ -595,14 +601,14 @@ function PersonActionsSheet({
               {person.name}
             </h2>
             <p className="truncate text-xs font-semibold text-slate-500">
-              {getPersonRelationLabel(person) || "Brak relacji"}
+              {localizedPersonRelation(person, peopleT) || peopleT("filters.missingRelation")}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-500"
-            aria-label="Zamknij"
+            aria-label={formT("relationship.close")}
           >
             <X className="h-5 w-5" />
           </button>
@@ -624,7 +630,7 @@ function PersonActionsSheet({
               className="flex min-h-12 items-center gap-3 rounded-[0.95rem] bg-rose-50 px-3 text-left text-sm font-black text-rose-600"
             >
               <Trash2 className="h-5 w-5" />
-              Usuń
+              {formT("delete.action")}
             </button>
           </div>
         )}
@@ -700,7 +706,7 @@ function PersonActionsSheet({
         {mode === "delete" && (
           <div>
             <p className="rounded-[0.9rem] bg-rose-50 px-3 py-3 text-sm font-bold leading-5 text-rose-700">
-              Usunąć tę osobę z HappyDate? Tej akcji nie da się cofnąć.
+              {formT("delete.confirm")}
             </p>
             {error && (
               <p className="mt-2 rounded-[0.8rem] bg-rose-50 px-3 py-2 text-xs font-bold text-rose-600">
@@ -713,7 +719,7 @@ function PersonActionsSheet({
                 onClick={() => setMode("actions")}
                 className="min-h-11 rounded-[0.9rem] bg-slate-50 px-4 text-sm font-black text-slate-600"
               >
-                Anuluj
+                {formT("actions.cancel")}
               </button>
               <button
                 type="button"
@@ -721,7 +727,7 @@ function PersonActionsSheet({
                 onClick={handleDelete}
                 className="min-h-11 rounded-[0.9rem] bg-rose-600 px-4 text-sm font-black text-white disabled:opacity-50"
               >
-                {saving ? "Usuwanie..." : "Usuń osobę"}
+                {formT(saving ? "states.deleting" : "delete.confirmAction")}
               </button>
             </div>
           </div>
@@ -729,6 +735,18 @@ function PersonActionsSheet({
       </section>
     </div>
   );
+}
+
+function localizedPersonRelation(
+  person: PersonRow,
+  t: ReturnType<typeof useTranslations<"people">>,
+) {
+  const key = getPersonRelationKey(person);
+  if (!key || key === "other") return getPersonRelationLabel(person);
+  const variant = person.gender === "female" || person.gender === "male"
+    ? person.gender
+    : "neutral";
+  return t(`relationships.${key}.${variant}`);
 }
 
 function Field({

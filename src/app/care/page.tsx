@@ -1,22 +1,28 @@
 // src/app/care/page.tsx
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
-export const metadata: Metadata = {
-  title: "HappyDate Care – Jesteśmy tu, żeby pomóc",
-  description:
-    "HappyDate Care to przestrzeń wsparcia i troski. Pomagamy z pytaniami, emocjami i codziennym korzystaniem z platformy.",
-  alternates: { canonical: "/care" },
-  openGraph: {
-    title: "HappyDate Care",
-    description:
-      "Nie tylko technologia. HappyDate Care to wsparcie, zrozumienie i ludzka pomoc.",
-    type: "website",
-    url: "https://happydate.pl/care",
-  },
-  twitter: { card: "summary_large_image" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("care.page");
+  return {
+    title: t("title"),
+    description: t("subtitle"),
+    alternates: { canonical: "/care" },
+    openGraph: {
+      title: "HappyDate Care",
+      description: t("intro"),
+      type: "website",
+      url: "https://happydate.pl/care",
+    },
+    twitter: { card: "summary_large_image" },
+  };
+}
 
-export default function CarePage() {
+export default async function CarePage() {
+  const t = await getTranslations("care.page");
+  const topicT = await getTranslations("care.topics");
+  const topics = ["technical", "gift", "questions"] as const;
+  const icons = { technical: "🗓️", gift: "🎁", questions: "💬" };
   return (
     <main className="min-h-screen bg-gradient-to-br from-sky-50 via-rose-50 to-amber-50 pb-[calc(var(--hd-nav-height)+env(safe-area-inset-bottom))]">
       {/* HERO */}
@@ -25,9 +31,7 @@ export default function CarePage() {
           💛 HappyDate Care
         </h1>
         <p className="mx-auto mt-4 max-w-[var(--hd-screen-wide)] text-base font-medium leading-7 text-slate-700 md:text-xl">
-          Czasem wystarczy, że ktoś po prostu jest.
-          HappyDate Care to miejsce stworzone z myślą o wsparciu, spokoju
-          i ludzkim podejściu — nawet w świecie technologii.
+          {t("subtitle")}
         </p>
       </section>
 
@@ -35,48 +39,27 @@ export default function CarePage() {
       <section className="mx-auto max-w-[var(--hd-screen-wide)] px-4 py-8">
         <div className="hd-surface p-5">
           <h2 className="text-2xl font-extrabold text-slate-900">
-            Czym jest HappyDate Care?
+            {t("aboutTitle")}
           </h2>
-          <p className="mt-4 text-slate-700 leading-relaxed">
-            HappyDate Care to nie jest klasyczne „centrum pomocy”.
-            To przestrzeń, w której możesz zadać pytanie, podzielić się
-            wątpliwością lub napisać wtedy, gdy coś jest dla Ciebie niejasne.
-            Dbamy nie tylko o działanie platformy, ale też o komfort osób,
-            które z niej korzystają.
-          </p>
+          <p className="mt-4 text-slate-700 leading-relaxed">{t("intro")}</p>
         </div>
       </section>
 
       {/* W CZYM POMAGAMY */}
       <section className="mx-auto max-w-[var(--hd-screen-wide)] px-4 py-6">
         <h3 className="mb-5 text-center text-2xl font-extrabold">
-          W czym możemy pomóc?
+          {t("helpTitle")}
         </h3>
         <div className="grid gap-3 md:grid-cols-3">
-          {[
-            {
-              icon: "🗓️",
-              h: "Korzystanie z platformy",
-              p: "Kalendarz wydarzeń, przypomnienia, ustawienia konta.",
-            },
-            {
-              icon: "🎁",
-              h: "Wybór prezentu",
-              p: "Jak działają rekomendacje, sugestie AI i personalizacja.",
-            },
-            {
-              icon: "💬",
-              h: "Pytania i wątpliwości",
-              p: "Jeśli coś jest niejasne lub po prostu chcesz zapytać.",
-            },
-          ].map((v) => (
-            <div
-              key={v.h}
-              className="hd-surface p-4"
-            >
-              <div className="text-3xl">{v.icon}</div>
-              <h4 className="mt-3 font-semibold text-lg">{v.h}</h4>
-              <p className="mt-2 text-slate-600">{v.p}</p>
+          {topics.map((topic) => (
+            <div key={topic} className="hd-surface p-4">
+              <div className="text-3xl">{icons[topic]}</div>
+              <h4 className="mt-3 font-semibold text-lg">
+                {topicT(`${topic}.title`)}
+              </h4>
+              <p className="mt-2 text-slate-600">
+                {topicT(`${topic}.description`)}
+              </p>
             </div>
           ))}
         </div>
@@ -86,13 +69,9 @@ export default function CarePage() {
       <section className="mx-auto max-w-[var(--hd-screen-wide)] px-4 py-8">
         <div className="hd-surface bg-gradient-to-br from-sky-50 to-pink-50 p-5">
           <h3 className="text-2xl font-extrabold text-slate-900">
-            Nasze podejście
+            {t("approachTitle")}
           </h3>
-          <p className="mt-4 text-slate-700 leading-relaxed">
-            Nie działamy na zasadzie automatycznych odpowiedzi.
-            Czytamy wiadomości, rozumiemy kontekst i odpowiadamy po ludzku.
-            Technologia jest ważna — ale relacje są ważniejsze.
-          </p>
+          <p className="mt-4 text-slate-700 leading-relaxed">{t("approach")}</p>
         </div>
       </section>
 
@@ -100,12 +79,9 @@ export default function CarePage() {
       <section className="mx-auto max-w-[var(--hd-screen-wide)] px-4 py-8">
         <div className="hd-surface p-5 text-center">
           <h3 className="text-2xl font-extrabold text-slate-900">
-            Napisz do HappyDate Care
+            {t("contactTitle")}
           </h3>
-          <p className="mt-3 text-slate-700 max-w-xl mx-auto">
-            Jeśli coś Cię martwi, zastanawia lub po prostu potrzebujesz pomocy —
-            jesteśmy tutaj.
-          </p>
+          <p className="mt-3 text-slate-700 max-w-xl mx-auto">{t("closing")}</p>
           <div className="mt-6 flex flex-col items-center gap-2">
             <a
               href="mailto:hello@happydate.pl"
@@ -113,9 +89,7 @@ export default function CarePage() {
             >
               hello@happydate.pl
             </a>
-            <p className="text-xs text-slate-500 mt-2">
-              Odpowiadamy możliwie szybko, z uważnością i szacunkiem.
-            </p>
+            <p className="text-xs text-slate-500 mt-2">{t("response")}</p>
           </div>
         </div>
       </section>

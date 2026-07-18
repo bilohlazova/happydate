@@ -5,7 +5,7 @@
   "assistant": { "ask": "Zapytaj Happy", "listen": "Posłuchaj krótkiego briefu", "stop": "Zatrzymaj brief", "read": "Przeczytaj krótki brief", "sectionLabel": "Działania Happy", "close": "Zamknij", "speechError": "Nie udało się odtworzyć głosu. Brief możesz przeczytać poniżej." },
   "countdown": { "today": "dzisiaj", "tomorrow": "jutro", "days": "za {count} dni" },
   "events": { "birthdayTitle": "Urodziny: {name}" },
-  "categories": { "birthday": "Urodziny", "anniversary": "Rocznica", "work": "Praca", "personal": "Osobiste" },
+  "categories": { "birthday": "Urodziny", "anniversary": "Rocznica", "work": "Praca", "personal": "Osobiste", "other": "Inne" },
   "insights": { "birthday": "Urodziny {name} — {countdown}", "event": "{title} — {countdown}", "savedGifts": "Masz {count} zapisane pomysły na prezent", "hasPreferences": "Happy zna już kilka upodobań {name}" },
   "brief": { "intro": "Dzisiaj masz {count} ważne sprawy.", "featured": "Najbliżej: {title}, {countdown}." },
   "featured": { "importantLabel": "Najbliższa ważna data", "nextLabel": "Najbliższe wydarzenie", "preferences": "Zapisane upodobania", "personCta": "Zobacz profil osoby", "eventCta": "Zobacz w kalendarzu" },

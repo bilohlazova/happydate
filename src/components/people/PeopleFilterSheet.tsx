@@ -20,41 +20,47 @@ interface PeopleFilterSheetProps {
   onClose: () => void;
 }
 
-const RELATION_OPTIONS: Array<{ value: RelationFilter; label: string }> = [
-  { value: "all", label: "Wszystkie" },
-  { value: "family", label: "Rodzina" },
-  { value: "partner", label: "Partner" },
-  { value: "friends", label: "Przyjaciele" },
-  { value: "work", label: "Praca" },
-  { value: "other", label: "Inne" },
+type FilterLabelKey = "all" | "family" | "partner" | "friends" | "work" | "other"
+  | "today" | "sevenDays" | "thirtyDays" | "missingDate"
+  | "women" | "men" | "genderOther" | "unspecified"
+  | "missingRelation" | "missingMemories" | "incomplete"
+  | "default" | "az" | "birthday" | "recent";
+
+const RELATION_OPTIONS: Array<{ value: RelationFilter; labelKey: FilterLabelKey }> = [
+  { value: "all", labelKey: "all" },
+  { value: "family", labelKey: "family" },
+  { value: "partner", labelKey: "partner" },
+  { value: "friends", labelKey: "friends" },
+  { value: "work", labelKey: "work" },
+  { value: "other", labelKey: "other" },
 ];
 
-const DATE_OPTIONS: Array<{ value: ImportantDateFilter; label: string }> = [
-  { value: "today", label: "Dzisiaj" },
-  { value: "7_days", label: "W ciągu 7 dni" },
-  { value: "30_days", label: "W ciągu 30 dni" },
-  { value: "missing", label: "Brak daty" },
+const DATE_OPTIONS: Array<{ value: ImportantDateFilter; labelKey: FilterLabelKey }> = [
+  { value: "today", labelKey: "today" },
+  { value: "7_days", labelKey: "sevenDays" },
+  { value: "30_days", labelKey: "thirtyDays" },
+  { value: "missing", labelKey: "missingDate" },
 ];
 
-const GENDER_OPTIONS: Array<{ value: GenderFilter; label: string }> = [
-  { value: "all", label: "Wszystkie" },
-  { value: "female", label: "Kobiety" },
-  { value: "male", label: "Mężczyźni" },
-  { value: "other", label: "Inna" },
-  { value: "unspecified", label: "Nie podano" },
+const GENDER_OPTIONS: Array<{ value: GenderFilter; labelKey: FilterLabelKey }> = [
+  { value: "all", labelKey: "all" },
+  { value: "female", labelKey: "women" },
+  { value: "male", labelKey: "men" },
+  { value: "other", labelKey: "genderOther" },
+  { value: "unspecified", labelKey: "unspecified" },
 ];
 
-const PROFILE_OPTIONS: Array<{ value: ProfileFilter; label: string }> = [
-  { value: "missing_relation", label: "Brak relacji" },
-  { value: "missing_memories", label: "Brak wspomnień" },
-  { value: "incomplete", label: "Do uzupełnienia" },
+const PROFILE_OPTIONS: Array<{ value: ProfileFilter; labelKey: FilterLabelKey }> = [
+  { value: "missing_relation", labelKey: "missingRelation" },
+  { value: "missing_memories", labelKey: "missingMemories" },
+  { value: "incomplete", labelKey: "incomplete" },
 ];
 
-const SORT_OPTIONS: Array<{ value: PeopleSort; label: string }> = [
-  { value: "default", label: "Domyślne" },
-  { value: "az", label: "A-Z" },
-  { value: "birthday", label: "Najbliższe urodziny" },
-  { value: "recent", label: "Ostatnio dodane" },
+const SORT_OPTIONS: Array<{ value: PeopleSort; labelKey: FilterLabelKey }> = [
+  { value: "default", labelKey: "default" },
+  { value: "az", labelKey: "az" },
+  { value: "birthday", labelKey: "birthday" },
+  { value: "recent", labelKey: "recent" },
 ];
 
 export function PeopleFilterSheet({
@@ -93,7 +99,7 @@ export function PeopleFilterSheet({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
           <div className="grid gap-3">
-            <FilterGroup title="Relacja">
+            <FilterGroup title={t("filters.relation")}>
               <ChipGrid
                 options={RELATION_OPTIONS}
                 value={draftFilters.relation}
@@ -103,7 +109,7 @@ export function PeopleFilterSheet({
               />
             </FilterGroup>
 
-            <FilterGroup title="Ważne daty">
+            <FilterGroup title={t("filters.importantDates")}>
               <ChipGrid
                 options={DATE_OPTIONS}
                 value={draftFilters.importantDate}
@@ -119,7 +125,7 @@ export function PeopleFilterSheet({
               />
             </FilterGroup>
 
-            <FilterGroup title="Płeć">
+            <FilterGroup title={t("filters.gender")}>
               <ChipGrid
                 options={GENDER_OPTIONS}
                 value={draftFilters.gender}
@@ -129,7 +135,7 @@ export function PeopleFilterSheet({
               />
             </FilterGroup>
 
-            <FilterGroup title="Profil">
+            <FilterGroup title={t("filters.profile")}>
               <ChipGrid
                 options={PROFILE_OPTIONS}
                 value={draftFilters.profile}
@@ -143,7 +149,7 @@ export function PeopleFilterSheet({
               />
             </FilterGroup>
 
-            <FilterGroup title="Sortowanie">
+            <FilterGroup title={t("filters.sort")}>
               <ChipGrid
                 options={SORT_OPTIONS}
                 value={draftFilters.sort}
@@ -196,18 +202,11 @@ function ChipGrid<T extends string>({
   value,
   onChange,
 }: {
-  options: Array<{ value: T; label: string }>;
+  options: Array<{ value: T; labelKey: FilterLabelKey }>;
   value: T;
   onChange: (value: T) => void;
 }) {
   const t = useTranslations("people");
-  const labelKeys: Record<string, "all" | "family" | "partner" | "friends" | "work" | "other" | "today" | "sevenDays" | "thirtyDays" | "missingDate" | "women" | "men" | "genderOther" | "unspecified" | "missingRelation" | "missingMemories" | "incomplete" | "default" | "az" | "birthday" | "recent"> = {
-    Wszystkie: "all", Rodzina: "family", Partner: "partner", Przyjaciele: "friends", Praca: "work", Inne: "other",
-    Dzisiaj: "today", "W ciągu 7 dni": "sevenDays", "W ciągu 30 dni": "thirtyDays", "Brak daty": "missingDate",
-    Kobiety: "women", Mężczyźni: "men", Inna: "genderOther", "Nie podano": "unspecified",
-    "Brak relacji": "missingRelation", "Brak wspomnień": "missingMemories", "Do uzupełnienia": "incomplete",
-    Domyślne: "default", "A-Z": "az", "Najbliższe urodziny": "birthday", "Ostatnio dodane": "recent",
-  };
   return (
     <div className="flex flex-wrap gap-1.5">
       {options.map((option) => {
@@ -224,7 +223,7 @@ function ChipGrid<T extends string>({
                 : "bg-slate-50 text-slate-600"
             }`}
           >
-            {t(`filters.${labelKeys[option.label]}`)}
+            {t(`filters.${option.labelKey}`)}
           </button>
         );
       })}

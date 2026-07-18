@@ -9,6 +9,11 @@ export interface HappyRecommendation {
   actionLabel: string;
   icon: string;
   href?: string;
+  translation?: {
+    type: "birthday";
+    name: string;
+    days: number;
+  };
 }
 
 interface HappyRecommendationCardProps {
@@ -23,10 +28,13 @@ export function HappyRecommendationCard({
     return null;
   }
 
-  const birthdayMatch = recommendation.message.match(/^(.*) ma urodziny za (\d+) dni 🎂$/);
-  const known = recommendation.title === "Happy poleca dziś ✨" && birthdayMatch;
+  const known = recommendation.translation?.type === "birthday"
+    ? recommendation.translation
+    : null;
   const title = known ? t("recommendation.knownTitle") : recommendation.title;
-  const message = known ? t("recommendation.birthday", { name: birthdayMatch[1], days: Number(birthdayMatch[2]) }) : recommendation.message;
+  const message = known
+    ? t("recommendation.birthday", { name: known.name, days: known.days })
+    : recommendation.message;
   const actionLabel = known ? t("recommendation.giftIdeas") : recommendation.actionLabel;
 
   return (

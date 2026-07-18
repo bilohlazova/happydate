@@ -22,7 +22,6 @@ import { RelationPickerField } from "@/components/people/RelationPickerField";
 import {
   getPersonRelationKey,
   getPersonRelationLabel,
-  getPersonRelationSearchAliases,
   getRelationCategoryForKey,
   getRelationLabel,
   type RelationCategory,
@@ -35,7 +34,7 @@ import {
   sortPeople,
   type PeopleFilters,
 } from "@/components/people/peopleFilters";
-import type { MemoryRow } from "@/lib/repositories/memory.types";
+import type { PeoplePageViewModel, PersonListItemViewModel } from "@/lib/people/peopleData.types";
 import type {
   PersonGender,
   PersonRelationKey,
@@ -53,11 +52,9 @@ const COLLAPSED_VISIBLE_COUNT = 10;
 
 interface PeoplePageContentProps {
   loading: boolean;
-  people: PersonRow[];
-  memories: MemoryRow[];
-  recommendation: HappyRecommendation | null;
-  onPersonUpdated: (person: PersonRow) => void;
-  onPersonDeleted: (personId: string) => void;
+  viewModel: PeoplePageViewModel | null;
+  onPersonUpdated: () => void | Promise<void>;
+  onPersonDeleted: (personId: string) => void | Promise<void>;
 }
 
 interface PersonListItem {
@@ -71,9 +68,7 @@ interface PersonListItem {
 
 export function PeoplePageContent({
   loading,
-  people,
-  memories,
-  recommendation,
+  viewModel,
   onPersonUpdated,
   onPersonDeleted,
 }: PeoplePageContentProps) {
@@ -103,24 +98,12 @@ export function PeoplePageContent({
   }, []);
 
   const peopleViewModels = useMemo(
-    () =>
-      people.map((person) => {
-        const personMemories = memories.filter(
-          (memory) => memory.person_id === person.id
-        );
-        const tags = getTagsForPerson(person, personMemories);
-        const birthday = getBirthdayInfo(person.birthday, locale);
-
-        return {
-          person,
-          tags,
-          memoriesCount: personMemories.length,
-          nextDateLabel: birthday?.label ?? null,
-          daysUntilNextDate: birthday?.daysUntil ?? null,
-          searchText: buildSearchText(person, tags, personMemories),
-        };
-      }),
-    [locale, memories, people]
+    () => (viewModel?.people ?? []).map((item) => adaptPersonListItem(item, locale)),
+    [locale, viewModel]
+  );
+  const recommendation = useMemo(
+    () => buildRecommendation(viewModel),
+    [viewModel]
   );
 
   const filteredPeople = useMemo(() => {
@@ -142,7 +125,7 @@ export function PeoplePageContent({
 
   const waitingForContact = Math.max(
     0,
-    people.length -
+    peopleViewModels.length -
       peopleViewModels.filter((item) => item.memoriesCount > 0).length
   );
   const alphabetItems = useMemo(
@@ -165,8 +148,8 @@ export function PeoplePageContent({
           aria-hidden={compactChrome}
         >
           <PeopleSummaryCard
-            peopleCount={people.length}
-            birthdaysThisWeek={birthdaysThisWeek}
+            peopleCount={viewModel?.summary.peopleCount ?? 0}
+            birthdaysThisWeek={viewModel?.summary.birthdaysThisWeek ?? birthdaysThisWeek}
             waitingForContact={waitingForContact}
           />
 
@@ -192,7 +175,7 @@ export function PeoplePageContent({
 
         <PeopleList
           loading={loading}
-          peopleCount={people.length}
+          peopleCount={viewModel?.summary.peopleCount ?? 0}
           filteredPeople={filteredPeople}
           query={query}
           appliedFilters={appliedFilters}
@@ -223,18 +206,65 @@ export function PeoplePageContent({
         <PersonActionsSheet
           person={actionPerson}
           onClose={() => setActionPerson(null)}
-          onUpdated={(person) => {
-            onPersonUpdated(person);
+          onUpdated={() => {
+            void onPersonUpdated();
             setActionPerson(null);
           }}
           onDeleted={(personId) => {
-            onPersonDeleted(personId);
+            void onPersonDeleted(personId);
             setActionPerson(null);
           }}
         />
       </div>
     </main>
   );
+}
+
+function adaptPersonListItem(
+  item: PersonListItemViewModel,
+  locale: AppLocale
+): PersonListItem {
+  const person: PersonRow = {
+    id: item.id,
+    user_id: "",
+    name: item.name,
+    relationship: item.relationship,
+    relation_label: item.relationLabel,
+    relation_key: item.relationKey,
+    relation_category: item.relationCategory,
+    birthday: item.birthday,
+    notes: null,
+    phone: null,
+    email: null,
+    external_contact_id: null,
+    contact_source: null,
+    gender: item.gender,
+    created_at: item.createdAt,
+  };
+  const birthday = getBirthdayInfo(item.birthday, locale);
+  return {
+    person,
+    tags: item.tags,
+    memoriesCount: item.memoriesCount,
+    nextDateLabel: birthday?.label ?? null,
+    daysUntilNextDate: item.daysUntilBirthday,
+    searchText: item.searchText,
+  };
+}
+
+function buildRecommendation(
+  viewModel: PeoplePageViewModel | null
+): HappyRecommendation | null {
+  const recommendation = viewModel?.recommendation;
+  if (!recommendation) return null;
+  const person = viewModel.people.find((item) => item.id === recommendation.personId);
+  if (!person) return null;
+  return {
+    title: "Happy poleca dziś ✨",
+    message: `${person.name} ma urodziny za ${recommendation.daysUntil} dni 🎂`,
+    actionLabel: "Zobacz pomysły na prezent →",
+    icon: "🎁",
+  };
 }
 
 function PeopleList({
@@ -787,54 +817,6 @@ function PeopleEmptyState() {
   );
 }
 
-function buildSearchText(
-  person: PersonRow,
-  tags: string[],
-  memories: MemoryRow[]
-) {
-  return [
-    person.name,
-    getPersonRelationLabel(person),
-    ...getPersonRelationSearchAliases(person),
-    person.notes,
-    person.phone,
-    person.email,
-    ...tags,
-    ...memories.flatMap((memory) => [
-      memory.title,
-      memory.value_text,
-      memory.content_text,
-      ...(memory.ai_tags ?? []),
-    ]),
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
-function getTagsForPerson(person: PersonRow, memories: MemoryRow[]): string[] {
-  const tags = new Set<string>();
-
-  memories.forEach((memory) => {
-    memory.ai_tags?.forEach((tag) => {
-      if (tag.trim()) {
-        tags.add(formatTag(tag));
-      }
-    });
-
-    if (memory.type) {
-      tags.add(formatTag(memory.type));
-    }
-  });
-
-  const relationLabel = getPersonRelationLabel(person);
-
-  if (tags.size === 0 && relationLabel) {
-    tags.add(formatTag(relationLabel));
-  }
-
-  return Array.from(tags).slice(0, 4);
-}
-
 function getAlphabetItems(items: PersonListItem[]) {
   const firstPersonByLetter = new Map<string, string>();
 
@@ -853,13 +835,6 @@ function getAlphabetItems(items: PersonListItem[]) {
     letter,
     personId,
   }));
-}
-
-function formatTag(tag: string): string {
-  return tag
-    .replaceAll("_", " ")
-    .trim()
-    .replace(/^\w/, (letter) => letter.toUpperCase());
 }
 
 function getBirthdayInfo(date: string | null, locale: AppLocale) {

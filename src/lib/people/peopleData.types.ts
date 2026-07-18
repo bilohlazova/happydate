@@ -17,11 +17,17 @@ export interface PersonHealthViewModel {
 export interface PersonListItemViewModel {
   id: string;
   name: string;
+  relationship: string | null;
   relationLabel: string | null;
+  relationKey: import("@/lib/repositories/person.types").PersonRelationKey | null;
+  relationCategory: import("@/lib/repositories/person.types").PersonRelationCategory | null;
+  gender: import("@/lib/repositories/person.types").PersonGender;
   birthday: string | null;
   daysUntilBirthday: number | null;
+  createdAt: string;
   tags: string[];
   knowledgeItemCount: number;
+  memoriesCount: number;
   searchText: string;
   href: string;
 }

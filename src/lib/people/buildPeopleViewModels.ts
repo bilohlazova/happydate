@@ -170,12 +170,27 @@ export function buildPeoplePageViewModel({
     return {
       id: person.id,
       name: person.name,
+      relationship: person.relationship,
       relationLabel: relationLabel(person),
+      relationKey: person.relation_key,
+      relationCategory: person.relation_category,
+      gender: person.gender,
       birthday: person.birthday,
       daysUntilBirthday: daysUntilBirthday(person.birthday, currentDate),
+      createdAt: person.created_at,
       tags,
       knowledgeItemCount: personItems.length,
-      searchText: [person.name, relationLabel(person), ...tags, ...values(personItems).map((item) => item.value)].filter(Boolean).join(" "),
+      memoriesCount: computed.memoriesCount,
+      searchText: [
+        person.name,
+        person.relationship,
+        relationLabel(person),
+        person.notes,
+        person.phone,
+        person.email,
+        ...tags,
+        ...values(personItems).map((item) => item.value),
+      ].filter(Boolean).join(" "),
       href: `/people/${encodeURIComponent(person.id)}`,
     };
   });

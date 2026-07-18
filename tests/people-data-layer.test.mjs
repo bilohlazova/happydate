@@ -43,6 +43,7 @@ test("PeoplePageViewModel is deterministic and excludes private or unrelated kno
   assert.equal(model.summary.peopleCount, 2);
   assert.equal(model.summary.birthdaysThisWeek, 1);
   assert.equal(model.people[0].knowledgeItemCount, 1);
+  assert.equal(model.people[0].memoriesCount, 0);
   assert.equal(model.people[0].searchText.includes("PRIVATE"), false);
   assert.equal(model.people[0].searchText.includes("OTHER USER"), false);
   assert.equal(model.recommendation?.personId, "person-1");
@@ -107,11 +108,8 @@ test("Stage 6.1 dependency and ownership guards protect production loaders", asy
   const loaders = await readFile(new URL("../src/lib/people/people.loaders.ts", import.meta.url), "utf8");
   const builders = await readFile(new URL("../src/lib/people/buildPeopleViewModels.ts", import.meta.url), "utf8");
   const repository = await readFile(new URL("../src/lib/repositories/personRepository.ts", import.meta.url), "utf8");
-  const uiFiles = [
-    "../src/app/people/page.tsx",
-    "../src/app/people/[id]/page.tsx",
-    "../src/components/people/PeoplePageContent.tsx",
-  ];
+  const listPage = await readFile(new URL("../src/app/people/page.tsx", import.meta.url), "utf8");
+  const profilePage = await readFile(new URL("../src/app/people/[id]/page.tsx", import.meta.url), "utf8");
   for (const forbidden of ['.from("memories")', "MemoryRow", "getActiveMemories", "getMemoriesForPerson", "getBrainMemories", "value_text", "content_text"]) {
     assert.equal(loaders.includes(forbidden), false, forbidden);
     assert.equal(builders.includes(forbidden), false, forbidden);
@@ -121,6 +119,27 @@ test("Stage 6.1 dependency and ownership guards protect production loaders", asy
   assert.equal((loaders.match(/getKnowledgeForPerson\(/g) ?? []).length, 1);
   assert.ok(loaders.lastIndexOf("getOwnedPersonById(") < loaders.lastIndexOf("getKnowledgeForPerson("));
   assert.match(repository, /\.eq\("id", personId\)[\s\S]*\.eq\("user_id", userId\)/);
-  const uiSources = await Promise.all(uiFiles.map((path) => readFile(new URL(path, import.meta.url), "utf8")));
-  assert.equal(uiSources.some((source) => source.includes("people.loaders")), false);
+  assert.equal(listPage.includes("people.loaders"), true);
+  assert.equal(profilePage.includes("people.loaders"), false);
+});
+
+test("Stage 6.2 People list consumes one ViewModel and has no legacy read path", async () => {
+  const page = await readFile(new URL("../src/app/people/page.tsx", import.meta.url), "utf8");
+  const content = await readFile(new URL("../src/components/people/PeoplePageContent.tsx", import.meta.url), "utf8");
+
+  assert.equal((page.match(/loadPeoplePage\(/g) ?? []).length, 2);
+  assert.match(page, /viewModel=\{viewModel\}/);
+  assert.match(content, /viewModel: PeoplePageViewModel \| null/);
+
+  for (const forbidden of [
+    "getActiveMemories",
+    "MemoryRow",
+    "loadBrain",
+    "createHappyContext",
+    "getPeople(",
+    '.from("memories")',
+  ]) {
+    assert.equal(page.includes(forbidden), false, forbidden);
+    assert.equal(content.includes(forbidden), false, forbidden);
+  }
 });

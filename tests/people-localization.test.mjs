@@ -46,7 +46,8 @@ test("People presentation preserves user values and unprefixed routes", async ()
   const card = await readFile(path.join(root, "src/components/people/PersonCard.tsx"), "utf8");
   const menu = await readFile(path.join(root, "src/components/people/AddPersonMenu.tsx"), "utf8");
   assert.match(page, /person\.name/);
-  assert.match(page, /memory\.value_text/);
+  assert.match(page, /item\.searchText/);
+  assert.doesNotMatch(page, /memory\.(?:value_text|content_text)/);
   assert.match(card, /person\.name/);
   assert.match(menu, /href: "\/people\/add\?mode=/);
   assert.doesNotMatch(menu, /href: `\/$\{locale\}/);

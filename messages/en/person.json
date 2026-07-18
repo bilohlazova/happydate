@@ -1,1 +1,100 @@
-{"profile":{"title":"Person profile","loading":"Loading...","notFound":"Person not found"},"details":{"notes":"Notes"},"knowledge":{"title":"What Happy remembers about this person","subtitle":"Based on saved information.","facts":"Known facts","gifts":"Gift ideas","memories":"Memories","profile":"Profile","summary":"Profile summary","completeness":"Profile completeness","completenessHint":"The more information you save, the more relevant Happy's suggestions become.","remembered":"Remembered information","more":"+{count} more","giftSaved":"You have a saved gift idea.","lastMemory":"Last memory","emptyTitle":"Happy does not know much about this person yet.","emptyDescription":"Add some information to improve future suggestions.","addInformation":"Add information"},"memories":{"title":"History","emptyTitle":"There are no memories yet","emptyDescription":"Add the first memory so HappyDate can get to know this person better."},"highlights":{"title":"⭐ Highlights","coffee":"Favorite coffee","food":"Favorite food","restaurant":"Restaurants","place":"Places","flower":"Flowers","movie":"Movies","music":"Music","book":"Books","hobby":"Hobby"},"advisor":{"subtitle":"Your personal gift assistant","firstMemoryTitle":"Let's get to know {name}","firstMemoryMessage":"Add the first memory about {name}. The more HappyDate knows, the more relevant reminders and gift suggestions become.","moreMemoriesTitle":"We are getting to know {name}","moreMemoriesMessage":"You already have some saved information. Add more memories so HappyDate can personalize gifts and important reminders.","flowersTitle":"Favorite flowers are missing","flowersMessage":"Knowing someone's favorite flowers can save a last-minute gift.","restaurantTitle":"We do not know their favorite restaurant yet","restaurantMessage":"Maybe next time ask which place this person most likes returning to?","hobbyTitle":"What do they enjoy in their free time?","hobbyMessage":"Knowing their hobbies helps create more personal and relevant gift suggestions."},"accessibility":{"profile":"Profile for {name}","knowledge":"Knowledge about this person","memorySection":"Person memories","addInformation":"Add information about this person"}}
+{
+  "profile": {
+    "title": "Person profile",
+    "loading": "Loading...",
+    "notFound": "Person not found",
+    "loadError": "The profile could not be loaded. Please try again."
+  },
+  "profileUi": {
+    "likes": "Likes",
+    "dislikes": "Dislikes",
+    "interests": "Interests",
+    "giftIdeas": "Gift ideas",
+    "giftHistory": "Gift history",
+    "importantFacts": "Important information",
+    "timeline": "Timeline",
+    "brain": "Happy noticed",
+    "askHappy": "Ask Happy",
+    "addNote": "Add note",
+    "birthdayCountdown": "{days, plural, =0 {Birthday today} =1 {Birthday tomorrow} other {Birthday in # days}}",
+    "health": {
+      "starting": "Happy is just getting to know this person",
+      "partial": "Happy knows this person partly",
+      "good": "Happy knows this person well",
+      "missing": "You can still add",
+      "areas": {
+        "birthday": "birthday",
+        "preferences": "preferences",
+        "interests": "interests",
+        "giftIdea": "a gift idea",
+        "importantFacts": "important information",
+        "memories": "memories"
+      }
+    },
+    "empty": {
+      "likes": "Happy does not know this person's preferences yet.",
+      "dislikes": "Nothing has been saved about what this person dislikes.",
+      "interests": "Happy does not know this person's interests yet.",
+      "giftIdeas": "No gift ideas have been saved yet.",
+      "giftHistory": "There are no confirmed given gifts yet.",
+      "importantFacts": "No important information has been saved yet.",
+      "timeline": "The timeline is still empty.",
+      "brain": "Happy needs more confirmed information before noticing a pattern."
+    }
+  },
+  "details": { "notes": "Notes" },
+  "knowledge": {
+    "title": "What Happy remembers about this person",
+    "subtitle": "Based on saved information.",
+    "facts": "Known facts",
+    "gifts": "Gift ideas",
+    "memories": "Memories",
+    "profile": "Profile",
+    "summary": "Profile summary",
+    "completeness": "Profile completeness",
+    "completenessHint": "The more information you save, the more relevant Happy's suggestions become.",
+    "remembered": "Remembered information",
+    "more": "+{count} more",
+    "giftSaved": "You have a saved gift idea.",
+    "lastMemory": "Last memory",
+    "emptyTitle": "Happy does not know much about this person yet.",
+    "emptyDescription": "Add some information to improve future suggestions.",
+    "addInformation": "Add information"
+  },
+  "memories": {
+    "title": "History",
+    "emptyTitle": "There are no memories yet",
+    "emptyDescription": "Add the first memory so HappyDate can get to know this person better."
+  },
+  "highlights": {
+    "title": "⭐ Highlights",
+    "coffee": "Favorite coffee",
+    "food": "Favorite food",
+    "restaurant": "Restaurants",
+    "place": "Places",
+    "flower": "Flowers",
+    "movie": "Movies",
+    "music": "Music",
+    "book": "Books",
+    "hobby": "Hobby"
+  },
+  "advisor": {
+    "subtitle": "Your personal gift assistant",
+    "firstMemoryTitle": "Let's get to know {name}",
+    "firstMemoryMessage": "Add the first memory about {name}. The more HappyDate knows, the more relevant reminders and gift suggestions become.",
+    "moreMemoriesTitle": "We are getting to know {name}",
+    "moreMemoriesMessage": "You already have some saved information. Add more memories so HappyDate can personalize gifts and important reminders.",
+    "flowersTitle": "Favorite flowers are missing",
+    "flowersMessage": "Knowing someone's favorite flowers can save a last-minute gift.",
+    "restaurantTitle": "We do not know their favorite restaurant yet",
+    "restaurantMessage": "Maybe next time ask which place this person most likes returning to?",
+    "hobbyTitle": "What do they enjoy in their free time?",
+    "hobbyMessage": "Knowing their hobbies helps create more personal and relevant gift suggestions."
+  },
+  "accessibility": {
+    "profile": "Profile for {name}",
+    "knowledge": "Knowledge about this person",
+    "memorySection": "Person memories",
+    "addInformation": "Add information about this person"
+  }
+}

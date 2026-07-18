@@ -120,7 +120,29 @@ test("Stage 6.1 dependency and ownership guards protect production loaders", asy
   assert.ok(loaders.lastIndexOf("getOwnedPersonById(") < loaders.lastIndexOf("getKnowledgeForPerson("));
   assert.match(repository, /\.eq\("id", personId\)[\s\S]*\.eq\("user_id", userId\)/);
   assert.equal(listPage.includes("people.loaders"), true);
-  assert.equal(profilePage.includes("people.loaders"), false);
+  assert.equal(profilePage.includes("people.loaders"), true);
+});
+
+test("Stage 6.3 profile consumes PersonProfileViewModel without legacy reads", async () => {
+  const page = await readFile(new URL("../src/app/people/[id]/page.tsx", import.meta.url), "utf8");
+  const content = await readFile(new URL("../src/components/people/PersonProfileContent.tsx", import.meta.url), "utf8");
+
+  assert.equal((page.match(/loadPersonProfile\(/g) ?? []).length, 1);
+  assert.match(page, /PersonProfileViewModel/);
+  assert.match(content, /viewModel: PersonProfileViewModel \| null/);
+
+  for (const forbidden of [
+    "supabase",
+    "MemoryRow",
+    "getMemoriesForPerson",
+    "getPersonById",
+    "memoryRepository",
+    "buildPersonKnowledge",
+    "mapMemory",
+  ]) {
+    assert.equal(page.includes(forbidden), false, forbidden);
+    assert.equal(content.includes(forbidden), false, forbidden);
+  }
 });
 
 test("Stage 6.2 People list consumes one ViewModel and has no legacy read path", async () => {

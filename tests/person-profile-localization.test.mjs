@@ -14,6 +14,7 @@ test("person profile and knowledge labels exist in all locales", async () => {
   for (const locale of locales) {
     const value = await dictionary(locale, "person");
     for (const text of [value.profile.title, value.knowledge.title, value.knowledge.facts, value.knowledge.completeness, value.knowledge.lastMemory, value.accessibility.profile]) assert.ok(text.trim());
+    for (const text of [value.profileUi.likes, value.profileUi.dislikes, value.profileUi.interests, value.profileUi.giftIdeas, value.profileUi.giftHistory, value.profileUi.importantFacts, value.profileUi.timeline, value.profileUi.brain]) assert.ok(text.trim());
   }
 });
 
@@ -53,9 +54,11 @@ test("localized more label and advisor fallback are safe", async () => {
 
 test("person name, custom relation, memory values, and routes remain untouched", async () => {
   const page = await readFile(path.join(root, "src/app/people/[id]/page.tsx"), "utf8");
+  const profile = await readFile(path.join(root, "src/components/people/PersonProfileContent.tsx"), "utf8");
   const card = await readFile(path.join(root, "src/components/people/PersonCard.tsx"), "utf8");
   const memory = await readFile(path.join(root, "src/components/memories/MemoryTimelineItem.tsx"), "utf8");
-  assert.match(page, /person\.name/);
+  assert.match(profile, /hero\.name/);
+  assert.match(profile, /item\.value/);
   assert.match(card, /relationKey !== "other"[\s\S]*: relationLabel/);
   assert.match(memory, /memory\./);
   assert.match(page, /useParams/);

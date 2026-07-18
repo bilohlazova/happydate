@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
 import ReviewsClient from "./ReviewsClient";
+import { getTranslations } from "next-intl/server";
 
-export const metadata: Metadata = {
-  title: "HappyDate – Opinie",
-  description:
-    "Opinie użytkowników HappyDate – prawdziwe historie i wrażenia z prezentów dostarczonych na czas.",
-  alternates: { canonical: "/reviews" },
-  openGraph: {
-    title: "HappyDate – Opinie",
-    description:
-      "Zobacz, co mówią o nas użytkownicy. Ciepłe historie i uśmiechy, które zostają na długo.",
-    type: "website",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("static.reviews");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+    alternates: { canonical: "/reviews" },
+    openGraph: {
+      title: t("metaTitle"),
+      description: t("metaDescription"),
+      type: "website",
+    },
+  };
+}
 
 export default function Page() {
   return <ReviewsClient />;

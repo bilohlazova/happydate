@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { MobileUI } from "@/lib/theme/mobile";
+import { useTranslations } from "next-intl";
 
 type SpecialDate = {
   id?: string;
@@ -37,6 +38,7 @@ function toYmd(d: string): string | null {
 }
 
 export default function SurveyPage() {
+  const t = useTranslations("static.survey");
   const router = useRouter();
   const [uid, setUid] = useState<string | null>(null);
 
@@ -84,7 +86,16 @@ export default function SurveyPage() {
         .eq("user_id", user.id)
         .order("date", { ascending: true });
 
-      setDates(((ds ?? []) as SpecialDate[]) ?? []);
+      setDates(
+        ((ds ?? []) as SpecialDate[]).map((row) => ({
+          ...row,
+          label: ["support", "celebration", "Trudny dzień", "Święto"].includes(
+            row.label
+          )
+            ? ""
+            : row.label,
+        }))
+      );
       setLoading(false);
     })();
   }, [router]);
@@ -96,9 +107,12 @@ export default function SurveyPage() {
     setDates((d) => [...d, { date: "", label: "", kind: "support" }]);
 
   const updateDate = (idx: number, patch: Partial<SpecialDate>) =>
-    setDates((d) => d.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
+    setDates((d) =>
+      d.map((row, i) => (i === idx ? { ...row, ...patch } : row))
+    );
 
-  const removeDate = (idx: number) => setDates((d) => d.filter((_, i) => i !== idx));
+  const removeDate = (idx: number) =>
+    setDates((d) => d.filter((_, i) => i !== idx));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,27 +131,34 @@ export default function SurveyPage() {
             ? {
                 user_id: uid,
                 date: ymd,
-                label: d.label?.trim() || (d.kind === "support" ? "Trudny dzień" : "Święto"),
+                label: d.label?.trim() || d.kind,
                 kind: d.kind,
               }
             : null;
         })
-        .filter((d): d is { user_id: string; date: string; label: string; kind: "support" | "celebration" } => d !== null);
+        .filter(
+          (
+            d
+          ): d is {
+            user_id: string;
+            date: string;
+            label: string;
+            kind: "support" | "celebration";
+          } => d !== null
+        );
 
       // 1) Upsert ankiety
-      const { error: sErr } = await supabase
-        .from("user_survey")
-        .upsert(
-          {
-            user_id: uid,
-            likes,
-            dislikes,
-            dream,
-            notes,
-            is_completed: true,
-          },
-          { onConflict: "user_id" }
-        );
+      const { error: sErr } = await supabase.from("user_survey").upsert(
+        {
+          user_id: uid,
+          likes,
+          dislikes,
+          dream,
+          notes,
+          is_completed: true,
+        },
+        { onConflict: "user_id" }
+      );
       if (sErr) throw new Error(`user_survey: ${sErr.message}`);
 
       // 2) Nadpisanie listy dat
@@ -145,20 +166,21 @@ export default function SurveyPage() {
         .from("user_special_dates")
         .delete()
         .eq("user_id", uid);
-      if (delErr) throw new Error(`user_special_dates(delete): ${delErr.message}`);
+      if (delErr)
+        throw new Error(`user_special_dates(delete): ${delErr.message}`);
 
       if (normalizedDates.length) {
         const { error: insErr } = await supabase
           .from("user_special_dates")
           .insert(normalizedDates);
-        if (insErr) throw new Error(`user_special_dates(insert): ${insErr.message}`);
+        if (insErr)
+          throw new Error(`user_special_dates(insert): ${insErr.message}`);
       }
 
-      setMsg("Dziękujemy! Ankieta zapisana ✅ (+100 pkt)");
+      setMsg(t("success"));
       setTimeout(() => router.replace("/profile"), 800);
     } catch (e: unknown) {
-      const text = e instanceof Error ? e.message : "Wystąpił błąd";
-      setErr(text);
+      setErr(t("error"));
       console.error("[survey] submit error:", e);
     } finally {
       setSaving(false);
@@ -167,8 +189,14 @@ export default function SurveyPage() {
 
   if (loading) {
     return (
-      <main className={`${MobileUI.screen} flex items-center justify-center px-4`}>
-        <p className={`${MobileUI.card} p-5 text-sm font-semibold text-gray-500`}>Ładowanie…</p>
+      <main
+        className={`${MobileUI.screen} flex items-center justify-center px-4`}
+      >
+        <p
+          className={`${MobileUI.card} p-5 text-sm font-semibold text-gray-500`}
+        >
+          {t("loading")}
+        </p>
       </main>
     );
   }
@@ -176,83 +204,87 @@ export default function SurveyPage() {
   return (
     <main className={`${MobileUI.screen} ${MobileUI.contentBottom} py-4`}>
       <div className={`${MobileUI.container} ${MobileUI.card} space-y-5 p-5`}>
-        <h1 className="text-[2rem] font-black leading-tight text-sky-600">Krótka ankieta 🎁</h1>
+        <h1 className="text-[2rem] font-black leading-tight text-sky-600">
+          {t("title")}
+        </h1>
         <p className="text-sm font-semibold leading-5 text-gray-600">
-          Pomóż nam lepiej dobierać prezenty i wsparcie — za wypełnienie otrzymasz <b>+100 punktów</b>.
+          {t("subtitle")}
         </p>
 
         <form onSubmit={submit} className="space-y-6">
           {/* Likes */}
           <div>
             <label className="mb-1.5 block text-sm font-bold text-gray-700">
-              Co chętnie dostał(a)byś w prezencie? (wpisz po przecinku)
+              {t("likes")}
             </label>
             <input
               type="text"
               defaultValue={likesText}
               onChange={(e) => setLikes(splitTags(e.target.value))}
               className={MobileUI.input}
-              placeholder="kwiaty, książki, czekolada…"
+              placeholder={t("likesPlaceholder")}
             />
           </div>
 
           {/* Dislikes */}
           <div>
             <label className="mb-1.5 block text-sm font-bold text-gray-700">
-              Czego nie chcesz otrzymywać? (po przecinku)
+              {t("dislikes")}
             </label>
             <input
               type="text"
               defaultValue={dislikesText}
               onChange={(e) => setDislikes(splitTags(e.target.value))}
               className={MobileUI.input}
-              placeholder="słodycze, alkohol…"
+              placeholder={t("dislikesPlaceholder")}
             />
           </div>
 
           {/* Dream */}
           <div>
-            <label className="mb-1.5 block text-sm font-bold text-gray-700">Twoje marzenie</label>
+            <label className="mb-1.5 block text-sm font-bold text-gray-700">
+              {t("dream")}
+            </label>
             <textarea
               value={dream}
               onChange={(e) => setDream(e.target.value)}
               className={`${MobileUI.input} h-auto min-h-24 py-3`}
               rows={3}
-              placeholder="O czym marzysz? (np. kurs językowy, weekend w górach)"
+              placeholder={t("dreamPlaceholder")}
             />
           </div>
 
           {/* Notes */}
           <div>
             <label className="mb-1.5 block text-sm font-bold text-gray-700">
-              Dodatkowe uwagi (rozmiar, alergie, itp.)
+              {t("notes")}
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className={`${MobileUI.input} h-auto min-h-24 py-3`}
               rows={3}
-              placeholder="Np. rozmiar M, alergia na orzechy…"
+              placeholder={t("notesPlaceholder")}
             />
           </div>
 
           {/* Special dates */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-semibold text-sky-600">Szczególne daty</h2>
+              <h2 className="text-lg font-semibold text-sky-600">
+                {t("dates")}
+              </h2>
               <button
                 type="button"
                 onClick={addEmptyDate}
                 className={`${MobileUI.button} min-h-9 bg-sky-500 px-3 text-white hover:bg-sky-600`}
               >
-                + Dodaj datę
+                + {t("addDate")}
               </button>
             </div>
 
             {dates.length === 0 && (
-              <p className="text-sm text-gray-500">
-                Dodaj dni, o których powinniśmy pamiętać — święta i trudne rocznice.
-              </p>
+              <p className="text-sm text-gray-500">{t("datesEmpty")}</p>
             )}
 
             <div className="space-y-3">
@@ -270,26 +302,28 @@ export default function SurveyPage() {
                   <select
                     value={d.kind}
                     onChange={(e) =>
-                      updateDate(i, { kind: e.target.value as SpecialDate["kind"] })
+                      updateDate(i, {
+                        kind: e.target.value as SpecialDate["kind"],
+                      })
                     }
                     className={`${MobileUI.input} col-span-1`}
                   >
-                    <option value="support">trudny dzień</option>
-                    <option value="celebration">święto</option>
+                    <option value="support">{t("support")}</option>
+                    <option value="celebration">{t("celebration")}</option>
                   </select>
                   <input
                     type="text"
                     value={d.label}
                     onChange={(e) => updateDate(i, { label: e.target.value })}
                     className={`${MobileUI.input} col-span-1`}
-                    placeholder="opis (np. rocznica)"
+                    placeholder={t("datePlaceholder")}
                   />
                   <button
                     type="button"
                     onClick={() => removeDate(i)}
                     className={`${MobileUI.button} col-span-1 bg-red-50 text-red-600 hover:bg-red-100`}
                   >
-                    Usuń
+                    {t("remove")}
                   </button>
                 </div>
               ))}
@@ -302,12 +336,14 @@ export default function SurveyPage() {
               disabled={saving}
               className={`${MobileUI.button} w-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60`}
             >
-              {saving ? "Zapisywanie…" : "Zakończ i odbierz +100 pkt"}
+              {saving ? t("saving") : t("submit")}
             </button>
           </div>
 
           {msg && (
-            <div className="rounded-[0.95rem] bg-green-100 p-3 text-sm font-semibold text-green-700">{msg}</div>
+            <div className="rounded-[0.95rem] bg-green-100 p-3 text-sm font-semibold text-green-700">
+              {msg}
+            </div>
           )}
           {err && (
             <div className="rounded-[0.95rem] bg-red-100 p-3 text-sm font-semibold text-red-700">

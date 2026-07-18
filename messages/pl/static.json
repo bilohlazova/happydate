@@ -1,0 +1,127 @@
+{
+  "about": {
+    "metaTitle": "HappyDate – O nas | Platforma online",
+    "metaDescription": "HappyDate pomaga pamiętać o ważnych datach i wybierać prezenty bez stresu.",
+    "title": "O nas – HappyDate 🎁",
+    "intro": "HappyDate to platforma online, która pomaga pamiętać o ważnych datach i wybierać prezenty bez stresu. Łączymy technologię, AI i ludzką wrażliwość, aby tworzyć prawdziwe emocje – nie przypadkowe upominki.",
+    "belief": "🌟 Wierzymy, że każdy chce czuć się ważny. Tworzymy narzędzie, które zamienia intencję i pamięć w realne gesty.",
+    "missionTitle": "Nasza misja",
+    "mission": "Upraszczamy cały proces: od pamiętania o ważnych datach, przez wybór prezentu, aż po jego realizację. Technologia wspiera – emocje pozostają w centrum.",
+    "valuesTitle": "Nasze wartości",
+    "values": {
+      "empathy": {
+        "title": "Empatia",
+        "text": "Projektujemy doświadczenie wokół ludzi i relacji, nie samych funkcji."
+      },
+      "trust": {
+        "title": "Zaufanie",
+        "text": "Szanujemy prywatność i dane. Działamy transparentnie i bez presji."
+      },
+      "simplicity": {
+        "title": "Prostota",
+        "text": "Jedna platforma, jasne kroki i realna pomoc – bez zbędnego chaosu."
+      }
+    },
+    "howTitle": "Jak działa HappyDate?",
+    "steps": {
+      "calendar": {
+        "title": "Tworzysz swój kalendarz",
+        "text": "Dodajesz urodziny, rocznice i ważne chwile w jednym miejscu."
+      },
+      "tips": {
+        "title": "Otrzymujesz podpowiedzi",
+        "text": "AI analizuje kontekst i sugeruje dopasowane pomysły."
+      },
+      "calm": {
+        "title": "Działasz bez stresu",
+        "text": "Wiesz co, kiedy i dla kogo – bez decyzji na ostatnią chwilę."
+      }
+    },
+    "contactTitle": "Masz pomysł? Napisz do nas.",
+    "contact": "HappyDate stale się rozwija. Jeśli widzisz coś, co może go ulepszyć – chętnie to przeczytamy.",
+    "contactNote": "Nie prowadzimy programu partnerskiego ani rekrutacji. Odpowiadamy na wartościowe wiadomości."
+  },
+  "reviews": {
+    "metaTitle": "Opinie użytkowników HappyDate",
+    "metaDescription": "Prawdziwe historie i doświadczenia użytkowników HappyDate.",
+    "title": "Opinie naszych użytkowników 💬",
+    "subtitle": "Prawdziwe historie o prezentach, które wywołały uśmiech i wzruszenie.",
+    "empty": "Brak opublikowanych opinii. Podziel się doświadczeniem jako pierwsza osoba ✨",
+    "leave": "Zostaw opinię ✍️",
+    "wantLeave": "Chcę zostawić opinię ✍️",
+    "loadMore": "Pokaż więcej",
+    "loading": "Ładowanie…",
+    "modalTitle": "Zostaw swoją opinię 💬",
+    "moderation": "Twój wpis pojawi się po krótkiej moderacji.",
+    "name": "Imię",
+    "namePlaceholder": "Twoje imię",
+    "email": "Email",
+    "emailPlaceholder": "Twój email",
+    "message": "Opinia",
+    "messagePlaceholder": "Napisz kilka słów o swoim doświadczeniu...",
+    "send": "Wyślij opinię 🚀",
+    "sending": "Wysyłanie...",
+    "close": "Zamknij",
+    "success": "Dziękujemy za opinię! 💛 Trafiła do moderacji.",
+    "error": "Coś poszło nie tak. Spróbuj ponownie."
+  },
+  "survey": {
+    "title": "Krótka ankieta 🎁",
+    "subtitle": "Pomóż nam lepiej dobierać prezenty i wsparcie — za wypełnienie otrzymasz +100 punktów.",
+    "likes": "Co chętnie dostał(a)byś w prezencie?",
+    "likesPlaceholder": "kwiaty, książki, czekolada…",
+    "dislikes": "Czego nie chcesz otrzymywać?",
+    "dislikesPlaceholder": "słodycze, alkohol…",
+    "dream": "Twoje marzenie",
+    "dreamPlaceholder": "O czym marzysz?",
+    "notes": "Dodatkowe uwagi",
+    "notesPlaceholder": "Alergie lub inne ważne informacje…",
+    "dates": "Szczególne daty",
+    "addDate": "Dodaj datę",
+    "datesEmpty": "Dodaj święta i trudne rocznice, o których powinniśmy pamiętać.",
+    "support": "Trudny dzień",
+    "celebration": "Święto",
+    "datePlaceholder": "opis (np. rocznica)",
+    "remove": "Usuń",
+    "submit": "Zakończ i odbierz +100 pkt",
+    "saving": "Zapisywanie…",
+    "loading": "Ładowanie…",
+    "success": "Dziękujemy! Ankieta zapisana ✅ (+100 pkt)",
+    "error": "Nie udało się zapisać ankiety."
+  },
+  "services": {
+    "metaTitle": "HappyDate – Usługi",
+    "metaDescription": "HappyDate Care i rytuały online. Pamięć, emocje i wsparcie.",
+    "title": "Jedna usługa. Wiele spokojnych chwil.",
+    "subtitle": "HappyDate pamięta za Ciebie — bez stresu i zapominania.",
+    "seeCare": "Zobacz HappyDate Care ↓",
+    "carePrice": "od 29 zł / miesiąc",
+    "careDescription": "Subskrypcja, która przejmuje pamiętanie i delikatne przypominanie — za Ciebie.",
+    "dates": "Daty",
+    "notes": "Notatki",
+    "see": "Zobacz HappyDate Care →",
+    "rituals": "Dodatkowe rytuały online",
+    "items": {
+      "listen": {
+        "title": "Wysłuchaj mnie",
+        "description": "Anonimowa rozmowa z kimś, kto naprawdę słucha."
+      },
+      "heaven": {
+        "title": "Wiadomość z Nieba",
+        "description": "Słowa, których nigdy nie udało się wypowiedzieć."
+      },
+      "group": {
+        "title": "Wiadomość od Grupy",
+        "description": "Jedna wiadomość z głosów wielu bliskich osób."
+      },
+      "fund": {
+        "title": "Zrzutka",
+        "description": "Wspólny gest i emocje — bez produktów."
+      },
+      "good": {
+        "title": "Podaruj Dobro",
+        "description": "Zrób coś dobrego dla innych i dla siebie."
+      }
+    }
+  }
+}

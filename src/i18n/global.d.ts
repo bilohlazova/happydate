@@ -12,6 +12,7 @@ import type assistantMessages from "../../messages/pl/assistant.json";
 import type giftMessages from "../../messages/pl/gift.json";
 import type dashboardMessages from "../../messages/pl/dashboard.json";
 import type careMessages from "../../messages/pl/care.json";
+import type staticMessages from "../../messages/pl/static.json";
 import type { AppLocale } from "./config";
 
 declare module "next-intl" {
@@ -32,6 +33,7 @@ declare module "next-intl" {
       gift: typeof giftMessages;
       dashboard: typeof dashboardMessages;
       care: typeof careMessages;
+      static: typeof staticMessages;
     };
   }
 }

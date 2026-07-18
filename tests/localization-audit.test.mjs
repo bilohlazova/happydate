@@ -22,6 +22,7 @@ const namespaces = [
   "gift",
   "dashboard",
   "care",
+  "static",
 ];
 
 function leafKeys(value, prefix = "") {

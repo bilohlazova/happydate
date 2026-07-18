@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState, FormEvent } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useLocale, useTranslations } from "next-intl";
 
 type Review = {
   id: string;
@@ -14,17 +15,9 @@ type Review = {
 
 const PAGE_SIZE = 6;
 
-function getErrorMessage(err: unknown) {
-  if (err instanceof Error) return err.message;
-  if (typeof err === "string") return err;
-  try {
-    return JSON.stringify(err);
-  } catch {
-    return "Nieznany błąd";
-  }
-}
-
 export default function ReviewsClient() {
+  const t = useTranslations("static.reviews");
+  const locale = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,11 +83,12 @@ export default function ReviewsClient() {
       if (error) throw error;
 
       formEl.reset();
-      alert("Dziękujemy za opinię! 💛 Trafiła do moderacji.");
+      alert(t("success"));
       setIsOpen(false);
       // опційно: loadReviews(true) після публікації адміном
     } catch (err: unknown) {
-      setError(getErrorMessage(err) || "Coś poszło nie tak. Spróbuj ponownie.");
+      console.error("[Reviews] submit failed", err);
+      setError(t("error"));
     } finally {
       setLoading(false);
     }
@@ -109,10 +103,10 @@ export default function ReviewsClient() {
       {/* HERO */}
       <section className="relative z-10 text-center py-20 md:py-28">
         <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white drop-shadow-sm">
-          Opinie naszych użytkowników 💬
+          {t("title")}
         </h1>
         <p className="mt-4 max-w-2xl mx-auto text-slate-700 dark:text-slate-300 md:text-lg">
-          Prawdziwe historie o prezentach, które wywołały uśmiech i wzruszenie.
+          {t("subtitle")}
         </p>
       </section>
 
@@ -121,14 +115,14 @@ export default function ReviewsClient() {
         {reviews.length === 0 && !loadingList ? (
           <div className="rounded-3xl border border-dashed border-slate-300/50 dark:border-slate-600/50 bg-white/70 dark:bg-slate-800/70 p-12 text-center shadow-xl backdrop-blur">
             <p className="text-lg text-slate-600 dark:text-slate-300">
-              Brak opublikowanych opinii. Bądź pierwszą osobą, która podzieli się doświadczeniem ✨
+              {t("empty")}
             </p>
             <div className="mt-10">
               <button
                 onClick={() => setIsOpen(true)}
                 className="inline-flex items-center rounded-full bg-gradient-to-r from-fuchsia-500 to-pink-500 px-8 py-4 font-semibold text-white shadow-lg hover:from-fuchsia-600 hover:to-pink-600 transition-all duration-200"
               >
-                Chcę zostawić opinię ✍️
+                {t("wantLeave")}
               </button>
             </div>
           </div>
@@ -146,7 +140,7 @@ export default function ReviewsClient() {
                   <figcaption className="mt-4 flex items-center justify-between text-sm text-slate-500">
                     <span>— {r.name}</span>
                     <time dateTime={r.created_at}>
-                      {new Date(r.created_at).toLocaleDateString("pl-PL")}
+                      {new Date(r.created_at).toLocaleDateString(locale)}
                     </time>
                   </figcaption>
                   <span className="pointer-events-none absolute -bottom-3 left-8 h-6 w-6 rotate-45 rounded-[6px] bg-white/90 dark:bg-slate-800/80 shadow-sm ring-1 ring-black/5" />
@@ -159,7 +153,7 @@ export default function ReviewsClient() {
                 onClick={() => setIsOpen(true)}
                 className="rounded-full bg-gradient-to-r from-fuchsia-500 to-pink-500 px-6 py-3 font-semibold text-white shadow hover:from-fuchsia-600 hover:to-pink-600"
               >
-                Zostaw opinię ✍️
+                {t("leave")}
               </button>
               {hasMore && (
                 <button
@@ -167,7 +161,7 @@ export default function ReviewsClient() {
                   disabled={loadingList}
                   className="rounded-full border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
                 >
-                  {loadingList ? "Ładowanie…" : "Pokaż więcej"}
+                  {loadingList ? t("loading") : t("loadMore")}
                 </button>
               )}
             </div>
@@ -182,17 +176,15 @@ export default function ReviewsClient() {
             <button
               onClick={() => setIsOpen(false)}
               className="absolute top-4 right-4 text-slate-500 hover:text-slate-800 dark:hover:text-white"
-              aria-label="Zamknij"
+              aria-label={t("close")}
             >
               ✕
             </button>
 
             <h2 className="mb-2 text-2xl font-bold text-slate-900 dark:text-white">
-              Zostaw swoją opinię 💬
+              {t("modalTitle")}
             </h2>
-            <p className="mb-4 text-sm text-slate-500">
-              Twój wpis pojawi się po krótkiej moderacji.
-            </p>
+            <p className="mb-4 text-sm text-slate-500">{t("moderation")}</p>
 
             {error && (
               <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -203,40 +195,40 @@ export default function ReviewsClient() {
             <form className="space-y-4" onSubmit={onSubmit}>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Imię
+                  {t("name")}
                 </label>
                 <input
                   name="name"
                   type="text"
                   required
                   className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2 text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
-                  placeholder="Twoje imię"
+                  placeholder={t("namePlaceholder")}
                   disabled={loading}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Email
+                  {t("email")}
                 </label>
                 <input
                   name="email"
                   type="email"
                   required
                   className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2 text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
-                  placeholder="Twój email"
+                  placeholder={t("emailPlaceholder")}
                   disabled={loading}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Opinia
+                  {t("message")}
                 </label>
                 <textarea
                   name="message"
                   rows={4}
                   required
                   className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2 text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
-                  placeholder="Napisz kilka słów o swoim doświadczeniu..."
+                  placeholder={t("messagePlaceholder")}
                   disabled={loading}
                 ></textarea>
               </div>
@@ -246,7 +238,7 @@ export default function ReviewsClient() {
                 disabled={loading}
                 className="mt-4 w-full rounded-full bg-gradient-to-r from-fuchsia-500 to-pink-500 px-6 py-3 font-semibold text-white shadow hover:from-fuchsia-600 hover:to-pink-600 disabled:opacity-60"
               >
-                {loading ? "Wysyłanie..." : "Wyślij opinię 🚀"}
+                {loading ? t("sending") : t("send")}
               </button>
             </form>
           </div>

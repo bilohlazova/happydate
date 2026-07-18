@@ -86,6 +86,31 @@ export async function getPersonById(
 }
 
 /**
+ * Ownership-safe read for route loaders. The explicit user constraint is kept
+ * in addition to RLS so person-specific Knowledge is never read first.
+ */
+export async function getOwnedPersonById(
+  userId: string,
+  personId: string
+): Promise<PersonRow | null> {
+  const { data, error } = await supabase
+    .from("people")
+    .select("*")
+    .eq("id", personId)
+    .eq("user_id", userId)
+    .returns<PersonRow[]>()
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `[personRepository] getOwnedPersonById failed: ${error.message}`
+    );
+  }
+
+  return data;
+}
+
+/**
  * Creates a new person.
  * Pure write operation with no business logic.
  */

@@ -1,10 +1,6 @@
 import createNextIntlPlugin from "next-intl/plugin";
 
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-
   typescript: {
     ignoreBuildErrors: true,
   },

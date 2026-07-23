@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 
 // ─── TYPES ──────────────────────────────────────────────────
 export type AssistantState = "guest" | "calm" | "active" | "urgent";
@@ -43,39 +44,46 @@ export function resolveState(
   return daysUntil(nextEvent.date) <= 1 ? "urgent" : "active";
 }
 
-function getGreeting(): string {
+type AssistantText = ReturnType<typeof useTranslations<"assistant.legacyMessages">>;
+
+function getGreeting(t: AssistantText): string {
   const h = new Date().getHours();
-  if (h >= 5  && h < 12) return "Dzień dobry";
-  if (h >= 12 && h < 18) return "Dobry dzień";
-  if (h >= 18 && h < 22) return "Dobry wieczór";
-  return "Dobranoc";
+  if (h >= 5  && h < 12) return t("greeting.morning");
+  if (h >= 12 && h < 18) return t("greeting.afternoon");
+  if (h >= 18 && h < 22) return t("greeting.evening");
+  return t("greeting.night");
 }
 
-function getDayLabel(dateStr: string): string {
+function getDayLabel(dateStr: string, t: AssistantText): string {
   const d = daysUntil(dateStr);
-  if (d === 0) return "dziś!";
-  if (d === 1) return "jutro";
-  return `za ${d} dni`;
+  if (d === 0) return t("day.today");
+  if (d === 1) return t("day.tomorrow");
+  return t("day.days", { count: d });
 }
 
 // ─── SPEECH ─────────────────────────────────────────────────
 function buildSpeech(
+  t: AssistantText,
   state: AssistantState,
   firstName?: string,
   nextEvent?: AssistantEvent | null
 ): string {
-  const greet = getGreeting();
+  const greet = getGreeting(t);
   const n = firstName ? `, ${firstName}` : "";
   switch (state) {
     case "guest":
-      return `${greet}! Cieszę się, że jesteś. Pomogę Ci pamiętać o ważnych osobach i chwilach.`;
+      return t("speech.guest", { greeting: greet });
     case "calm":
-      return `${greet}${n}! Dziś spokojny dzień. Wszystko masz pod kontrolą.`;
+      return t("speech.calm", { greeting: `${greet}${n}` });
     case "active":
-      if (!nextEvent) return `${greet}${n}! Masz nadchodzące wydarzenie.`;
-      return `${greet}${n}! Pamiętam — ${nextEvent.title} ${getDayLabel(nextEvent.date)}. Chcesz, żebym pomógł?`;
+      if (!nextEvent) return t("speech.activeFallback", { greeting: `${greet}${n}` });
+      return t("speech.activeEvent", { greeting: `${greet}${n}`, title: nextEvent.title, day: getDayLabel(nextEvent.date, t) });
     case "urgent":
-      return `${firstName ?? "Hej"}, ważne! ${nextEvent?.title ?? "Ważne wydarzenie"} — ${getDayLabel(nextEvent?.date ?? "")}. Mogę pomóc natychmiast.`;
+      return t("speech.urgent", {
+        name: firstName ?? t("fallbackName"),
+        title: nextEvent?.title ?? t("importantEvent"),
+        day: nextEvent?.date ? getDayLabel(nextEvent.date, t) : t("day.tomorrow"),
+      });
   }
 }
 
@@ -89,6 +97,7 @@ const BAR_H = [3, 8, 5, 11, 4, 9, 3];
 function Avatar({ state, speaking, onClick }: {
   state: AssistantState; speaking: boolean; onClick: () => void;
 }) {
+  const t = useTranslations("assistant.legacyActions");
   const c = STATE_COLOR[state];
   return (
     <div style={{ position: "relative", width: 64, height: 64, flexShrink: 0 }}>
@@ -104,7 +113,7 @@ function Avatar({ state, speaking, onClick }: {
           animation: "hdRingFast 1s ease-in-out infinite", pointerEvents: "none",
         }} />
       )}
-      <button onClick={onClick} aria-label="Porozmawiaj ze mną" style={{
+      <button onClick={onClick} aria-label={t("talk")} style={{
         width: 64, height: 64, borderRadius: "50%",
         background: `linear-gradient(145deg,${c}cc,${c})`,
         border: "none", cursor: "pointer",
@@ -140,24 +149,25 @@ function Avatar({ state, speaking, onClick }: {
 function Message({ state, firstName, nextEvent }: {
   state: AssistantState; firstName?: string; nextEvent?: AssistantEvent | null;
 }) {
-  const greet = getGreeting();
+  const t = useTranslations("assistant.legacyMessages");
+  const greet = getGreeting(t);
   const n = firstName ? `, ${firstName}` : "";
 
   const lines = ((): string[] => {
     switch (state) {
-      case "guest":  return [`${greet} 💛`, "Cieszę się, że jesteś.", "Pomogę Ci pamiętać o ważnych osobach i chwilach."];
-      case "calm":   return [`${greet}${n} 💛`, "Dziś spokojny dzień.", "Wszystko masz pod kontrolą."];
-      case "active": return [`${greet}${n} 💛`, nextEvent ? `🎂 ${nextEvent.title} — ${getDayLabel(nextEvent.date)}` : "Masz nadchodzące wydarzenie."];
-      case "urgent": return [`⚠️ ${firstName ? firstName + ", j" : "J"}utro ważny dzień!`, nextEvent ? `🎂 ${nextEvent.title}` : ""];
+      case "guest":  return [`${greet} 💛`, t("primary.guest.line2"), t("primary.guest.line3")];
+      case "calm":   return [`${greet}${n} 💛`, t("primary.calm.line2"), t("primary.calm.line3")];
+      case "active": return [`${greet}${n} 💛`, nextEvent ? `🎂 ${nextEvent.title} — ${getDayLabel(nextEvent.date, t)}` : t("primary.active.fallback")];
+      case "urgent": return [`⚠️ ${t("primary.urgent.withEvent", { name: firstName ?? t("fallbackName"), day: t("day.tomorrow") })}`, nextEvent ? `🎂 ${nextEvent.title}` : ""];
     }
   })();
 
   const cta = ((): string => {
     switch (state) {
-      case "guest":  return "Zacznij od dodania pierwszej ważnej osoby.";
-      case "calm":   return "Chcesz coś zaplanować lub dodać?";
-      case "active": return "Chcesz, żebym pomógł z przygotowaniami?";
-      case "urgent": return "Nie zostawiaj tego na ostatnią chwilę 😉";
+      case "guest":  return t("secondary.guest");
+      case "calm":   return t("secondary.calm");
+      case "active": return t("secondary.active");
+      case "urgent": return t("secondary.urgent");
     }
   })();
 
@@ -174,7 +184,7 @@ function Message({ state, firstName, nextEvent }: {
           textTransform: "uppercase" as const,
           color: state === "urgent" ? "#e24b4a" : "#3a9bd5",
         }}>
-          {state === "urgent" ? "Uwaga — pilne" : "HappyDate AI"}
+          {state === "urgent" ? t("urgentLabel") : "HappyDate AI"}
         </span>
       </div>
       {lines.filter(Boolean).map((line, i) => (
@@ -196,7 +206,8 @@ function Message({ state, firstName, nextEvent }: {
 // ─── EVENT HIGHLIGHT ────────────────────────────────────────
 function EventHighlight({ event, urgent }: { event: AssistantEvent; urgent: boolean }) {
   const days = daysUntil(event.date);
-  const chip = days === 0 ? "Dziś!" : days === 1 ? "Jutro" : `Za ${days} dni`;
+  const t = useTranslations("assistant.legacyMessages");
+  const chip = getDayLabel(event.date, t);
   if (urgent) {
     return (
       <div style={{
@@ -212,7 +223,7 @@ function EventHighlight({ event, urgent }: { event: AssistantEvent; urgent: bool
             {event.title}{event.person_name ? ` — ${event.person_name}` : ""}
           </p>
           <p style={{ fontSize: 11, color: "var(--color-text-danger)", opacity: .8, margin: 0 }}>
-            {days === 0 ? "To dziś — nie zwlekaj!" : "Zostało mniej niż 24 godziny"}
+            {days === 0 ? t("eventHighlight.today") : t("eventHighlight.lessThanDay")}
           </p>
         </div>
       </div>
@@ -250,6 +261,8 @@ function EventHighlight({ event, urgent }: { event: AssistantEvent; urgent: bool
 function VoiceButton({ speaking, isGuest, onClick }: {
   speaking: boolean; isGuest: boolean; onClick: () => void;
 }) {
+  const t = useTranslations("assistant.legacyActions");
+
   return (
     <button onClick={onClick} style={{
       width: "100%", display: "flex", alignItems: "center",
@@ -271,33 +284,34 @@ function VoiceButton({ speaking, isGuest, onClick }: {
               <line x1="12" y1="19" x2="12" y2="23"/></>
         }
       </svg>
-      {speaking ? "Zatrzymaj" : isGuest ? "Posłuchaj wprowadzenia" : "🎤 Porozmawiaj ze mną"}
+      {speaking ? t("stop") : isGuest ? t("intro") : t("talk")}
     </button>
   );
 }
 
 // ─── ACTIONS ────────────────────────────────────────────────
 function Actions({ state, onSpeak }: { state: AssistantState; onSpeak: () => void }) {
+  const t = useTranslations("assistant.legacyActions");
   type Btn = { icon: string; label: string; href?: string; onClick?: () => void; primary?: boolean; danger?: boolean };
 
   const btns = ((): Btn[] => {
     switch (state) {
       case "guest":  return [
-        { icon: "🎤", label: "Powiedz coś",          onClick: onSpeak, primary: true },
-        { icon: "👉", label: "Zacznij",               href: "/auth/login" },
+        { icon: "🎤", label: t("speak"), onClick: onSpeak, primary: true },
+        { icon: "👉", label: t("start"), href: "/auth/login" },
       ];
       case "calm":   return [
-        { icon: "➕", label: "Dodaj wydarzenie",       href: "/calendar" },
-        { icon: "👤", label: "Dodaj osobę",            href: "/people" },
+        { icon: "➕", label: t("addEvent"), href: "/calendar" },
+        { icon: "👤", label: t("addPerson"), href: "/people" },
       ];
       case "active": return [
-        { icon: "🎁", label: "Pomysł prezentu",        href: "/services" },
-        { icon: "✍️", label: "Napisz wiadomość",       href: "/services" },
-        { icon: "📦", label: "Zamów prezent",          href: "/services" },
+        { icon: "🎁", label: t("giftIdea"), href: "/services" },
+        { icon: "✍️", label: t("writeMessage"), href: "/services" },
+        { icon: "📦", label: t("orderGift"), href: "/services" },
       ];
       case "urgent": return [
-        { icon: "🔥", label: "Szybkie rozwiązanie",    href: "/services", danger: true },
-        { icon: "✍️", label: "Napisz wiadomość teraz", href: "/services" },
+        { icon: "🔥", label: t("quick"), href: "/services", danger: true },
+        { icon: "✍️", label: t("writeNow"), href: "/services" },
       ];
     }
   })();
@@ -340,12 +354,13 @@ function Actions({ state, onSpeak }: { state: AssistantState; onSpeak: () => voi
 function Suggestion({ state, nextEvent }: {
   state: AssistantState; nextEvent?: AssistantEvent | null;
 }) {
+  const t = useTranslations("assistant.legacyMessages");
   const text = ((): string => {
     switch (state) {
-      case "guest":  return "💡 Dodaj pierwszą osobę, a będę Ci przypominał o wszystkim, co ważne.";
-      case "calm":   return "💡 Wskazówka: Dodaj preferencje osoby, a podpowiem idealny prezent 🎁";
-      case "active": return `💡 Im więcej wiem o ${nextEvent?.person_name ?? "tej osobie"}, tym lepiej mogę pomóc.`;
-      case "urgent": return "🔥 Mam gotowe rozwiązania na ostatnią chwilę — szybko i z sercem.";
+      case "guest":  return `💡 ${t("suggestion.guest")}`;
+      case "calm":   return `💡 ${t("suggestion.calm")}`;
+      case "active": return `💡 ${t("suggestion.active", { person: nextEvent?.person_name ?? t("thisPerson") })}`;
+      case "urgent": return `🔥 ${t("suggestion.urgent")}`;
     }
   })();
 
@@ -377,6 +392,8 @@ interface Props {
 
 export default function AssistantCard({ state, profile, nextEvent }: Props) {
   const [speaking, setSpeaking] = useState(false);
+  const t = useTranslations("assistant.legacyMessages");
+  const locale = useLocale();
 
   useEffect(() => {
     return () => { if ("speechSynthesis" in window) window.speechSynthesis.cancel(); };
@@ -390,14 +407,14 @@ export default function AssistantCard({ state, profile, nextEvent }: Props) {
   const handleVoice = useCallback(() => {
     if (!("speechSynthesis" in window)) return;
     if (speaking) { window.speechSynthesis.cancel(); setSpeaking(false); return; }
-    const u = new SpeechSynthesisUtterance(buildSpeech(state, profile?.firstName, nextEvent));
-    u.lang = "pl-PL"; u.rate = 0.9; u.pitch = 1.05;
+    const u = new SpeechSynthesisUtterance(buildSpeech(t, state, profile?.firstName, nextEvent));
+    u.lang = locale; u.rate = 0.9; u.pitch = 1.05;
     u.onstart = () => setSpeaking(true);
     u.onend   = () => setSpeaking(false);
     u.onerror = () => setSpeaking(false);
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
-  }, [speaking, state, profile, nextEvent]);
+  }, [locale, nextEvent, profile, speaking, state, t]);
 
   return (
     <div>

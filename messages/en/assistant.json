@@ -68,5 +68,127 @@
       "description": "Fresh ideas and suggestions",
       "prompt": "Show me inspiration for..."
     }
+  },
+  "legacyActions": {
+    "speak": "Say something",
+    "start": "Start",
+    "addEvent": "Add event",
+    "addPerson": "Add person",
+    "giftIdea": "Gift idea",
+    "writeMessage": "Write a message",
+    "orderGift": "Order a gift",
+    "quick": "Quick solution",
+    "writeNow": "Write a message now",
+    "stop": "Stop",
+    "listening": "Listening…",
+    "intro": "Listen to intro",
+    "talk": "🎤 Talk to me"
+  },
+  "legacyPanel": {
+    "userFallback": "friend",
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening",
+      "night": "Good night"
+    },
+    "subtext": {
+      "morning": "Start the day calmly",
+      "afternoon": "Something important is waiting today",
+      "evening": "A calm evening with loved ones",
+      "night": "Everything is remembered for tomorrow"
+    },
+    "day": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "days": "{count} days"
+    },
+    "speech": {
+      "eventCount": "{count, plural, one {You have # upcoming event.} other {You have # upcoming events.}}",
+      "noEvents": "You have no events today.",
+      "important": "Most important: {title}.",
+      "allGood": "Everything is under control. Have a good day."
+    },
+    "aria": {
+      "start": "Start assistant",
+      "stop": "Stop assistant"
+    },
+    "event": {
+      "phonePrompt": " — waiting for your call",
+      "now": "Now"
+    },
+    "listen": {
+      "start": "Listen",
+      "stop": "Stop"
+    },
+    "nav": {
+      "calendar": "Calendar",
+      "people": "People",
+      "notes": "Notes"
+    },
+    "upcoming": {
+      "title": "Upcoming",
+      "all": "All →"
+    }
+  },
+  "legacyMessages": {
+    "fallbackName": "Hey",
+    "thisPerson": "this person",
+    "importantEvent": "Important event",
+    "urgentLabel": "Important — urgent",
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening",
+      "night": "Good night"
+    },
+    "day": {
+      "today": "today!",
+      "todayPlain": "today",
+      "tomorrow": "tomorrow",
+      "days": "in {count} days"
+    },
+    "primary": {
+      "guest": {
+        "line2": "I’m glad you’re here.",
+        "line3": "I’ll help you remember important people and moments."
+      },
+      "calm": {
+        "line2": "Today is calm.",
+        "line3": "Everything is under control."
+      },
+      "active": {
+        "fallback": "You have an upcoming event.",
+        "intro": "You have an important event"
+      },
+      "urgent": {
+        "withoutEvent": "{name}, tomorrow is an important day!",
+        "withEvent": "{name}, {day} is an important day!"
+      }
+    },
+    "secondary": {
+      "guest": "Start by adding your first important person.",
+      "calm": "Would you like to plan or add something?",
+      "active": "Would you like help preparing?",
+      "urgent": "Don’t leave it until the last moment 😉"
+    },
+    "speech": {
+      "guest": "{greeting}! I’m glad you’re here. I’ll help you remember important people and moments.",
+      "calm": "{greeting}! Today is calm. Everything is under control.",
+      "activeFallback": "{greeting}! You have an upcoming event.",
+      "activeEvent": "{greeting}! I remember — {title} {day}. Would you like help?",
+      "urgent": "{name}, important! {title} — {day}. I can help right away."
+    },
+    "eventHighlight": {
+      "today": "It’s today — don’t wait!",
+      "lessThanDay": "Less than 24 hours left"
+    },
+    "suggestion": {
+      "guest": "Add your first person and I’ll remind you about what matters.",
+      "calm": "Tip: add a person’s preferences and I’ll suggest a better gift 🎁",
+      "active": "The more I know about {person}, the better I can help.",
+      "urgent": "I have last-minute ideas ready — quickly and with heart.",
+      "preferences": "I remember {person}’s preferences — I have a fitting idea for you 🎁"
+    }
   }
 }

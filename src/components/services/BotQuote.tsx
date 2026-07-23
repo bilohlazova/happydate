@@ -1,16 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
-const QUOTES = [
-  "„Bip bip… każdy Twój tekst sprawia, że serducho mi pika szybciej! ⚡️🤖”",
-  "„Oj, znowu myślę o prezentach… czy to już uzależnienie? 🎁😅”",
-  "„Wiesz, że mam więcej pomysłów niż półka w Empiku? 📚🎶”",
-  "„Kiedy piszesz, moje kable tańczą jak na imprezie! 🎉🔌”",
-  "„Nie jestem robotem… ale prezenty robię lepsze niż ludzie 😎”",
-];
+const QUOTES = ["q1", "q2", "q3", "q4", "q5"] as const;
 
 export default function BotQuoteBubble() {
+  const t = useTranslations("static.services.phase3b.assistant");
   const [i, setI] = useState(0);
   const [fade, setFade] = useState(true);
   const timerRef = useRef<number | null>(null);
@@ -38,7 +34,7 @@ export default function BotQuoteBubble() {
         max-w-[280px] md:max-w-[320px]
         select-none
       "
-      aria-label="Cytat bota"
+      aria-label={t("quoteLabel")}
     >
       {/* м’яке підсвічення за хмаринкою */}
       <div
@@ -62,7 +58,9 @@ export default function BotQuoteBubble() {
         `}
         style={{ transitionDuration: "220ms" }}
       >
-        <blockquote className="leading-relaxed">{QUOTES[i]}</blockquote>
+        <blockquote className="leading-relaxed">
+          {t(`quotes.${QUOTES[i]}`)}
+        </blockquote>
 
         {/* хвостик хмаринки */}
         <span

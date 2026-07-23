@@ -1,17 +1,21 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 const STEPS = [
-  { emoji: "🎯", title: "Wybierz kierunek", text: "Zwierzęta, dzieci lub planeta — co porusza Twoje serce?" },
-  { emoji: "📅", title: "Zarezerwuj termin", text: "Podaj datę i miejsce. Pomożemy skoordynować wizytę." },
-  { emoji: "🎁", title: "Przygotuj gest", text: "Karma, książeczki, roślinka — lub po prostu Twój czas." },
-  { emoji: "✨", title: "Zostaw ślad dobra", text: "Przyjdź, poznaj, pobądź. To wystarczy." },
-];
+  { emoji: "🎯", key: "s1" },
+  { emoji: "📅", key: "s2" },
+  { emoji: "🎁", key: "s3" },
+  { emoji: "✨", key: "s4" },
+] as const;
 
 export default function GoodDeedSteps() {
+  const t = useTranslations("static.services.phase3b.goodDeed");
+
   return (
     <section style={{ background: "#fff", padding: "24px 16px" }}>
       <h2 style={{ fontSize: 18, fontWeight: 800, color: "#1a1040", textAlign: "center", marginBottom: 16 }}>
-        Jak to działa?
+        {t("stepsTitle")}
       </h2>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 480, margin: "0 auto" }}>
@@ -32,9 +36,9 @@ export default function GoodDeedSteps() {
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1040", marginBottom: 2 }}>
-                <span style={{ color: "#b0a8cc", marginRight: 6 }}>{i + 1}.</span>{s.title}
+                <span style={{ color: "#b0a8cc", marginRight: 6 }}>{i + 1}.</span>{t(`steps.${s.key}.title`)}
               </div>
-              <div style={{ fontSize: 12, color: "#7c6f9f", lineHeight: 1.4 }}>{s.text}</div>
+              <div style={{ fontSize: 12, color: "#7c6f9f", lineHeight: 1.4 }}>{t(`steps.${s.key}.desc`)}</div>
             </div>
           </div>
         ))}

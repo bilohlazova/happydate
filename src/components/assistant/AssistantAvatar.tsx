@@ -5,6 +5,7 @@
 // Змінює колір і анімацію залежно від стану
 
 import { AssistantState } from "./types";
+import { useTranslations } from "next-intl";
 
 interface Props {
   state: AssistantState;
@@ -23,6 +24,7 @@ const STATE_COLOR: Record<AssistantState, string> = {
 const BAR_H = [3, 8, 5, 11, 4, 9, 3];
 
 export default function AssistantAvatar({ state, speaking, listening, onClick }: Props) {
+  const t = useTranslations("assistant.legacyActions");
   const color = STATE_COLOR[state];
   const isAnimated = speaking || listening;
 
@@ -54,7 +56,7 @@ export default function AssistantAvatar({ state, speaking, listening, onClick }:
       {/* main orb */}
       <button
         onClick={onClick}
-        aria-label={speaking ? "Zatrzymaj" : listening ? "Słucham..." : "Porozmawiaj ze mną"}
+        aria-label={speaking ? t("stop") : listening ? t("listening") : t("talk")}
         style={{
           width: 72, height: 72,
           borderRadius: "50%",

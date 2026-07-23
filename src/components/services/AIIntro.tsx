@@ -2,24 +2,21 @@
 "use client";
 
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import AskAIButton from "@/components/services/AskAIButton";
 import BotQuoteBubble from "@/components/services/BotQuote";
 
 export default function AIIntro() {
-  const examples = [
-    "👔 Pomysł na prezent dla taty (do 150 zł, majsterkowanie)",
-    "💍 Elegancki upominek ślubny (300–500 zł)",
-    "🌸 Upominek dla babci (do 80 zł, lubi ogród)",
-    "💡 Tani, ale wyjątkowy prezent dla kolegi (do 60 zł, kawa)",
-  ];
+  const t = useTranslations("static.services.phase3b.assistant");
+  const examples = ["e1", "e2", "e3", "e4"] as const;
 
   return (
     <section className="mx-auto max-w-5xl px-6 py-14">
       <h2 className="text-center text-2xl md:text-3xl font-extrabold text-slate-900">
-        Poznaj swojego doradcę prezentowego
+        {t("introTitle")}
       </h2>
       <p className="mt-3 text-center text-slate-600">
-        Wpisz pytanie lub kliknij przykład:
+        {t("introSubtitle")}
       </p>
 
       {/* layout: lewa kolumna — przykłady; prawa — robot + cytat */}
@@ -28,15 +25,14 @@ export default function AIIntro() {
         <div>
           <div className="grid gap-3 sm:grid-cols-2">
             {examples.map((txt) => (
-              <AskAIButton key={txt} variant="ghost" title="Otwórz czat AI">
-                {txt}
+              <AskAIButton key={txt} variant="ghost">
+                {t(`examples.${txt}`)}
               </AskAIButton>
             ))}
           </div>
 
           <p className="mt-4 text-sm text-neutral-500">
-            Wskazówka: im więcej szczegółów (wiek, hobby, relacja, budżet),
-            tym lepsze dopasowanie.
+            {t("tip")}
           </p>
         </div>
 
@@ -49,7 +45,7 @@ export default function AIIntro() {
           />
           <Image
             src="/images/robot.png"
-            alt="HappyDate — asystent AI"
+            alt={t("botAlt")}
             width={420}
             height={420}
             className="w-full max-w-[360px] md:max-w-[420px] h-auto drop-shadow-xl"
@@ -59,7 +55,8 @@ export default function AIIntro() {
           <span className="absolute bottom-3 right-3 rounded-full bg-white/80 backdrop-blur px-3 py-1 text-xs shadow ring-1 ring-black/5">
             HappyBot •{" "}
             <span className="inline-flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-emerald-400" /> online
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />{" "}
+              {t("online")}
             </span>
           </span>
 

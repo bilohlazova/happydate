@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 type ServiceCardProps = {
   emoji?: string;
@@ -41,6 +42,7 @@ export function ServiceCard({
   external = false,
   ctaLabel, // ✅ приймаємо проп
 }: ServiceCardProps) {
+  const t = useTranslations("static.services.phase3b");
   const CardInner = (
     <div className="relative bg-white/80 dark:bg-gray-800/70 backdrop-blur-lg rounded-2xl shadow-md hover:shadow-xl transition transform hover:scale-105 text-center p-8 group h-full">
       {badge && (
@@ -63,7 +65,7 @@ export function ServiceCard({
       <span
         className={`inline-block mt-2 px-6 py-2 rounded-xl text-white font-semibold shadow transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${accentToBtn[accent]}`}
       >
-        {ctaLabel ? ctaLabel : "Dowiedz się więcej →"}
+        {ctaLabel ?? t("learnMore")}
       </span>
     </div>
   );

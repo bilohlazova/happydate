@@ -2,6 +2,7 @@
 
 // src/components/assistant/AssistantVoiceButton.tsx
 // Кнопка голосової взаємодії — завжди user-triggered, ніколи autoplay
+import { useTranslations } from "next-intl";
 
 interface Props {
   speaking: boolean;
@@ -11,15 +12,16 @@ interface Props {
 }
 
 export default function AssistantVoiceButton({ speaking, listening, isGuest, onClick }: Props) {
+  const t = useTranslations("assistant.legacyActions");
   const isActive = speaking || listening;
 
   const label = speaking
-    ? "Zatrzymaj"
+    ? t("stop")
     : listening
-    ? "Słucham…"
+    ? t("listening")
     : isGuest
-    ? "🎤 Posłuchaj wprowadzenia"
-    : "🎤 Porozmawiaj ze mną";
+    ? t("intro")
+    : t("talk");
 
   return (
     <button

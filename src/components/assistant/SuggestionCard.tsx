@@ -4,6 +4,7 @@
 // Легка підказка під асистентом — мінімальна, не нав'язлива
 
 import { AssistantState, AssistantEvent, AssistantProfile } from "./types";
+import { useTranslations } from "next-intl";
 
 interface Props {
   state: AssistantState;
@@ -11,26 +12,32 @@ interface Props {
   nextEvent?: AssistantEvent | null;
 }
 
-function getSuggestion(state: AssistantState, profile?: AssistantProfile, nextEvent?: AssistantEvent | null): string {
+function getSuggestion(
+  t: ReturnType<typeof useTranslations<"assistant.legacyMessages">>,
+  state: AssistantState,
+  profile?: AssistantProfile,
+  nextEvent?: AssistantEvent | null
+): string {
   // Персоналізована підказка якщо є preferences
   if (profile?.preferences && state === "active" && nextEvent?.person_name) {
-    return `💡 Pamiętam preferencje ${nextEvent.person_name} — mam dla Ciebie trafny pomysł 🎁`;
+    return `💡 ${t("suggestion.preferences", { person: nextEvent.person_name })}`;
   }
 
   switch (state) {
     case "guest":
-      return "💡 Dodaj pierwszą osobę, a będę Ci przypominał o wszystkim, co ważne.";
+      return `💡 ${t("suggestion.guest")}`;
     case "calm":
-      return "💡 Wskazówka: Dodaj preferencje osoby, a podpowiem idealny prezent 🎁";
+      return `💡 ${t("suggestion.calm")}`;
     case "active":
-      return `💡 Im więcej wiem o ${nextEvent?.person_name ?? "tej osobie"}, tym lepiej mogę pomóc.`;
+      return `💡 ${t("suggestion.active", { person: nextEvent?.person_name ?? t("thisPerson") })}`;
     case "urgent":
-      return "🔥 Mam gotowe rozwiązania na ostatnią chwilę — szybko i z sercem.";
+      return `🔥 ${t("suggestion.urgent")}`;
   }
 }
 
 export default function SuggestionCard({ state, profile, nextEvent }: Props) {
-  const text = getSuggestion(state, profile, nextEvent);
+  const t = useTranslations("assistant.legacyMessages");
+  const text = getSuggestion(t, state, profile, nextEvent);
 
   return (
     <div style={{

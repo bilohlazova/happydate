@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 
 export interface HappyEvent {
   id: string;
@@ -17,16 +18,14 @@ interface AIAssistantProps {
   events?: HappyEvent[];
 }
 
-const MONTHS_PL = [
-  "Sty","Lut","Mar","Kwi","Maj","Cze",
-  "Lip","Sie","Wrz","Paź","Lis","Gru",
-];
-
 export default function AIAssistant({
-  userName = "Użytkowniku",
+  userName,
   events = [],
 }: AIAssistantProps) {
-  const [greeting, setGreeting]   = useState("Dzień dobry");
+  const t = useTranslations("assistant.legacyPanel");
+  const locale = useLocale();
+  const displayName = userName ?? t("userFallback");
+  const [greeting, setGreeting]   = useState(t("greeting.morning"));
   const [subtext,  setSubtext]    = useState("");
   const [speaking, setSpeaking]   = useState(false);
   const [blinking, setBlinking]   = useState(false);
@@ -36,19 +35,19 @@ export default function AIAssistant({
   useEffect(() => {
     const h = new Date().getHours();
     if (h >= 5 && h < 12) {
-      setGreeting("Dzień dobry");
-      setSubtext("Zacznij dzień ze spokojem");
+      setGreeting(t("greeting.morning"));
+      setSubtext(t("subtext.morning"));
     } else if (h >= 12 && h < 18) {
-      setGreeting("Dobry dzień");
-      setSubtext("Masz dziś coś ważnego");
+      setGreeting(t("greeting.afternoon"));
+      setSubtext(t("subtext.afternoon"));
     } else if (h >= 18 && h < 22) {
-      setGreeting("Dobry wieczór");
-      setSubtext("Spokojny wieczór z bliskimi");
+      setGreeting(t("greeting.evening"));
+      setSubtext(t("subtext.evening"));
     } else {
-      setGreeting("Dobranoc");
-      setSubtext("Wszystko zapamiętane na jutro");
+      setGreeting(t("greeting.night"));
+      setSubtext(t("subtext.night"));
     }
-  }, []);
+  }, [t]);
 
   /* ── random blink ── */
   useEffect(() => {
@@ -87,9 +86,9 @@ export default function AIAssistant({
     const d = new Date(dateStr);
     d.setHours(0, 0, 0, 0);
     const diff = Math.round((d.getTime() - today.getTime()) / 86_400_000);
-    if (diff === 0) return "Dziś";
-    if (diff === 1) return "Jutro";
-    return `${diff} dni`;
+    if (diff === 0) return t("day.today");
+    if (diff === 1) return t("day.tomorrow");
+    return t("day.days", { count: diff });
   }
 
   function chipClass(dateStr: string) {
@@ -103,18 +102,18 @@ export default function AIAssistant({
 
   /* ── speech ── */
   const buildText = useCallback(() => {
-    const name = userName;
+    const name = displayName;
     const count = upcoming.length;
     const imp = importantEvent;
     return [
       `${greeting}, ${name}!`,
       count > 0
-        ? `Masz ${count} nadchodzące wydarzenie${count > 1 ? "ń" : ""}.`
-        : "Nie masz dziś żadnych wydarzeń.",
-      imp ? `Najważniejsze: ${imp.title}.` : "",
-      "Wszystko pod kontrolą. Miłego dnia.",
+        ? t("speech.eventCount", { count })
+        : t("speech.noEvents"),
+      imp ? t("speech.important", { title: imp.title }) : "",
+      t("speech.allGood"),
     ].filter(Boolean).join(" ");
-  }, [greeting, userName, upcoming, importantEvent]);
+  }, [displayName, greeting, importantEvent, t, upcoming]);
 
   function handleSpeak() {
     if (!("speechSynthesis" in window)) return;
@@ -125,7 +124,7 @@ export default function AIAssistant({
     }
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(buildText());
-    u.lang    = "pl-PL";
+    u.lang    = locale;
     u.rate    = 0.88;
     u.pitch   = 0.95;
     u.onstart = () => setSpeaking(true);
@@ -156,9 +155,9 @@ export default function AIAssistant({
               style={{ inset: "-18px", animation: "hdRing 3.5s ease-in-out infinite 1s" }}
             />
             {/* orb body */}
-            <button
+              <button
               onClick={handleSpeak}
-              aria-label={speaking ? "Zatrzymaj asystenta" : "Uruchom asystenta"}
+              aria-label={speaking ? t("aria.stop") : t("aria.start")}
               className="w-16 h-16 rounded-full relative overflow-hidden flex items-center justify-center cursor-pointer border-none"
               style={{
                 background: "linear-gradient(145deg,#2d7ec4 0%,#4A9FE8 50%,#74b8f0 100%)",
@@ -211,7 +210,7 @@ export default function AIAssistant({
               </span>
             </div>
             <p className="text-[19px] font-bold text-gray-900 leading-snug tracking-tight mb-0.5">
-              {greeting}, {userName} 💛
+              {greeting}, {displayName} 💛
             </p>
             <p className="text-[13px] text-gray-400 font-light italic leading-snug">
               {subtext}
@@ -231,12 +230,12 @@ export default function AIAssistant({
                 <p className="text-[12px] text-gray-400 font-light italic mt-0.5">
                   {importantEvent.person_name}
                   {importantEvent.relation ? ` · ${importantEvent.relation}` : ""}
-                  {" — czeka na Twój telefon"}
+                  {t("event.phonePrompt")}
                 </p>
               )}
             </div>
             <span className="text-[11px] font-bold text-white bg-[#4A9FE8] px-3 py-1 rounded-full flex-shrink-0">
-              Teraz
+              {t("event.now")}
             </span>
           </div>
         )}
@@ -275,22 +274,22 @@ export default function AIAssistant({
               )}
             </svg>
           </span>
-          {speaking ? "Zatrzymaj" : "Posłuchaj"}
+          {speaking ? t("listen.stop") : t("listen.start")}
         </button>
 
         {/* ── QUICK ACTIONS ── */}
         <div className="grid grid-cols-3 gap-2">
           {([
             {
-              label: "Kalendarz", href: "/calendar",
+              label: t("nav.calendar"), href: "/calendar",
               icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
             },
             {
-              label: "Osoby", href: "/people",
+              label: t("nav.people"), href: "/people",
               icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
             },
             {
-              label: "Notatki", href: "/notes",
+              label: t("nav.notes"), href: "/notes",
               icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>,
             },
           ] as const).map((a) => (
@@ -313,10 +312,10 @@ export default function AIAssistant({
         <div className="border-t border-gray-50 px-5 py-4">
           <div className="flex justify-between items-center mb-3">
             <span className="text-[10px] font-bold tracking-widest text-gray-300 uppercase">
-              Nadchodzące
+              {t("upcoming.title")}
             </span>
             <Link href="/calendar" className="text-[12px] font-semibold text-[#4A9FE8] no-underline">
-              Wszystkie →
+              {t("upcoming.all")}
             </Link>
           </div>
           <div className="flex flex-col gap-2">
@@ -335,7 +334,7 @@ export default function AIAssistant({
                       {d.getDate()}
                     </div>
                     <div className="text-[9px] font-semibold tracking-wider uppercase text-gray-300 mt-0.5">
-                      {MONTHS_PL[d.getMonth()]}
+                      {new Intl.DateTimeFormat(locale, { month: "short" }).format(d)}
                     </div>
                   </div>
                   <div className="w-px h-7 bg-gray-100 flex-shrink-0" />

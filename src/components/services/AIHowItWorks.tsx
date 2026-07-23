@@ -1,38 +1,26 @@
+import { useTranslations } from "next-intl";
+
 export default function AIHowItWorks() {
+  const t = useTranslations("static.services.phase3b.assistant");
   const steps = [
-    {
-      n: "Krok 1",
-      emoji: "🧩",
-      title: "Opisz osobę i okazję",
-      text: "Kim jest obdarowana osoba, co lubi, jaki styl życia, jaki budżet zakładasz.",
-    },
-    {
-      n: "Krok 2",
-      emoji: "🎁",
-      title: "Otrzymaj 2–3 trafione propozycje",
-      text: "Każda z krótkim opisem, uzasadnieniem i widełkami cenowymi.",
-    },
-    {
-      n: "Krok 3",
-      emoji: "⚡",
-      title: "Zrealizuj w 1 klik",
-      text: "Szybkie linki do zakupu lub wsparcie konsultanta z dostawą „na czas”.",
-    },
-  ];
+    { key: "s1", emoji: "🧩" },
+    { key: "s2", emoji: "🎁" },
+    { key: "s3", emoji: "⚡" },
+  ] as const;
 
   return (
     <section className="mx-auto max-w-5xl px-6 py-14">
       <h2 className="text-center text-2xl md:text-3xl font-extrabold text-slate-900">
-        Jak działa Asystent?
+        {t("howTitle")}
       </h2>
       <p className="mt-3 text-center text-slate-600">
-        Trzy proste kroki od pytania do idealnego prezentu.
+        {t("howSubtitle")}
       </p>
 
       <div className="mt-10 grid gap-6 md:grid-cols-3">
         {steps.map((s) => (
           <article
-            key={s.n}
+            key={s.key}
             className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5"
           >
             <div className="flex items-center gap-3">
@@ -40,13 +28,13 @@ export default function AIHowItWorks() {
                 {s.emoji}
               </div>
               <div className="text-2xl font-extrabold text-slate-800">
-                {s.n}
+                {t(`steps.${s.key}.n`)}
               </div>
             </div>
             <h3 className="mt-3 text-lg font-semibold text-slate-900">
-              {s.title}
+              {t(`steps.${s.key}.title`)}
             </h3>
-            <p className="mt-1 text-slate-600">{s.text}</p>
+            <p className="mt-1 text-slate-600">{t(`steps.${s.key}.text`)}</p>
           </article>
         ))}
       </div>

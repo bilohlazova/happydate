@@ -1,31 +1,31 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 const VIDEOS = [
   {
     id: "4jwYAuj8QO4",
-    title: "Pomoc dla zwierząt",
+    key: "animals",
     emoji: "🐾",
-    desc: "Wspieramy lokalne schroniska — odwiedzamy, karmimy, kochamy.",
   },
   {
     id: "TbSiXeDoo1A",
-    title: "Wizyta w domu dziecka",
+    key: "children",
     emoji: "👧",
-    desc: "Dajemy dzieciom uwagę, czas i prezenty — tworzymy wspomnienia.",
   },
   {
     id: "3VnezHfE5iQ",
-    title: "Akcja ekologiczna",
+    key: "planet",
     emoji: "🌿",
-    desc: "Sprzątamy lasy, sadzimy rośliny, edukujemy — razem dla natury.",
   },
-];
+] as const;
 
-function VideoCard({ id, title, emoji, desc }: typeof VIDEOS[0]) {
+function VideoCard({ id, videoKey, emoji }: { id: string; videoKey: typeof VIDEOS[number]["key"]; emoji: string }) {
+  const t = useTranslations("static.services.phase3b.goodDeed");
   const [playing, setPlaying] = useState(false);
   const thumb = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+  const title = t(`videos.${videoKey}.title`);
 
   return (
     <div style={{
@@ -60,7 +60,7 @@ function VideoCard({ id, title, emoji, desc }: typeof VIDEOS[0]) {
                 background: "rgba(0,0,0,.35)",
                 border: "none", cursor: "pointer",
               }}
-              aria-label={`Odtwórz: ${title}`}
+            aria-label={t("play", { title })}
             >
               <div style={{
                 width: 56, height: 56, borderRadius: "50%",
@@ -87,7 +87,7 @@ function VideoCard({ id, title, emoji, desc }: typeof VIDEOS[0]) {
           {emoji} {title}
         </div>
         <div style={{ fontSize: 12, color: "#7c6f9f", lineHeight: 1.4 }}>
-          {desc}
+          {t(`videos.${videoKey}.desc`)}
         </div>
       </div>
     </div>
@@ -95,17 +95,26 @@ function VideoCard({ id, title, emoji, desc }: typeof VIDEOS[0]) {
 }
 
 export default function YouTubeShowcase() {
+  const t = useTranslations("static.services.phase3b.goodDeed");
+
   return (
     <section style={{ background: "#f8f7ff", padding: "24px 16px" }}>
       <h3 style={{
         fontSize: 18, fontWeight: 800, color: "#1a1040",
         textAlign: "center", marginBottom: 16,
       }}>
-        Zobacz, jak pomagamy 💛
+        {t("videosTitle")}
       </h3>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 480, margin: "0 auto" }}>
-        {VIDEOS.map(v => <VideoCard key={v.id} {...v} />)}
+        {VIDEOS.map((video) => (
+          <VideoCard
+            key={video.id}
+            id={video.id}
+            videoKey={video.key}
+            emoji={video.emoji}
+          />
+        ))}
       </div>
     </section>
   );

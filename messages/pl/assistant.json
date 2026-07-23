@@ -68,5 +68,127 @@
       "description": "Nowe pomysły i podpowiedzi",
       "prompt": "Pokaż mi inspiracje dotyczące..."
     }
+  },
+  "legacyActions": {
+    "speak": "Powiedz coś",
+    "start": "Zacznij",
+    "addEvent": "Dodaj wydarzenie",
+    "addPerson": "Dodaj osobę",
+    "giftIdea": "Pomysł prezentu",
+    "writeMessage": "Napisz wiadomość",
+    "orderGift": "Zamów prezent",
+    "quick": "Szybkie rozwiązanie",
+    "writeNow": "Napisz wiadomość teraz",
+    "stop": "Zatrzymaj",
+    "listening": "Słucham…",
+    "intro": "Posłuchaj wprowadzenia",
+    "talk": "🎤 Porozmawiaj ze mną"
+  },
+  "legacyPanel": {
+    "userFallback": "Użytkowniku",
+    "greeting": {
+      "morning": "Dzień dobry",
+      "afternoon": "Dobry dzień",
+      "evening": "Dobry wieczór",
+      "night": "Dobranoc"
+    },
+    "subtext": {
+      "morning": "Zacznij dzień ze spokojem",
+      "afternoon": "Masz dziś coś ważnego",
+      "evening": "Spokojny wieczór z bliskimi",
+      "night": "Wszystko zapamiętane na jutro"
+    },
+    "day": {
+      "today": "Dziś",
+      "tomorrow": "Jutro",
+      "days": "{count} dni"
+    },
+    "speech": {
+      "eventCount": "{count, plural, one {Masz # nadchodzące wydarzenie.} few {Masz # nadchodzące wydarzenia.} other {Masz # nadchodzących wydarzeń.}}",
+      "noEvents": "Nie masz dziś żadnych wydarzeń.",
+      "important": "Najważniejsze: {title}.",
+      "allGood": "Wszystko pod kontrolą. Miłego dnia."
+    },
+    "aria": {
+      "start": "Uruchom asystenta",
+      "stop": "Zatrzymaj asystenta"
+    },
+    "event": {
+      "phonePrompt": " — czeka na Twój telefon",
+      "now": "Teraz"
+    },
+    "listen": {
+      "start": "Posłuchaj",
+      "stop": "Zatrzymaj"
+    },
+    "nav": {
+      "calendar": "Kalendarz",
+      "people": "Osoby",
+      "notes": "Notatki"
+    },
+    "upcoming": {
+      "title": "Nadchodzące",
+      "all": "Wszystkie →"
+    }
+  },
+  "legacyMessages": {
+    "fallbackName": "Hej",
+    "thisPerson": "tej osobie",
+    "importantEvent": "Ważne wydarzenie",
+    "urgentLabel": "Uwaga — pilne",
+    "greeting": {
+      "morning": "Dzień dobry",
+      "afternoon": "Dobry dzień",
+      "evening": "Dobry wieczór",
+      "night": "Dobranoc"
+    },
+    "day": {
+      "today": "dziś!",
+      "todayPlain": "dziś",
+      "tomorrow": "jutro",
+      "days": "za {count} dni"
+    },
+    "primary": {
+      "guest": {
+        "line2": "Cieszę się, że jesteś.",
+        "line3": "Pomogę Ci pamiętać o ważnych osobach i chwilach."
+      },
+      "calm": {
+        "line2": "Dziś spokojny dzień.",
+        "line3": "Wszystko masz pod kontrolą."
+      },
+      "active": {
+        "fallback": "Masz nadchodzące wydarzenie.",
+        "intro": "Masz ważne wydarzenie"
+      },
+      "urgent": {
+        "withoutEvent": "{name}, jutro ważny dzień!",
+        "withEvent": "{name}, {day} ważny dzień!"
+      }
+    },
+    "secondary": {
+      "guest": "Zacznij od dodania pierwszej ważnej osoby.",
+      "calm": "Chcesz coś zaplanować lub dodać?",
+      "active": "Chcesz, żebym pomógł z przygotowaniami?",
+      "urgent": "Nie zostawiaj tego na ostatnią chwilę 😉"
+    },
+    "speech": {
+      "guest": "{greeting}! Cieszę się, że jesteś. Pomogę Ci pamiętać o ważnych osobach i chwilach.",
+      "calm": "{greeting}! Dziś spokojny dzień. Wszystko masz pod kontrolą.",
+      "activeFallback": "{greeting}! Masz nadchodzące wydarzenie.",
+      "activeEvent": "{greeting}! Pamiętam — {title} {day}. Chcesz, żebym pomógł?",
+      "urgent": "{name}, ważne! {title} — {day}. Mogę pomóc natychmiast."
+    },
+    "eventHighlight": {
+      "today": "To dziś — nie zwlekaj!",
+      "lessThanDay": "Zostało mniej niż 24 godziny"
+    },
+    "suggestion": {
+      "guest": "Dodaj pierwszą osobę, a będę Ci przypominał o wszystkim, co ważne.",
+      "calm": "Wskazówka: Dodaj preferencje osoby, a podpowiem idealny prezent 🎁",
+      "active": "Im więcej wiem o {person}, tym lepiej mogę pomóc.",
+      "urgent": "Mam gotowe rozwiązania na ostatnią chwilę — szybko i z sercem.",
+      "preferences": "Pamiętam preferencje {person} — mam dla Ciebie trafny pomysł 🎁"
+    }
   }
 }

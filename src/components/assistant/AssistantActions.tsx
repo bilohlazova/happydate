@@ -5,6 +5,7 @@
 // Принцип: максимум 3 кнопки, завжди конкретні
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { AssistantState } from "./types";
 
 interface Action {
@@ -20,31 +21,35 @@ interface Props {
   onSpeak?: () => void;
 }
 
-function getActions(state: AssistantState, onSpeak?: () => void): Action[] {
+function getActions(
+  state: AssistantState,
+  t: ReturnType<typeof useTranslations<"assistant.legacyActions">>,
+  onSpeak?: () => void
+): Action[] {
   switch (state) {
     case "guest":
       return [
-        { icon: "🎤", label: "Powiedz coś", onClick: onSpeak, variant: "primary" },
-        { icon: "👉", label: "Zacznij", href: "/auth/login" },
+        { icon: "🎤", label: t("speak"), onClick: onSpeak, variant: "primary" },
+        { icon: "👉", label: t("start"), href: "/auth/login" },
       ];
 
     case "calm":
       return [
-        { icon: "➕", label: "Dodaj wydarzenie", href: "/calendar" },
-        { icon: "👤", label: "Dodaj osobę", href: "/people" },
+        { icon: "➕", label: t("addEvent"), href: "/calendar" },
+        { icon: "👤", label: t("addPerson"), href: "/people" },
       ];
 
     case "active":
       return [
-        { icon: "🎁", label: "Pomysł prezentu", href: "/services" },
-        { icon: "✍️", label: "Napisz wiadomość", href: "/services" },
-        { icon: "📦", label: "Zamów prezent", href: "/services" },
+        { icon: "🎁", label: t("giftIdea"), href: "/services" },
+        { icon: "✍️", label: t("writeMessage"), href: "/services" },
+        { icon: "📦", label: t("orderGift"), href: "/services" },
       ];
 
     case "urgent":
       return [
-        { icon: "🔥", label: "Szybkie rozwiązanie", href: "/services", variant: "danger" },
-        { icon: "✍️", label: "Napisz wiadomość teraz", href: "/services" },
+        { icon: "🔥", label: t("quick"), href: "/services", variant: "danger" },
+        { icon: "✍️", label: t("writeNow"), href: "/services" },
       ];
   }
 }
@@ -56,7 +61,8 @@ const COLS: Record<number, string> = {
 };
 
 export default function AssistantActions({ state, onSpeak }: Props) {
-  const actions = getActions(state, onSpeak);
+  const t = useTranslations("assistant.legacyActions");
+  const actions = getActions(state, t, onSpeak);
   const cols = COLS[actions.length] ?? "1fr 1fr";
 
   return (

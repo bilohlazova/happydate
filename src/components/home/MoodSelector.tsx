@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 import MoodCard from "./MoodCard";
 import type { HappyDateMode } from "@/lib/happy";
@@ -16,32 +17,25 @@ const MODES = [
   {
     id: "energy",
     icon: "😊",
-    title: "Dodaj mi energii",
-    subtitle: "Pozytywne rozpoczęcie dnia",
   },
   {
     id: "quick",
     icon: "☕",
-    title: "Krótko i konkretnie",
-    subtitle: "Najważniejsze informacje w 20 sekund",
   },
   {
     id: "calm",
     icon: "💙",
-    title: "Spokojnie",
-    subtitle: "Bez pośpiechu i z większą ilością szczegółów",
   },
   {
     id: "surprise",
     icon: "🎉",
-    title: "Zaskocz mnie",
-    subtitle: "HappyDate sam wybierze najlepszy sposób",
   },
 ] as const;
 
 export default function MoodSelector({
   onChange,
 }: MoodSelectorProps) {
+  const t = useTranslations("home.legacyMood");
   const [selected, setSelected] =
     useState<HappyDateMode>("quick");
 
@@ -54,7 +48,7 @@ export default function MoodSelector({
     <section className={MobileUI.compactSpacing}>
       <div>
         <h2 className={`${MobileUI.sectionTitle} font-bold text-gray-900`}>
-          Wybierz tryb
+          {t("title")}
         </h2>
       </div>
 
@@ -63,8 +57,8 @@ export default function MoodSelector({
           <MoodCard
             key={mode.id}
             icon={mode.icon}
-            title={mode.title}
-            subtitle={mode.subtitle}
+            title={t(`${mode.id}.title`)}
+            subtitle={t(`${mode.id}.subtitle`)}
             selected={selected === mode.id}
             onClick={() => handleSelect(mode.id)}
           />

@@ -1,17 +1,105 @@
 {
-  "greeting": { "named": "Hallo, {name}!", "fallback": "Hallo!", "subtitle": "Das ist heute für dich wichtig." },
-  "stats": { "label": "wichtige Punkte", "description": "Happy behält wichtige Menschen und Daten im Blick." },
-  "summary": { "empty": "Für heute gibt es keine dringenden Punkte." },
-  "assistant": { "ask": "Happy fragen", "listen": "Kurzes Briefing anhören", "stop": "Briefing stoppen", "read": "Kurzes Briefing lesen", "sectionLabel": "Happy Aktionen", "close": "Schließen", "speechError": "Die Sprachausgabe ist fehlgeschlagen. Du kannst das Briefing unten lesen." },
-  "countdown": { "today": "heute", "tomorrow": "morgen", "days": "in {count} Tagen" },
-  "events": { "birthdayTitle": "Geburtstag: {name}" },
-  "categories": { "birthday": "Geburtstag", "anniversary": "Jahrestag", "work": "Arbeit", "personal": "Persönlich", "other": "Sonstiges" },
-  "insights": { "birthday": "Geburtstag von {name} — {countdown}", "event": "{title} — {countdown}", "savedGifts": "Du hast {count} gespeicherte Geschenkideen", "hasPreferences": "Happy kennt bereits einige Vorlieben von {name}" },
-  "brief": { "intro": "Du hast heute {count} wichtige Punkte.", "featured": "Als Nächstes: {title}, {countdown}." },
-  "featured": { "importantLabel": "Nächstes wichtiges Datum", "nextLabel": "Nächstes Ereignis", "preferences": "Gespeicherte Vorlieben", "personCta": "Personenprofil ansehen", "eventCta": "Im Kalender ansehen" },
-  "metrics": { "savedGifts": "{count} gespeicherte Ideen", "notes": "{count} Notizen", "memories": "{count} Erinnerungen" },
-  "upcoming": { "title": "Bevorstehende Ereignisse", "all": "Alle ansehen" },
-  "recommendations": { "title": "Happy empfiehlt", "reviewGiftsTitle": "Gespeicherte Ideen ansehen", "reviewGiftsDescription": "Du hast {count} gespeicherte Geschenkideen.", "addGiftTitle": "Geschenkidee speichern", "addGiftDescription": "Speichere eine echte Idee für {name}.", "addContextTitle": "Informationen zur Person ergänzen", "addContextDescription": "Einige Vorlieben von {name} helfen bei der Vorbereitung.", "memoriesTitle": "Gemeinsame Erinnerungen ansehen", "memoriesDescription": "Du hast {count} gespeicherte Erinnerungen." },
-  "empty": { "title": "Beginne mit einer wichtigen Person oder einem Ereignis", "description": "Füge eine Person oder ein Datum hinzu. Happy zeigt nur Informationen aus deinen Daten.", "addPerson": "Person hinzufügen", "addEvent": "Ereignis hinzufügen" },
-  "error": { "title": "Einige Daten sind vorübergehend nicht verfügbar", "description": "Wir zeigen die sicher geladenen Bereiche.", "retry": "Erneut versuchen" }
+  "greeting": {
+    "named": "Hallo, {name}!",
+    "fallback": "Hallo!",
+    "subtitle": "Das ist heute für dich wichtig."
+  },
+  "stats": {
+    "label": "wichtige Punkte",
+    "description": "Happy behält wichtige Menschen und Daten im Blick."
+  },
+  "summary": {
+    "empty": "Für heute gibt es keine dringenden Punkte."
+  },
+  "assistant": {
+    "ask": "Happy fragen",
+    "listen": "Kurzes Briefing anhören",
+    "stop": "Briefing stoppen",
+    "read": "Kurzes Briefing lesen",
+    "sectionLabel": "Happy Aktionen",
+    "close": "Schließen",
+    "speechError": "Die Sprachausgabe ist fehlgeschlagen. Du kannst das Briefing unten lesen."
+  },
+  "countdown": {
+    "today": "heute",
+    "tomorrow": "morgen",
+    "days": "in {count} Tagen"
+  },
+  "events": {
+    "birthdayTitle": "Geburtstag: {name}"
+  },
+  "categories": {
+    "birthday": "Geburtstag",
+    "anniversary": "Jahrestag",
+    "work": "Arbeit",
+    "personal": "Persönlich",
+    "other": "Sonstiges"
+  },
+  "insights": {
+    "birthday": "Geburtstag von {name} — {countdown}",
+    "event": "{title} — {countdown}",
+    "savedGifts": "Du hast {count} gespeicherte Geschenkideen",
+    "hasPreferences": "Happy kennt bereits einige Vorlieben von {name}"
+  },
+  "brief": {
+    "intro": "Du hast heute {count} wichtige Punkte.",
+    "featured": "Als Nächstes: {title}, {countdown}."
+  },
+  "featured": {
+    "importantLabel": "Nächstes wichtiges Datum",
+    "nextLabel": "Nächstes Ereignis",
+    "preferences": "Gespeicherte Vorlieben",
+    "personCta": "Personenprofil ansehen",
+    "eventCta": "Im Kalender ansehen"
+  },
+  "metrics": {
+    "savedGifts": "{count} gespeicherte Ideen",
+    "notes": "{count} Notizen",
+    "memories": "{count} Erinnerungen"
+  },
+  "upcoming": {
+    "title": "Bevorstehende Ereignisse",
+    "all": "Alle ansehen"
+  },
+  "recommendations": {
+    "title": "Happy empfiehlt",
+    "reviewGiftsTitle": "Gespeicherte Ideen ansehen",
+    "reviewGiftsDescription": "Du hast {count} gespeicherte Geschenkideen.",
+    "addGiftTitle": "Geschenkidee speichern",
+    "addGiftDescription": "Speichere eine echte Idee für {name}.",
+    "addContextTitle": "Informationen zur Person ergänzen",
+    "addContextDescription": "Einige Vorlieben von {name} helfen bei der Vorbereitung.",
+    "memoriesTitle": "Gemeinsame Erinnerungen ansehen",
+    "memoriesDescription": "Du hast {count} gespeicherte Erinnerungen."
+  },
+  "empty": {
+    "title": "Beginne mit einer wichtigen Person oder einem Ereignis",
+    "description": "Füge eine Person oder ein Datum hinzu. Happy zeigt nur Informationen aus deinen Daten.",
+    "addPerson": "Person hinzufügen",
+    "addEvent": "Ereignis hinzufügen"
+  },
+  "error": {
+    "title": "Einige Daten sind vorübergehend nicht verfügbar",
+    "description": "Wir zeigen die sicher geladenen Bereiche.",
+    "retry": "Erneut versuchen"
+  },
+  "legacyMood": {
+    "title": "Modus wählen",
+    "energy": {
+      "title": "Gib mir Energie",
+      "subtitle": "Ein positiver Start in den Tag"
+    },
+    "quick": {
+      "title": "Kurz und klar",
+      "subtitle": "Die wichtigsten Informationen in 20 Sekunden"
+    },
+    "calm": {
+      "title": "Ruhig",
+      "subtitle": "Ohne Eile und mit mehr Details"
+    },
+    "surprise": {
+      "title": "Überrasche mich",
+      "subtitle": "HappyDate wählt den besten Weg"
+    }
+  }
 }

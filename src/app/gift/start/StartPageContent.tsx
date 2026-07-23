@@ -169,7 +169,7 @@ export default function GiftStartPage({
           </div>
         </section>
 
-        {/* Formularz */}
+        {/* Form */}
         <form
           onSubmit={handleSubmit}
           className={`${MobileUI.card} space-y-4 border-white/60 bg-white/80 p-4 backdrop-blur`}

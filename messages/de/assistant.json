@@ -68,5 +68,127 @@
       "description": "Neue Ideen und Anregungen",
       "prompt": "Zeige mir Inspiration für..."
     }
+  },
+  "legacyActions": {
+    "speak": "Sag etwas",
+    "start": "Starten",
+    "addEvent": "Ereignis hinzufügen",
+    "addPerson": "Person hinzufügen",
+    "giftIdea": "Geschenkidee",
+    "writeMessage": "Nachricht schreiben",
+    "orderGift": "Geschenk bestellen",
+    "quick": "Schnelle Lösung",
+    "writeNow": "Nachricht jetzt schreiben",
+    "stop": "Stoppen",
+    "listening": "Ich höre zu…",
+    "intro": "Einführung anhören",
+    "talk": "🎤 Sprich mit mir"
+  },
+  "legacyPanel": {
+    "userFallback": "Freund",
+    "greeting": {
+      "morning": "Guten Morgen",
+      "afternoon": "Guten Tag",
+      "evening": "Guten Abend",
+      "night": "Gute Nacht"
+    },
+    "subtext": {
+      "morning": "Beginne den Tag ruhig",
+      "afternoon": "Heute wartet etwas Wichtiges",
+      "evening": "Ein ruhiger Abend mit deinen Liebsten",
+      "night": "Alles ist für morgen gemerkt"
+    },
+    "day": {
+      "today": "Heute",
+      "tomorrow": "Morgen",
+      "days": "{count} Tage"
+    },
+    "speech": {
+      "eventCount": "{count, plural, one {Du hast # bevorstehendes Ereignis.} other {Du hast # bevorstehende Ereignisse.}}",
+      "noEvents": "Heute hast du keine Ereignisse.",
+      "important": "Am wichtigsten: {title}.",
+      "allGood": "Alles unter Kontrolle. Hab einen schönen Tag."
+    },
+    "aria": {
+      "start": "Assistent starten",
+      "stop": "Assistent stoppen"
+    },
+    "event": {
+      "phonePrompt": " — wartet auf deinen Anruf",
+      "now": "Jetzt"
+    },
+    "listen": {
+      "start": "Anhören",
+      "stop": "Stopp"
+    },
+    "nav": {
+      "calendar": "Kalender",
+      "people": "Personen",
+      "notes": "Notizen"
+    },
+    "upcoming": {
+      "title": "Bevorstehend",
+      "all": "Alle →"
+    }
+  },
+  "legacyMessages": {
+    "fallbackName": "Hallo",
+    "thisPerson": "diese Person",
+    "importantEvent": "Wichtiges Ereignis",
+    "urgentLabel": "Achtung — dringend",
+    "greeting": {
+      "morning": "Guten Morgen",
+      "afternoon": "Guten Tag",
+      "evening": "Guten Abend",
+      "night": "Gute Nacht"
+    },
+    "day": {
+      "today": "heute!",
+      "todayPlain": "heute",
+      "tomorrow": "morgen",
+      "days": "in {count} Tagen"
+    },
+    "primary": {
+      "guest": {
+        "line2": "Schön, dass du da bist.",
+        "line3": "Ich helfe dir, wichtige Menschen und Momente im Blick zu behalten."
+      },
+      "calm": {
+        "line2": "Heute ist ein ruhiger Tag.",
+        "line3": "Alles ist unter Kontrolle."
+      },
+      "active": {
+        "fallback": "Du hast ein bevorstehendes Ereignis.",
+        "intro": "Du hast ein wichtiges Ereignis"
+      },
+      "urgent": {
+        "withoutEvent": "{name}, morgen ist ein wichtiger Tag!",
+        "withEvent": "{name}, {day} ist ein wichtiger Tag!"
+      }
+    },
+    "secondary": {
+      "guest": "Beginne mit deiner ersten wichtigen Person.",
+      "calm": "Möchtest du etwas planen oder hinzufügen?",
+      "active": "Möchtest du Hilfe bei der Vorbereitung?",
+      "urgent": "Lass es nicht bis zum letzten Moment liegen 😉"
+    },
+    "speech": {
+      "guest": "{greeting}! Schön, dass du da bist. Ich helfe dir, wichtige Menschen und Momente im Blick zu behalten.",
+      "calm": "{greeting}! Heute ist ein ruhiger Tag. Alles ist unter Kontrolle.",
+      "activeFallback": "{greeting}! Du hast ein bevorstehendes Ereignis.",
+      "activeEvent": "{greeting}! Ich erinnere mich — {title} {day}. Möchtest du Hilfe?",
+      "urgent": "{name}, wichtig! {title} — {day}. Ich kann sofort helfen."
+    },
+    "eventHighlight": {
+      "today": "Das ist heute — warte nicht!",
+      "lessThanDay": "Weniger als 24 Stunden übrig"
+    },
+    "suggestion": {
+      "guest": "Füge die erste Person hinzu, und ich erinnere dich an alles Wichtige.",
+      "calm": "Tipp: Füge Vorlieben hinzu, dann schlage ich ein besseres Geschenk vor 🎁",
+      "active": "Je mehr ich über {person} weiß, desto besser kann ich helfen.",
+      "urgent": "Ich habe Last-Minute-Ideen parat — schnell und mit Herz.",
+      "preferences": "Ich merke mir die Vorlieben von {person} — ich habe eine passende Idee für dich 🎁"
+    }
   }
 }

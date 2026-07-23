@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 /* ══ Анімована банка ══ */
 function MoneyJar({ percent }: { percent: number }) {
+  const t = useTranslations("static.services.phase3b.fund.states");
   const p = Math.min(100, Math.max(0, percent));
   const color = p < 30 ? "#86efac" : p < 70 ? "#34d399" : "#10b981";
   const lightColor = p < 30 ? "#bbf7d0" : "#6ee7b7";
@@ -54,17 +56,25 @@ function MoneyJar({ percent }: { percent: number }) {
       </svg>
 
       <div style={{ fontSize: 12, fontWeight: 700, color: "#059669", textAlign: "center" }}>
-        {p === 0 ? "Czeka na pierwszą wpłatę 🌱" :
-         p < 50 ? "Zrzutka rośnie! 💪" :
-         p < 100 ? "Prawie gotowe! 🎉" :
-         "Cel osiągnięty! 🎊"}
+        {p === 0 ? t("empty") :
+         p < 50 ? t("growing") :
+         p < 100 ? t("almost") :
+         t("done")}
       </div>
     </div>
   );
 }
 
+const STEPS = [
+  { n: "01", emoji: "✨", key: "s1" },
+  { n: "02", emoji: "🔗", key: "s2" },
+  { n: "03", emoji: "💳", key: "s3" },
+] as const;
+
 /* ══ Головна сторінка ══ */
 export default function ZrzutkaPage() {
+  const t = useTranslations("static.services.phase3b.fund");
+  const commonT = useTranslations("static.services.phase3b");
   const [collected, setCollected] = useState(180);
   const goal = 500;
   const percent = Math.round((collected / goal) * 100);
@@ -84,23 +94,23 @@ export default function ZrzutkaPage() {
         padding: "28px 20px 24px", textAlign: "center",
       }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: "#d97706", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10, background: "rgba(251,191,36,.15)", display: "inline-block", padding: "4px 12px", borderRadius: 20 }}>
-          Zrzutka
+          {t("title")}
         </div>
         <h1 style={{ fontSize: 26, fontWeight: 800, color: "#1a1040", margin: "0 0 8px", lineHeight: 1.2 }}>
-          💸 Zbierz kasę<br/>od znajomych
+          {t("heroTitle")}
         </h1>
         <p style={{ fontSize: 13, color: "#6b5e8a", margin: "0 0 6px", lineHeight: 1.5 }}>
-          Stwórz zrzutkę, udostępnij link i zbieraj wpłaty. Wypłać w dowolnej chwili.
+          {t("subtitle")}
         </p>
         <p style={{ fontSize: 12, color: "#10b981", fontWeight: 700, marginBottom: 20 }}>
-          Bierzemy tylko niewielki % od zebranej kwoty.
+          {t("fee")}
         </p>
         <Link href="#start" style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", color: "#fff", borderRadius: 20, padding: "12px 28px", fontSize: 15, fontWeight: 800, textDecoration: "none", boxShadow: "0 4px 14px rgba(124,58,237,.3)" }}>
-          Utwórz zrzutkę →
+          {t("create")}
         </Link>
         <div style={{ marginTop: 12 }}>
           <Link href="/services" style={{ fontSize: 12, color: "#b0a8cc", textDecoration: "none" }}>
-            ← Wróć do Usługi
+            {commonT("backToServices")}
           </Link>
         </div>
       </section>
@@ -108,7 +118,7 @@ export default function ZrzutkaPage() {
       {/* ══ DEMO BANKI ══ */}
       <section style={{ margin: "12px 16px 0", background: "#fff", borderRadius: 24, border: "1.5px solid #ede9f8", padding: "20px 16px", boxShadow: "0 2px 8px rgba(0,0,0,.04)" }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: "#b0a8cc", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "center", marginBottom: 16 }}>
-          Podgląd zrzutki — demo
+          {t("demoTitle")}
         </div>
 
         <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
@@ -120,27 +130,27 @@ export default function ZrzutkaPage() {
           {/* Деталі */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: "#1a1040", marginBottom: 4 }}>
-              Urodziny Tomka 🎂
+              {t("demoName")}
             </div>
 
             {/* Прогрес */}
             <div style={{ background: "#f8f7ff", borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, color: "#1a1040", marginBottom: 6 }}>
-                <span>Zebrano</span>
+                <span>{t("collected")}</span>
                 <span style={{ color: "#059669" }}>{collected} zł</span>
               </div>
               <div style={{ height: 8, background: "#ede9f8", borderRadius: 20, overflow: "hidden", marginBottom: 4 }}>
                 <div style={{ height: "100%", borderRadius: 20, background: "linear-gradient(90deg,#34d399,#10b981)", width: `${percent}%`, transition: "width 0.8s cubic-bezier(.4,0,.2,1)" }}/>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#b0a8cc" }}>
-                <span>Cel: {goal} zł</span>
-                <span>Brakuje: {goal - collected} zł</span>
+                <span>{t("goal", { amount: goal })}</span>
+                <span>{t("missing", { amount: goal - collected })}</span>
               </div>
             </div>
 
             {/* Учасники */}
             <div style={{ fontSize: 11, fontWeight: 700, color: "#b0a8cc", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
-              Uczestnicy
+              {t("participants")}
             </div>
             {PARTICIPANTS.map(p => (
               <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
@@ -155,7 +165,7 @@ export default function ZrzutkaPage() {
         {/* Кнопки симуляції */}
         <div style={{ borderTop: "1px solid #f5f3ff", marginTop: 14, paddingTop: 12 }}>
           <div style={{ fontSize: 11, color: "#b0a8cc", textAlign: "center", marginBottom: 8 }}>
-            Kliknij i zobacz jak baniak rośnie 👇
+            {t("clickHint")}
           </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
             {[20, 50, 100].map(amount => (
@@ -175,22 +185,18 @@ export default function ZrzutkaPage() {
       {/* ══ JAK TO DZIAŁA ══ */}
       <section style={{ padding: "16px 16px 8px" }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: "#b0a8cc", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "center", marginBottom: 12 }}>
-          Jak to działa?
+          {commonT("howItWorks")}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {[
-            { n: "01", emoji: "✨", title: "Utwórz zrzutkę", desc: "Podaj nazwę i cel. Gotowe w 1 minutę." },
-            { n: "02", emoji: "🔗", title: "Udostępnij link", desc: "Każdy wpłaca ile chce — przez link lub kod QR." },
-            { n: "03", emoji: "💳", title: "Wypłać kiedy chcesz", desc: "Pieniądze dostępne od razu. Wypłacasz w dowolnej chwili." },
-          ].map(s => (
+          {STEPS.map(s => (
             <div key={s.n} style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #ede9f8", padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 42, height: 42, borderRadius: 14, background: "linear-gradient(135deg,#ede9fe,#fce7f3)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <span style={{ fontSize: 9, fontWeight: 800, color: "#c4b5f8" }}>{s.n}</span>
                 <span style={{ fontSize: 18 }}>{s.emoji}</span>
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1040", marginBottom: 2 }}>{s.title}</div>
-                <div style={{ fontSize: 12, color: "#7c6f9f" }}>{s.desc}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1040", marginBottom: 2 }}>{t(`steps.${s.key}.title`)}</div>
+                <div style={{ fontSize: 12, color: "#7c6f9f" }}>{t(`steps.${s.key}.desc`)}</div>
               </div>
             </div>
           ))}
@@ -199,15 +205,15 @@ export default function ZrzutkaPage() {
 
       {/* ══ OPŁATY ══ */}
       <section style={{ margin: "8px 16px", background: "linear-gradient(135deg,#f0fdf4,#dcfce7)", borderRadius: 20, border: "1.5px solid #86efac", padding: "16px" }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: "#065f46", marginBottom: 6 }}>💚 Przejrzyste opłaty</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: "#065f46", marginBottom: 6 }}>{t("feesTitle")}</div>
         <div style={{ fontSize: 13, color: "#166534", lineHeight: 1.5, marginBottom: 10 }}>
-          Bierzemy tylko <strong>niewielki procent</strong> od zebranej kwoty. Bez ukrytych kosztów, bez abonamentów.
+          {t("feesText")}
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           {[
-            { label: "Tworzenie", value: "0 zł" },
-            { label: "Prowizja", value: "2–4%" },
-            { label: "Wypłata", value: "0 zł" },
+            { label: t("feeItems.create"), value: "0 zł" },
+            { label: t("feeItems.commission"), value: "2–4%" },
+            { label: t("feeItems.payout"), value: "0 zł" },
           ].map(f => (
             <div key={f.label} style={{ flex: 1, background: "#fff", borderRadius: 12, padding: "10px", textAlign: "center" }}>
               <div style={{ fontSize: 16, fontWeight: 800, color: "#065f46" }}>{f.value}</div>
@@ -220,12 +226,12 @@ export default function ZrzutkaPage() {
       {/* ══ CTA ══ */}
       <section style={{ padding: "16px", textAlign: "center" }} id="start">
         <div style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", borderRadius: 20, padding: "20px 16px", color: "#fff" }}>
-          <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 6 }}>Gotowy na zrzutkę? 🚀</div>
+          <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 6 }}>{t("ready")}</div>
           <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 16, lineHeight: 1.5 }}>
-            Stwórz i udostępnij link w mniej niż minutę.
+            {t("readyText")}
           </div>
           <Link href="/survey?flow=zrzutka" style={{ display: "inline-block", background: "#fff", color: "#7c3aed", borderRadius: 14, padding: "12px 28px", fontSize: 15, fontWeight: 800, textDecoration: "none" }}>
-            Utwórz zrzutkę →
+            {t("create")}
           </Link>
         </div>
       </section>

@@ -1,5 +1,6 @@
 // src/app/services/asystent-ai/page.tsx
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
 import AIIntro from "@/components/services/AIIntro";
 import AIFAQ from "@/components/services/AIFAQ";
@@ -7,27 +8,29 @@ import AIHowItWorks from "@/components/services/AIHowItWorks";
 import ChatModalControllerAI from "@/components/services/ChatModalControllerAI";
 import AskAIButton from "@/components/services/AskAIButton";
 
-export const metadata: Metadata = {
-  title: "HappyDate – Asystent Prezentowy AI",
-  description:
-    "Twój osobisty asystent AI, który podpowie trafione prezenty na każdą okazję – na podstawie zainteresowań, relacji i budżetu.",
-  alternates: { canonical: "/services/asystent-ai" },
-  openGraph: {
-    title: "HappyDate – Asystent Prezentowy AI",
-    description:
-      "Nie wiesz, co podarować? Zapytaj AI i otrzymaj 2–3 dopasowane propozycje w minutę.",
-    type: "website",
-    url: "https://happydate.pl/services/asystent-ai",
-  },
-  twitter: { card: "summary_large_image" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("static.services.phase3b.assistant");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+    alternates: { canonical: "/services/asystent-ai" },
+    openGraph: {
+      title: t("metaTitle"),
+      description: t("ogDescription"),
+      type: "website",
+      url: "https://happydate.pl/services/asystent-ai",
+    },
+    twitter: { card: "summary_large_image" },
+  };
+}
 
-export default function AsystentAIPage() {
+export default async function AsystentAIPage() {
+  const t = await getTranslations("static.services.phase3b.assistant");
   const features = [
-    { emoji: "⚡", title: "Szybkie rekomendacje", text: "2–3 pomysły w minutę, z opisem i linkami do zakupu." },
-    { emoji: "🎯", title: "Dopasowanie", text: "Preferencje, styl życia, wiek, okazja i budżet — wszystko brane pod uwagę." },
-    { emoji: "🛡️", title: "Prywatność", text: "Twoje dane są bezpieczne. Możesz działać całkiem anonimowo." },
-    { emoji: "🤝", title: "Wsparcie człowieka", text: "Gdy potrzeba — dołącza konsultant i dopina całość z dostawą." },
+    { emoji: "⚡", key: "speed" },
+    { emoji: "🎯", key: "match" },
+    { emoji: "🛡️", key: "privacy" },
+    { emoji: "🤝", key: "human" },
   ] as const;
 
   return (
@@ -38,23 +41,25 @@ export default function AsystentAIPage() {
       {/* 2) Korzyści */}
       <section className="mx-auto max-w-[var(--hd-screen-wide)] px-4 py-10 sm:px-5">
         <h2 className="text-center text-2xl md:text-3xl font-extrabold text-slate-900">
-          Dlaczego HappyDate?
+          {t("featuresTitle")}
         </h2>
         <p className="mt-3 text-center text-slate-600">
-          Zobacz, dlaczego użytkownicy wybierają nasz Asystent Prezentowy.
+          {t("featuresSubtitle")}
         </p>
 
         <div className="mt-8 grid gap-3 sm:grid-cols-2">
           {features.map((f) => (
             <article
-              key={f.title}
+              key={f.key}
               className="hd-surface p-4"
             >
               <div className="text-2xl">{f.emoji}</div>
               <h3 className="mt-2 text-lg font-semibold text-slate-900">
-                {f.title}
+                {t(`featureItems.${f.key}.title`)}
               </h3>
-              <p className="mt-1 text-slate-600">{f.text}</p>
+              <p className="mt-1 text-slate-600">
+                {t(`featureItems.${f.key}.text`)}
+              </p>
             </article>
           ))}
         </div>
@@ -67,16 +72,16 @@ export default function AsystentAIPage() {
       <section className="mx-auto max-w-[var(--hd-screen-wide)] px-4 pb-10 sm:px-5">
         <div className="hd-surface p-5 text-center">
           <h2 className="text-xl font-bold text-slate-900">
-            Gotowy na pomysł idealnego prezentu?
+            {t("ctaTitle")}
           </h2>
           <p className="mt-2 text-slate-600">
-            Uruchom czat i w 60 sekund dostaniesz 2–3 trafione propozycje.
+            {t("ctaText")}
           </p>
           <div className="mt-4">
             <AskAIButton />
           </div>
           <p className="mt-2 text-xs text-slate-500">
-            Anonimowo i bez zobowiązań
+            {t("anonymous")}
           </p>
         </div>
       </section>

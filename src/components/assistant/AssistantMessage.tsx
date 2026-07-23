@@ -4,6 +4,7 @@
 // Генерує емоційно правильний текст залежно від стану і контексту
 
 import { AssistantState, AssistantEvent, daysUntil } from "./types";
+import { useTranslations } from "next-intl";
 
 interface Props {
   state: AssistantState;
@@ -12,61 +13,64 @@ interface Props {
   preferences?: string | null;
 }
 
-function getGreeting(): string {
+type AssistantText = ReturnType<typeof useTranslations<"assistant.legacyMessages">>;
+
+function getGreeting(t: AssistantText): string {
   const h = new Date().getHours();
-  if (h >= 5  && h < 12) return "Dzień dobry";
-  if (h >= 12 && h < 18) return "Dobry dzień";
-  if (h >= 18 && h < 22) return "Dobry wieczór";
-  return "Dobranoc";
+  if (h >= 5  && h < 12) return t("greeting.morning");
+  if (h >= 12 && h < 18) return t("greeting.afternoon");
+  if (h >= 18 && h < 22) return t("greeting.evening");
+  return t("greeting.night");
 }
 
-function getDayLabel(dateStr: string): string {
+function getDayLabel(dateStr: string, t: AssistantText): string {
   const d = daysUntil(dateStr);
-  if (d === 0) return "dziś!";
-  if (d === 1) return "jutro";
-  return `za ${d} ${d < 5 ? "dni" : "dni"}`;
+  if (d === 0) return t("day.today");
+  if (d === 1) return t("day.tomorrow");
+  return t("day.days", { count: d });
 }
 
 // Головне повідомлення асистента
-function buildPrimary(state: AssistantState, firstName?: string, nextEvent?: AssistantEvent | null): string {
-  const greet = getGreeting();
+function buildPrimary(t: AssistantText, state: AssistantState, firstName?: string, nextEvent?: AssistantEvent | null): string {
+  const greet = getGreeting(t);
   const name = firstName ? `, ${firstName}` : "";
 
   switch (state) {
     case "guest":
-      return `${greet} 💛\nCieszę się, że jesteś.\nPomogę Ci pamiętać o ważnych osobach i chwilach.`;
+      return `${greet} 💛\n${t("primary.guest.line2")}\n${t("primary.guest.line3")}`;
 
     case "calm":
-      return `${greet}${name} 💛\nDziś spokojny dzień.\nWszystko masz pod kontrolą.`;
+      return `${greet}${name} 💛\n${t("primary.calm.line2")}\n${t("primary.calm.line3")}`;
 
     case "active":
-      if (!nextEvent) return `${greet}${name} 💛\nMasz nadchodzące wydarzenie.`;
-      return `${greet}${name} 💛\nMasz ważne wydarzenie:\n🎂 ${nextEvent.title} — ${getDayLabel(nextEvent.date)}`;
+      if (!nextEvent) return `${greet}${name} 💛\n${t("primary.active.fallback")}`;
+      return `${greet}${name} 💛\n${t("primary.active.intro")}:\n🎂 ${nextEvent.title} — ${getDayLabel(nextEvent.date, t)}`;
 
     case "urgent":
-      if (!nextEvent) return `⚠️ ${firstName ?? "Hej"}, jutro ważny dzień!`;
-      const dayStr = daysUntil(nextEvent.date) === 0 ? "dziś" : "jutro";
-      return `⚠️ ${firstName ?? "Hej"}, ${dayStr} ważny dzień!\n🎂 ${nextEvent.title}`;
+      if (!nextEvent) return `⚠️ ${t("primary.urgent.withoutEvent", { name: firstName ?? t("fallbackName") })}`;
+      const dayStr = daysUntil(nextEvent.date) === 0 ? t("day.todayPlain") : t("day.tomorrow");
+      return `⚠️ ${t("primary.urgent.withEvent", { name: firstName ?? t("fallbackName"), day: dayStr })}\n🎂 ${nextEvent.title}`;
   }
 }
 
 // Другорядне / call-to-action повідомлення
-function buildSecondary(state: AssistantState): string {
+function buildSecondary(t: AssistantText, state: AssistantState): string {
   switch (state) {
     case "guest":
-      return "Zacznij od dodania pierwszej ważnej osoby.";
+      return t("secondary.guest");
     case "calm":
-      return "Chcesz coś zaplanować lub dodać?";
+      return t("secondary.calm");
     case "active":
-      return "Chcesz, żebym pomógł z przygotowaniami?";
+      return t("secondary.active");
     case "urgent":
-      return "Nie zostawiaj tego na ostatnią chwilę 😉";
+      return t("secondary.urgent");
   }
 }
 
 export default function AssistantMessage({ state, firstName, nextEvent }: Props) {
-  const primary   = buildPrimary(state, firstName, nextEvent);
-  const secondary = buildSecondary(state);
+  const t = useTranslations("assistant.legacyMessages");
+  const primary   = buildPrimary(t, state, firstName, nextEvent);
+  const secondary = buildSecondary(t, state);
 
   const lines = primary.split("\n");
 
@@ -92,7 +96,7 @@ export default function AssistantMessage({ state, firstName, nextEvent }: Props)
           textTransform: "uppercase" as const,
           color: state === "urgent" ? "#e24b4a" : "#3a9bd5",
         }}>
-          {state === "urgent" ? "Uwaga — pilne" : "HappyDate AI"}
+          {state === "urgent" ? t("urgentLabel") : "HappyDate AI"}
         </span>
       </div>
 
@@ -136,24 +140,33 @@ export default function AssistantMessage({ state, firstName, nextEvent }: Props)
 export function buildSpeechText(
   state: AssistantState,
   firstName?: string,
-  nextEvent?: AssistantEvent | null
+  nextEvent?: AssistantEvent | null,
+  copy?: {
+    greeting: string;
+    dayLabel: (date: string) => string;
+    guest: string;
+    calm: string;
+    activeFallback: string;
+    activeEvent: (title: string, day: string) => string;
+    urgent: (name: string, day: string, title: string) => string;
+  }
 ): string {
-  const greet = getGreeting();
+  const greet = copy?.greeting ?? "Good day";
   const name = firstName ?? "";
 
   switch (state) {
     case "guest":
-      return `${greet}! Cieszę się, że jesteś. Pomogę Ci pamiętać o ważnych osobach i chwilach. Zacznij od dodania pierwszej osoby.`;
+      return copy?.guest ?? `${greet}! I can help you remember important people and moments.`;
 
     case "calm":
-      return `${greet}${name ? ", " + name : ""}! Dziś spokojny dzień. Wszystko masz pod kontrolą. Chcesz coś zaplanować?`;
+      return copy?.calm ?? `${greet}${name ? ", " + name : ""}! Everything is under control.`;
 
     case "active":
-      if (!nextEvent) return `${greet}${name ? ", " + name : ""}! Masz nadchodzące wydarzenie. Mogę pomóc z przygotowaniami.`;
-      return `${greet}${name ? ", " + name : ""}! Pamiętam — ${nextEvent.title} ${getDayLabel(nextEvent.date)}. Chcesz, żebym pomógł?`;
+      if (!nextEvent) return copy?.activeFallback ?? `${greet}${name ? ", " + name : ""}! You have an upcoming event.`;
+      return copy?.activeEvent(nextEvent.title, copy.dayLabel(nextEvent.date)) ?? `${greet}${name ? ", " + name : ""}! ${nextEvent.title}.`;
 
     case "urgent":
-      const dayStr = nextEvent && daysUntil(nextEvent.date) === 0 ? "dziś" : "jutro";
-      return `${name ? name + ", " : ""}ważne! ${dayStr} — ${nextEvent?.title ?? "ważne wydarzenie"}. Nie zostawiaj tego na ostatnią chwilę. Mogę pomóc natychmiast.`;
+      const dayStr = nextEvent && daysUntil(nextEvent.date) === 0 ? "today" : "tomorrow";
+      return copy?.urgent(name, dayStr, nextEvent?.title ?? "important event") ?? `${name ? name + ", " : ""}important: ${nextEvent?.title ?? "important event"}.`;
   }
 }

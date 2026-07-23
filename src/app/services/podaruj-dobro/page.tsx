@@ -1,53 +1,54 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import YouTubeShowcase from "@/components/services/YouTubeShowcase";
 import GoodDeedForm from "@/components/services/GoodDeedForm";
 
-export const metadata: Metadata = {
-  title: "HappyDate – Podaruj Dobro",
-  description: "Zamiast prezentu — podaruj dobro! Zarejestruj się na wizytę i pomóż potrzebującym.",
-  alternates: { canonical: "/services/podaruj-dobro" },
-  robots: { index: true, follow: true },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("static.services.phase3b.goodDeed");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+    alternates: { canonical: "/services/podaruj-dobro" },
+    robots: { index: true, follow: true },
+  };
+}
 
 const DIRECTIONS = [
   {
     emoji: "🐾",
-    title: "Zwierzęta",
-    subtitle: "Schronisko",
-    desc: "Godzina Twojej obecności zmienia wszystko dla zwierzaka czekającego na dom.",
+    key: "animals",
     bg: "linear-gradient(135deg,#d1fae5,#a7f3d0)",
     border: "#6ee7b7",
     color: "#065f46",
   },
   {
     emoji: "👧",
-    title: "Dzieci",
-    subtitle: "Dom dziecka",
-    desc: "Twój czas i uwaga to prezent, którego żaden sklep nie sprzedaje.",
+    key: "children",
     bg: "linear-gradient(135deg,#fce7f3,#fbcfe8)",
     border: "#f9a8d4",
     color: "#9d174d",
   },
   {
     emoji: "🌿",
-    title: "Planeta",
-    subtitle: "Akcja eko",
-    desc: "Każde posadzone drzewo to gest troski, który wróci do nas wszystkich.",
+    key: "planet",
     bg: "linear-gradient(135deg,#dbeafe,#bfdbfe)",
     border: "#93c5fd",
     color: "#1e40af",
   },
-];
+] as const;
 
 const STEPS = [
-  { emoji: "🎯", n: "01", title: "Wybierz kierunek", desc: "Zwierzęta, dzieci lub planeta" },
-  { emoji: "📅", n: "02", title: "Zarezerwuj termin", desc: "Data, miasto, godzina" },
-  { emoji: "🎁", n: "03", title: "Przygotuj gest", desc: "Karma, czas lub roślinka" },
-  { emoji: "✨", n: "04", title: "Zostaw ślad dobra", desc: "Przyjdź i pobądź" },
-];
+  { emoji: "🎯", n: "01", key: "s1" },
+  { emoji: "📅", n: "02", key: "s2" },
+  { emoji: "🎁", n: "03", key: "s3" },
+  { emoji: "✨", n: "04", key: "s4" },
+] as const;
 
-export default function PodarujDobroPage() {
+export default async function PodarujDobroPage() {
+  const t = await getTranslations("static.services.phase3b.goodDeed");
+  const commonT = await getTranslations("static.services.phase3b");
+
   return (
     <main style={{ background: "#f8f7ff", minHeight: "100svh", paddingBottom: 100, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
 
@@ -59,25 +60,24 @@ export default function PodarujDobroPage() {
         position: "relative",
         overflow: "hidden",
       }}>
-        {/* Декоративні кола */}
         <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: "50%", background: "rgba(236,72,153,.12)" }} />
         <div style={{ position: "absolute", bottom: -30, left: -30, width: 120, height: 120, borderRadius: "50%", background: "rgba(251,191,36,.15)" }} />
 
         <div style={{ position: "relative", zIndex: 1 }}>
           <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, color: "#be185d", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12, background: "rgba(236,72,153,.1)", padding: "4px 12px", borderRadius: 20 }}>
-            Podaruj Dobro
+            {t("badge")}
           </div>
 
           <h1 style={{ fontSize: 28, fontWeight: 800, color: "#1a1040", margin: "0 0 8px", lineHeight: 1.2, letterSpacing: "-0.5px" }}>
-            Dobro ma wiele twarzy.
+            {t("title")}
           </h1>
           <p style={{ fontSize: 22, fontWeight: 800, color: "#e11d48", margin: "0 0 20px", lineHeight: 1.2 }}>
-            Którą z nich pokażesz dzisiaj?
+            {t("titleAccent")}
           </p>
 
           <p style={{ fontSize: 14, color: "#6b5e8a", lineHeight: 1.6, maxWidth: 300, margin: "0 auto 24px" }}>
-            Nie potrzebujesz wiele. Wystarczy obecność.
-            <br /><strong style={{ color: "#1a1040" }}>Zostaw po sobie ślad dobra.</strong>
+            {t("subtitle")}
+            <br /><strong style={{ color: "#1a1040" }}>{t("subtitleStrong")}</strong>
           </p>
 
           <a
@@ -92,12 +92,12 @@ export default function PodarujDobroPage() {
               boxShadow: "0 4px 20px rgba(236,72,153,.4)",
             }}
           >
-            ❤️ Wybieram swoją drogę dobra
+            {t("cta")}
           </a>
 
           <div style={{ marginTop: 14 }}>
             <Link href="/services" style={{ fontSize: 12, color: "rgba(255,255,255,.5)", textDecoration: "none" }}>
-              ← Wróć do Usługi
+              {commonT("backToServices")}
             </Link>
           </div>
         </div>
@@ -106,12 +106,12 @@ export default function PodarujDobroPage() {
       {/* ══ TRZY KIERUNKI ════════════════════════════════ */}
       <section style={{ padding: "24px 16px 8px" }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: "#b0a8cc", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "center", marginBottom: 14 }}>
-          Wybierz swój kierunek
+          {t("directionsTitle")}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {DIRECTIONS.map(d => (
-            <div key={d.title} style={{
+            <div key={d.key} style={{
               background: "#fff",
               borderRadius: 20,
               border: `1.5px solid ${d.border}`,
@@ -132,10 +132,10 @@ export default function PodarujDobroPage() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: "#1a1040" }}>{d.title}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: d.color, background: d.bg, padding: "2px 8px", borderRadius: 20 }}>{d.subtitle}</span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: "#1a1040" }}>{t(`directions.${d.key}.title`)}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: d.color, background: d.bg, padding: "2px 8px", borderRadius: 20 }}>{t(`directions.${d.key}.subtitle`)}</span>
                 </div>
-                <p style={{ fontSize: 12, color: "#7c6f9f", lineHeight: 1.5, margin: 0 }}>{d.desc}</p>
+                <p style={{ fontSize: 12, color: "#7c6f9f", lineHeight: 1.5, margin: 0 }}>{t(`directions.${d.key}.desc`)}</p>
               </div>
             </div>
           ))}
@@ -145,7 +145,7 @@ export default function PodarujDobroPage() {
       {/* ══ KROKI ════════════════════════════════════════ */}
       <section style={{ padding: "20px 16px 8px" }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: "#b0a8cc", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "center", marginBottom: 14 }}>
-          Jak to działa?
+          {t("stepsTitle")}
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -160,8 +160,8 @@ export default function PodarujDobroPage() {
                 <span style={{ fontSize: 10, fontWeight: 800, color: "#c4b5f8", letterSpacing: "0.05em" }}>{s.n}</span>
                 <span style={{ fontSize: 18 }}>{s.emoji}</span>
               </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1040", marginBottom: 2 }}>{s.title}</div>
-              <div style={{ fontSize: 11, color: "#7c6f9f" }}>{s.desc}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1040", marginBottom: 2 }}>{t(`steps.${s.key}.title`)}</div>
+              <div style={{ fontSize: 11, color: "#7c6f9f" }}>{t(`steps.${s.key}.desc`)}</div>
             </div>
           ))}
         </div>

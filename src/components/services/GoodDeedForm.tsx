@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 type FormData = {
   type: "zwierzaki" | "dzieci" | "planeta";
@@ -13,12 +14,13 @@ type FormData = {
 };
 
 const TYPES = [
-  { id: "zwierzaki", label: "Zwierzaki", emoji: "🐾", bg: "#d1fae5", color: "#065f46" },
-  { id: "dzieci",    label: "Dzieci",    emoji: "👶", bg: "#fce7f3", color: "#9d174d" },
-  { id: "planeta",   label: "Planeta",   emoji: "🌍", bg: "#dbeafe", color: "#1e40af" },
+  { id: "zwierzaki", key: "animals", emoji: "🐾", bg: "#d1fae5", color: "#065f46" },
+  { id: "dzieci", key: "children", emoji: "👶", bg: "#fce7f3", color: "#9d174d" },
+  { id: "planeta", key: "planet", emoji: "🌍", bg: "#dbeafe", color: "#1e40af" },
 ] as const;
 
 export default function GoodDeedForm() {
+  const t = useTranslations("static.services.phase3b.goodDeed");
   const [form, setForm] = useState<FormData>({
     type: "zwierzaki", city: "", date: "", time: "",
     message: "", email: "", consent: false,
@@ -42,10 +44,10 @@ export default function GoodDeedForm() {
         setSuccess(true);
         setForm(f => ({ ...f, city: "", date: "", time: "", message: "", email: "", consent: false }));
       } else {
-        setError(data.error || "Coś poszło nie tak.");
+        setError(t("genericError"));
       }
     } catch {
-      setError("Nie udało się wysłać formularza.");
+      setError(t("sendError"));
     } finally {
       setLoading(false);
     }
@@ -65,29 +67,29 @@ export default function GoodDeedForm() {
 
         {/* Заголовок */}
         <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: "#1a1040", marginBottom: 4 }}>Podaruj Dobro 💛</div>
-          <div style={{ fontSize: 13, color: "#7c6f9f" }}>Wybierz kierunek dobra, wypełnij dane i dołącz do akcji.</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: "#1a1040", marginBottom: 4 }}>{t("formTitle")}</div>
+          <div style={{ fontSize: 13, color: "#7c6f9f" }}>{t("formSubtitle")}</div>
         </div>
 
         {/* Вибір типу */}
         <div className="gdf-field">
-          <span className="gdf-label">Kierunek dobra</span>
+          <span className="gdf-label">{t("typeLabel")}</span>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-            {TYPES.map(t => (
+            {TYPES.map((type) => (
               <button
-                key={t.id}
+                key={type.id}
                 type="button"
-                onClick={() => setForm(f => ({ ...f, type: t.id }))}
+                onClick={() => setForm(f => ({ ...f, type: type.id }))}
                 style={{
-                  border: form.type === t.id ? `2px solid ${t.color}` : "1.5px solid #e8e3f5",
-                  background: form.type === t.id ? t.bg : "#f8f7ff",
+                  border: form.type === type.id ? `2px solid ${type.color}` : "1.5px solid #e8e3f5",
+                  background: form.type === type.id ? type.bg : "#f8f7ff",
                   borderRadius: 12, padding: "10px 4px", cursor: "pointer",
                   display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                   transition: "all .15s",
                 }}
               >
-                <span style={{ fontSize: 22 }}>{t.emoji}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: form.type === t.id ? t.color : "#7c6f9f" }}>{t.label}</span>
+                <span style={{ fontSize: 22 }}>{type.emoji}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: form.type === type.id ? type.color : "#7c6f9f" }}>{t(`directions.${type.key}.label`)}</span>
               </button>
             ))}
           </div>
@@ -95,37 +97,37 @@ export default function GoodDeedForm() {
 
         {/* Місто */}
         <div className="gdf-field">
-          <label className="gdf-label">Miasto</label>
-          <input className="gdf-input" type="text" name="city" value={form.city} onChange={handleText} placeholder="np. Warszawa" required />
+          <label className="gdf-label">{t("city")}</label>
+          <input className="gdf-input" type="text" name="city" value={form.city} onChange={handleText} placeholder={t("cityPlaceholder")} required />
         </div>
 
         {/* Дата + час в одному рядку */}
         <div className="gdf-field" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           <div>
-            <label className="gdf-label">Data</label>
+            <label className="gdf-label">{t("date")}</label>
             <input className="gdf-input" type="date" name="date" value={form.date} onChange={handleText} required />
           </div>
           <div>
-            <label className="gdf-label">Godzina</label>
+            <label className="gdf-label">{t("time")}</label>
             <input className="gdf-input" type="time" name="time" value={form.time} onChange={handleText} />
           </div>
         </div>
 
         {/* Повідомлення */}
         <div className="gdf-field">
-          <label className="gdf-label">Wiadomość (opcjonalnie)</label>
+          <label className="gdf-label">{t("message")}</label>
           <textarea
             className="gdf-input"
             name="message" value={form.message} onChange={handleText}
-            rows={3} placeholder="Dlaczego chcesz podarować dobro?"
+            rows={3} placeholder={t("messagePlaceholder")}
             style={{ resize: "none", minHeight: 80 }}
           />
         </div>
 
         {/* Email */}
         <div className="gdf-field">
-          <label className="gdf-label">Twój e-mail</label>
-          <input className="gdf-input" type="email" name="email" value={form.email} onChange={handleText} placeholder="np. jan.kowalski@gmail.com" required />
+          <label className="gdf-label">{t("email")}</label>
+          <input className="gdf-input" type="email" name="email" value={form.email} onChange={handleText} placeholder={t("emailPlaceholder")} required />
         </div>
 
         {/* Zgoda RODO */}
@@ -145,7 +147,7 @@ export default function GoodDeedForm() {
           </button>
           <input type="checkbox" checked={form.consent} onChange={e => setForm(f => ({ ...f, consent: e.target.checked }))} required style={{ display: "none" }} />
           <span style={{ fontSize: 12, color: "#7c6f9f", lineHeight: 1.4 }}>
-            ❤️ Wyrażam zgodę na przetwarzanie danych osobowych (RODO).
+            {t("consent")}
           </span>
         </div>
 
@@ -166,13 +168,13 @@ export default function GoodDeedForm() {
             transition: "all .15s",
           }}
         >
-          {loading ? "Wysyłanie…" : "Wyślij zgłoszenie ✨"}
+          {loading ? t("sending") : t("submit")}
         </button>
 
         {/* Feedback */}
         {success && (
           <div style={{ marginTop: 12, textAlign: "center", fontSize: 14, fontWeight: 700, color: "#15803d", background: "#dcfce7", borderRadius: 12, padding: "10px" }}>
-            Twoje zgłoszenie zostało wysłane ✅
+            {t("success")}
           </div>
         )}
         {error && (

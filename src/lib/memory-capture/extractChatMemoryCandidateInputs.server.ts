@@ -11,6 +11,7 @@ const UNCERTAIN_WORDS = [
   "chyba",
   "prawdopodobnie",
   "можливо",
+  "може",
   "мабуть",
   "напевно",
   "возможно",
@@ -19,6 +20,8 @@ const UNCERTAIN_WORDS = [
 ];
 const BUDGET_OR_URGENCY = /\b(бюджет|budget|budżet|терміново|срочно|urgent|pilne|today|tomorrow|сьогодні|завтра)\b/iu;
 const TEMPORARY = /\b(сьогодні|завтра|today|tomorrow|this week|w tym tygodniu|на цей раз|tym razem)\b/iu;
+const FIRST_PERSON = /\b(я|мені|мене|мне|меня|i|me|ja|mi|mnie)\b/iu;
+const PREDICTION_OR_PURCHASE = /\b(думаю|думаю,|сподобається|сподобаються|понравится|понравятся|купити|купить|buy|purchase|kupić)\b/iu;
 
 function cleanValue(value: string): string | null {
   const normalized = value
@@ -66,13 +69,24 @@ export async function extractChatMemoryCandidateInputs({
 }): Promise<MemoryCaptureAiCandidateInput[]> {
   const message = userMessage.trim();
   const lowerMessage = message.toLocaleLowerCase();
-  if (!message || UNCERTAIN_WORDS.some((word) => lowerMessage.includes(word)) || TEMPORARY.test(message)) return [];
+  if (
+    !message ||
+    UNCERTAIN_WORDS.some((word) => lowerMessage.includes(word)) ||
+    TEMPORARY.test(message) ||
+    FIRST_PERSON.test(message) ||
+    PREDICTION_OR_PURCHASE.test(message)
+  ) return [];
 
   const dislikedGift = firstMatch(message, [
     /(?:не\s+любить\s+отримувати|не\s+любит\s+получать|не\s+любить|не\s+любит|не\s+подобається|не\s+нравится|nie\s+lubi|does\s+not\s+like|doesn't\s+like|dislikes)\s+([^.!?\n]{2,120})/iu,
     /(?:уникає|unika|avoids)\s+([^.!?\n]{2,120})/iu,
   ]);
   if (dislikedGift) return candidate("disliked_gift", dislikedGift);
+
+  const postposedDislikedGift = firstMatch(message, [
+    /^([^.!?\n]{2,120})\s+(?:не\s+любить|не\s+любит|не\s+подобається|не\s+нравится)$/iu,
+  ]);
+  if (postposedDislikedGift) return candidate("disliked_gift", postposedDislikedGift);
 
   const explicitBrand = firstMatch(message, [
     /(?:улюблен(?:ий|а)\s+бренд|бренд|марка|favorite\s+brand|ulubiona\s+marka)\s*[:—-]?\s*([^.!?\n]{2,120})/iu,
@@ -85,6 +99,14 @@ export async function extractChatMemoryCandidateInputs({
   if (likedValue) {
     if (likelyBrand(likedValue)) return candidate("favorite_brand", likedValue);
     return candidate("interest", likedValue);
+  }
+
+  const postposedLikedValue = firstMatch(message, [
+    /^([^.!?\n]{2,120})\s+(?:любить|любит|подобається|нравится)$/iu,
+  ]);
+  if (postposedLikedValue) {
+    if (likelyBrand(postposedLikedValue)) return candidate("favorite_brand", postposedLikedValue);
+    return candidate("interest", postposedLikedValue);
   }
 
   const hobby = firstMatch(message, [

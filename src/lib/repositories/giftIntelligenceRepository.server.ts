@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { KnowledgeItem } from "@/lib/knowledge";
 import { listKnowledgeForOwnedPersonOnServer } from "./knowledgeRepository";
+import { mapOwnedGiftPersonRow, type OwnedGiftPersonRow } from "./giftPersonMapper";
 import type {
   PersonGender,
   PersonRelationKey,
@@ -21,6 +22,20 @@ export interface GiftIntelligenceSource {
   knowledge: KnowledgeItem[];
 }
 
+export class GiftIntelligenceRepositoryError extends Error {
+  readonly code: "gift_person_lookup_failed";
+  readonly cause?: unknown;
+
+  constructor(
+    code: "gift_person_lookup_failed",
+    cause?: unknown,
+  ) {
+    super(code);
+    this.code = code;
+    this.cause = cause;
+  }
+}
+
 function adminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,21 +48,16 @@ export async function findOwnedGiftPerson(
   userId: string,
   personId: string,
 ): Promise<OwnedGiftPerson | null> {
-  const { data } = await adminClient()
+  const { data, error } = await adminClient()
     .from("people")
-    .select("id, user_id, name, relation, relation_key, gender, birthday")
+    .select("id, user_id, name, relationship, relation_label, relation_key, gender, birthday")
     .eq("id", personId)
     .eq("user_id", userId)
     .maybeSingle();
-  return data ? {
-    id: data.id,
-    userId: data.user_id,
-    name: data.name ?? null,
-    relation: data.relation ?? null,
-    relationKey: data.relation_key ?? null,
-    gender: data.gender ?? "unspecified",
-    birthday: data.birthday ?? null,
-  } : null;
+  if (error) {
+    throw new GiftIntelligenceRepositoryError("gift_person_lookup_failed", error);
+  }
+  return data ? mapOwnedGiftPersonRow(data as OwnedGiftPersonRow) : null;
 }
 
 export async function getCachedGiftIdeas(person: OwnedGiftPerson, occasion: string) {

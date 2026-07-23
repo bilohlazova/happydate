@@ -9,6 +9,7 @@ import {
 import { buildGiftRecommendationInstructions } from "../src/lib/gift-intelligence/index.ts";
 import { mapLegacyMemoryToKnowledge } from "../src/lib/knowledge/compatibilityMapper.ts";
 import { resolveGiftAccess } from "../src/lib/gifts/giftApiSecurity.ts";
+import { mapOwnedGiftPersonRow } from "../src/lib/repositories/giftPersonMapper.ts";
 
 function item(overrides = {}) {
   const row = {
@@ -129,12 +130,66 @@ test("authenticated user can access an owned person", async () => {
   assert.equal(result.ok && result.person.userId, "user-1");
 });
 
+test("owned gift person rows use current relation schema and canonical mapping", () => {
+  const person = mapOwnedGiftPersonRow({
+    id: "person-1",
+    user_id: "user-1",
+    name: "Dima",
+    relationship: "Brat",
+    relation_label: null,
+    relation_key: null,
+    gender: "male",
+    birthday: "2026-08-03",
+  });
+
+  assert.deepEqual(person, {
+    id: "person-1",
+    userId: "user-1",
+    name: "Dima",
+    relation: "Brat",
+    relationKey: "sibling",
+    gender: "male",
+    birthday: "2026-08-03",
+  });
+});
+
+test("owned gift person mapping gives relation_label priority over relationship", () => {
+  const person = mapOwnedGiftPersonRow({
+    id: "person-1",
+    user_id: "user-1",
+    name: "Anna",
+    relationship: "friend",
+    relation_label: "Mama",
+    relation_key: null,
+    gender: null,
+    birthday: null,
+  });
+
+  assert.equal(person.relation, "Mama");
+  assert.equal(person.relationKey, "parent");
+  assert.equal(person.gender, "unspecified");
+});
+
 test("another user's or invalid person is hidden with 404", async () => {
   const result = await resolveGiftAccess(new Request("http://localhost"), "foreign", {
     authenticate: async () => "user-1",
     findOwnedPerson: async () => null,
   });
   assert.deepEqual(result, { ok: false, status: 404, error: "person_not_found" });
+});
+
+test("owned person lookup failures are not converted into person_not_found", async () => {
+  const lookupError = new Error("gift_person_lookup_failed");
+
+  await assert.rejects(
+    resolveGiftAccess(new Request("http://localhost"), "person-1", {
+      authenticate: async () => "user-1",
+      findOwnedPerson: async () => {
+        throw lookupError;
+      },
+    }),
+    (error) => error === lookupError,
+  );
 });
 
 test("unauthenticated request is rejected before ownership or data reads", async () => {
@@ -173,6 +228,10 @@ test("Knowledge and legacy Notes reads are user and person scoped", async () => 
       "utf8",
     ),
   ]);
+  assert.match(repository, /select\("id, user_id, name, relationship, relation_label, relation_key, gender, birthday"\)/);
+  assert.doesNotMatch(repository, /select\("id, user_id, name, relation,/);
+  assert.match(repository, /const \{ data, error \}/);
+  assert.match(repository, /throw new GiftIntelligenceRepositoryError\("gift_person_lookup_failed"/);
   assert.match(repository, /\.eq\("id", personId\)[\s\S]*?\.eq\("user_id", userId\)/);
   const knowledgeRead = repository.slice(repository.indexOf("loadGiftIntelligenceSource"));
   assert.match(knowledgeRead, /listKnowledgeForOwnedPersonOnServer/);

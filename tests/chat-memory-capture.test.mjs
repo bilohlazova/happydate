@@ -72,8 +72,35 @@ test("structured chat extractor accepts explicit facts and rejects inferred, unc
     locale: "uk",
   }), [{ type: "disliked_gift", value: "одяг", confidence: "high", explicit: true }]);
 
+  assert.deepEqual(await extractChatMemoryCandidateInputs({
+    userMessage: "мотоцикли любить",
+    locale: "uk",
+  }), [{ type: "interest", value: "мотоцикли", confidence: "high", explicit: true }]);
+
+  assert.deepEqual(await extractChatMemoryCandidateInputs({
+    userMessage: "одяг не любить",
+    locale: "uk",
+  }), [{ type: "disliked_gift", value: "одяг", confidence: "high", explicit: true }]);
+
+  assert.deepEqual(await extractChatMemoryCandidateInputs({
+    userMessage: "мінімалізм подобається",
+    locale: "uk",
+  }), [{ type: "interest", value: "мінімалізм", confidence: "high", explicit: true }]);
+
+  assert.deepEqual(await extractChatMemoryCandidateInputs({
+    userMessage: "Shoei подобається",
+    locale: "uk",
+  }), [{ type: "favorite_brand", value: "Shoei", confidence: "high", explicit: true }]);
+
   assert.deepEqual(await extractChatMemoryCandidateInputs({ userMessage: "Бюджет 500 zł", locale: "uk" }), []);
   assert.deepEqual(await extractChatMemoryCandidateInputs({ userMessage: "Можливо, йому подобається спорт", locale: "uk" }), []);
+  assert.deepEqual(await extractChatMemoryCandidateInputs({ userMessage: "можливо, мотоцикли любить", locale: "uk" }), []);
+  assert.deepEqual(await extractChatMemoryCandidateInputs({ userMessage: "напевно, спорт подобається", locale: "uk" }), []);
+  assert.deepEqual(await extractChatMemoryCandidateInputs({ userMessage: "може, одяг не любить", locale: "uk" }), []);
+  assert.deepEqual(await extractChatMemoryCandidateInputs({ userMessage: "я люблю мотоцикли", locale: "uk" }), []);
+  assert.deepEqual(await extractChatMemoryCandidateInputs({ userMessage: "думаю, мотоцикли йому сподобаються", locale: "uk" }), []);
+  assert.deepEqual(await extractChatMemoryCandidateInputs({ userMessage: "мотоцикли купити", locale: "uk" }), []);
+  assert.deepEqual(await extractChatMemoryCandidateInputs({ userMessage: "Діма", locale: "uk" }), []);
   assert.deepEqual(await extractChatMemoryCandidateInputs({ userMessage: "Терміново треба подарунок завтра", locale: "uk" }), []);
 });
 
@@ -123,6 +150,14 @@ test("detect endpoint is authenticated, ownership-scoped, non-persistent and kee
   assert.match(detectRoute, /loadGiftIntelligenceSource/);
   assert.match(detectRoute, /buildMemoryCaptureCandidates/);
   assert.match(detectRoute, /aiResponseSource: "chat_message"/);
+  const accessIndex = detectRoute.indexOf("resolveGiftAccess(");
+  const sourceIndex = detectRoute.indexOf("loadGiftIntelligenceSource(access.person)");
+  const extractorIndex = detectRoute.indexOf("extractChatMemoryCandidateInputs({ userMessage, locale })");
+  const builderIndex = detectRoute.indexOf("buildMemoryCaptureCandidates({");
+  assert.ok(accessIndex >= 0);
+  assert.ok(sourceIndex > accessIndex);
+  assert.ok(extractorIndex > accessIndex);
+  assert.ok(builderIndex > extractorIndex);
   assert.doesNotMatch(detectRoute, /createKnowledge|createKnowledgeOnServer|\.insert\(|\.upsert\(|\.update\(/);
   assert.doesNotMatch(detectRoute, /\.from\("memories"\)/);
 

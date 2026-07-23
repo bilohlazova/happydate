@@ -5,7 +5,16 @@ export const dynamic = "force-dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import {
+  GiftDiscoveryPanel,
+  type GiftDiscoveryAnswerValue,
+} from "@/components/gift/GiftDiscoveryPanel";
 import { GiftRecommendationCard } from "@/components/gift/GiftRecommendationCard";
+import type {
+  GiftDiscoveryAnswers,
+  GiftDiscoveryQuestion,
+  GiftDiscoveryQuestionType,
+} from "@/lib/gift-discovery";
 import type { GiftWorkspaceViewModel } from "@/lib/gifts/gift.types";
 import {
   requestGiftRecommendations,
@@ -58,6 +67,12 @@ export default function GiftStartPage({
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ key: "saveError" | "success" | "error"; success: boolean } | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendationState>({ status: "idle" });
+  const [recommendationPending, setRecommendationPending] = useState(false);
+  const [refreshError, setRefreshError] = useState(false);
+  const [discoveryAnswers, setDiscoveryAnswers] = useState<GiftDiscoveryAnswers>({});
+  const [skippedDiscoveryQuestions, setSkippedDiscoveryQuestions] = useState<string[]>([]);
+  const requestSequenceRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const personId = sp.get("personId");
 
   // ініціалізація форми один раз
@@ -138,29 +153,178 @@ export default function GiftStartPage({
     }
   }
 
-  async function loadRecommendations() {
-    if (!personId) return;
-    setRecommendations({ status: "loading" });
-    const result = await requestGiftRecommendations({
-      personId,
-      occasion: form.occasion || form.eventTitle || "general",
-      locale,
-      budget: {
-        amount: form.budget,
-        currency: "PLN",
-      },
-      event: {
-        id: form.eventId,
-        category: form.occasion || form.eventTitle || "general",
-        date: form.eventDate,
-        personId,
-      },
-    });
-    if (!result.ok) {
-      setRecommendations({ status: "error", error: result.error });
-      return;
+  function discoveryQuestionType(questionId: string): GiftDiscoveryQuestionType | null {
+    const maybeType = questionId.split(":").at(-1);
+    if (
+      maybeType === "budget" ||
+      maybeType === "relationshipStrength" ||
+      maybeType === "interests" ||
+      maybeType === "hobbies" ||
+      maybeType === "preferredStyle" ||
+      maybeType === "favoriteBrands" ||
+      maybeType === "dislikedGifts" ||
+      maybeType === "urgency"
+    ) {
+      return maybeType;
     }
-    setRecommendations({ status: "success", ...result });
+    return null;
+  }
+
+  function answersWithDiscoveryAnswer(
+    questionId: string,
+    value: GiftDiscoveryAnswerValue,
+  ): GiftDiscoveryAnswers {
+    const questionType = discoveryQuestionType(questionId);
+    if (!questionType) return discoveryAnswers;
+    return { ...discoveryAnswers, [questionType]: value };
+  }
+
+  function formWithDiscoveryAnswer(
+    questionId: string,
+    value: GiftDiscoveryAnswerValue,
+  ): FormState {
+    const questionType = discoveryQuestionType(questionId);
+    if (!questionType) return form;
+    const textValue = String(value).trim();
+    const nextForm = { ...form };
+
+    if (questionType === "budget" && typeof value === "number" && Number.isFinite(value)) {
+      nextForm.budget = Math.max(0, Math.round(value));
+    } else if (
+      questionType === "interests" ||
+      questionType === "hobbies" ||
+      questionType === "favoriteBrands"
+    ) {
+      nextForm.interests = [nextForm.interests, textValue].filter(Boolean).join(", ");
+    } else if (questionType === "dislikedGifts") {
+      nextForm.notes = [nextForm.notes, textValue].filter(Boolean).join("\n");
+    }
+
+    return nextForm;
+  }
+
+  function visibleDiscoveryQuestions(
+    questions: readonly GiftDiscoveryQuestion[] | undefined,
+    answers = discoveryAnswers,
+    skipped = skippedDiscoveryQuestions,
+  ): GiftDiscoveryQuestion[] {
+    const answeredTypes = new Set(Object.keys(answers));
+    const skippedIds = new Set(skipped);
+    const skippedTypes = new Set(skipped.map(discoveryQuestionType).filter(Boolean));
+    return (questions ?? []).filter(
+      (question) =>
+        !answeredTypes.has(question.type) &&
+        !skippedIds.has(question.id) &&
+        !skippedTypes.has(question.type),
+    );
+  }
+
+  function resetDiscoverySessionState() {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    requestSequenceRef.current += 1;
+    setDiscoveryAnswers({});
+    setSkippedDiscoveryQuestions([]);
+    setRefreshError(false);
+    setRecommendationPending(false);
+  }
+
+  async function loadRecommendations({
+    nextForm = form,
+    nextAnswers = discoveryAnswers,
+    nextSkipped = skippedDiscoveryQuestions,
+    preservePrevious = false,
+  }: {
+    nextForm?: FormState;
+    nextAnswers?: GiftDiscoveryAnswers;
+    nextSkipped?: string[];
+    preservePrevious?: boolean;
+  } = {}) {
+    if (!personId) return;
+    const sequence = requestSequenceRef.current + 1;
+    requestSequenceRef.current = sequence;
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    setRecommendationPending(true);
+    setRefreshError(false);
+    const previousRecommendations = recommendations;
+    if (!preservePrevious) {
+      setRecommendations({ status: "loading" });
+    }
+    try {
+      const result = await requestGiftRecommendations({
+        personId,
+        occasion: nextForm.occasion || nextForm.eventTitle || "general",
+        locale,
+        budget: {
+          amount: nextForm.budget,
+          currency: "PLN",
+        },
+        event: {
+          id: nextForm.eventId,
+          category: nextForm.occasion || nextForm.eventTitle || "general",
+          date: nextForm.eventDate,
+          personId,
+        },
+        discoveryAnswers: nextAnswers,
+        skippedDiscoveryQuestions: nextSkipped,
+        signal: controller.signal,
+      });
+      if (sequence !== requestSequenceRef.current) return;
+      if (!result.ok) {
+        if (preservePrevious && previousRecommendations.status === "success") {
+          setRefreshError(true);
+          setRecommendations(previousRecommendations);
+        } else {
+          setRecommendations({ status: "error", error: result.error });
+        }
+        return;
+      }
+      setRecommendations({ status: "success", ...result });
+    } catch {
+      if (sequence !== requestSequenceRef.current) return;
+      if (preservePrevious && previousRecommendations.status === "success") {
+        setRefreshError(true);
+        setRecommendations(previousRecommendations);
+      } else {
+        setRecommendations({ status: "error", error: "request_failed" });
+      }
+    } finally {
+      if (sequence === requestSequenceRef.current) {
+        abortControllerRef.current = null;
+        setRecommendationPending(false);
+      }
+    }
+  }
+
+  function handleDiscoveryAnswer(questionId: string, value: GiftDiscoveryAnswerValue) {
+    const nextForm = formWithDiscoveryAnswer(questionId, value);
+    const nextAnswers = answersWithDiscoveryAnswer(questionId, value);
+    const nextSkipped = skippedDiscoveryQuestions.filter((question) => question !== questionId);
+    setDiscoveryAnswers(nextAnswers);
+    setSkippedDiscoveryQuestions(nextSkipped);
+    setForm(nextForm);
+    void loadRecommendations({
+      nextForm,
+      nextAnswers,
+      nextSkipped,
+      preservePrevious: recommendations.status === "success",
+    });
+  }
+
+  function handleDiscoverySkip(questionId: string) {
+    const nextSkipped = [...new Set([...skippedDiscoveryQuestions, questionId])];
+    setSkippedDiscoveryQuestions(nextSkipped);
+  }
+
+  function handleGenerateClick() {
+    resetDiscoverySessionState();
+    void loadRecommendations({
+      nextAnswers: {},
+      nextSkipped: [],
+      preservePrevious: false,
+    });
   }
 
   function applySuggestionToRequest(title: string, why: string) {
@@ -205,12 +369,12 @@ export default function GiftStartPage({
               </div>
               <button
                 type="button"
-                onClick={loadRecommendations}
-                disabled={recommendations.status === "loading"}
+                onClick={handleGenerateClick}
+                disabled={recommendations.status === "loading" || recommendationPending}
                 className={`${MobileUI.button} bg-sky-500 px-4 text-white shadow hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60`}
                 aria-label={t("recommendations.generateAria")}
               >
-                {recommendations.status === "loading"
+                {recommendations.status === "loading" || recommendationPending
                   ? t("recommendations.loading")
                   : recommendations.status === "success"
                     ? t("recommendations.retry")
@@ -236,7 +400,7 @@ export default function GiftStartPage({
                 </p>
                 <button
                   type="button"
-                  onClick={loadRecommendations}
+                  onClick={() => loadRecommendations()}
                   className="mt-2 text-xs font-extrabold text-rose-800 underline underline-offset-2"
                 >
                   {t("recommendations.retry")}
@@ -286,7 +450,7 @@ export default function GiftStartPage({
                     </p>
                     <button
                       type="button"
-                      onClick={loadRecommendations}
+                      onClick={() => loadRecommendations()}
                       className="mt-2 text-xs font-extrabold text-sky-700 underline underline-offset-2"
                     >
                       {t("recommendations.retry")}
@@ -294,7 +458,22 @@ export default function GiftStartPage({
                   </div>
                 )}
 
-                {recommendations.followUpQuestions.length > 0 && (
+                {refreshError && (
+                  <div className="mt-3 rounded-2xl bg-rose-50 p-3 text-sm font-bold text-rose-700 ring-1 ring-rose-100" role="alert">
+                    {t("recommendations.refreshError")}
+                  </div>
+                )}
+
+                {visibleDiscoveryQuestions(recommendations.discovery?.remainingQuestions).length ? (
+                  <GiftDiscoveryPanel
+                    className="mt-3"
+                    followUpQuestions={visibleDiscoveryQuestions(recommendations.discovery?.remainingQuestions)}
+                    completionScore={recommendations.discovery?.completionScore ?? 0}
+                    onAnswer={handleDiscoveryAnswer}
+                    onSkip={handleDiscoverySkip}
+                    loading={recommendationPending}
+                  />
+                ) : recommendations.followUpQuestions.length > 0 && (
                   <section className="mt-3 rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-100" aria-labelledby="gift-follow-up-questions">
                     <h3 id="gift-follow-up-questions" className="text-sm font-black text-amber-900">
                       {t("recommendations.followUpTitle")}

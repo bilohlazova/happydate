@@ -2,6 +2,8 @@ import type {
   GiftRecommendationCaution,
   GiftRecommendationSuggestion,
 } from "../gift-intelligence";
+import type { GiftDiscoveryPromptInput } from "../gift-discovery/index.ts";
+import type { GiftDiscoveryAnswers } from "../gift-discovery/index.ts";
 
 export interface LegacyGiftIdea {
   title?: unknown;
@@ -13,6 +15,7 @@ export interface LegacyGiftIdea {
 export interface GiftSuggestionApiResponse {
   suggestions?: unknown;
   followUpQuestions?: unknown;
+  discovery?: unknown;
   ideas?: unknown;
   error?: unknown;
   cached?: unknown;
@@ -32,6 +35,9 @@ export interface RequestGiftRecommendationsInput {
     date: string | null;
     personId: string | null;
   };
+  discoveryAnswers?: GiftDiscoveryAnswers;
+  skippedDiscoveryQuestions?: string[];
+  signal?: AbortSignal;
 }
 
 export type GiftRecommendationsResult =
@@ -39,6 +45,7 @@ export type GiftRecommendationsResult =
       ok: true;
       suggestions: GiftRecommendationSuggestion[];
       followUpQuestions: string[];
+      discovery: GiftDiscoveryPromptInput | null;
       usedLegacyFallback: boolean;
       cached: boolean;
     }
@@ -73,6 +80,22 @@ function followUpQuestions(value: unknown): string[] {
   return value.map(text).filter((item): item is string => Boolean(item));
 }
 
+function isDiscoveryPromptInput(value: unknown): value is GiftDiscoveryPromptInput {
+  if (!value || typeof value !== "object") return false;
+  const discovery = value as Record<string, unknown>;
+  return (
+    typeof discovery.completionScore === "number" &&
+    Array.isArray(discovery.remainingQuestions) &&
+    Array.isArray(discovery.answeredQuestions) &&
+    Array.isArray(discovery.missingSignals) &&
+    typeof discovery.locale === "string"
+  );
+}
+
+function discovery(value: unknown): GiftDiscoveryPromptInput | null {
+  return isDiscoveryPromptInput(value) ? value : null;
+}
+
 export function mapLegacyIdeaToStructuredSuggestion(
   idea: LegacyGiftIdea,
 ): GiftRecommendationSuggestion | null {
@@ -101,6 +124,7 @@ export function normalizeGiftSuggestionResponse(
       ok: true,
       suggestions: response.suggestions.filter(isStructuredSuggestion),
       followUpQuestions: followUpQuestions(response.followUpQuestions),
+      discovery: discovery(response.discovery),
       usedLegacyFallback: false,
     };
   }
@@ -112,6 +136,7 @@ export function normalizeGiftSuggestionResponse(
         .map((idea) => mapLegacyIdeaToStructuredSuggestion(idea as LegacyGiftIdea))
         .filter((item): item is GiftRecommendationSuggestion => Boolean(item)),
       followUpQuestions: followUpQuestions(response.followUpQuestions),
+      discovery: discovery(response.discovery),
       usedLegacyFallback: true,
     };
   }
@@ -120,6 +145,7 @@ export function normalizeGiftSuggestionResponse(
     ok: true,
     suggestions: [],
     followUpQuestions: followUpQuestions(response.followUpQuestions),
+    discovery: discovery(response.discovery),
     usedLegacyFallback: false,
   };
 }
@@ -144,8 +170,11 @@ export async function requestGiftRecommendations(
       locale: input.locale,
       budget: input.budget,
       event: input.event,
+      discoveryAnswers: input.discoveryAnswers,
+      skippedDiscoveryQuestions: input.skippedDiscoveryQuestions,
     }),
     cache: "no-store",
+    signal: input.signal,
   });
 
   const payload = await response.json().catch(() => ({})) as GiftSuggestionApiResponse;

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { buildGiftDiscoverySession } from "../src/lib/gift-discovery/index.ts";
 import {
   buildGiftRecommendationInstructions,
   buildGiftRepairInstructions,
@@ -174,12 +175,100 @@ test("prompt contract forbids fabricated facts and preserves locale and canonica
     locale: "de",
     missingSignals: ["missing_budget"],
   }));
-  assert.match(instructions, /Use only GiftRecommendationContext/);
+  assert.match(instructions, /structured AI payload: context and discovery/);
   assert.match(instructions, /Do not invent missing facts/);
   assert.match(instructions, /Treat missingSignals as unknown information, not negative information/);
   assert.match(instructions, /Respect context\.locale/);
   assert.match(instructions, /canonical/);
   assert.match(instructions, /missing_budget/);
+});
+
+test("discovery follow-up validation keeps only remaining questions in deterministic priority", () => {
+  const weakContext = context({
+    locale: "en",
+    person: { id: "person-1", relationKey: null, gender: "female", age: 54 },
+    budget: { amount: null, currency: null },
+    preferences: {
+      likes: [],
+      dislikes: [],
+      interests: [],
+      wishes: [],
+      importantFacts: [],
+    },
+    missingSignals: [
+      "missing_budget",
+      "missing_relationship",
+      "missing_preferences",
+      "missing_dislikes",
+    ],
+  });
+  const discoverySession = buildGiftDiscoverySession({ context: weakContext });
+  const result = validateGiftRecommendations(
+    response([suggestion()], [
+      "unknown-question",
+      "missing_preferences:interests",
+      "missing_budget:budget",
+      "missing_budget:budget",
+      "missing_dislikes:dislikedGifts",
+      "missing_preferences:preferredStyle",
+    ]),
+    weakContext,
+    { discoverySession },
+  );
+
+  assert.deepEqual(result.followUpQuestions, [
+    "What budget should I use for this gift?",
+    "Which interests matter most to this person right now?",
+    "Which gifts should I avoid?",
+  ]);
+  assert.equal(result.diagnostics.completionScore, discoverySession.completionScore);
+  assert.equal(result.diagnostics.remainingQuestionCount, discoverySession.remainingQuestions.length);
+  assert.equal(result.diagnostics.answeredQuestionCount, 0);
+  assert.equal(result.diagnostics.followUpQuestionCount, 3);
+});
+
+test("discovery follow-up validation excludes answered and known context questions", () => {
+  const discoveryContext = context({
+    locale: "de",
+    person: { id: "person-1", relationKey: "mother", gender: "female", age: 54 },
+    budget: { amount: 200, currency: "PLN" },
+    preferences: {
+      likes: [],
+      dislikes: [],
+      interests: [],
+      wishes: [],
+      importantFacts: [],
+    },
+    missingSignals: [
+      "missing_budget",
+      "missing_relationship",
+      "missing_preferences",
+      "missing_dislikes",
+    ],
+  });
+  const discoverySession = buildGiftDiscoverySession({
+    context: discoveryContext,
+    answeredQuestions: [{ type: "interests" }],
+  });
+  const result = validateGiftRecommendations(
+    response([suggestion()], [
+      "missing_budget:budget",
+      "missing_relationship:relationshipStrength",
+      "missing_preferences:interests",
+      "missing_dislikes:dislikedGifts",
+    ]),
+    discoveryContext,
+    { discoverySession },
+  );
+
+  assert.deepEqual(result.followUpQuestions, [
+    "Welche Geschenke sollte ich vermeiden?",
+    "Welcher Geschenkstil passt am besten zu dieser Person?",
+    "Hat diese Person Lieblingsmarken oder Lieblingsorte?",
+  ]);
+  assert.equal(result.followUpQuestions.some((question) => question.includes("Budget")), false);
+  assert.equal(result.followUpQuestions.some((question) => question.includes("Beziehung")), false);
+  assert.equal(result.diagnostics.locale, "de");
 });
 
 test("repair behavior is bounded to one server-side attempt", async () => {

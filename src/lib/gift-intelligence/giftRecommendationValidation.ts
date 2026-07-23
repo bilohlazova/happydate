@@ -1,3 +1,7 @@
+import {
+  buildGiftDiscoveryFollowUpQuestions,
+  type GiftDiscoverySession,
+} from "../gift-discovery/index.ts";
 import type {
   GiftLegacyIdea,
   GiftPersonalizationSignal,
@@ -162,10 +166,24 @@ function followUpQuestionsFromMissingSignals(
   return context.missingSignals.slice(0, 3).map((signal) => `question:${signal}`);
 }
 
+function followUpQuestions(
+  context: GiftRecommendationContext,
+  modelQuestions: unknown,
+  discoverySession?: GiftDiscoverySession,
+): string[] {
+  if (discoverySession) {
+    return buildGiftDiscoveryFollowUpQuestions(discoverySession, modelQuestions, 3);
+  }
+  return followUpQuestionsFromMissingSignals(context, modelQuestions);
+}
+
 export function validateGiftRecommendations(
   response: GiftRecommendationAiResponse | unknown,
   context: GiftRecommendationContext,
-  options: { repairAttempted?: boolean } = {},
+  options: {
+    repairAttempted?: boolean;
+    discoverySession?: GiftDiscoverySession;
+  } = {},
 ): GiftRecommendationValidationResult {
   const input = response && typeof response === "object"
     ? response as Record<string, unknown>
@@ -210,14 +228,23 @@ export function validateGiftRecommendations(
     suggestions.push(suggestion);
   }
 
+  const validatedFollowUpQuestions = followUpQuestions(
+    context,
+    input.followUpQuestions,
+    options.discoverySession,
+  );
   return {
     suggestions,
-    followUpQuestions: followUpQuestionsFromMissingSignals(context, input.followUpQuestions),
+    followUpQuestions: validatedFollowUpQuestions,
     diagnostics: {
       generatedCount: rawSuggestions.length,
       duplicateRejectedCount,
       budgetRejectedCount,
       missingSignalsCount: context.missingSignals.length,
+      completionScore: options.discoverySession?.completionScore,
+      remainingQuestionCount: options.discoverySession?.remainingQuestions.length,
+      answeredQuestionCount: options.discoverySession?.answeredQuestions.length,
+      followUpQuestionCount: validatedFollowUpQuestions.length,
       locale: context.locale,
       repairAttempted: options.repairAttempted === true,
     },

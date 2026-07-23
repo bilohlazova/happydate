@@ -12,6 +12,13 @@ import {
 } from "@/lib/gifts/giftApiSecurity";
 import { mapKnowledgeToGifts } from "@/lib/gifts/gift.mapper";
 import {
+  applyGiftDiscoveryAnswersToContext,
+  buildGiftDiscoveryPromptInput,
+  buildGiftDiscoverySession,
+  normalizeGiftDiscoveryRequest,
+  type GiftDiscoveryPromptInput,
+} from "@/lib/gift-discovery";
+import {
   buildGiftRecommendationContext,
   buildGiftRecommendationInstructions,
   buildGiftRepairInstructions,
@@ -19,7 +26,7 @@ import {
   mapSuggestionsToLegacyIdeas,
   validateGiftRecommendations,
   type GiftRecommendationAiResponse,
-  type GiftRecommendationContext,
+  type GiftRecommendationAiPayload,
 } from "@/lib/gift-intelligence";
 import { DEFAULT_LOCALE, normalizeLocale } from "@/i18n/config";
 
@@ -39,6 +46,8 @@ type GiftRequestBody = {
     date?: unknown;
     personId?: unknown;
   } | null;
+  discoveryAnswers?: unknown;
+  skippedDiscoveryQuestions?: unknown;
 };
 
 /* ================= ENV ================= */
@@ -52,14 +61,14 @@ const openai = new OpenAI({
 });
 
 async function generateGiftRecommendations(
-  context: GiftRecommendationContext,
+  payload: unknown,
   instructions: string,
 ): Promise<GiftRecommendationAiResponse> {
   const ai = await openai.responses.create({
     model: "gpt-4.1-mini",
     temperature: 0.8,
     instructions,
-    input: JSON.stringify(context),
+    input: JSON.stringify(payload),
     text: {
       format: {
         type: "json_schema",
@@ -94,6 +103,13 @@ export async function POST(req: Request) {
       ? body.occasion.trim()
       : "general";
     const locale = normalizeLocale(body.locale) ?? DEFAULT_LOCALE;
+    const discoveryRequest = normalizeGiftDiscoveryRequest({
+      discoveryAnswers: body.discoveryAnswers,
+      skippedDiscoveryQuestions: body.skippedDiscoveryQuestions,
+    });
+    const hasDiscoverySessionInput =
+      Object.keys(discoveryRequest.answers).length > 0 ||
+      discoveryRequest.skippedQuestionIds.length > 0;
 
     if (!personId) {
       return NextResponse.json(
@@ -116,7 +132,9 @@ export async function POST(req: Request) {
     }
     const ownedPerson = access.person;
 
-    const cached = await getCachedGiftIdeas(ownedPerson, occasion);
+    const cached = hasDiscoverySessionInput
+      ? null
+      : await getCachedGiftIdeas(ownedPerson, occasion);
 
     if (cached) {
       return NextResponse.json({
@@ -128,7 +146,7 @@ export async function POST(req: Request) {
     /* ================= LOAD PERSON ================= */
 
     const { person, knowledge } = await loadGiftIntelligenceSource(ownedPerson);
-    const giftRecommendationContext = buildGiftRecommendationContext({
+    const baseGiftRecommendationContext = buildGiftRecommendationContext({
       person: {
         id: person.id,
         name: person.name,
@@ -151,20 +169,36 @@ export async function POST(req: Request) {
       } : null,
       locale,
     });
+    const giftRecommendationContext = applyGiftDiscoveryAnswersToContext(
+      baseGiftRecommendationContext,
+      discoveryRequest.answers,
+    );
 
     /* ================= PROMPT ================= */
+    const giftDiscoverySession = buildGiftDiscoverySession({
+      context: giftRecommendationContext,
+      answeredQuestions: discoveryRequest.answeredQuestions,
+      skippedQuestions: discoveryRequest.skippedQuestionIds,
+    });
+    const giftDiscoveryPromptInput = buildGiftDiscoveryPromptInput(giftDiscoverySession);
+    const giftRecommendationPayload = {
+      context: giftRecommendationContext,
+      discovery: giftDiscoveryPromptInput,
+    } satisfies GiftRecommendationAiPayload<GiftDiscoveryPromptInput>;
 
     /* ================= OPENAI ================= */
 
     const parsed = await generateGiftRecommendations(
-      giftRecommendationContext,
-      buildGiftRecommendationInstructions(giftRecommendationContext),
+      giftRecommendationPayload,
+      buildGiftRecommendationInstructions(giftRecommendationContext, giftDiscoveryPromptInput),
     );
-    let validated = validateGiftRecommendations(parsed, giftRecommendationContext);
+    let validated = validateGiftRecommendations(parsed, giftRecommendationContext, {
+      discoverySession: giftDiscoverySession,
+    });
 
     if (validated.suggestions.length < 5 && validated.validationErrors.length > 0) {
       const repairInput = {
-        ...giftRecommendationContext,
+        ...giftRecommendationPayload,
         validationErrors: validated.validationErrors,
         validSuggestions: validated.suggestions,
       };
@@ -180,7 +214,10 @@ export async function POST(req: Request) {
             : repaired.followUpQuestions,
         },
         giftRecommendationContext,
-        { repairAttempted: true },
+        {
+          repairAttempted: true,
+          discoverySession: giftDiscoverySession,
+        },
       );
       validated = repairedValidated;
     }
@@ -188,7 +225,9 @@ export async function POST(req: Request) {
 
     /* ================= SAVE CACHE ================= */
 
-    await saveGiftIdeas(ownedPerson, occasion, legacyIdeas);
+    if (!hasDiscoverySessionInput) {
+      await saveGiftIdeas(ownedPerson, occasion, legacyIdeas);
+    }
 
     /* ================= RETURN ================= */
 
@@ -196,6 +235,7 @@ export async function POST(req: Request) {
       ideas: legacyIdeas,
       suggestions: validated.suggestions,
       followUpQuestions: validated.followUpQuestions,
+      discovery: giftDiscoveryPromptInput,
       diagnostics: validated.diagnostics,
       cached: false,
     });

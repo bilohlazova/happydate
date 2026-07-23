@@ -3,6 +3,10 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  buildGiftDiscoveryPromptInput,
+  buildGiftDiscoverySession,
+} from "../src/lib/gift-discovery/index.ts";
+import {
   buildGiftRecommendationContext,
   buildGiftRecommendationInstructions,
   buildGiftRepairInstructions,
@@ -35,15 +39,22 @@ function knowledge(overrides = {}) {
   };
 }
 
-test("Gift AI route uses GiftRecommendationContext as the single structured model payload", async () => {
+test("Gift AI route uses context and discovery as the single structured model payload", async () => {
   const route = await readFile(
     new URL("../src/app/api/ai/gift-suggestions/route.ts", import.meta.url),
     "utf8",
   );
 
   assert.match(route, /buildGiftRecommendationContext\(\{/);
-  assert.match(route, /input: JSON\.stringify\(context\)/);
-  assert.match(route, /generateGiftRecommendations\(\s*giftRecommendationContext,/);
+  assert.match(route, /applyGiftDiscoveryAnswersToContext/);
+  assert.match(route, /buildGiftDiscoverySession\(\{\s*context: giftRecommendationContext,/);
+  assert.match(route, /answeredQuestions: discoveryRequest\.answeredQuestions/);
+  assert.match(route, /skippedQuestions: discoveryRequest\.skippedQuestionIds/);
+  assert.match(route, /buildGiftDiscoveryPromptInput\(giftDiscoverySession\)/);
+  assert.match(route, /const giftRecommendationPayload = \{\s*context: giftRecommendationContext,\s*discovery: giftDiscoveryPromptInput,\s*\}/);
+  assert.match(route, /input: JSON\.stringify\(payload\)/);
+  assert.match(route, /generateGiftRecommendations\(\s*giftRecommendationPayload,/);
+  assert.match(route, /buildGiftRecommendationInstructions\(giftRecommendationContext, giftDiscoveryPromptInput\)/);
   assert.match(route, /instructions,/);
   assert.doesNotMatch(route, /buildGiftKnowledgeContext|formatGiftContextAsLegacyNotes|notesText/);
   assert.doesNotMatch(route, /Person: \$\{|Relation: \$\{|Notes:\s*\$\{/);
@@ -112,6 +123,32 @@ test("GiftRecommendationContext payload preserves locale, missingSignals, previo
   assert.ok(context.missingSignals.includes("missing_budget"));
 });
 
+test("GiftDiscoverySession projection preserves locale, completion and priority for AI payload", () => {
+  const giftContext = buildGiftRecommendationContext({
+    locale: "de",
+    currentDate: new Date("2026-07-23T10:00:00.000Z"),
+    person: {
+      id: "person-1",
+      relationKey: null,
+      gender: null,
+      birthday: null,
+    },
+    event: { id: null, category: null, date: null, personId: "person-1" },
+    knowledge: [],
+    gifts: [],
+    budget: null,
+  });
+  const discovery = buildGiftDiscoveryPromptInput(buildGiftDiscoverySession({
+    context: giftContext,
+  }));
+
+  assert.equal(discovery.locale, "de");
+  assert.ok(discovery.completionScore < 100);
+  assert.equal(discovery.nextRecommendedQuestion?.type, "budget");
+  assert.equal(discovery.remainingQuestions[0].type, "budget");
+  assert.deepEqual(discovery.answeredQuestions, []);
+});
+
 test("Gift AI instructions preserve duplicate avoidance and missing-data behavior", async () => {
   const instructions = buildGiftRecommendationInstructions({
     locale: "pl",
@@ -132,8 +169,12 @@ test("Gift AI instructions preserve duplicate avoidance and missing-data behavio
   });
   const repairInstructions = buildGiftRepairInstructions();
 
+  assert.match(instructions, /structured AI payload: context and discovery/);
   assert.match(instructions, /Do not invent missing facts/);
   assert.match(instructions, /missingSignals/);
+  assert.match(instructions, /completionScore/);
+  assert.match(instructions, /nextRecommendedQuestion/);
+  assert.match(instructions, /followUpQuestions, return at most 3 canonical question IDs/);
   assert.match(instructions, /Avoid every value in duplicateAvoidance\.previousGiftValues/);
   assert.match(repairInstructions, /only repair attempt/);
 });

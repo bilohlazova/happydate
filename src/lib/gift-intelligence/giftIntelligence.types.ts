@@ -127,6 +127,16 @@ export interface GiftRecommendationContext {
     previousGiftValues: string[];
   };
   missingSignals: GiftIntelligenceMissingSignal[];
+  discoveryAnswers?: {
+    budget?: number;
+    relationshipStrength?: "close" | "medium" | "distant";
+    interests?: string;
+    hobbies?: string;
+    preferredStyle?: "practical" | "emotional" | "elegant";
+    favoriteBrands?: string;
+    dislikedGifts?: string;
+    urgency?: "today" | "thisWeek" | "flexible";
+  };
 }
 
 export interface BuildGiftRecommendationContextInput {
@@ -204,11 +214,20 @@ export interface GiftRecommendationAiResponse {
   followUpQuestions: string[];
 }
 
+export interface GiftRecommendationAiPayload<Discovery = unknown> {
+  context: GiftRecommendationContext;
+  discovery: Discovery;
+}
+
 export interface GiftRecommendationValidationDiagnostics {
   generatedCount: number;
   duplicateRejectedCount: number;
   budgetRejectedCount: number;
   missingSignalsCount: number;
+  completionScore?: number;
+  remainingQuestionCount?: number;
+  answeredQuestionCount?: number;
+  followUpQuestionCount?: number;
   locale: string;
   repairAttempted: boolean;
 }

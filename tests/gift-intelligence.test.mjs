@@ -89,7 +89,8 @@ test("production Gift AI has no direct Supabase or legacy model dependency", asy
     ".from(\"memories\")", "MemoryRow", "BrainMemory", "NotesMemoryRow",
   ]) assert.equal(route.includes(forbidden), false, forbidden);
   assert.match(route, /buildGiftRecommendationContext/);
-  assert.match(route, /JSON\.stringify\(context\)/);
+  assert.match(route, /buildGiftDiscoverySession/);
+  assert.match(route, /JSON\.stringify\(payload\)/);
   assert.doesNotMatch(route, /formatGiftContextAsLegacyNotes|notesText|Person: \$\{|Relation: \$\{/);
   assert.match(buildGiftRecommendationInstructions({
     locale: "pl",
@@ -107,7 +108,7 @@ test("production Gift AI has no direct Supabase or legacy model dependency", asy
     },
     duplicateAvoidance: { previousGiftValues: [] },
     missingSignals: [],
-  }), /Use only GiftRecommendationContext/);
+  }), /structured AI payload: context and discovery/);
   assert.match(route, /model: "gpt-4\.1-mini"/);
   assert.match(route, /temperature: 0\.8/);
 });

@@ -42,6 +42,7 @@ const SUPPORTED_TYPES = new Set<MemoryCaptureCandidateType>([
 const SUPPORTED_SOURCES = new Set<MemoryCaptureCandidateSource>([
   "discovery_answer",
   "ai_response",
+  "chat_message",
 ]);
 
 function safeError(status: 400 | 401 | 404 | 500, error: string) {

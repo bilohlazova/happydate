@@ -45,7 +45,8 @@
     "retry": "Spróbuj ponownie",
     "rateLimited": "Wysłano zbyt wiele wiadomości. Spróbuj ponownie za chwilę.",
     "retryIn": "Spróbuj ponownie za {seconds} s",
-    "cancelled": "Odpowiedź została przerwana."
+    "cancelled": "Odpowiedź została przerwana.",
+    "memorySaveFailed": "Nie udało się zapisać tej informacji. Spróbuj ponownie."
   },
   "actions": {
     "gift": {

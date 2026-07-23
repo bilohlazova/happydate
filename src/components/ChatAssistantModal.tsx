@@ -7,10 +7,14 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKe
 import AssistantHome from "@/components/chat-assistant/AssistantHome";
 import ChatAssistantHeader from "@/components/chat-assistant/ChatAssistantHeader";
 import ChatComposer from "@/components/chat-assistant/ChatComposer";
-import ConversationView from "@/components/chat-assistant/ConversationView";
+import ConversationView, { type ChatMemoryCaptureViewState } from "@/components/chat-assistant/ConversationView";
 import type { AssistantAction, ChatMessage } from "@/components/chat-assistant/types";
 import { useAssistantHomeContext } from "@/hooks/useAssistantHomeContext";
 import { buildConversationHistory } from "@/lib/assistant/chatClient";
+import { resolveChatPerson } from "@/lib/chat-person/resolveChatPerson";
+import type { MemoryCaptureCandidate } from "@/lib/memory-capture";
+import { shouldRunChatMemoryDetection } from "@/lib/memory-capture/chatMemoryDetectionPrecheck";
+import { confirmMemoryCaptureCandidate } from "@/lib/memoryCaptureClient";
 import { supabase } from "@/lib/supabaseClient";
 
 interface ChatAssistantModalProps {
@@ -25,6 +29,35 @@ const ACTION_DEFINITIONS = [
   { id: "inspiration", icon: Sparkles },
 ] as const;
 
+type ChatPersonContext = {
+  activePersonId: string | null;
+  resolutionStatus: "none" | "resolved" | "ambiguous";
+};
+
+type ChatMemoryCaptureState = ChatMemoryCaptureViewState & {
+  personId: string | null;
+  dismissedCandidateIds: string[];
+  savedCandidateIds: string[];
+  detectionStatus: "idle" | "loading" | "success" | "error";
+};
+
+const INITIAL_PERSON_CONTEXT: ChatPersonContext = {
+  activePersonId: null,
+  resolutionStatus: "none",
+};
+
+const INITIAL_MEMORY_CAPTURE_STATE: ChatMemoryCaptureState = {
+  candidates: [],
+  detectedForMessageId: null,
+  savingCandidateId: null,
+  retryNonceByCandidateId: {},
+  error: null,
+  personId: null,
+  dismissedCandidateIds: [],
+  savedCandidateIds: [],
+  detectionStatus: "idle",
+};
+
 export default function ChatAssistantModal({ open, onClose }: ChatAssistantModalProps) {
   const t = useTranslations("assistant");
   const locale = useLocale();
@@ -36,11 +69,15 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
   const [showTyping, setShowTyping] = useState(false);
   const [isHomeExiting, setIsHomeExiting] = useState(false);
   const [rateLimitNow, setRateLimitNow] = useState(0);
+  const [personContext, setPersonContext] = useState<ChatPersonContext>(INITIAL_PERSON_CONTEXT);
+  const [memoryCapture, setMemoryCapture] = useState<ChatMemoryCaptureState>(INITIAL_MEMORY_CAPTURE_STATE);
   const dialogRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
   const homeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const memoryDetectionAbortRef = useRef<AbortController | null>(null);
+  const memoryDetectionRequestRef = useRef(0);
   const shouldAutoScrollRef = useRef(true);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const messageIdRef = useRef(0);
@@ -57,6 +94,8 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
   const cancelActiveResponse = useCallback(() => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
+    memoryDetectionAbortRef.current?.abort();
+    memoryDetectionAbortRef.current = null;
     if (homeTimerRef.current) clearTimeout(homeTimerRef.current);
     homeTimerRef.current = null;
     setIsResponding(false);
@@ -121,6 +160,8 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
     cancelActiveResponse();
     setMessages([]);
     setValue("");
+    setPersonContext(INITIAL_PERSON_CONTEXT);
+    setMemoryCapture(INITIAL_MEMORY_CAPTURE_STATE);
   }, [cancelActiveResponse, locale]);
 
   useEffect(() => {
@@ -151,6 +192,8 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
     cancelActiveResponse();
     setMessages([]);
     setValue("");
+    setPersonContext(INITIAL_PERSON_CONTEXT);
+    setMemoryCapture(INITIAL_MEMORY_CAPTURE_STATE);
     homeContext.refresh();
   }
 
@@ -159,10 +202,127 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
     requestAnimationFrame(() => textareaRef.current?.focus());
   }
 
+  function updatePersonContextFromUserMessage(content: string): ChatPersonContext {
+    const resolution = resolveChatPerson({
+      userMessage: content,
+      people: homeContext.people,
+      currentPersonId: personContext.activePersonId,
+    });
+    const next: ChatPersonContext = {
+      activePersonId: resolution.status === "resolved" ? resolution.personId : null,
+      resolutionStatus: resolution.status,
+    };
+    setPersonContext(next);
+    return next;
+  }
+
+  async function detectMemoryCandidates(input: {
+    personId: string;
+    userMessage: string;
+    messageId: string;
+    requestId: number;
+    signal: AbortSignal;
+  }) {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) return;
+      const response = await fetch("/api/memory-capture/detect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          personId: input.personId,
+          userMessage: input.userMessage,
+          locale,
+        }),
+        cache: "no-store",
+        signal: input.signal,
+      });
+      const payload = await response.json().catch(() => ({})) as {
+        candidates?: unknown;
+      };
+      if (!response.ok) throw new Error("memory detection failed");
+      if (input.requestId !== memoryDetectionRequestRef.current || input.signal.aborted) return;
+      const candidates = Array.isArray(payload.candidates)
+        ? payload.candidates.filter((candidate): candidate is MemoryCaptureCandidate =>
+            Boolean(candidate) && typeof candidate === "object"
+              && typeof (candidate as MemoryCaptureCandidate).id === "string",
+          )
+        : [];
+      setMemoryCapture((current) => ({
+        ...current,
+        candidates,
+        detectedForMessageId: candidates.length ? input.messageId : null,
+        detectionStatus: "success",
+        error: null,
+        personId: input.personId,
+      }));
+    } catch {
+      if (input.signal.aborted || input.requestId !== memoryDetectionRequestRef.current) return;
+      setMemoryCapture((current) => ({
+        ...current,
+        candidates: [],
+        detectedForMessageId: null,
+        detectionStatus: "error",
+        error: null,
+        personId: input.personId,
+      }));
+    }
+  }
+
+  function handlePotentialMemoryDetection(content: string, messageId: string) {
+    const nextPersonContext = updatePersonContextFromUserMessage(content);
+    memoryDetectionAbortRef.current?.abort();
+    memoryDetectionAbortRef.current = null;
+    const person = nextPersonContext.activePersonId
+      ? homeContext.people.find((item) => item.id === nextPersonContext.activePersonId)
+      : null;
+    if (!shouldRunChatMemoryDetection({
+      activePersonId: nextPersonContext.activePersonId,
+      userMessage: content,
+      resolvedOnlyName: person?.name ?? null,
+    })) {
+      setMemoryCapture((current) => ({
+        ...current,
+        candidates: [],
+        detectedForMessageId: null,
+        detectionStatus: "idle",
+        error: null,
+        personId: nextPersonContext.activePersonId,
+      }));
+      return;
+    }
+
+    const personId = nextPersonContext.activePersonId;
+    if (!personId) return;
+    const controller = new AbortController();
+    const requestId = ++memoryDetectionRequestRef.current;
+    memoryDetectionAbortRef.current = controller;
+    setMemoryCapture((current) => ({
+      ...current,
+      candidates: [],
+      detectedForMessageId: null,
+      detectionStatus: "loading",
+      error: null,
+      personId,
+    }));
+    void detectMemoryCandidates({
+      personId,
+      userMessage: content,
+      messageId,
+      requestId,
+      signal: controller.signal,
+    });
+  }
+
   function commitFirstMessage(content: string) {
     const userMessage: ChatMessage = { id: nextMessageId(), role: "user", content, status: "complete" };
     const assistantMessage: ChatMessage = { id: nextMessageId(), role: "assistant", content: "", status: "streaming" };
     setMessages([userMessage, assistantMessage]);
+    handlePotentialMemoryDetection(content, userMessage.id);
     setIsHomeExiting(false);
     homeTimerRef.current = null;
     void streamAssistantResponse(content, [], assistantMessage.id);
@@ -283,7 +443,47 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
     const userMessage: ChatMessage = { id: nextMessageId(), role: "user", content, status: "complete" };
     const assistantMessage: ChatMessage = { id: nextMessageId(), role: "assistant", content: "", status: "streaming" };
     setMessages((current) => [...current, userMessage, assistantMessage]);
+    handlePotentialMemoryDetection(content, userMessage.id);
     void streamAssistantResponse(content, conversation, assistantMessage.id);
+  }
+
+  async function confirmMemoryCandidate(candidateId: string) {
+    const candidate = memoryCapture.candidates.find((item) => item.id === candidateId);
+    if (!candidate || !memoryCapture.personId || memoryCapture.savingCandidateId) return;
+    setMemoryCapture((current) => ({ ...current, savingCandidateId: candidateId, error: null }));
+    const result = await confirmMemoryCaptureCandidate({
+      personId: memoryCapture.personId,
+      candidate,
+    });
+    if (result.ok) {
+      setMemoryCapture((current) => ({
+        ...current,
+        candidates: current.candidates.filter((item) => item.id !== candidateId),
+        savedCandidateIds: [...current.savedCandidateIds, candidateId],
+        savingCandidateId: null,
+        error: null,
+      }));
+      homeContext.refresh();
+      return;
+    }
+    setMemoryCapture((current) => ({
+      ...current,
+      savingCandidateId: null,
+      error: t("conversation.memorySaveFailed"),
+      retryNonceByCandidateId: {
+        ...current.retryNonceByCandidateId,
+        [candidateId]: (current.retryNonceByCandidateId[candidateId] ?? 0) + 1,
+      },
+    }));
+  }
+
+  function dismissMemoryCandidate(candidateId: string) {
+    setMemoryCapture((current) => ({
+      ...current,
+      candidates: current.candidates.filter((item) => item.id !== candidateId),
+      dismissedCandidateIds: [...current.dismissedCandidateIds, candidateId],
+      error: null,
+    }));
   }
 
   function retryMessage(assistantMessageId: string) {
@@ -398,7 +598,10 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
             rateLimitLabel={t("conversation.rateLimited")}
             retryInLabel={(seconds) => t("conversation.retryIn", { seconds })}
             now={rateLimitNow || Date.now()}
+            memoryCapture={memoryCapture}
             onRetry={retryMessage}
+            onConfirmMemoryCandidate={confirmMemoryCandidate}
+            onDismissMemoryCandidate={dismissMemoryCandidate}
             onScroll={handleConversationScroll}
           />
         )}

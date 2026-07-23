@@ -222,7 +222,7 @@ function aiResponseCandidates(
       type: candidate.type,
       value: candidateValue,
       confidence: candidateConfidence,
-      source: "ai_response",
+      source: input.aiResponseSource ?? "ai_response",
     });
   }
 

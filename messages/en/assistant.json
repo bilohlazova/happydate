@@ -45,7 +45,8 @@
     "retry": "Try again",
     "rateLimited": "Too many messages were sent. Please try again shortly.",
     "retryIn": "Try again in {seconds}s",
-    "cancelled": "The response was interrupted."
+    "cancelled": "The response was interrupted.",
+    "memorySaveFailed": "Could not save this information. Please try again."
   },
   "actions": {
     "gift": {

@@ -45,7 +45,8 @@
     "retry": "Erneut versuchen",
     "rateLimited": "Es wurden zu viele Nachrichten gesendet. Bitte versuche es später erneut.",
     "retryIn": "In {seconds} Sek. erneut versuchen",
-    "cancelled": "Die Antwort wurde unterbrochen."
+    "cancelled": "Die Antwort wurde unterbrochen.",
+    "memorySaveFailed": "Diese Information konnte nicht gespeichert werden. Bitte versuche es erneut."
   },
   "actions": {
     "gift": {

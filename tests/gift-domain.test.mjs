@@ -90,6 +90,8 @@ test("AI Gift Cache compatibility paths remain present and unchanged", async () 
   const route = await readFile(new URL("../src/app/api/ai/gift-suggestions/route.ts", import.meta.url), "utf8");
   for (const api of ["getCachedGiftIdeas", "saveGiftIdeas", "loadGiftIntelligenceSource", "loadLegacyGiftNotes"]) {
     assert.match(repository, new RegExp(`export async function ${api}`));
+  }
+  for (const api of ["getCachedGiftIdeas", "saveGiftIdeas", "loadGiftIntelligenceSource"]) {
     assert.ok(route.includes(`${api}(`));
   }
 });

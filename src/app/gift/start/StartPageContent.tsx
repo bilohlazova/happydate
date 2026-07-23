@@ -5,7 +5,12 @@ export const dynamic = "force-dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import { GiftRecommendationCard } from "@/components/gift/GiftRecommendationCard";
 import type { GiftWorkspaceViewModel } from "@/lib/gifts/gift.types";
+import {
+  requestGiftRecommendations,
+  type GiftRecommendationsResult,
+} from "@/lib/gifts/giftRecommendationClient";
 import { submitLegacyGiftRequest } from "@/lib/gifts/giftRequestCompatibility";
 import { MobileUI } from "@/lib/theme/mobile";
 import { GiftWorkspacePanel } from "./GiftWorkspacePanel";
@@ -25,6 +30,12 @@ type FormState = {
   delivery: "kurier" | "paczkomat" | "osobiscie";
   notes: string;
 };
+
+type RecommendationState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | Extract<GiftRecommendationsResult, { ok: true }> & { status: "success" }
+  | { status: "error"; error: Exclude<GiftRecommendationsResult, { ok: true }>["error"] };
 
 function formatDate(ymd: string | null | undefined, locale: string) {
   if (!ymd) return "";
@@ -46,6 +57,8 @@ export default function GiftStartPage({
   const t = useTranslations("gift");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ key: "saveError" | "success" | "error"; success: boolean } | null>(null);
+  const [recommendations, setRecommendations] = useState<RecommendationState>({ status: "idle" });
+  const personId = sp.get("personId");
 
   // ініціалізація форми один раз
   const [form, setForm] = useState<FormState>(() => ({
@@ -125,6 +138,42 @@ export default function GiftStartPage({
     }
   }
 
+  async function loadRecommendations() {
+    if (!personId) return;
+    setRecommendations({ status: "loading" });
+    const result = await requestGiftRecommendations({
+      personId,
+      occasion: form.occasion || form.eventTitle || "general",
+      locale,
+      budget: {
+        amount: form.budget,
+        currency: "PLN",
+      },
+      event: {
+        id: form.eventId,
+        category: form.occasion || form.eventTitle || "general",
+        date: form.eventDate,
+        personId,
+      },
+    });
+    if (!result.ok) {
+      setRecommendations({ status: "error", error: result.error });
+      return;
+    }
+    setRecommendations({ status: "success", ...result });
+  }
+
+  function applySuggestionToRequest(title: string, why: string) {
+    setForm((current) => ({
+      ...current,
+      notes: [current.notes, `${title} — ${why}`].filter(Boolean).join("\n"),
+    }));
+    document.getElementById("gift-request-form")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
   return (
     <main className={`${MobileUI.screen} bg-gradient-to-br from-sky-50 via-rose-50 to-amber-50`}>
       <div className={`${MobileUI.container} ${MobileUI.contentBottom} py-4`}>
@@ -142,6 +191,131 @@ export default function GiftStartPage({
         </header>
 
         <GiftWorkspacePanel workspace={workspace} hasError={workspaceError} />
+
+        {personId && (
+          <section className={`${MobileUI.card} mb-4 border-white/60 bg-white/80 p-4 backdrop-blur`}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="font-semibold text-slate-800">
+                  {t("recommendations.title")}
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  {t("recommendations.subtitle")}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={loadRecommendations}
+                disabled={recommendations.status === "loading"}
+                className={`${MobileUI.button} bg-sky-500 px-4 text-white shadow hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60`}
+                aria-label={t("recommendations.generateAria")}
+              >
+                {recommendations.status === "loading"
+                  ? t("recommendations.loading")
+                  : recommendations.status === "success"
+                    ? t("recommendations.retry")
+                    : t("recommendations.generate")}
+              </button>
+            </div>
+
+            {recommendations.status === "loading" && (
+              <div
+                className="mt-4 grid gap-3"
+                aria-live="polite"
+                aria-label={t("recommendations.loading")}
+              >
+                <div className="h-40 animate-pulse rounded-2xl bg-white/70 ring-1 ring-slate-100" />
+                <div className="h-28 animate-pulse rounded-2xl bg-white/60 ring-1 ring-slate-100" />
+              </div>
+            )}
+
+            {recommendations.status === "error" && (
+              <div className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm text-rose-700 ring-1 ring-rose-100" role="alert">
+                <p className="font-bold">
+                  {t(`recommendations.errors.${recommendations.error}`)}
+                </p>
+                <button
+                  type="button"
+                  onClick={loadRecommendations}
+                  className="mt-2 text-xs font-extrabold text-rose-800 underline underline-offset-2"
+                >
+                  {t("recommendations.retry")}
+                </button>
+              </div>
+            )}
+
+            {recommendations.status === "success" && (
+              <div className="mt-4" aria-live="polite">
+                {recommendations.suggestions.length > 0 ? (
+                  <ol
+                    className="grid gap-3"
+                    aria-label={t("recommendations.listAria")}
+                  >
+                    {recommendations.suggestions.map((suggestion) => (
+                      <li key={`${suggestion.title}-${suggestion.category}`}>
+                        <GiftRecommendationCard
+                          suggestion={suggestion}
+                          actions={
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                              <button
+                                type="button"
+                                onClick={() => applySuggestionToRequest(suggestion.title, suggestion.why)}
+                                className={`${MobileUI.button} bg-sky-500 px-4 text-white shadow hover:bg-sky-600`}
+                              >
+                                {t("recommendations.useInRequest")}
+                              </button>
+                              <a
+                                href="#gift-request-form"
+                                className={`${MobileUI.button} inline-flex items-center justify-center border border-sky-100 bg-white px-4 text-sky-700 hover:bg-sky-50`}
+                              >
+                                {t("recommendations.backToForm")}
+                              </a>
+                            </div>
+                          }
+                        />
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600 ring-1 ring-slate-100" role="status">
+                    <p className="font-bold text-slate-800">
+                      {t("recommendations.emptyTitle")}
+                    </p>
+                    <p className="mt-1">
+                      {t("recommendations.emptyDescription")}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={loadRecommendations}
+                      className="mt-2 text-xs font-extrabold text-sky-700 underline underline-offset-2"
+                    >
+                      {t("recommendations.retry")}
+                    </button>
+                  </div>
+                )}
+
+                {recommendations.followUpQuestions.length > 0 && (
+                  <section className="mt-3 rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-100" aria-labelledby="gift-follow-up-questions">
+                    <h3 id="gift-follow-up-questions" className="text-sm font-black text-amber-900">
+                      {t("recommendations.followUpTitle")}
+                    </h3>
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm font-medium text-amber-800">
+                      {recommendations.followUpQuestions.map((question) => (
+                        <li key={question}>{question}</li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+
+                {recommendations.usedLegacyFallback && (
+                  <p className="mt-3 text-xs font-semibold text-slate-500">
+                    {t("recommendations.legacyFallback")}
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Wydarzenie */}
         <section className={`${MobileUI.card} mb-4 border-white/60 bg-white/80 p-4 backdrop-blur`}>
@@ -171,6 +345,7 @@ export default function GiftStartPage({
 
         {/* Form */}
         <form
+          id="gift-request-form"
           onSubmit={handleSubmit}
           className={`${MobileUI.card} space-y-4 border-white/60 bg-white/80 p-4 backdrop-blur`}
         >

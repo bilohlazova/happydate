@@ -1,12 +1,19 @@
 import { createClient } from "@supabase/supabase-js";
 import { mapLegacyMemoriesToKnowledge, type KnowledgeItem } from "@/lib/knowledge";
 import { MEMORY_ROW_COLUMNS, type MemoryRow } from "./memory.types";
+import type {
+  PersonGender,
+  PersonRelationKey,
+} from "./person.types";
 
 export interface OwnedGiftPerson {
   id: string;
   userId: string;
   name: string | null;
   relation: string | null;
+  relationKey: PersonRelationKey | null;
+  gender: PersonGender;
+  birthday: string | null;
 }
 
 export interface GiftIntelligenceSource {
@@ -28,7 +35,7 @@ export async function findOwnedGiftPerson(
 ): Promise<OwnedGiftPerson | null> {
   const { data } = await adminClient()
     .from("people")
-    .select("id, user_id, name, relation")
+    .select("id, user_id, name, relation, relation_key, gender, birthday")
     .eq("id", personId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -37,6 +44,9 @@ export async function findOwnedGiftPerson(
     userId: data.user_id,
     name: data.name ?? null,
     relation: data.relation ?? null,
+    relationKey: data.relation_key ?? null,
+    gender: data.gender ?? "unspecified",
+    birthday: data.birthday ?? null,
   } : null;
 }
 

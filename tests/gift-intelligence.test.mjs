@@ -6,6 +6,7 @@ import {
   buildGiftKnowledgeContext,
   formatGiftContextAsLegacyNotes,
 } from "../src/lib/gifts/giftKnowledgeContext.ts";
+import { buildGiftRecommendationInstructions } from "../src/lib/gift-intelligence/index.ts";
 import { mapLegacyMemoryToKnowledge } from "../src/lib/knowledge/compatibilityMapper.ts";
 import { resolveGiftAccess } from "../src/lib/gifts/giftApiSecurity.ts";
 
@@ -87,8 +88,26 @@ test("production Gift AI has no direct Supabase or legacy model dependency", asy
     "@supabase/supabase-js", "supabaseClient", ".from(\"notes\")",
     ".from(\"memories\")", "MemoryRow", "BrainMemory", "NotesMemoryRow",
   ]) assert.equal(route.includes(forbidden), false, forbidden);
-  assert.match(route, /buildGiftKnowledgeContext/);
-  assert.match(route, /Generate exactly 5 gift ideas available in Poland\./);
+  assert.match(route, /buildGiftRecommendationContext/);
+  assert.match(route, /JSON\.stringify\(context\)/);
+  assert.doesNotMatch(route, /formatGiftContextAsLegacyNotes|notesText|Person: \$\{|Relation: \$\{/);
+  assert.match(buildGiftRecommendationInstructions({
+    locale: "pl",
+    generatedAt: "2026-07-23T00:00:00.000Z",
+    person: { id: "person-1", relationKey: null, gender: null, age: null },
+    event: { id: null, category: null, date: null, daysUntil: null },
+    budget: { amount: null, currency: null },
+    season: "none",
+    preferences: { likes: [], dislikes: [], interests: [], wishes: [], importantFacts: [] },
+    memories: [],
+    gifts: {
+      active: [],
+      previous: [],
+      lifecycleCounts: { idea: 0, selected: 0, purchased: 0, given: 0 },
+    },
+    duplicateAvoidance: { previousGiftValues: [] },
+    missingSignals: [],
+  }), /Use only GiftRecommendationContext/);
   assert.match(route, /model: "gpt-4\.1-mini"/);
   assert.match(route, /temperature: 0\.8/);
 });
@@ -137,7 +156,7 @@ test("ownership verification precedes cache and every protected read", async () 
   assert.ok(access >= 0);
   for (const operation of [
     "getCachedGiftIdeas(", "loadGiftIntelligenceSource(",
-    "loadLegacyGiftNotes(", "saveGiftIdeas(",
+    "saveGiftIdeas(",
   ]) assert.ok(route.indexOf(operation) > access, operation);
 });
 

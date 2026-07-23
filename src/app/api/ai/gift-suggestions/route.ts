@@ -3,7 +3,6 @@ import OpenAI from "openai";
 import {
   getCachedGiftIdeas,
   findOwnedGiftPerson,
-  loadLegacyGiftNotes,
   loadGiftIntelligenceSource,
   saveGiftIdeas,
 } from "@/lib/repositories/giftIntelligenceRepository.server";
@@ -11,22 +10,35 @@ import {
   authenticateGiftRequest,
   resolveGiftAccess,
 } from "@/lib/gifts/giftApiSecurity";
+import { mapKnowledgeToGifts } from "@/lib/gifts/gift.mapper";
 import {
-  buildGiftKnowledgeContext,
-  formatGiftContextAsLegacyNotes,
-} from "@/lib/gifts/giftKnowledgeContext";
+  buildGiftRecommendationContext,
+  buildGiftRecommendationInstructions,
+  buildGiftRepairInstructions,
+  giftRecommendationJsonSchema,
+  mapSuggestionsToLegacyIdeas,
+  validateGiftRecommendations,
+  type GiftRecommendationAiResponse,
+  type GiftRecommendationContext,
+} from "@/lib/gift-intelligence";
+import { DEFAULT_LOCALE, normalizeLocale } from "@/i18n/config";
 
 /* ================= TYPES ================= */
 
-type AiIdea = {
-  title: string;
-  explanation: string;
-  why: string;
-  price_range: string;
-};
-
-type AiResponse = {
-  ideas: AiIdea[];
+type GiftRequestBody = {
+  personId?: unknown;
+  occasion?: unknown;
+  locale?: unknown;
+  budget?: {
+    amount?: unknown;
+    currency?: unknown;
+  } | null;
+  event?: {
+    id?: unknown;
+    category?: unknown;
+    date?: unknown;
+    personId?: unknown;
+  } | null;
 };
 
 /* ================= ENV ================= */
@@ -39,45 +51,49 @@ const openai = new OpenAI({
   apiKey: OPENAI_API_KEY,
 });
 
-/* ================= SCHEMA ================= */
-
-const schema = {
-  type: "object",
-  properties: {
-    ideas: {
-      type: "array",
-      minItems: 5,
-      maxItems: 5,
-      items: {
-        type: "object",
-        properties: {
-          title: { type: "string" },
-          explanation: { type: "string" },
-          why: { type: "string" },
-          price_range: { type: "string" },
-        },
-        required: [
-          "title",
-          "explanation",
-          "why",
-          "price_range",
-        ],
-        additionalProperties: false,
+async function generateGiftRecommendations(
+  context: GiftRecommendationContext,
+  instructions: string,
+): Promise<GiftRecommendationAiResponse> {
+  const ai = await openai.responses.create({
+    model: "gpt-4.1-mini",
+    temperature: 0.8,
+    instructions,
+    input: JSON.stringify(context),
+    text: {
+      format: {
+        type: "json_schema",
+        name: "gift_recommendations",
+        strict: true,
+        schema: giftRecommendationJsonSchema,
       },
     },
-  },
-  required: ["ideas"],
-  additionalProperties: false,
-} as const;
+  });
+
+  const output = ai.output_text;
+
+  if (!output) {
+    throw new Error("Empty AI output");
+  }
+
+  try {
+    return JSON.parse(output) as GiftRecommendationAiResponse;
+  } catch {
+    throw new Error("Invalid JSON from AI");
+  }
+}
 
 /* ================= ROUTE ================= */
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = (await req.json()) as GiftRequestBody;
 
-    const personId = body.personId as string | undefined;
-    const occasion = body.occasion || "general";
+    const personId = typeof body.personId === "string" ? body.personId : undefined;
+    const occasion = typeof body.occasion === "string" && body.occasion.trim()
+      ? body.occasion.trim()
+      : "general";
+    const locale = normalizeLocale(body.locale) ?? DEFAULT_LOCALE;
 
     if (!personId) {
       return NextResponse.json(
@@ -111,69 +127,76 @@ export async function POST(req: Request) {
 
     /* ================= LOAD PERSON ================= */
 
-    const { person, knowledge } =
-      await loadGiftIntelligenceSource(ownedPerson);
-    const giftContext = buildGiftKnowledgeContext(ownedPerson.id, knowledge);
-    const legacyNotes = giftContext.facts.length
-      ? []
-      : await loadLegacyGiftNotes(ownedPerson);
-    const notesText = formatGiftContextAsLegacyNotes(giftContext, legacyNotes);
+    const { person, knowledge } = await loadGiftIntelligenceSource(ownedPerson);
+    const giftRecommendationContext = buildGiftRecommendationContext({
+      person: {
+        id: person.id,
+        name: person.name,
+        relationKey: person.relationKey,
+        relationship: person.relation,
+        gender: person.gender,
+        birthday: person.birthday,
+      },
+      event: {
+        id: typeof body.event?.id === "string" ? body.event.id : null,
+        category: typeof body.event?.category === "string" ? body.event.category : occasion,
+        date: typeof body.event?.date === "string" ? body.event.date : null,
+        personId: typeof body.event?.personId === "string" ? body.event.personId : person.id,
+      },
+      knowledge,
+      gifts: mapKnowledgeToGifts(knowledge),
+      budget: body.budget ? {
+        amount: typeof body.budget.amount === "number" ? body.budget.amount : null,
+        currency: typeof body.budget.currency === "string" ? body.budget.currency : null,
+      } : null,
+      locale,
+    });
 
     /* ================= PROMPT ================= */
 
-    const input = `
-You are an elite gift recommendation expert.
-
-Person: ${person?.name ?? "Unknown"}
-Relation: ${person?.relation ?? "Unknown"}
-Occasion: ${occasion}
-
-Notes:
-${notesText}
-
-Generate exactly 5 gift ideas available in Poland.
-
-Return ONLY valid JSON matching schema.
-`;
-
     /* ================= OPENAI ================= */
 
-    const ai = await openai.responses.create({
-      model: "gpt-4.1-mini",
-      temperature: 0.8,
-      input,
-      text: {
-        format: {
-          type: "json_schema",
-          name: "gift_ideas",
-          strict: true,
-          schema,
+    const parsed = await generateGiftRecommendations(
+      giftRecommendationContext,
+      buildGiftRecommendationInstructions(giftRecommendationContext),
+    );
+    let validated = validateGiftRecommendations(parsed, giftRecommendationContext);
+
+    if (validated.suggestions.length < 5 && validated.validationErrors.length > 0) {
+      const repairInput = {
+        ...giftRecommendationContext,
+        validationErrors: validated.validationErrors,
+        validSuggestions: validated.suggestions,
+      };
+      const repaired = await generateGiftRecommendations(
+        repairInput,
+        buildGiftRepairInstructions(),
+      );
+      const repairedValidated = validateGiftRecommendations(
+        {
+          suggestions: [...validated.suggestions, ...repaired.suggestions],
+          followUpQuestions: validated.followUpQuestions.length
+            ? validated.followUpQuestions
+            : repaired.followUpQuestions,
         },
-      },
-    });
-
-    const output = ai.output_text;
-
-    if (!output) {
-      throw new Error("Empty AI output");
+        giftRecommendationContext,
+        { repairAttempted: true },
+      );
+      validated = repairedValidated;
     }
-
-    let parsed: AiResponse;
-
-    try {
-      parsed = JSON.parse(output);
-    } catch {
-      throw new Error("Invalid JSON from AI");
-    }
+    const legacyIdeas = mapSuggestionsToLegacyIdeas(validated.suggestions);
 
     /* ================= SAVE CACHE ================= */
 
-    await saveGiftIdeas(ownedPerson, occasion, parsed.ideas);
+    await saveGiftIdeas(ownedPerson, occasion, legacyIdeas);
 
     /* ================= RETURN ================= */
 
     return NextResponse.json({
-      ideas: parsed.ideas,
+      ideas: legacyIdeas,
+      suggestions: validated.suggestions,
+      followUpQuestions: validated.followUpQuestions,
+      diagnostics: validated.diagnostics,
       cached: false,
     });
   } catch (error) {

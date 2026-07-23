@@ -47,6 +47,120 @@ test("chat person resolver uses exact names, unambiguous first names and safe re
   }), { status: "none", personId: null, matchedBy: null });
 });
 
+test("chat person resolver supports safe Ukrainian inflected first-name forms", () => {
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "для Діми",
+    people: [{ id: "dima", name: "Діма", relation: "брат" }],
+  }), { status: "resolved", personId: "dima", matchedBy: "name" });
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "подарунок Дімі",
+    people: [{ id: "dima", name: "Діма", relation: "брат" }],
+  }), { status: "resolved", personId: "dima", matchedBy: "name" });
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "розкажи про Діму",
+    people: [{ id: "dima", name: "Діма", relation: "брат" }],
+  }), { status: "resolved", personId: "dima", matchedBy: "name" });
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "з Дімою",
+    people: [{ id: "dima", name: "Діма", relation: "брат" }],
+  }), { status: "resolved", personId: "dima", matchedBy: "name" });
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "для Марії",
+    people: [{ id: "maria", name: "Марія", relation: "подруга" }],
+  }), { status: "resolved", personId: "maria", matchedBy: "name" });
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "про Марію",
+    people: [{ id: "maria", name: "Марія", relation: "подруга" }],
+  }), { status: "resolved", personId: "maria", matchedBy: "name" });
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "з Марією",
+    people: [{ id: "maria", name: "Марія", relation: "подруга" }],
+  }), { status: "resolved", personId: "maria", matchedBy: "name" });
+});
+
+test("chat person resolver keeps Ukrainian inflected matching deterministic and ambiguity-safe", () => {
+  const sameFirstNamePeople = [
+    { id: "dima-k", name: "Діма Коваленко", relation: "брат" },
+    { id: "dima-p", name: "Діма Петренко", relation: "друг" },
+  ];
+
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "для Діми",
+    people: sameFirstNamePeople,
+  }), { status: "ambiguous", personId: null, matchedBy: "name" });
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "Діма",
+    people: sameFirstNamePeople,
+  }), { status: "ambiguous", personId: null, matchedBy: "name" });
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "для Діми Коваленка",
+    people: sameFirstNamePeople,
+  }), { status: "resolved", personId: "dima-k", matchedBy: "name" });
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "для Діми Петренка",
+    people: sameFirstNamePeople,
+  }), { status: "resolved", personId: "dima-p", matchedBy: "name" });
+
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "для Марії",
+    people: [
+      { id: "maria", name: "Марія", relation: null },
+      { id: "maryna", name: "Марина", relation: null },
+    ],
+  }), { status: "resolved", personId: "maria", matchedBy: "name" });
+});
+
+test("chat person resolver preserves priority, active-person switching and mixed-language exact matching", () => {
+  const mixedPeople = [
+    { id: "dima", name: "Діма", relation: "брат" },
+    { id: "anna", name: "Anna Kowalska", relation: "żona" },
+    { id: "john", name: "John Smith", relation: "friend" },
+  ];
+
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "Anna needs a gift",
+    people: mixedPeople,
+    currentPersonId: "dima",
+  }), { status: "resolved", personId: "anna", matchedBy: "name" });
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "для Діми",
+    people: mixedPeople,
+    currentPersonId: "anna",
+  }), { status: "resolved", personId: "dima", matchedBy: "name" });
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "what about John?",
+    people: mixedPeople,
+  }), { status: "resolved", personId: "john", matchedBy: "name" });
+});
+
+test("chat person resolver rejects Ukrainian inflection false positives", () => {
+  const ukrainianPeople = [
+    { id: "dima", name: "Діма", relation: "брат" },
+    { id: "maria", name: "Марія", relation: "подруга" },
+  ];
+
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "димає",
+    people: ukrainianPeople,
+  }), { status: "none", personId: null, matchedBy: null });
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "дим",
+    people: ukrainianPeople,
+  }), { status: "none", personId: null, matchedBy: null });
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "маріячи",
+    people: ukrainianPeople,
+  }), { status: "none", personId: null, matchedBy: null });
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "порадь щось без імені",
+    people: ukrainianPeople,
+  }), { status: "none", personId: null, matchedBy: null });
+  assert.deepEqual(resolveChatPerson({
+    userMessage: "про Діміних друзів",
+    people: ukrainianPeople,
+  }), { status: "none", personId: null, matchedBy: null });
+});
+
 test("cheap chat memory pre-check avoids acknowledgements, names, budgets and lets explicit facts pass", () => {
   assert.equal(shouldRunChatMemoryDetection({ activePersonId: null, userMessage: "Діма любить мотоцикли" }), false);
   assert.equal(shouldRunChatMemoryDetection({ activePersonId: "dima", userMessage: "так" }), false);

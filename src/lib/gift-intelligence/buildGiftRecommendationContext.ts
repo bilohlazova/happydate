@@ -1,4 +1,7 @@
 import type { GiftLifecycle } from "../gifts/gift.types.ts";
+import type { KnowledgeItem, KnowledgeKind, KnowledgePolarity, KnowledgeState } from "../knowledge/domain.ts";
+import { buildSemanticMemoryProjection } from "../semantic-memory/index.ts";
+import { mapSemanticMemoryToGiftContextProjection } from "./giftSemanticMemoryAdapter.ts";
 import type {
   BuildGiftRecommendationContextInput,
   GiftIntelligenceGiftInput,
@@ -9,17 +12,28 @@ import type {
 } from "./giftIntelligence.types.ts";
 
 const ACTIVE_GIFT_STATES = new Set<GiftLifecycle>(["idea", "selected", "purchased"]);
-const INTEREST_CATEGORIES = new Set([
-  "interest",
-  "hobby",
-  "travel",
-  "sport",
-  "book",
-  "movie",
-  "music",
-  "pet",
-  "flower",
-  "perfume",
+const KNOWLEDGE_KINDS = new Set<KnowledgeKind>([
+  "fact",
+  "preference",
+  "experience",
+  "gift",
+  "wish",
+  "journal",
+  "note",
+]);
+const KNOWLEDGE_POLARITIES = new Set<KnowledgePolarity>([
+  "likes",
+  "dislikes",
+  "avoids",
+  "prefers",
+  "neutral",
+]);
+const KNOWLEDGE_STATES = new Set<KnowledgeState>([
+  "proposed",
+  "confirmed",
+  "active",
+  "superseded",
+  "archived",
 ]);
 
 function clean(value: string | null | undefined): string | null {
@@ -80,23 +94,12 @@ function seasonFor(currentDate: Date): GiftSeasonSignal {
   return "none";
 }
 
-function knowledgeValue(item: GiftIntelligenceKnowledgeInput): string | null {
-  return clean(item.value) ?? clean(item.title) ?? clean(item.summary);
-}
-
 function activeAiEligible(item: GiftIntelligenceKnowledgeInput): boolean {
   return (
     (item.state === "active" || item.state === "confirmed") &&
     item.kind !== "journal" &&
     item.aiEligible !== false
   );
-}
-
-function pushUnique(target: string[], value: string | null): void {
-  if (!value) return;
-  const seen = new Set(target.map(normalizedKey));
-  const key = normalizedKey(value);
-  if (!seen.has(key)) target.push(value);
 }
 
 function relevantKnowledge(
@@ -123,70 +126,89 @@ function sortedDate(value: { occurredOn?: string | null; createdAt?: string | nu
   return value.occurredOn ?? value.createdAt ?? "";
 }
 
-function classifyKnowledge(
-  knowledge: readonly GiftIntelligenceKnowledgeInput[],
-): GiftRecommendationContext["preferences"] &
+function knowledgeKind(value: string): KnowledgeKind {
+  return KNOWLEDGE_KINDS.has(value as KnowledgeKind) ? value as KnowledgeKind : "note";
+}
+
+function knowledgePolarity(value: string | null | undefined): KnowledgePolarity | null {
+  return value && KNOWLEDGE_POLARITIES.has(value as KnowledgePolarity)
+    ? value as KnowledgePolarity
+    : null;
+}
+
+function knowledgeState(value: string | null | undefined): KnowledgeState {
+  return value && KNOWLEDGE_STATES.has(value as KnowledgeState)
+    ? value as KnowledgeState
+    : "active";
+}
+
+function toSemanticKnowledgeItem(item: GiftIntelligenceKnowledgeInput): KnowledgeItem {
+  const rich = item as GiftIntelligenceKnowledgeInput & Partial<KnowledgeItem>;
+  const kind = knowledgeKind(item.kind);
+  const giftRelevantCategory = kind === "note" || kind === "journal"
+    ? null
+    : clean(item.category);
+  const giftRelevantTitle = kind === "note" || kind === "journal"
+    ? null
+    : clean(item.title);
+  const evidence = rich.evidence ?? {
+    sourceKind: "legacy" as const,
+    sourceId: item.id,
+    originalText: clean(item.value) ?? clean(item.title) ?? clean(item.summary),
+    capturedAt: item.createdAt ?? item.occurredOn ?? null,
+  };
+  return {
+    id: item.id,
+    personId: item.personId,
+    eventId: item.eventId ?? null,
+    kind,
+    category: giftRelevantCategory,
+    polarity: kind === "note" || kind === "journal" || kind === "gift" || kind === "experience"
+      ? null
+      : knowledgePolarity(item.polarity),
+    title: giftRelevantTitle,
+    value: clean(item.value),
+    occurredOn: item.occurredOn ?? null,
+    importance: typeof rich.importance === "number" && Number.isFinite(rich.importance)
+      ? rich.importance
+      : 0,
+    tags: Array.isArray(rich.tags) ? [...rich.tags] : [],
+    summary: clean(item.summary),
+    state: knowledgeState(item.state),
+    aiEligible: item.aiEligible !== false,
+    createdAt: item.createdAt ?? null,
+    updatedAt: rich.updatedAt ?? null,
+    legacyType: kind === "note" || kind === "journal"
+      ? kind
+      : clean(rich.legacyType) ?? giftRelevantTitle ?? giftRelevantCategory ?? clean(item.kind) ?? "note",
+    evidence,
+    classification: rich.classification ?? null,
+    compatibility: {
+      valueText: clean(rich.compatibility?.valueText) ?? clean(item.value),
+      contentText: clean(rich.compatibility?.contentText) ?? clean(item.summary),
+    },
+  };
+}
+
+function projectKnowledgeForGiftContext({
+  personId,
+  knowledge,
+  currentDate,
+}: {
+  personId: string | null;
+  knowledge: readonly GiftIntelligenceKnowledgeInput[];
+  currentDate: Date;
+}): GiftRecommendationContext["preferences"] &
   Pick<GiftRecommendationContext, "knowledge" | "memories"> {
-  const preferences: GiftRecommendationContext["preferences"] = {
-    likes: [],
-    dislikes: [],
-    interests: [],
-    wishes: [],
-    importantFacts: [],
-  };
-  const storedKnowledge: GiftRecommendationContext["knowledge"] = {
-    interests: [],
-    hobbies: [],
-    favoriteBrands: [],
-    dislikedGifts: [],
-    preferredStyles: [],
-  };
-  const memories: GiftRecommendationContext["memories"] = [];
-  const seenMemories = new Set<string>();
-
-  for (const item of [...knowledge].sort((a, b) => sortedDate(b).localeCompare(sortedDate(a)) || a.id.localeCompare(b.id))) {
-    const value = knowledgeValue(item);
-    if (!value) continue;
-    if (item.kind === "wish") {
-      pushUnique(preferences.wishes, value);
-    } else if (item.kind === "fact") {
-      pushUnique(preferences.importantFacts, value);
-    } else if (item.kind === "experience") {
-      const key = normalizedKey(value);
-      if (!seenMemories.has(key)) {
-        seenMemories.add(key);
-        memories.push({ id: item.id, value, occurredOn: item.occurredOn ?? null });
-      }
-    } else if (item.kind === "preference") {
-      if (item.title === "favorite_brand") {
-        pushUnique(storedKnowledge.favoriteBrands, value);
-        pushUnique(preferences.likes, value);
-      } else if (item.title === "disliked_gift") {
-        pushUnique(storedKnowledge.dislikedGifts, value);
-        pushUnique(preferences.dislikes, value);
-      } else if (item.title === "preferred_style") {
-        pushUnique(storedKnowledge.preferredStyles, value);
-        pushUnique(preferences.wishes, value);
-      } else if (item.category === "hobby") {
-        pushUnique(storedKnowledge.hobbies, value);
-        pushUnique(preferences.interests, value);
-      } else if (item.category === "interest") {
-        pushUnique(storedKnowledge.interests, value);
-        pushUnique(preferences.interests, value);
-      } else if (item.polarity === "dislikes" || item.polarity === "avoids") {
-        pushUnique(preferences.dislikes, value);
-      } else if (item.category && INTEREST_CATEGORIES.has(item.category)) {
-        pushUnique(storedKnowledge.interests, value);
-        pushUnique(preferences.interests, value);
-      } else if (item.polarity === "likes" || item.polarity === "prefers") {
-        pushUnique(preferences.likes, value);
-      } else {
-        pushUnique(preferences.interests, value);
-      }
-    }
-  }
-
-  return { ...preferences, knowledge: storedKnowledge, memories };
+  const projection = buildSemanticMemoryProjection({
+    people: personId ? [{ id: personId }] : [],
+    knowledge: knowledge.map(toSemanticKnowledgeItem),
+    currentDate,
+  });
+  const personProjection = personId
+    ? projection.people.find((person) => person.personId === personId) ?? null
+    : null;
+  return mapSemanticMemoryToGiftContextProjection(personProjection);
 }
 
 function buildGiftProjection(
@@ -254,7 +276,11 @@ export function buildGiftRecommendationContext({
   const eventId = event?.id ?? null;
   const scopedKnowledge = relevantKnowledge(personId, knowledge);
   const scopedGifts = relevantGifts(personId, eventId, gifts);
-  const { knowledge: storedKnowledge, memories, ...preferences } = classifyKnowledge(scopedKnowledge);
+  const { knowledge: storedKnowledge, memories, ...preferences } = projectKnowledgeForGiftContext({
+    personId,
+    knowledge: scopedKnowledge,
+    currentDate,
+  });
   const giftProjection = buildGiftProjection(scopedGifts);
 
   const context: GiftRecommendationContext = {

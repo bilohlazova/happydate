@@ -26,6 +26,7 @@ export const SEMANTIC_MEMORY_TAGS = [
   "lifestyle",
   "previous_gift",
   "gift_failure",
+  "preferred_style",
   "wishlist",
   "important_fact",
   "memory",

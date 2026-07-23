@@ -36,6 +36,7 @@ const CATEGORY_TAGS: Readonly<Record<string, readonly SemanticMemoryTag[]>> = {
   work: ["profession", "important_fact"],
   family: ["family", "important_fact"],
   lifestyle: ["lifestyle"],
+  preferred_style: ["preferred_style", "lifestyle"],
   important: ["important_fact"],
   important_fact: ["important_fact"],
   gift_failure: ["gift_failure", "dislike"],
@@ -47,7 +48,7 @@ const CATEGORY_TAGS: Readonly<Record<string, readonly SemanticMemoryTag[]>> = {
 const TITLE_TAGS: Readonly<Record<string, readonly SemanticMemoryTag[]>> = {
   favorite_brand: ["brand"],
   disliked_gift: ["gift_failure", "dislike"],
-  preferred_style: ["lifestyle"],
+  preferred_style: ["preferred_style", "lifestyle"],
   gift_failure: ["gift_failure", "dislike"],
   wishlist: ["wishlist"],
 };
@@ -97,6 +98,7 @@ const KNOWN_SOURCE_TAGS = new Set<SemanticMemoryTag>([
   "lifestyle",
   "previous_gift",
   "gift_failure",
+  "preferred_style",
   "wishlist",
   "important_fact",
   "memory",
@@ -126,7 +128,6 @@ export function semanticTagsForKnowledge(item: KnowledgeItem): SemanticMemoryTag
   if (item.kind === "fact") tags.add("important_fact");
   if (item.kind === "wish") tags.add("wishlist");
   if (item.kind === "experience") tags.add("memory");
-  if (item.kind === "preference") tags.add("interest");
 
   add(tags, category ? CATEGORY_TAGS[category] : undefined);
   add(tags, title ? TITLE_TAGS[title] : undefined);

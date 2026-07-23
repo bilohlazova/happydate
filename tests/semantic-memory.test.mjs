@@ -84,6 +84,21 @@ test("semantic projection maps one fact to multiple canonical tags without dupli
   assert.equal("categories" in model.people[0], false);
 });
 
+test("semantic projection represents preferred style as a semantic tag without importing Gift concepts", () => {
+  const model = projection([
+    knowledge({
+      id: "style",
+      title: "preferred_style",
+      value: "Minimalistyczny",
+      category: "general",
+      polarity: null,
+      legacyType: "preferred_style",
+    }),
+  ]);
+
+  assert.deepEqual(model.people[0].facts[0].tags, ["lifestyle", "preferred_style"]);
+});
+
 test("semantic projection preserves user values and normalizes only for matching", () => {
   const model = projection([
     knowledge({ id: "coffee", value: "  Kawa z kardamonem  ", category: "coffee" }),

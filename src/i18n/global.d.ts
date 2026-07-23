@@ -10,6 +10,7 @@ import type remindersMessages from "../../messages/pl/reminders.json";
 import type homeMessages from "../../messages/pl/home.json";
 import type assistantMessages from "../../messages/pl/assistant.json";
 import type giftMessages from "../../messages/pl/gift.json";
+import type memoryCaptureMessages from "../../messages/pl/memoryCapture.json";
 import type dashboardMessages from "../../messages/pl/dashboard.json";
 import type careMessages from "../../messages/pl/care.json";
 import type staticMessages from "../../messages/pl/static.json";
@@ -31,6 +32,7 @@ declare module "next-intl" {
       home: typeof homeMessages;
       assistant: typeof assistantMessages;
       gift: typeof giftMessages;
+      memoryCapture: typeof memoryCaptureMessages;
       dashboard: typeof dashboardMessages;
       care: typeof careMessages;
       static: typeof staticMessages;

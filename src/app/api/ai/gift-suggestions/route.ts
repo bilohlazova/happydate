@@ -18,6 +18,7 @@ import {
   normalizeGiftDiscoveryRequest,
   type GiftDiscoveryPromptInput,
 } from "@/lib/gift-discovery";
+import { buildMemoryCaptureCandidates } from "@/lib/memory-capture";
 import {
   buildGiftRecommendationContext,
   buildGiftRecommendationInstructions,
@@ -222,6 +223,11 @@ export async function POST(req: Request) {
       validated = repairedValidated;
     }
     const legacyIdeas = mapSuggestionsToLegacyIdeas(validated.suggestions);
+    const memoryCandidates = buildMemoryCaptureCandidates({
+      context: giftRecommendationContext,
+      discoveryAnswers: discoveryRequest.answers,
+      aiResponse: parsed,
+    });
 
     /* ================= SAVE CACHE ================= */
 
@@ -236,6 +242,7 @@ export async function POST(req: Request) {
       suggestions: validated.suggestions,
       followUpQuestions: validated.followUpQuestions,
       discovery: giftDiscoveryPromptInput,
+      memoryCandidates,
       diagnostics: validated.diagnostics,
       cached: false,
     });

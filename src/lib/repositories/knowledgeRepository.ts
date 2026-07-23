@@ -1,3 +1,4 @@
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 import {
   buildKnowledgeSnapshot,
@@ -61,6 +62,43 @@ export interface UpdateKnowledgeInput {
 
 function repositoryError(operation: string, message: string): Error {
   return new Error(`[knowledgeRepository] ${operation} failed: ${message}`);
+}
+
+function serverSupabaseClient(): SupabaseClient {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+}
+
+async function createKnowledgeWithClient(
+  client: SupabaseClient,
+  input: CreateKnowledgeInput,
+): Promise<KnowledgeItem> {
+  const images = assertPersistableMemoryImageValues(input.images ?? []);
+  const { data, error } = await client
+    .from("memories")
+    .insert({
+      user_id: input.userId,
+      person_id: input.personId ?? null,
+      event_id: input.eventId ?? null,
+      type: input.legacyType,
+      title: input.title ?? null,
+      value_text: input.value ?? null,
+      content_text: input.content ?? null,
+      occurred_on: input.occurredOn ?? null,
+      importance: input.importance ?? 0,
+      source: input.source ?? "manual",
+      images,
+      is_active: true,
+    })
+    .select(MEMORY_ROW_COLUMNS)
+    .returns<MemoryRow[]>()
+    .single();
+
+  if (error) throw repositoryError("createKnowledge", error.message);
+  return mapLegacyMemoryToKnowledge(data);
 }
 
 /** @internal Raw compatibility read used by legacy repository methods. */
@@ -141,29 +179,13 @@ export async function getKnowledgeContext(
 export async function createKnowledge(
   input: CreateKnowledgeInput
 ): Promise<KnowledgeItem> {
-  const images = assertPersistableMemoryImageValues(input.images ?? []);
-  const { data, error } = await supabase
-    .from("memories")
-    .insert({
-      user_id: input.userId,
-      person_id: input.personId ?? null,
-      event_id: input.eventId ?? null,
-      type: input.legacyType,
-      title: input.title ?? null,
-      value_text: input.value ?? null,
-      content_text: input.content ?? null,
-      occurred_on: input.occurredOn ?? null,
-      importance: input.importance ?? 0,
-      source: input.source ?? "manual",
-      images,
-      is_active: true,
-    })
-    .select(MEMORY_ROW_COLUMNS)
-    .returns<MemoryRow[]>()
-    .single();
+  return createKnowledgeWithClient(supabase, input);
+}
 
-  if (error) throw repositoryError("createKnowledge", error.message);
-  return mapLegacyMemoryToKnowledge(data);
+export async function createKnowledgeOnServer(
+  input: CreateKnowledgeInput
+): Promise<KnowledgeItem> {
+  return createKnowledgeWithClient(serverSupabaseClient(), input);
 }
 
 export async function updateKnowledge(

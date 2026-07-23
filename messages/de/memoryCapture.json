@@ -1,0 +1,33 @@
+{
+  "title": "Ich habe etwas Nützliches über diese Person gelernt",
+  "description": "Speichere es nur, wenn es stimmt.",
+  "save": "Speichern",
+  "saving": "Wird gespeichert…",
+  "notNow": "Nicht jetzt",
+  "highConfidence": "Hohe Sicherheit",
+  "retry": "Erneut versuchen",
+  "status": {
+    "saved": "In Happys Gedächtnis gespeichert.",
+    "alreadySaved": "Diese Information ist bereits in Happys Gedächtnis gespeichert.",
+    "saveFailed": "Diese Information konnte gerade nicht gespeichert werden. Versuche es erneut."
+  },
+  "labels": {
+    "interest": "Mag",
+    "hobby": "Hobby",
+    "favorite_brand": "Lieblingsmarke",
+    "disliked_gift": "Vermeiden",
+    "preferred_style": "Bevorzugter Stil"
+  },
+  "aria": {
+    "card": "Vorgeschlagene gespeicherte Information",
+    "save": "Information speichern: {value}",
+    "notNow": "Information verwerfen: {value}",
+    "candidate": {
+      "interest": "Mag {value}",
+      "hobby": "Hobby: {value}",
+      "favorite_brand": "Lieblingsmarke: {value}",
+      "disliked_gift": "Vermeiden: {value}",
+      "preferred_style": "Bevorzugter Stil: {value}"
+    }
+  }
+}

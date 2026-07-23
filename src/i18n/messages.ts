@@ -15,6 +15,7 @@ type RemindersMessages = typeof import("../../messages/pl/reminders.json");
 type HomeMessages = typeof import("../../messages/pl/home.json");
 type AssistantMessages = typeof import("../../messages/pl/assistant.json");
 type GiftMessages = typeof import("../../messages/pl/gift.json");
+type MemoryCaptureMessages = typeof import("../../messages/pl/memoryCapture.json");
 type DashboardMessages = typeof import("../../messages/pl/dashboard.json");
 type CareMessages = typeof import("../../messages/pl/care.json");
 type StaticMessages = typeof import("../../messages/pl/static.json");
@@ -32,6 +33,7 @@ export interface AppMessages extends AbstractIntlMessages {
   home: HomeMessages;
   assistant: AssistantMessages;
   gift: GiftMessages;
+  memoryCapture: MemoryCaptureMessages;
   dashboard: DashboardMessages;
   care: CareMessages;
   static: StaticMessages;
@@ -49,6 +51,7 @@ type RemindersMessageLoader = () => Promise<RemindersMessages>;
 type HomeMessageLoader = () => Promise<HomeMessages>;
 type AssistantMessageLoader = () => Promise<AssistantMessages>;
 type GiftMessageLoader = () => Promise<GiftMessages>;
+type MemoryCaptureMessageLoader = () => Promise<MemoryCaptureMessages>;
 type DashboardMessageLoader = () => Promise<DashboardMessages>;
 type CareMessageLoader = () => Promise<CareMessages>;
 type StaticMessageLoader = () => Promise<StaticMessages>;
@@ -221,6 +224,18 @@ const GIFT_MESSAGE_LOADERS: Record<AppLocale, GiftMessageLoader> = {
   de: () =>
     import("../../messages/de/gift.json").then((module) => module.default),
 };
+const MEMORY_CAPTURE_MESSAGE_LOADERS: Record<AppLocale, MemoryCaptureMessageLoader> = {
+  pl: () =>
+    import("../../messages/pl/memoryCapture.json").then((module) => module.default),
+  uk: () =>
+    import("../../messages/uk/memoryCapture.json").then((module) => module.default),
+  en: () =>
+    import("../../messages/en/memoryCapture.json").then((module) => module.default),
+  ru: () =>
+    import("../../messages/ru/memoryCapture.json").then((module) => module.default),
+  de: () =>
+    import("../../messages/de/memoryCapture.json").then((module) => module.default),
+};
 const DASHBOARD_MESSAGE_LOADERS: Record<AppLocale, DashboardMessageLoader> = {
   pl: () =>
     import("../../messages/pl/dashboard.json").then((module) => module.default),
@@ -380,6 +395,7 @@ export async function loadMessages(locale: AppLocale): Promise<AppMessages> {
     home,
     assistant,
     gift,
+    memoryCapture,
     dashboard,
     care,
     staticMessages,
@@ -396,6 +412,7 @@ export async function loadMessages(locale: AppLocale): Promise<AppMessages> {
     HOME_MESSAGE_LOADERS[locale](),
     ASSISTANT_MESSAGE_LOADERS[locale](),
     GIFT_MESSAGE_LOADERS[locale](),
+    MEMORY_CAPTURE_MESSAGE_LOADERS[locale](),
     DASHBOARD_MESSAGE_LOADERS[locale](),
     CARE_MESSAGE_LOADERS[locale](),
     STATIC_MESSAGE_LOADERS[locale](),
@@ -413,6 +430,7 @@ export async function loadMessages(locale: AppLocale): Promise<AppMessages> {
     home,
     assistant,
     gift,
+    memoryCapture,
     dashboard,
     care,
     static: staticMessages,

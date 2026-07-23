@@ -10,16 +10,19 @@ import {
   type GiftDiscoveryAnswerValue,
 } from "@/components/gift/GiftDiscoveryPanel";
 import { GiftRecommendationCard } from "@/components/gift/GiftRecommendationCard";
+import { MemoryCaptureCard } from "@/components/memory/MemoryCaptureCard";
 import type {
   GiftDiscoveryAnswers,
   GiftDiscoveryQuestion,
   GiftDiscoveryQuestionType,
 } from "@/lib/gift-discovery";
+import type { MemoryCaptureCandidate } from "@/lib/memory-capture";
 import type { GiftWorkspaceViewModel } from "@/lib/gifts/gift.types";
 import {
   requestGiftRecommendations,
   type GiftRecommendationsResult,
 } from "@/lib/gifts/giftRecommendationClient";
+import { confirmMemoryCaptureCandidate } from "@/lib/memoryCaptureClient";
 import { submitLegacyGiftRequest } from "@/lib/gifts/giftRequestCompatibility";
 import { MobileUI } from "@/lib/theme/mobile";
 import { GiftWorkspacePanel } from "./GiftWorkspacePanel";
@@ -64,6 +67,7 @@ export default function GiftStartPage({
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("gift");
+  const memoryT = useTranslations("memoryCapture");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ key: "saveError" | "success" | "error"; success: boolean } | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendationState>({ status: "idle" });
@@ -71,6 +75,14 @@ export default function GiftStartPage({
   const [refreshError, setRefreshError] = useState(false);
   const [discoveryAnswers, setDiscoveryAnswers] = useState<GiftDiscoveryAnswers>({});
   const [skippedDiscoveryQuestions, setSkippedDiscoveryQuestions] = useState<string[]>([]);
+  const [dismissedMemoryCandidateIds, setDismissedMemoryCandidateIds] = useState<string[]>([]);
+  const [savedMemoryCandidateIds, setSavedMemoryCandidateIds] = useState<string[]>([]);
+  const [savingMemoryCandidateId, setSavingMemoryCandidateId] = useState<string | null>(null);
+  const [memoryCaptureStatus, setMemoryCaptureStatus] = useState<{
+    kind: "saved" | "alreadySaved" | "saveFailed";
+    candidateId: string;
+  } | null>(null);
+  const [memoryCaptureRetryNonce, setMemoryCaptureRetryNonce] = useState(0);
   const requestSequenceRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const personId = sp.get("personId");
@@ -219,12 +231,24 @@ export default function GiftStartPage({
     );
   }
 
+  function visibleMemoryCandidates(
+    candidates: readonly MemoryCaptureCandidate[] | undefined,
+  ): MemoryCaptureCandidate[] {
+    const dismissed = new Set(dismissedMemoryCandidateIds);
+    const saved = new Set(savedMemoryCandidateIds);
+    return (candidates ?? []).filter(
+      (candidate) => !dismissed.has(candidate.id) && !saved.has(candidate.id),
+    );
+  }
+
   function resetDiscoverySessionState() {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     requestSequenceRef.current += 1;
     setDiscoveryAnswers({});
     setSkippedDiscoveryQuestions([]);
+    setDismissedMemoryCandidateIds([]);
+    setMemoryCaptureStatus(null);
     setRefreshError(false);
     setRecommendationPending(false);
   }
@@ -326,6 +350,38 @@ export default function GiftStartPage({
       preservePrevious: false,
     });
   }
+
+  async function handleMemoryCandidateConfirm(candidateId: string) {
+    if (!personId || recommendations.status !== "success") return;
+    const candidate = recommendations.memoryCandidates.find((item) => item.id === candidateId);
+    if (!candidate) return;
+
+    setSavingMemoryCandidateId(candidateId);
+    setMemoryCaptureStatus(null);
+    const result = await confirmMemoryCaptureCandidate({ personId, candidate });
+
+    if (result.ok) {
+      setSavedMemoryCandidateIds((current) => [...new Set([...current, candidateId])]);
+      setMemoryCaptureStatus({
+        kind: result.status === "already_exists" ? "alreadySaved" : "saved",
+        candidateId,
+      });
+    } else {
+      setMemoryCaptureStatus({ kind: "saveFailed", candidateId });
+      setMemoryCaptureRetryNonce((current) => current + 1);
+    }
+
+    setSavingMemoryCandidateId(null);
+  }
+
+  function handleMemoryCandidateDismiss(candidateId: string) {
+    setDismissedMemoryCandidateIds((current) => [...new Set([...current, candidateId])]);
+    setMemoryCaptureStatus(null);
+  }
+
+  const activeMemoryCandidate = recommendations.status === "success"
+    ? visibleMemoryCandidates(recommendations.memoryCandidates)[0] ?? null
+    : null;
 
   function applySuggestionToRequest(title: string, why: string) {
     setForm((current) => ({
@@ -484,6 +540,32 @@ export default function GiftStartPage({
                       ))}
                     </ul>
                   </section>
+                )}
+
+                {memoryCaptureStatus && (
+                  <div
+                    className={[
+                      "mt-3 rounded-2xl p-3 text-sm font-bold ring-1",
+                      memoryCaptureStatus.kind === "saveFailed"
+                        ? "bg-rose-50 text-rose-700 ring-rose-100 dark:bg-rose-400/10 dark:text-rose-100 dark:ring-rose-400/20"
+                        : "bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-400/10 dark:text-emerald-100 dark:ring-emerald-400/20",
+                    ].join(" ")}
+                    role={memoryCaptureStatus.kind === "saveFailed" ? "alert" : "status"}
+                    aria-live="polite"
+                  >
+                    {memoryT(`status.${memoryCaptureStatus.kind}`)}
+                  </div>
+                )}
+
+                {activeMemoryCandidate && (
+                  <MemoryCaptureCard
+                    key={`${activeMemoryCandidate.id}:${memoryCaptureRetryNonce}`}
+                    className="mt-3"
+                    candidate={activeMemoryCandidate}
+                    onConfirm={handleMemoryCandidateConfirm}
+                    onDismiss={handleMemoryCandidateDismiss}
+                    loading={savingMemoryCandidateId === activeMemoryCandidate.id}
+                  />
                 )}
 
                 {recommendations.usedLegacyFallback && (

@@ -1,0 +1,33 @@
+{
+  "title": "Я дізнався щось корисне про цю людину",
+  "description": "Збережи це лише якщо інформація правильна.",
+  "save": "Зберегти",
+  "saving": "Збереження…",
+  "notNow": "Не зараз",
+  "highConfidence": "Висока впевненість",
+  "retry": "Спробувати ще раз",
+  "status": {
+    "saved": "Збережено в пам’яті Happy.",
+    "alreadySaved": "Ця інформація вже збережена в пам’яті Happy.",
+    "saveFailed": "Зараз не вдалося зберегти цю інформацію. Спробуй ще раз."
+  },
+  "labels": {
+    "interest": "Любить",
+    "hobby": "Хобі",
+    "favorite_brand": "Улюблений бренд",
+    "disliked_gift": "Уникати",
+    "preferred_style": "Бажаний стиль"
+  },
+  "aria": {
+    "card": "Пропозиція зберегти інформацію",
+    "save": "Зберегти інформацію: {value}",
+    "notNow": "Відхилити інформацію: {value}",
+    "candidate": {
+      "interest": "Любить {value}",
+      "hobby": "Хобі: {value}",
+      "favorite_brand": "Улюблений бренд: {value}",
+      "disliked_gift": "Уникати: {value}",
+      "preferred_style": "Бажаний стиль: {value}"
+    }
+  }
+}

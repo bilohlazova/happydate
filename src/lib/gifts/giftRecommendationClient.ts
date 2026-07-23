@@ -4,6 +4,7 @@ import type {
 } from "../gift-intelligence";
 import type { GiftDiscoveryPromptInput } from "../gift-discovery/index.ts";
 import type { GiftDiscoveryAnswers } from "../gift-discovery/index.ts";
+import type { MemoryCaptureCandidate } from "../memory-capture";
 
 export interface LegacyGiftIdea {
   title?: unknown;
@@ -16,6 +17,7 @@ export interface GiftSuggestionApiResponse {
   suggestions?: unknown;
   followUpQuestions?: unknown;
   discovery?: unknown;
+  memoryCandidates?: unknown;
   ideas?: unknown;
   error?: unknown;
   cached?: unknown;
@@ -46,6 +48,7 @@ export type GiftRecommendationsResult =
       suggestions: GiftRecommendationSuggestion[];
       followUpQuestions: string[];
       discovery: GiftDiscoveryPromptInput | null;
+      memoryCandidates: MemoryCaptureCandidate[];
       usedLegacyFallback: boolean;
       cached: boolean;
     }
@@ -96,6 +99,25 @@ function discovery(value: unknown): GiftDiscoveryPromptInput | null {
   return isDiscoveryPromptInput(value) ? value : null;
 }
 
+function isMemoryCaptureCandidate(value: unknown): value is MemoryCaptureCandidate {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.type === "string" &&
+    typeof candidate.value === "string" &&
+    candidate.confidence === "high" &&
+    typeof candidate.source === "string" &&
+    candidate.requiresConfirmation === true
+  );
+}
+
+function memoryCandidates(value: unknown): MemoryCaptureCandidate[] {
+  return Array.isArray(value)
+    ? value.filter(isMemoryCaptureCandidate)
+    : [];
+}
+
 export function mapLegacyIdeaToStructuredSuggestion(
   idea: LegacyGiftIdea,
 ): GiftRecommendationSuggestion | null {
@@ -125,6 +147,7 @@ export function normalizeGiftSuggestionResponse(
       suggestions: response.suggestions.filter(isStructuredSuggestion),
       followUpQuestions: followUpQuestions(response.followUpQuestions),
       discovery: discovery(response.discovery),
+      memoryCandidates: memoryCandidates(response.memoryCandidates),
       usedLegacyFallback: false,
     };
   }
@@ -137,6 +160,7 @@ export function normalizeGiftSuggestionResponse(
         .filter((item): item is GiftRecommendationSuggestion => Boolean(item)),
       followUpQuestions: followUpQuestions(response.followUpQuestions),
       discovery: discovery(response.discovery),
+      memoryCandidates: memoryCandidates(response.memoryCandidates),
       usedLegacyFallback: true,
     };
   }
@@ -146,6 +170,7 @@ export function normalizeGiftSuggestionResponse(
     suggestions: [],
     followUpQuestions: followUpQuestions(response.followUpQuestions),
     discovery: discovery(response.discovery),
+    memoryCandidates: memoryCandidates(response.memoryCandidates),
     usedLegacyFallback: false,
   };
 }

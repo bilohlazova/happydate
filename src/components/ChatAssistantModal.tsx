@@ -273,7 +273,7 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
     }
   }
 
-  function handlePotentialMemoryDetection(content: string, messageId: string) {
+  function handlePotentialMemoryDetection(content: string, messageId: string): ChatPersonContext {
     const nextPersonContext = updatePersonContextFromUserMessage(content);
     memoryDetectionAbortRef.current?.abort();
     memoryDetectionAbortRef.current = null;
@@ -293,11 +293,11 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
         error: null,
         personId: nextPersonContext.activePersonId,
       }));
-      return;
+      return nextPersonContext;
     }
 
     const personId = nextPersonContext.activePersonId;
-    if (!personId) return;
+    if (!personId) return nextPersonContext;
     const controller = new AbortController();
     const requestId = ++memoryDetectionRequestRef.current;
     memoryDetectionAbortRef.current = controller;
@@ -316,22 +316,24 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
       requestId,
       signal: controller.signal,
     });
+    return nextPersonContext;
   }
 
   function commitFirstMessage(content: string) {
     const userMessage: ChatMessage = { id: nextMessageId(), role: "user", content, status: "complete" };
     const assistantMessage: ChatMessage = { id: nextMessageId(), role: "assistant", content: "", status: "streaming" };
     setMessages([userMessage, assistantMessage]);
-    handlePotentialMemoryDetection(content, userMessage.id);
+    const nextPersonContext = handlePotentialMemoryDetection(content, userMessage.id);
     setIsHomeExiting(false);
     homeTimerRef.current = null;
-    void streamAssistantResponse(content, [], assistantMessage.id);
+    void streamAssistantResponse(content, [], assistantMessage.id, nextPersonContext);
   }
 
   async function streamAssistantResponse(
     content: string,
     conversation: ReturnType<typeof buildConversationHistory>,
     assistantMessageId: string,
+    requestPersonContext: ChatPersonContext = personContext,
   ) {
     abortControllerRef.current?.abort();
     const controller = new AbortController();
@@ -365,6 +367,8 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
             events: homeContext.isAuthenticated ? homeContext.events : [],
             people: homeContext.isAuthenticated ? homeContext.people : [],
             memories: homeContext.isAuthenticated ? homeContext.memories : [],
+            activePersonId: homeContext.isAuthenticated ? requestPersonContext.activePersonId : null,
+            personResolutionStatus: homeContext.isAuthenticated ? requestPersonContext.resolutionStatus : "none",
           },
         }),
         signal: controller.signal,
@@ -443,8 +447,8 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
     const userMessage: ChatMessage = { id: nextMessageId(), role: "user", content, status: "complete" };
     const assistantMessage: ChatMessage = { id: nextMessageId(), role: "assistant", content: "", status: "streaming" };
     setMessages((current) => [...current, userMessage, assistantMessage]);
-    handlePotentialMemoryDetection(content, userMessage.id);
-    void streamAssistantResponse(content, conversation, assistantMessage.id);
+    const nextPersonContext = handlePotentialMemoryDetection(content, userMessage.id);
+    void streamAssistantResponse(content, conversation, assistantMessage.id, nextPersonContext);
   }
 
   async function confirmMemoryCandidate(candidateId: string) {

@@ -110,6 +110,82 @@ test("people validation rejects more than twenty and unsafe field values", () =>
   } })).success, false);
 });
 
+test("active person context accepts only ids from the existing people list", () => {
+  const person = { id: "person-1", name: "Dima", relation: "sibling", birthday: null, gender: "male" };
+  const parsed = parseAssistantChatRequest(validRequest({
+    context: {
+      userName: null,
+      insight: null,
+      events: [],
+      people: [person],
+      activePersonId: "person-1",
+      personResolutionStatus: "resolved",
+    },
+  }));
+  assert.equal(parsed.success, true);
+  assert.equal(parsed.data.context.activePerson.name, "Dima");
+  assert.equal(parsed.data.context.personResolutionStatus, "resolved");
+
+  const invalid = parseAssistantChatRequest(validRequest({
+    context: {
+      userName: null,
+      insight: null,
+      events: [],
+      people: [person],
+      activePersonId: "not-owned-or-not-loaded",
+      personResolutionStatus: "resolved",
+    },
+  }));
+  assert.equal(invalid.success, true);
+  assert.equal(invalid.data.context.activePerson, null);
+
+  const malformed = parseAssistantChatRequest(validRequest({
+    context: {
+      userName: null,
+      insight: null,
+      events: [],
+      people: [person],
+      activePersonId: { id: "person-1" },
+      personResolutionStatus: "unexpected",
+    },
+  }));
+  assert.equal(malformed.success, true);
+  assert.equal(malformed.data.context.activePerson, null);
+  assert.equal(malformed.data.context.personResolutionStatus, "none");
+});
+
+test("ACTIVE PERSON section renders only for a valid resolved person and never exposes ids", () => {
+  const person = { id: "private-active-id", name: "Dima", relation: "sibling", birthday: null, gender: "male" };
+  const parsed = parseAssistantChatRequest(validRequest({
+    context: {
+      userName: null,
+      insight: null,
+      events: [],
+      people: [person],
+      activePersonId: "private-active-id",
+      personResolutionStatus: "resolved",
+    },
+  }));
+  assert.equal(parsed.success, true);
+  const formatted = formatAssistantContext(parsed.data.context);
+  assert.match(formatted, /ACTIVE PERSON[\s\S]*Dima/);
+  assert.doesNotMatch(formatted, /private-active-id/);
+
+  const invalid = parseAssistantChatRequest(validRequest({
+    context: {
+      userName: null,
+      insight: null,
+      events: [],
+      people: [person],
+      activePersonId: "missing",
+      personResolutionStatus: "resolved",
+    },
+  }));
+  assert.equal(invalid.success, true);
+  assert.doesNotMatch(formatAssistantContext(invalid.data.context) ?? "", /ACTIVE PERSON/);
+  assert.match(buildAssistantSystemPrompt("en"), /When ACTIVE PERSON is present/);
+});
+
 test("PEOPLE prompt is non-JSON, omits IDs, and works for every locale", () => {
   const context = {
     userName: null,
@@ -398,6 +474,9 @@ test("chat frontend uses the same-origin relative endpoint without localhost or 
   const modalSource = await readFile(new URL("../src/components/ChatAssistantModal.tsx", import.meta.url), "utf8");
   const routeSource = await readFile(new URL("../src/app/api/ai-chat/route.ts", import.meta.url), "utf8");
   assert.match(modalSource, /fetch\("\/api\/ai-chat"/);
+  assert.match(modalSource, /activePersonId: homeContext\.isAuthenticated \? requestPersonContext\.activePersonId : null/);
+  assert.match(modalSource, /personResolutionStatus: homeContext\.isAuthenticated \? requestPersonContext\.resolutionStatus : "none"/);
+  assert.doesNotMatch(modalSource, /activePerson:\s*\{/);
   assert.doesNotMatch(modalSource, /localhost|https?:\/\//);
   assert.doesNotMatch(routeSource, /Access-Control-Allow-Origin/);
   assert.doesNotMatch(routeSource, /NEXT_PUBLIC_(?:OPENAI|UPSTASH)/);

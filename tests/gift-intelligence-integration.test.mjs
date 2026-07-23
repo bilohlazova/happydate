@@ -158,6 +158,7 @@ test("Gift AI instructions preserve duplicate avoidance and missing-data behavio
     budget: { amount: null, currency: null },
     season: "none",
     preferences: { likes: [], dislikes: [], interests: [], wishes: [], importantFacts: [] },
+    knowledge: { interests: [], hobbies: [], favoriteBrands: [], dislikedGifts: [], preferredStyles: [] },
     memories: [],
     gifts: {
       active: [],
@@ -176,5 +177,8 @@ test("Gift AI instructions preserve duplicate avoidance and missing-data behavio
   assert.match(instructions, /nextRecommendedQuestion/);
   assert.match(instructions, /followUpQuestions, return at most 3 canonical question IDs/);
   assert.match(instructions, /Avoid every value in duplicateAvoidance\.previousGiftValues/);
+  assert.match(instructions, /context\.knowledge as confirmed long-term memory/);
+  assert.match(instructions, /Use stored knowledge before asking follow-up questions/);
+  assert.match(instructions, /current-session discoveryAnswers first, then confirmed context\.knowledge/);
   assert.match(repairInstructions, /only repair attempt/);
 });

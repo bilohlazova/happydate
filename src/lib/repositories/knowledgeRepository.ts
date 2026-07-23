@@ -24,6 +24,12 @@ export interface GetKnowledgeForPersonInput {
   includeArchived?: boolean;
 }
 
+export interface ListKnowledgeForOwnedPersonInput {
+  userId: string;
+  personId: string;
+  includeArchived?: boolean;
+}
+
 export interface GetKnowledgeContextInput
   extends ListKnowledgeInput,
     KnowledgeContextOptions {}
@@ -147,6 +153,31 @@ export async function listKnowledgeRowsForPerson({
   return data ?? [];
 }
 
+export async function listKnowledgeRowsForOwnedPersonOnServer({
+  userId,
+  personId,
+  includeArchived = false,
+}: ListKnowledgeForOwnedPersonInput): Promise<MemoryRow[]> {
+  let query = serverSupabaseClient()
+    .from("memories")
+    .select(MEMORY_ROW_COLUMNS)
+    .eq("user_id", userId)
+    .eq("person_id", personId);
+
+  if (!includeArchived) {
+    query = query.eq("is_active", true);
+  }
+
+  const { data, error } = await query
+    .order("created_at", { ascending: false })
+    .returns<MemoryRow[]>();
+
+  if (error) {
+    throw repositoryError("listKnowledgeRowsForOwnedPersonOnServer", error.message);
+  }
+  return data ?? [];
+}
+
 export async function listKnowledge(
   input: ListKnowledgeInput
 ): Promise<KnowledgeItem[]> {
@@ -163,6 +194,14 @@ export async function getKnowledgeForPerson(
   return (
     getPersonKnowledge(buildKnowledgeSnapshot(items), input.personId) ??
     buildPersonKnowledgeProfile(input.personId, [])
+  );
+}
+
+export async function listKnowledgeForOwnedPersonOnServer(
+  input: ListKnowledgeForOwnedPersonInput
+): Promise<KnowledgeItem[]> {
+  return mapLegacyMemoriesToKnowledge(
+    await listKnowledgeRowsForOwnedPersonOnServer(input)
   );
 }
 

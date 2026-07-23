@@ -74,15 +74,15 @@ function alreadyKnown(
     case "relationshipStrength":
       return Boolean(context.person.relationKey);
     case "interests":
-      return context.preferences.interests.length > 0;
+      return context.knowledge.interests.length > 0 || context.preferences.interests.length > 0;
     case "hobbies":
-      return context.preferences.interests.length > 0;
+      return context.knowledge.hobbies.length > 0;
     case "dislikedGifts":
-      return context.preferences.dislikes.length > 0;
+      return context.knowledge.dislikedGifts.length > 0 || context.preferences.dislikes.length > 0;
     case "preferredStyle":
-      return context.preferences.likes.length > 0 || context.preferences.wishes.length > 0;
+      return context.knowledge.preferredStyles.length > 0 || context.preferences.wishes.length > 0;
     case "favoriteBrands":
-      return context.preferences.likes.length > 0 || context.preferences.wishes.length > 0;
+      return context.knowledge.favoriteBrands.length > 0;
     case "urgency":
       return context.event.id !== null || context.event.date !== null || context.event.daysUntil !== null;
   }

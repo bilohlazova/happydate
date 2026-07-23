@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
-import { mapLegacyMemoriesToKnowledge, type KnowledgeItem } from "@/lib/knowledge";
-import { MEMORY_ROW_COLUMNS, type MemoryRow } from "./memory.types";
+import type { KnowledgeItem } from "@/lib/knowledge";
+import { listKnowledgeForOwnedPersonOnServer } from "./knowledgeRepository";
 import type {
   PersonGender,
   PersonRelationKey,
@@ -63,23 +63,12 @@ export async function getCachedGiftIdeas(person: OwnedGiftPerson, occasion: stri
 export async function loadGiftIntelligenceSource(
   person: OwnedGiftPerson,
 ): Promise<GiftIntelligenceSource> {
-  const client = adminClient();
-  const memoryResult = await client
-    .from("memories")
-    .select(MEMORY_ROW_COLUMNS)
-    .eq("user_id", person.userId)
-    .eq("person_id", person.id)
-    .eq("is_active", true)
-    .order("created_at", { ascending: false })
-    .returns<MemoryRow[]>();
-  if (memoryResult.error) {
-    throw new Error(`[giftIntelligenceRepository] knowledge read failed: ${memoryResult.error.message}`);
-  }
-  const knowledge = mapLegacyMemoriesToKnowledge(memoryResult.data ?? []);
-
   return {
     person,
-    knowledge,
+    knowledge: await listKnowledgeForOwnedPersonOnServer({
+      userId: person.userId,
+      personId: person.id,
+    }),
   };
 }
 

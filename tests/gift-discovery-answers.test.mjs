@@ -26,6 +26,13 @@ function context(overrides = {}) {
       wishes: [],
       importantFacts: [],
     },
+    knowledge: {
+      interests: [],
+      hobbies: [],
+      favoriteBrands: [],
+      dislikedGifts: [],
+      preferredStyles: [],
+    },
     memories: [],
     gifts: {
       active: [],
@@ -133,10 +140,15 @@ test("session answers enrich context without mutating the original and remove ma
   assert.deepEqual(original.preferences.interests, []);
   assert.equal(enriched.budget.amount, 300);
   assert.equal(enriched.budget.currency, "PLN");
-  assert.deepEqual(enriched.preferences.interests, ["coffee", "cycling"]);
+  assert.deepEqual(enriched.preferences.interests, ["cycling", "coffee"]);
   assert.deepEqual(enriched.preferences.likes, ["Kindle"]);
   assert.deepEqual(enriched.preferences.wishes, ["practical"]);
   assert.deepEqual(enriched.preferences.dislikes, ["plastic flowers"]);
+  assert.deepEqual(enriched.knowledge.interests, ["coffee"]);
+  assert.deepEqual(enriched.knowledge.hobbies, ["cycling"]);
+  assert.deepEqual(enriched.knowledge.favoriteBrands, ["Kindle"]);
+  assert.deepEqual(enriched.knowledge.preferredStyles, ["practical"]);
+  assert.deepEqual(enriched.knowledge.dislikedGifts, ["plastic flowers"]);
   assert.deepEqual(enriched.discoveryAnswers, {
     budget: 300,
     interests: "coffee",
@@ -161,6 +173,13 @@ test("session answers enrich context without mutating the original and remove ma
 test("session answers take precedence while existing repository values are preserved", () => {
   const enriched = applyGiftDiscoveryAnswersToContext(context({
     budget: { amount: 100, currency: "EUR" },
+    knowledge: {
+      interests: ["Books"],
+      hobbies: [],
+      favoriteBrands: ["Coffee"],
+      dislikedGifts: [],
+      preferredStyles: [],
+    },
     preferences: {
       likes: ["Coffee"],
       dislikes: ["Noise"],
@@ -177,7 +196,8 @@ test("session answers take precedence while existing repository values are prese
 
   assert.deepEqual(enriched.budget, { amount: 500, currency: "EUR" });
   assert.deepEqual(enriched.preferences.interests, ["Books"]);
-  assert.deepEqual(enriched.preferences.likes, ["Coffee", "Kindle"]);
+  assert.deepEqual(enriched.preferences.likes, ["Kindle", "Coffee"]);
+  assert.deepEqual(enriched.knowledge.favoriteBrands, ["Kindle", "Coffee"]);
 });
 
 test("answered and skipped questions disappear, but skipped questions do not increase completion", () => {

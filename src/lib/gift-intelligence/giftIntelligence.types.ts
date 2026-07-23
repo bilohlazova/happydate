@@ -105,6 +105,13 @@ export interface GiftRecommendationContext {
     wishes: string[];
     importantFacts: string[];
   };
+  knowledge: {
+    interests: string[];
+    hobbies: string[];
+    favoriteBrands: string[];
+    dislikedGifts: string[];
+    preferredStyles: string[];
+  };
   memories: Array<{
     id: string;
     value: string;

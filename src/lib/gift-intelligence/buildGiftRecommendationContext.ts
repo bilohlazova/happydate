@@ -85,7 +85,11 @@ function knowledgeValue(item: GiftIntelligenceKnowledgeInput): string | null {
 }
 
 function activeAiEligible(item: GiftIntelligenceKnowledgeInput): boolean {
-  return item.state !== "archived" && item.kind !== "journal" && item.aiEligible !== false;
+  return (
+    (item.state === "active" || item.state === "confirmed") &&
+    item.kind !== "journal" &&
+    item.aiEligible !== false
+  );
 }
 
 function pushUnique(target: string[], value: string | null): void {
@@ -121,13 +125,21 @@ function sortedDate(value: { occurredOn?: string | null; createdAt?: string | nu
 
 function classifyKnowledge(
   knowledge: readonly GiftIntelligenceKnowledgeInput[],
-): GiftRecommendationContext["preferences"] & Pick<GiftRecommendationContext, "memories"> {
+): GiftRecommendationContext["preferences"] &
+  Pick<GiftRecommendationContext, "knowledge" | "memories"> {
   const preferences: GiftRecommendationContext["preferences"] = {
     likes: [],
     dislikes: [],
     interests: [],
     wishes: [],
     importantFacts: [],
+  };
+  const storedKnowledge: GiftRecommendationContext["knowledge"] = {
+    interests: [],
+    hobbies: [],
+    favoriteBrands: [],
+    dislikedGifts: [],
+    preferredStyles: [],
   };
   const memories: GiftRecommendationContext["memories"] = [];
   const seenMemories = new Set<string>();
@@ -146,9 +158,25 @@ function classifyKnowledge(
         memories.push({ id: item.id, value, occurredOn: item.occurredOn ?? null });
       }
     } else if (item.kind === "preference") {
-      if (item.polarity === "dislikes" || item.polarity === "avoids") {
+      if (item.title === "favorite_brand") {
+        pushUnique(storedKnowledge.favoriteBrands, value);
+        pushUnique(preferences.likes, value);
+      } else if (item.title === "disliked_gift") {
+        pushUnique(storedKnowledge.dislikedGifts, value);
+        pushUnique(preferences.dislikes, value);
+      } else if (item.title === "preferred_style") {
+        pushUnique(storedKnowledge.preferredStyles, value);
+        pushUnique(preferences.wishes, value);
+      } else if (item.category === "hobby") {
+        pushUnique(storedKnowledge.hobbies, value);
+        pushUnique(preferences.interests, value);
+      } else if (item.category === "interest") {
+        pushUnique(storedKnowledge.interests, value);
+        pushUnique(preferences.interests, value);
+      } else if (item.polarity === "dislikes" || item.polarity === "avoids") {
         pushUnique(preferences.dislikes, value);
       } else if (item.category && INTEREST_CATEGORIES.has(item.category)) {
+        pushUnique(storedKnowledge.interests, value);
         pushUnique(preferences.interests, value);
       } else if (item.polarity === "likes" || item.polarity === "prefers") {
         pushUnique(preferences.likes, value);
@@ -158,7 +186,7 @@ function classifyKnowledge(
     }
   }
 
-  return { ...preferences, memories };
+  return { ...preferences, knowledge: storedKnowledge, memories };
 }
 
 function buildGiftProjection(
@@ -226,7 +254,7 @@ export function buildGiftRecommendationContext({
   const eventId = event?.id ?? null;
   const scopedKnowledge = relevantKnowledge(personId, knowledge);
   const scopedGifts = relevantGifts(personId, eventId, gifts);
-  const { memories, ...preferences } = classifyKnowledge(scopedKnowledge);
+  const { knowledge: storedKnowledge, memories, ...preferences } = classifyKnowledge(scopedKnowledge);
   const giftProjection = buildGiftProjection(scopedGifts);
 
   const context: GiftRecommendationContext = {
@@ -250,6 +278,7 @@ export function buildGiftRecommendationContext({
     },
     season: seasonFor(currentDate),
     preferences,
+    knowledge: storedKnowledge,
     memories,
     gifts: giftProjection,
     duplicateAvoidance: {

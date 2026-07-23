@@ -22,6 +22,13 @@ function context(overrides = {}) {
       wishes: [],
       importantFacts: [],
     },
+    knowledge: {
+      interests: [],
+      hobbies: [],
+      favoriteBrands: [],
+      dislikedGifts: [],
+      preferredStyles: [],
+    },
     memories: [],
     gifts: {
       active: [],

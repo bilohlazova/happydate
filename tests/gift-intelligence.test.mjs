@@ -100,6 +100,7 @@ test("production Gift AI has no direct Supabase or legacy model dependency", asy
     budget: { amount: null, currency: null },
     season: "none",
     preferences: { likes: [], dislikes: [], interests: [], wishes: [], importantFacts: [] },
+    knowledge: { interests: [], hobbies: [], favoriteBrands: [], dislikedGifts: [], preferredStyles: [] },
     memories: [],
     gifts: {
       active: [],
@@ -162,13 +163,22 @@ test("ownership verification precedes cache and every protected read", async () 
 });
 
 test("Knowledge and legacy Notes reads are user and person scoped", async () => {
-  const repository = await readFile(
+  const [repository, knowledgeRepository] = await Promise.all([
+    readFile(
     new URL("../src/lib/repositories/giftIntelligenceRepository.server.ts", import.meta.url),
     "utf8",
-  );
+    ),
+    readFile(
+      new URL("../src/lib/repositories/knowledgeRepository.ts", import.meta.url),
+      "utf8",
+    ),
+  ]);
   assert.match(repository, /\.eq\("id", personId\)[\s\S]*?\.eq\("user_id", userId\)/);
   const knowledgeRead = repository.slice(repository.indexOf("loadGiftIntelligenceSource"));
-  assert.match(knowledgeRead, /\.from\("memories"\)[\s\S]*?\.eq\("user_id", person\.userId\)[\s\S]*?\.eq\("person_id", person\.id\)/);
+  assert.match(knowledgeRead, /listKnowledgeForOwnedPersonOnServer/);
+  assert.doesNotMatch(knowledgeRead, /\.from\("memories"\)/);
+  assert.match(knowledgeRepository, /listKnowledgeRowsForOwnedPersonOnServer/);
+  assert.match(knowledgeRepository, /\.eq\("user_id", userId\)[\s\S]*?\.eq\("person_id", personId\)/);
   const notesRead = repository.slice(repository.indexOf("loadLegacyGiftNotes"));
   assert.match(notesRead, /\.from\("notes"\)[\s\S]*?\.eq\("user_id", person\.userId\)[\s\S]*?\.eq\("person_id", person\.id\)/);
 });

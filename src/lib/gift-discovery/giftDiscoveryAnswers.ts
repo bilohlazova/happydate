@@ -72,11 +72,12 @@ function canonicalEnum<T extends string>(value: unknown, allowed: Set<T>): T | n
   return typeof value === "string" && allowed.has(value as T) ? value as T : null;
 }
 
-function pushUnique(target: string[], value: string | null): void {
+function pushPreferred(target: string[], value: string | null): void {
   if (!value) return;
   const key = value.toLocaleLowerCase();
-  if (target.some((item) => item.toLocaleLowerCase() === key)) return;
-  target.push(value);
+  const existing = target.findIndex((item) => item.toLocaleLowerCase() === key);
+  if (existing >= 0) target.splice(existing, 1);
+  target.unshift(value);
 }
 
 function removeMissing(
@@ -156,6 +157,13 @@ export function applyGiftDiscoveryAnswersToContext(
       wishes: [...context.preferences.wishes],
       importantFacts: [...context.preferences.importantFacts],
     },
+    knowledge: {
+      interests: [...context.knowledge.interests],
+      hobbies: [...context.knowledge.hobbies],
+      favoriteBrands: [...context.knowledge.favoriteBrands],
+      dislikedGifts: [...context.knowledge.dislikedGifts],
+      preferredStyles: [...context.knowledge.preferredStyles],
+    },
     memories: context.memories.map((memory) => ({ ...memory })),
     gifts: {
       active: context.gifts.active.map((gift) => ({ ...gift })),
@@ -177,23 +185,28 @@ export function applyGiftDiscoveryAnswersToContext(
     next.missingSignals = removeMissing(next.missingSignals, "missing_budget");
   }
   if (answers.interests) {
-    pushUnique(next.preferences.interests, answers.interests);
+    pushPreferred(next.knowledge.interests, answers.interests);
+    pushPreferred(next.preferences.interests, answers.interests);
     next.missingSignals = removeMissing(next.missingSignals, "missing_preferences");
   }
   if (answers.hobbies) {
-    pushUnique(next.preferences.interests, answers.hobbies);
+    pushPreferred(next.knowledge.hobbies, answers.hobbies);
+    pushPreferred(next.preferences.interests, answers.hobbies);
     next.missingSignals = removeMissing(next.missingSignals, "missing_preferences");
   }
   if (answers.favoriteBrands) {
-    pushUnique(next.preferences.likes, answers.favoriteBrands);
+    pushPreferred(next.knowledge.favoriteBrands, answers.favoriteBrands);
+    pushPreferred(next.preferences.likes, answers.favoriteBrands);
     next.missingSignals = removeMissing(next.missingSignals, "missing_preferences");
   }
   if (answers.preferredStyle) {
-    pushUnique(next.preferences.wishes, answers.preferredStyle);
+    pushPreferred(next.knowledge.preferredStyles, answers.preferredStyle);
+    pushPreferred(next.preferences.wishes, answers.preferredStyle);
     next.missingSignals = removeMissing(next.missingSignals, "missing_preferences");
   }
   if (answers.dislikedGifts) {
-    pushUnique(next.preferences.dislikes, answers.dislikedGifts);
+    pushPreferred(next.knowledge.dislikedGifts, answers.dislikedGifts);
+    pushPreferred(next.preferences.dislikes, answers.dislikedGifts);
     next.missingSignals = removeMissing(next.missingSignals, "missing_dislikes");
   }
   if (answers.relationshipStrength) {

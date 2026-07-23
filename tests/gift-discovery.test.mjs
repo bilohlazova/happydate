@@ -36,6 +36,13 @@ function context(overrides = {}) {
       wishes: [],
       importantFacts: [],
     },
+    knowledge: {
+      interests: [],
+      hobbies: [],
+      favoriteBrands: [],
+      dislikedGifts: [],
+      preferredStyles: [],
+    },
     memories: [],
     gifts: {
       active: [],
@@ -150,6 +157,13 @@ test("questions are not asked for information already present in context", () =>
         wishes: [],
         importantFacts: [],
       },
+      knowledge: {
+        interests: ["travel"],
+        hobbies: ["photography"],
+        favoriteBrands: ["Kindle"],
+        dislikedGifts: ["synthetic flowers"],
+        preferredStyles: ["practical"],
+      },
       missingSignals: [
         "missing_budget",
         "missing_relationship",
@@ -161,6 +175,33 @@ test("questions are not asked for information already present in context", () =>
   });
   assert.deepEqual(session.questions, []);
   assert.equal(session.nextRecommendedQuestion, null);
+});
+
+test("stored knowledge suppresses already answered discovery questions", () => {
+  const session = buildGiftDiscoverySession({
+    context: context({
+      preferences: {
+        likes: [],
+        dislikes: [],
+        interests: [],
+        wishes: [],
+        importantFacts: [],
+      },
+      knowledge: {
+        interests: ["motorcycles"],
+        hobbies: ["photography"],
+        favoriteBrands: ["Garmin"],
+        dislikedGifts: ["plastic souvenirs"],
+        preferredStyles: ["practical"],
+      },
+      missingSignals: [
+        "missing_preferences",
+        "missing_dislikes",
+      ],
+    }),
+  });
+
+  assert.deepEqual(session.questions, []);
 });
 
 test("completion score reflects context completeness", () => {

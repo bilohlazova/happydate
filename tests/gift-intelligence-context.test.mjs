@@ -61,6 +61,10 @@ test("complete Gift Intelligence context collects canonical person, event, knowl
       knowledge({ id: "like", category: "coffee", polarity: "likes", value: "Flat white" }),
       knowledge({ id: "dislike", category: "food", polarity: "dislikes", value: "Spicy food" }),
       knowledge({ id: "interest", category: "book", polarity: "prefers", value: "Crime novels" }),
+      knowledge({ id: "hobby", category: "hobby", polarity: null, value: "Photography" }),
+      knowledge({ id: "brand", category: "general", title: "favorite_brand", polarity: null, value: "Garmin" }),
+      knowledge({ id: "avoid", category: "general", title: "disliked_gift", polarity: null, value: "Plastic souvenirs" }),
+      knowledge({ id: "style", category: "general", title: "preferred_style", polarity: null, value: "Practical" }),
       knowledge({ id: "wish", kind: "wish", category: "gift", polarity: null, value: "Trip to Japan" }),
       knowledge({ id: "fact", kind: "fact", category: "important", polarity: null, value: "Works remotely" }),
       knowledge({ id: "memory", kind: "experience", category: "travel", polarity: null, value: "Zakopane trip", occurredOn: "2025-05-01" }),
@@ -85,16 +89,47 @@ test("complete Gift Intelligence context collects canonical person, event, knowl
   });
   assert.deepEqual(context.budget, { amount: 250, currency: "PLN" });
   assert.equal(context.season, "christmas");
-  assert.deepEqual(context.preferences.likes, ["Flat white"]);
-  assert.deepEqual(context.preferences.dislikes, ["Spicy food"]);
-  assert.deepEqual(context.preferences.interests, ["Crime novels"]);
-  assert.deepEqual(context.preferences.wishes, ["Trip to Japan"]);
+  assert.deepEqual(context.preferences.likes, ["Garmin", "Flat white"]);
+  assert.deepEqual(context.preferences.dislikes, ["Plastic souvenirs", "Spicy food"]);
+  assert.deepEqual(context.preferences.interests, ["Photography", "Crime novels"]);
+  assert.deepEqual(context.preferences.wishes, ["Practical", "Trip to Japan"]);
+  assert.deepEqual(context.knowledge, {
+    interests: ["Crime novels"],
+    hobbies: ["Photography"],
+    favoriteBrands: ["Garmin"],
+    dislikedGifts: ["Plastic souvenirs"],
+    preferredStyles: ["Practical"],
+  });
   assert.deepEqual(context.preferences.importantFacts, ["Works remotely"]);
   assert.deepEqual(context.memories.map((item) => item.value), ["Zakopane trip"]);
   assert.deepEqual(context.gifts.active.map((item) => item.value), ["Coffee set"]);
   assert.deepEqual(context.gifts.previous.map((item) => item.value), ["Board game"]);
   assert.deepEqual(context.duplicateAvoidance.previousGiftValues, ["Board game"]);
   assert.deepEqual(context.missingSignals, []);
+});
+
+test("confirmed long-term knowledge is deterministic and ignores archived, inactive and unsupported items", () => {
+  const context = buildGiftRecommendationContext({
+    locale: "en",
+    currentDate: now,
+    person: { id: "person-1", relationKey: "friend", gender: "male", birthday: "1990-01-01" },
+    knowledge: [
+      knowledge({ id: "z-later", title: "favorite_brand", value: "Garmin", createdAt: "2026-07-10T00:00:00.000Z" }),
+      knowledge({ id: "a-earlier", title: "favorite_brand", value: "Aeropress", createdAt: "2026-07-10T00:00:00.000Z" }),
+      knowledge({ id: "archived", title: "favorite_brand", value: "Archived", state: "archived" }),
+      knowledge({ id: "inactive", title: "favorite_brand", value: "Inactive", aiEligible: false }),
+      knowledge({ id: "proposed", title: "favorite_brand", value: "Proposed", state: "proposed" }),
+      knowledge({ id: "journal", kind: "journal", value: "Private" }),
+      knowledge({ id: "note", kind: "note", value: "Loose note" }),
+    ],
+  });
+
+  assert.deepEqual(context.knowledge.favoriteBrands, ["Aeropress", "Garmin"]);
+  assert.equal(JSON.stringify(context).includes("Archived"), false);
+  assert.equal(JSON.stringify(context).includes("Inactive"), false);
+  assert.equal(JSON.stringify(context).includes("Proposed"), false);
+  assert.equal(JSON.stringify(context).includes("Private"), false);
+  assert.equal(JSON.stringify(context).includes("Loose note"), false);
 });
 
 test("missing information is exposed as missingSignals and never throws", () => {

@@ -1,29 +1,20 @@
-import { PRIORITY } from "../priorities";
+import { PRIORITY } from "../priorities.ts";
 import type { KnowledgeItem } from "../../knowledge/index.ts";
-import { consumerStoredType, consumerValue } from "../../knowledge/index.ts";
-import { Insight } from "../types";
+import { consumerValue } from "../../knowledge/index.ts";
+import { selectBrainLegacyFallbackSource } from "../brainSemanticMemoryAdapter.ts";
+import type { Insight } from "../types.ts";
 
 export interface MemoryEngineParams {
   memories?: KnowledgeItem[];
 }
 
-// Memory Engine owns genuine memories and notes — not structured
-// preferences, which belong to the Preference Engine.
-const MEMORY_TYPES = ["memory", "note", "story"] as const;
-
 export function buildMemoryInsight({
   memories = [],
 }: MemoryEngineParams): Insight | null {
-  // Find the first structured memory that should appear
-  // in the Care Feed.
-  const memory = memories.find(
-    (memory) =>
-      MEMORY_TYPES.includes(
-        consumerStoredType(memory) as (typeof MEMORY_TYPES)[number]
-      ) &&
-      memory.title?.trim() &&
-      consumerValue(memory)?.trim(),
-  );
+  const memory = selectBrainLegacyFallbackSource({
+    knowledge: memories,
+    sourceKind: "memory",
+  });
 
   if (!memory) {
     return null;

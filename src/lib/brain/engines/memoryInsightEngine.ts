@@ -5,32 +5,18 @@ import type {
 } from "../types";
 import {
   consumerIsActive,
-  consumerStoredType,
   consumerValue,
   type KnowledgeItem,
 } from "../../knowledge/index.ts";
+import {
+  buildPersonKnowledgeFromSemanticMemory,
+  getBrainSemanticMemorySourceProvenance,
+} from "../brainSemanticMemoryAdapter.ts";
+import type { PersonKnowledge } from "../types.ts";
 
 const GIFT_WINDOW_DAYS = 30;
 const MISSING_CONTEXT_WINDOW_DAYS = 14;
 const RECENT_MEMORY_WINDOW_DAYS = 30;
-
-const CONTEXT_TYPES = new Set([
-  "coffee",
-  "restaurant",
-  "food",
-  "movie",
-  "book",
-  "music",
-  "hobby",
-  "perfume",
-  "flower",
-  "travel",
-  "sport",
-  "pet",
-  "preference",
-]);
-
-const MEMORY_TYPES = new Set(["memory", "story"]);
 
 /**
  * Event Insight uses 800 for an event inside seven days. Keeping this engine
@@ -47,10 +33,6 @@ export interface MemoryInsightInput {
   event?: BrainEvent | null;
   memories: KnowledgeItem[];
   currentDate: Date;
-}
-
-function normalizedType(memory: KnowledgeItem): string {
-  return consumerStoredType(memory)?.trim().toLowerCase() ?? "";
 }
 
 function meaningfulValue(value: string | null): value is string {
@@ -80,20 +62,59 @@ function createdNewestFirst(first: KnowledgeItem, second: KnowledgeItem): number
   return dateDifference || first.id.localeCompare(second.id);
 }
 
+function buildPersonKnowledge(
+  memories: KnowledgeItem[],
+  personId: string,
+  currentDate = new Date(0),
+): PersonKnowledge {
+  return buildPersonKnowledgeFromSemanticMemory({
+    person: { id: personId, name: "" },
+    knowledge: memories,
+    currentDate,
+  });
+}
+
+function giftIdeasForPerson(
+  memories: KnowledgeItem[],
+  personId: string,
+  knowledge: PersonKnowledge,
+): KnowledgeItem[] {
+  if (knowledge.giftIdeas.length === 0) return [];
+  return memories
+    .filter(
+      (memory) =>
+        consumerIsActive(memory)
+        && memory.personId === personId
+        && getBrainSemanticMemorySourceProvenance(memory).isCurrentGiftIdea
+        && meaningfulValue(consumerValue(memory)),
+    )
+    .sort(createdNewestFirst);
+}
+
 /** Active, person-owned gift ideas with a meaningful saved value. */
 export function getGiftIdeasForPerson(
+  memories: KnowledgeItem[],
+  personId: string,
+): KnowledgeItem[] {
+  return giftIdeasForPerson(
+    memories,
+    personId,
+    buildPersonKnowledge(memories, personId),
+  );
+}
+
+function memoriesForPerson(
   memories: KnowledgeItem[],
   personId: string,
 ): KnowledgeItem[] {
   return memories
     .filter(
       (memory) =>
-        consumerIsActive(memory) &&
-        memory.personId === personId &&
-        normalizedType(memory) === "gift" &&
-        meaningfulValue(consumerValue(memory)),
+        consumerIsActive(memory)
+        && memory.personId === personId
+        && getBrainSemanticMemorySourceProvenance(memory).isMemory,
     )
-    .sort(createdNewestFirst);
+    .sort(newestFirst);
 }
 
 /** Active, person-owned memories, including the compatible legacy story type. */
@@ -101,14 +122,24 @@ export function getMemoriesForPerson(
   memories: KnowledgeItem[],
   personId: string,
 ): KnowledgeItem[] {
+  return memoriesForPerson(memories, personId);
+}
+
+function personContextRecords(
+  memories: KnowledgeItem[],
+  personId: string,
+  knowledge: PersonKnowledge,
+): KnowledgeItem[] {
+  if (knowledge.sourceMemoryIds.length === 0) return [];
   return memories
     .filter(
       (memory) =>
-        consumerIsActive(memory) &&
-        memory.personId === personId &&
-        MEMORY_TYPES.has(normalizedType(memory)),
+        consumerIsActive(memory)
+        && memory.personId === personId
+        && getBrainSemanticMemorySourceProvenance(memory).isMemoryInsightContext
+        && meaningfulValue(consumerValue(memory)),
     )
-    .sort(newestFirst);
+    .sort(createdNewestFirst);
 }
 
 /**
@@ -119,15 +150,11 @@ export function getPersonContextRecords(
   memories: KnowledgeItem[],
   personId: string,
 ): KnowledgeItem[] {
-  return memories
-    .filter(
-      (memory) =>
-        consumerIsActive(memory) &&
-        memory.personId === personId &&
-        CONTEXT_TYPES.has(normalizedType(memory)) &&
-        meaningfulValue(consumerValue(memory)),
-    )
-    .sort(createdNewestFirst);
+  return personContextRecords(
+    memories,
+    personId,
+    buildPersonKnowledge(memories, personId),
+  );
 }
 
 function startOfLocalDay(value: Date): number {
@@ -202,7 +229,7 @@ function recentMemory(
   currentDate: Date,
 ): KnowledgeItem | null {
   return (
-    getMemoriesForPerson(memories, personId).find((memory) => {
+    memoriesForPerson(memories, personId).find((memory) => {
       const relevantDate = memory.occurredOn ?? memory.createdAt;
       if (!relevantDate) return false;
       const ageInDays = daysFromCurrentDate(relevantDate, currentDate);
@@ -225,8 +252,9 @@ export function buildMemoryInsightForPerson({
   memories,
   currentDate,
 }: MemoryInsightInput): Insight | null {
-  const gifts = getGiftIdeasForPerson(memories, person.id);
-  const contextRecords = getPersonContextRecords(memories, person.id);
+  const knowledge = buildPersonKnowledge(memories, person.id, currentDate);
+  const gifts = giftIdeasForPerson(memories, person.id, knowledge);
+  const contextRecords = personContextRecords(memories, person.id, knowledge);
   const daysUntilEvent = getMemoryInsightEventDaysUntil(event, currentDate);
   const personName = compact(person.name, 60) || "tej osoby";
   const action = {

@@ -8,6 +8,7 @@ import {
 } from "../knowledge/index.ts";
 import {
   buildSemanticMemoryProjection,
+  semanticTagsForKnowledge,
   type SemanticMemoryTag,
 } from "../semantic-memory/index.ts";
 import type {
@@ -61,12 +62,48 @@ const COMPATIBILITY_CATEGORIES: Readonly<Record<string, CompatibilityCategory>> 
   sport: { key: "sports", requiredTag: "sport" },
 };
 
+const MEMORY_INSIGHT_CONTEXT_EXCLUSIONS = new Set([
+  "interest",
+  "drink",
+  "place",
+]);
+
+const LEGACY_FALLBACK_PREFERENCE_TAGS: Readonly<
+  Record<string, SemanticMemoryTag>
+> = {
+  flower: "lifestyle",
+  coffee: "favorite_food",
+  restaurant: "favorite_food",
+  food: "favorite_food",
+  movie: "movie",
+  book: "book",
+  music: "music",
+  perfume: "lifestyle",
+  hobby: "hobby",
+};
+
 const KNOWLEDGE_LIST_KEYS = Object.freeze([
   "interests",
   "favoritePlaces",
   "favoriteFood",
   "favoriteDrinks",
   "hobbies",
+  "books",
+  "movies",
+  "music",
+  "pets",
+  "perfumes",
+  "flowers",
+  "travel",
+  "sports",
+] as const satisfies readonly KnowledgeListKey[]);
+
+const REMINDER_CONTEXT_KEYS = Object.freeze([
+  "interests",
+  "favoriteDrinks",
+  "hobbies",
+  "favoriteFood",
+  "favoritePlaces",
   "books",
   "movies",
   "music",
@@ -103,6 +140,22 @@ export interface BuildPersonKnowledgeFromSemanticMemoryInput {
   person: BrainPerson;
   knowledge: KnowledgeItem[];
   currentDate?: Date;
+}
+
+export interface BrainSemanticMemorySourceProvenance {
+  tags: SemanticMemoryTag[];
+  isMemory: boolean;
+  isCurrentGiftIdea: boolean;
+  isPersonKnowledgeContext: boolean;
+  isMemoryInsightContext: boolean;
+  isLegacyFallbackMemory: boolean;
+  isLegacyFallbackNote: boolean;
+  isLegacyFallbackPreference: boolean;
+}
+
+export interface SelectBrainLegacyFallbackSourceInput {
+  knowledge: readonly KnowledgeItem[];
+  sourceKind: "memory" | "preference";
 }
 
 function normalizedStoredType(item: KnowledgeItem): string {
@@ -232,6 +285,109 @@ function currentGiftIdea(item: KnowledgeItem, storedType: string): boolean {
   return item.kind === "gift" && item.category !== "given";
 }
 
+/**
+ * Source-level compatibility metadata for Brain consumers that must preserve
+ * record ordering and duplicate behavior after Semantic Memory merges facts.
+ */
+export function getBrainSemanticMemorySourceProvenance(
+  item: KnowledgeItem,
+): BrainSemanticMemorySourceProvenance {
+  const storedType = normalizedStoredType(item);
+  const category = sourceCategory(item, storedType);
+  const tags = semanticTagsForKnowledge(toSemanticKnowledgeItem(item));
+  const compatibility = COMPATIBILITY_CATEGORIES[category];
+  const isStructuredKnowledge = Boolean(
+    compatibility && tags.includes(compatibility.requiredTag),
+  );
+  const legacyFallbackStoredType = consumerStoredType(item);
+  const legacyPreferenceTag = legacyFallbackStoredType
+    ? LEGACY_FALLBACK_PREFERENCE_TAGS[legacyFallbackStoredType]
+    : undefined;
+  const isLegacyFallbackNote = legacyFallbackStoredType === "note";
+  return {
+    tags,
+    isMemory:
+      tags.includes("memory")
+      && (storedType === "memory" || storedType === "story"),
+    isCurrentGiftIdea:
+      tags.includes("wishlist")
+      && currentGiftIdea(item, storedType),
+    isPersonKnowledgeContext: isStructuredKnowledge,
+    isMemoryInsightContext:
+      isStructuredKnowledge
+      && !MEMORY_INSIGHT_CONTEXT_EXCLUSIONS.has(category),
+    isLegacyFallbackMemory:
+      isLegacyFallbackNote
+      || (
+        tags.includes("memory")
+        && (
+          legacyFallbackStoredType === "memory"
+          || legacyFallbackStoredType === "story"
+        )
+      ),
+    isLegacyFallbackNote,
+    isLegacyFallbackPreference: Boolean(
+      legacyPreferenceTag && tags.includes(legacyPreferenceTag),
+    ),
+  };
+}
+
+function semanticProjectionSourceIds(
+  knowledge: readonly KnowledgeItem[],
+): Set<string> {
+  const projection = buildSemanticMemoryProjection({
+    knowledge: knowledge.map(toSemanticKnowledgeItem),
+    currentDate: new Date(0),
+  });
+  const sourceIds = new Set<string>();
+  for (const fact of projection.unassigned) {
+    for (const sourceId of fact.sourceKnowledgeIds) sourceIds.add(sourceId);
+  }
+  for (const person of projection.people) {
+    for (const fact of person.facts) {
+      for (const sourceId of fact.sourceKnowledgeIds) sourceIds.add(sourceId);
+    }
+    for (const timelineItem of person.timeline) {
+      for (const sourceId of timelineItem.sourceKnowledgeIds) {
+        sourceIds.add(sourceId);
+      }
+    }
+  }
+  return sourceIds;
+}
+
+/**
+ * Preserve the legacy no-people fallback's source-order first-match behavior.
+ * Notes are an explicit compatibility exception because Semantic Memory does
+ * not classify generic notes as facts.
+ */
+export function selectBrainLegacyFallbackSource({
+  knowledge,
+  sourceKind,
+}: SelectBrainLegacyFallbackSourceInput): KnowledgeItem | null {
+  const active = knowledge.filter(consumerIsActive);
+  const semanticSourceIds = semanticProjectionSourceIds(active);
+  return active.find((item) => {
+    if (!meaningful(item.title) || !meaningful(consumerValue(item))) {
+      return false;
+    }
+    const provenance = getBrainSemanticMemorySourceProvenance(item);
+    if (sourceKind === "memory") {
+      return (
+        provenance.isLegacyFallbackMemory
+        && (
+          provenance.isLegacyFallbackNote
+          || semanticSourceIds.has(item.id)
+        )
+      );
+    }
+    return (
+      provenance.isLegacyFallbackPreference
+      && semanticSourceIds.has(item.id)
+    );
+  }) ?? null;
+}
+
 /** Extract explicit user text only for existing eligible structured types. */
 export function extractPersonKnowledgeValue(
   item: KnowledgeItem,
@@ -256,6 +412,30 @@ export function countPersonKnownFacts(knowledge: PersonKnowledge): number {
   }
   for (const gift of knowledge.giftIdeas) facts.add(normalizedValue(gift.value));
   return facts.size;
+}
+
+/**
+ * Preserve Reminder Planning's established category order while keeping
+ * semantic PersonKnowledge as the single context source.
+ */
+export function selectBrainPersonKnowledgeContextValues(
+  knowledge: PersonKnowledge | null | undefined,
+  limit = 2,
+): string[] {
+  if (!knowledge || limit <= 0) return [];
+  const values: string[] = [];
+  const seen = new Set<string>();
+  for (const key of REMINDER_CONTEXT_KEYS) {
+    for (const raw of knowledge[key]) {
+      const value = meaningful(raw);
+      const normalized = value ? normalizedValue(value) : null;
+      if (!value || !normalized || seen.has(normalized)) continue;
+      seen.add(normalized);
+      values.push(value);
+      if (values.length === limit) return values;
+    }
+  }
+  return values;
 }
 
 /** Brain profile completeness; deliberately separate from Semantic completeness. */

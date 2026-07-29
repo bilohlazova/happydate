@@ -1,7 +1,9 @@
 import {
-  buildAllPeopleKnowledge,
+  buildPersonKnowledgeFromSemanticMemory,
   extractPersonKnowledgeValue,
-} from "./personKnowledgeEngine.ts";
+  getBrainSemanticMemorySourceProvenance,
+  selectBrainPersonKnowledgeContextValues,
+} from "../brainSemanticMemoryAdapter.ts";
 import type {
   BrainEvent,
   BrainPerson,
@@ -75,11 +77,6 @@ export interface BuildReminderForEventInput {
 }
 
 const DAY_MS = 86_400_000;
-const CONTEXT_KEYS = [
-  "interests", "favoriteDrinks", "hobbies", "favoriteFood",
-  "favoritePlaces", "books", "movies", "music", "pets", "perfumes",
-  "flowers", "travel", "sports",
-] as const satisfies readonly (keyof PersonKnowledge)[];
 
 function calendarDate(value: string | Date): CalendarDate | null {
   if (value instanceof Date) {
@@ -162,30 +159,12 @@ function meaningful(value: string | undefined | null): string | null {
   return normalized || null;
 }
 
-function contextValues(knowledge: PersonKnowledge | null | undefined): string[] {
-  if (!knowledge) return [];
-  const values: string[] = [];
-  const seen = new Set<string>();
-  for (const key of CONTEXT_KEYS) {
-    const list = knowledge[key] as string[];
-    for (const raw of list) {
-      const value = meaningful(raw);
-      const normalized = value?.toLocaleLowerCase();
-      if (value && normalized && !seen.has(normalized)) {
-        seen.add(normalized);
-        values.push(value);
-        if (values.length === 2) return values;
-      }
-    }
-  }
-  return values;
-}
-
 function contextSourceIds(memories: KnowledgeItem[], personId: string, values: string[]): string[] {
   const wanted = new Set(values.map((value) => value.toLocaleLowerCase()));
   const result: string[] = [];
   for (const memory of memories) {
     if (!consumerIsActive(memory) || memory.personId !== personId) continue;
+    if (!getBrainSemanticMemorySourceProvenance(memory).isPersonKnowledgeContext) continue;
     const value = extractPersonKnowledgeValue(memory);
     if (value && wanted.has(value.toLocaleLowerCase()) && !result.includes(memory.id)) result.push(memory.id);
   }
@@ -223,7 +202,7 @@ export function buildReminderForEvent({
 
   const personName = meaningful(person?.name) ?? meaningful(event.person_name);
   const gifts = knowledge?.giftIdeas ?? [];
-  const context = contextValues(knowledge);
+  const context = selectBrainPersonKnowledgeContextValues(knowledge);
   let type: PlannedReminderType;
   if (daysUntil === 0) type = "event_today";
   else if (gifts.length > 0) type = "gift_saved";
@@ -280,18 +259,6 @@ export function selectTopReminder(reminders: PlannedReminder[]): PlannedReminder
 }
 
 export function planReminders(input: ReminderPlanningInput): PlannedReminder[] {
-  const knowledge = input.personKnowledge ?? buildAllPeopleKnowledge({
-    people: input.people,
-    memories: input.memories,
-    currentDate: input.currentDate,
-  });
-  const peopleById = new Map(input.people.map((person) => [person.id, person]));
-  const peopleByName = new Map<string, BrainPerson | null>();
-  for (const person of input.people) {
-    const key = person.name.trim().toLocaleLowerCase();
-    peopleByName.set(key, peopleByName.has(key) ? null : person);
-  }
-  const knowledgeByPerson = new Map(knowledge.map((item) => [item.personId, item]));
   const memoriesByPerson = new Map<string, KnowledgeItem[]>();
   for (const memory of input.memories) {
     if (!memory.personId) continue;
@@ -299,6 +266,20 @@ export function planReminders(input: ReminderPlanningInput): PlannedReminder[] {
     group.push(memory);
     memoriesByPerson.set(memory.personId, group);
   }
+  const knowledge = input.personKnowledge ?? input.people.map((person) =>
+    buildPersonKnowledgeFromSemanticMemory({
+      person,
+      knowledge: memoriesByPerson.get(person.id) ?? [],
+      currentDate: input.currentDate,
+    }),
+  );
+  const peopleById = new Map(input.people.map((person) => [person.id, person]));
+  const peopleByName = new Map<string, BrainPerson | null>();
+  for (const person of input.people) {
+    const key = person.name.trim().toLocaleLowerCase();
+    peopleByName.set(key, peopleByName.has(key) ? null : person);
+  }
+  const knowledgeByPerson = new Map(knowledge.map((item) => [item.personId, item]));
 
   const byEvent = new Map<string, PlannedReminder>();
   for (const event of input.events) {

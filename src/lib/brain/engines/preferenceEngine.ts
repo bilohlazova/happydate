@@ -1,36 +1,20 @@
-import { PRIORITY } from "../priorities";
+import { PRIORITY } from "../priorities.ts";
 import type { KnowledgeItem } from "../../knowledge/index.ts";
-import { consumerStoredType, consumerValue } from "../../knowledge/index.ts";
-import { Insight } from "../types";
+import { consumerValue } from "../../knowledge/index.ts";
+import { selectBrainLegacyFallbackSource } from "../brainSemanticMemoryAdapter.ts";
+import type { Insight } from "../types.ts";
 
 export interface PreferenceEngineParams {
   memories?: KnowledgeItem[];
 }
 
-const PREFERENCE_TYPES = [
-  "flower",
-  "coffee",
-  "restaurant",
-  "food",
-  "movie",
-  "book",
-  "music",
-  "perfume",
-  "hobby",
-] as const;
-
 export function buildPreferenceInsight({
   memories = [],
 }: PreferenceEngineParams): Insight | null {
-  // Find the first structured preference.
-  const preference = memories.find(
-    (memory) =>
-      PREFERENCE_TYPES.includes(
-        consumerStoredType(memory) as (typeof PREFERENCE_TYPES)[number]
-      ) &&
-      memory.title?.trim() &&
-      consumerValue(memory)?.trim(),
-  );
+  const preference = selectBrainLegacyFallbackSource({
+    knowledge: memories,
+    sourceKind: "preference",
+  });
 
   if (!preference) {
     return null;

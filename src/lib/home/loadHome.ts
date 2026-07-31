@@ -6,7 +6,8 @@ import type { HomeLoaderData, HomeStoredEvent } from "./home.types";
 import { getHomeRepositoryData } from "@/lib/repositories/home/home.repository";
 import { getAiEligibleKnowledge } from "@/lib/knowledge";
 import { buildAssistantPeopleContext } from "@/lib/assistant/peopleContext";
-import { buildAssistantMemoryContext } from "@/lib/assistant/memoryContext";
+import { buildAssistantMemoryContextFromSemanticMemory } from "@/lib/assistant/assistantSemanticMemoryAdapter";
+import { buildSemanticMemoryProjection } from "@/lib/semantic-memory";
 
 function toBrainEvents(events: HomeStoredEvent[]): BrainEvent[] {
   return events.map((event) => {
@@ -42,6 +43,11 @@ export async function loadHome({
   const assistantPeople = data.errors.some((error) => error.section === "people")
     ? []
     : buildAssistantPeopleContext(data.people);
+  const semanticMemory = buildSemanticMemoryProjection({
+    people: assistantPeople,
+    knowledge: safeKnowledge,
+    currentDate,
+  });
   return {
     isAuthenticated: data.isAuthenticated,
     profile: data.profile,
@@ -64,6 +70,10 @@ export async function loadHome({
       eventTranslate,
     }),
     assistantPeople,
-    assistantMemories: buildAssistantMemoryContext(assistantPeople, safeKnowledge),
+    assistantMemories: buildAssistantMemoryContextFromSemanticMemory({
+      people: assistantPeople,
+      semanticMemory,
+      sourceKnowledge: safeKnowledge,
+    }),
   };
 }

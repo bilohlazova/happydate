@@ -119,3 +119,10 @@ test("new conversation, locale change and cancellation invalidate stale v2 resul
   assert.match(modal, /input\.requestId !== happyLearningRequestRef\.current/);
   assert.match(modal, /setHappyLearning\(INITIAL_HAPPY_LEARNING_STATE\)/);
 });
+
+test("Happy Learning card renders below its message instead of being clipped in a horizontal row", async () => {
+  const view = await readFile(path.join(root, "src/components/chat-assistant/ConversationView.tsx"), "utf8");
+  assert.match(view, /className=\{`flex flex-col \$\{message\.role === "user" \? "items-end" : "items-start"\}`\}/);
+  assert.match(view, /message\.id === happyLearning\.detectedForMessageId/);
+  assert.doesNotMatch(view, /className=\{`flex \$\{message\.role === "user" \? "justify-end" : "justify-start"\}`\}/);
+});

@@ -95,6 +95,7 @@ test("general chat starts v2 detection after person resolution without blocking 
   const client = await readFile(path.join(root, "src/lib/happy-learning/happyLearningClient.ts"), "utf8");
   const card = await readFile(path.join(root, "src/components/memory/HappyLearningCard.tsx"), "utf8");
   const gift = await readFile(path.join(root, "src/app/gift/start/StartPageContent.tsx"), "utf8");
+  const provider = await readFile(path.join(root, "src/lib/happy-learning/openAiHappyLearningProvider.server.ts"), "utf8");
 
   assert.match(client, /\/api\/memory-capture\/detect-v2/);
   assert.match(client, /personId: input\.personId[\s\S]*userMessage: input\.userMessage[\s\S]*locale: input\.locale/);
@@ -107,6 +108,7 @@ test("general chat starts v2 detection after person resolution without blocking 
   assert.doesNotMatch(card, /onConfirm|confirmMemoryCaptureCandidate/);
   assert.match(gift, /MemoryCaptureCard/);
   assert.match(gift, /confirmMemoryCaptureCandidate/);
+  assert.doesNotMatch(provider, /uniqueItems/);
 });
 
 test("new conversation, locale change and cancellation invalidate stale v2 results", async () => {

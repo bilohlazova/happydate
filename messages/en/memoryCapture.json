@@ -47,11 +47,11 @@
       "wish": "Dreams of",
       "personal_fact": "Important detail",
       "experience": "Memory",
-      "gift_idea": "Gift idea"
-      ,"favorite_color": "Favorite color"
-      ,"profession": "Works as"
-      ,"clothing_size": "Size"
-      ,"pet": "Pet"
+      "gift_idea": "Gift idea",
+      "favorite_color": "Favorite color",
+      "profession": "Works as",
+      "clothing_size": "Size",
+      "pet": "Pet"
     }
   }
 }

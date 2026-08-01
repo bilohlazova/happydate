@@ -30,7 +30,7 @@ const RESPONSE_SCHEMA = {
             value: { type: "string", maxLength: 120 },
             polarity: { type: ["string", "null"], enum: ["likes", "dislikes", "avoids", "prefers", "neutral", null] },
             semanticTags: {
-              type: "array", maxItems: 5, uniqueItems: true,
+              type: "array", maxItems: 5,
               items: { type: "string", enum: [...SEMANTIC_MEMORY_TAGS] },
             },
             evidenceText: { type: "string", maxLength: 240 },

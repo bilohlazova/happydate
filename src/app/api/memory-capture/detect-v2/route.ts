@@ -7,6 +7,7 @@ import {
 } from "@/lib/happy-learning/happyLearningAccess.server";
 import { createHappyLearningDetectV2Response } from "@/lib/happy-learning/happyLearningDetectV2.server";
 import { createOpenAiHappyLearningProvider } from "@/lib/happy-learning/openAiHappyLearningProvider.server";
+import { issueHappyLearningDetectionToken } from "@/lib/happy-learning/happyLearningDetectionToken.server";
 
 export const runtime = "nodejs";
 
@@ -21,6 +22,11 @@ export async function POST(request: Request) {
     findOwnedPerson: findOwnedHappyLearningPerson,
     loadKnowledge: loadOwnedHappyLearningKnowledge,
     provider: createOpenAiHappyLearningProvider(),
+    issueDetectionToken: (userId, candidate) => issueHappyLearningDetectionToken({
+      userId,
+      candidate,
+      secret: process.env.HAPPY_LEARNING_TOKEN_SECRET?.trim() ?? "",
+    }),
     checkRateLimit: async (userId) => {
       if (!limiter) throw new Error("rate_limiter_unavailable");
       return (await limiter.check(rateLimitKey(userId), "authenticated")).allowed;

@@ -36,8 +36,9 @@ export interface GetKnowledgeContextInput
 
 /**
  * Canonical writes currently target the legacy persistence schema. Fields that
- * cannot be represented losslessly (classification, polarity, state history)
- * are intentionally not accepted before a future additive migration.
+ * cannot be represented losslessly (classification and state history) are
+ * intentionally not accepted before a future additive migration. Controlled
+ * semantic tags may carry Happy Learning polarity through compatibility reads.
  */
 export interface CreateKnowledgeInput {
   userId: string;
@@ -51,6 +52,7 @@ export interface CreateKnowledgeInput {
   importance?: number;
   source?: string;
   images?: string[];
+  aiTags?: string[];
 }
 
 export interface UpdateKnowledgeInput {
@@ -97,6 +99,7 @@ async function createKnowledgeWithClient(
       importance: input.importance ?? 0,
       source: input.source ?? "manual",
       images,
+      ai_tags: input.aiTags ?? [],
       is_active: true,
     })
     .select(MEMORY_ROW_COLUMNS)

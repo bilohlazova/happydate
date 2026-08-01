@@ -12,7 +12,8 @@ import type { AssistantAction, ChatMessage } from "@/components/chat-assistant/t
 import { useAssistantHomeContext } from "@/hooks/useAssistantHomeContext";
 import { buildConversationHistory } from "@/lib/assistant/chatClient";
 import { resolveChatPerson } from "@/lib/chat-person/resolveChatPerson";
-import { requestHappyLearningDetection } from "@/lib/happy-learning/happyLearningClient";
+import { confirmHappyLearningCandidate, requestHappyLearningDetection } from "@/lib/happy-learning/happyLearningClient";
+import type { HappyLearningDetectionCandidate } from "@/lib/happy-learning/happyLearningDetectV2.types";
 import { supabase } from "@/lib/supabaseClient";
 
 interface ChatAssistantModalProps {
@@ -421,6 +422,18 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
     }));
   }
 
+  async function saveHappyLearningCandidate(candidate: HappyLearningDetectionCandidate) {
+    if (candidate.semanticStatus !== "new") return "error" as const;
+    const { data } = await supabase.auth.getSession();
+    const accessToken = data.session?.access_token;
+    if (!accessToken) return "error" as const;
+    const result = await confirmHappyLearningCandidate({ candidate, accessToken });
+    if (!result.ok) return "error" as const;
+    homeContext.refresh();
+    router.refresh();
+    return result.status;
+  }
+
   function retryMessage(assistantMessageId: string) {
     if (isResponding) return;
     const assistantIndex = messages.findIndex((message) => message.id === assistantMessageId);
@@ -536,6 +549,7 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
             happyLearning={happyLearning}
             onRetry={retryMessage}
             onDismissHappyLearningCandidate={dismissHappyLearningCandidate}
+            onSaveHappyLearningCandidate={saveHappyLearningCandidate}
             onScroll={handleConversationScroll}
           />
         )}

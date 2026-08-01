@@ -32,6 +32,7 @@ function validCandidate(overrides = {}) {
     schemaVersion: "happy-learning-detection-v2",
     authorization: "detection_only",
     semanticStatus: "new",
+    detectionToken: "signed.payload",
     ...overrides,
   };
 }
@@ -99,13 +100,13 @@ test("general chat starts v2 detection after person resolution without blocking 
 
   assert.match(client, /\/api\/memory-capture\/detect-v2/);
   assert.match(client, /personId: input\.personId[\s\S]*userMessage: input\.userMessage[\s\S]*locale: input\.locale/);
-  assert.doesNotMatch(client, /supabase|confirm|createKnowledge|\.insert\(|\.upsert\(/);
+  assert.doesNotMatch(client, /supabase|createKnowledge|\.insert\(|\.upsert\(/);
   assert.ok(modal.indexOf("handlePotentialHappyLearning(content") < modal.indexOf("streamAssistantResponse(content"));
   assert.match(modal, /void detectHappyLearningCandidates/);
   assert.match(modal, /resolutionStatus !== "resolved"/);
   assert.match(modal, /candidate\.personId === input\.personId/);
-  assert.match(card, /disabled/);
-  assert.doesNotMatch(card, /onConfirm|confirmMemoryCaptureCandidate/);
+  assert.match(card, /disabled=\{conflict \|\| status === "saving"/);
+  assert.match(client, /confirmHappyLearningCandidate/);
   assert.match(gift, /MemoryCaptureCard/);
   assert.match(gift, /confirmMemoryCaptureCandidate/);
   assert.doesNotMatch(provider, /uniqueItems/);

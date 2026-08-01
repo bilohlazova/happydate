@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { createHappyLearningDetectV2Response } from "../src/lib/happy-learning/happyLearningDetectV2.server.ts";
+import { issueHappyLearningDetectionToken } from "../src/lib/happy-learning/happyLearningDetectionToken.server.ts";
 
 const ELIGIBLE = {
   statementStatus: "explicit",
@@ -59,6 +60,7 @@ function dependencies(overrides = {}) {
       : null,
     loadKnowledge: async () => [],
     provider: async () => ({ candidates: [rawCandidate()] }),
+    issueDetectionToken: (userId, candidate) => issueHappyLearningDetectionToken({ userId, candidate, secret: "test-secret", now: 1_700_000_000_000 }),
     ...overrides,
   };
 }
@@ -83,8 +85,10 @@ test("authenticated owned person receives a server-bound detection-only candidat
     schemaVersion: "happy-learning-detection-v2",
     authorization: "detection_only",
     semanticStatus: "new",
+    detectionToken: body.candidates[0].detectionToken,
   });
   assert.match(body.candidates[0].id, /^happy-learning:[a-f0-9]{24}$/);
+  assert.match(body.candidates[0].detectionToken, /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
 });
 
 test("unauthenticated and missing or unowned people fail safely", async () => {

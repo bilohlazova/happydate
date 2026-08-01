@@ -19,6 +19,7 @@ const CANDIDATE_KEYS = new Set([
   "id", "personId", "personName", "captureType", "value", "polarity", "semanticTags",
   "evidenceText", "decision", "confidence", "source", "requiresConfirmation",
   "schemaVersion", "authorization", "semanticStatus",
+  "detectionToken",
 ]);
 const DECISION_KEYS = new Set(["statementStatus", "durability", "usefulness", "safety"]);
 
@@ -55,9 +56,10 @@ function parseCandidate(value: unknown): HappyLearningDetectionCandidate | null 
   const personName = boundedText(item.personName, 120);
   const candidateValue = boundedText(item.value, 120);
   const evidenceText = boundedText(item.evidenceText, 240);
+  const detectionToken = boundedText(item.detectionToken, 4_096);
   const decision = parseDecision(item.decision);
   if (
-    !id || !personId || !personName || !candidateValue || !evidenceText || !decision
+    !id || !personId || !personName || !candidateValue || !evidenceText || !detectionToken || !decision
     || typeof item.captureType !== "string" || !CAPTURE_TYPES.has(item.captureType)
     || item.source !== "chat_message"
     || item.requiresConfirmation !== true
@@ -92,7 +94,48 @@ function parseCandidate(value: unknown): HappyLearningDetectionCandidate | null 
     schemaVersion: HAPPY_LEARNING_DETECTION_SCHEMA_VERSION,
     authorization: "detection_only",
     semanticStatus: item.semanticStatus,
+    detectionToken,
   };
+}
+
+export type HappyLearningConfirmResult =
+  | { ok: true; status: "created" | "already_known"; knowledgeId: string | null }
+  | { ok: false; error: "expired_token" | "invalid_token" | "stale_candidate" | "person_not_found" | "conflict" | "rate_limited" | "save_failed" };
+type HappyLearningConfirmError = Extract<HappyLearningConfirmResult, { ok: false }>["error"];
+
+export async function confirmHappyLearningCandidate(input: {
+  candidate: HappyLearningDetectionCandidate;
+  accessToken: string;
+}, fetcher: typeof fetch = fetch): Promise<HappyLearningConfirmResult> {
+  try {
+    const { candidate } = input;
+    const response = await fetcher("/api/memory-capture/confirm-v2", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${input.accessToken}` },
+      body: JSON.stringify({
+        detectionToken: candidate.detectionToken,
+        candidate: {
+          id: candidate.id,
+          personId: candidate.personId,
+          captureType: candidate.captureType,
+          value: candidate.value,
+          polarity: candidate.polarity,
+          semanticTags: candidate.semanticTags,
+          evidenceText: candidate.evidenceText,
+          schemaVersion: candidate.schemaVersion,
+        },
+      }),
+      cache: "no-store",
+    });
+    const body = record(await response.json().catch(() => null));
+    if (response.ok && body?.ok === true && (body.status === "created" || body.status === "already_known")) {
+      return { ok: true, status: body.status, knowledgeId: typeof body.knowledgeId === "string" ? body.knowledgeId : null };
+    }
+    const allowed = new Set(["expired_token", "invalid_token", "stale_candidate", "person_not_found", "conflict", "rate_limited"]);
+    return { ok: false, error: typeof body?.error === "string" && allowed.has(body.error) ? body.error as HappyLearningConfirmError : "save_failed" };
+  } catch {
+    return { ok: false, error: "save_failed" };
+  }
 }
 
 export function parseHappyLearningDetectV2Response(value: unknown): HappyLearningDetectV2Response {

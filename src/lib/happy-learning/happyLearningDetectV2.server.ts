@@ -12,6 +12,7 @@ import {
 import { HAPPY_LEARNING_LIMITS } from "./happyLearningSchema.ts";
 import type { HappyLearningStructuredProvider } from "./happyLearning.types.ts";
 import type { HappyLearningAuthContext } from "./happyLearningAccess.server.ts";
+import type { HappyLearningConfirmationCandidate } from "./happyLearningDetectionToken.server.ts";
 
 const LOCALES = new Set<AssistantChatLocale>(["pl", "uk", "en", "ru", "de"]);
 const REQUEST_KEYS = new Set(["personId", "userMessage", "locale"]);
@@ -23,6 +24,7 @@ export type HappyLearningDetectV2Dependencies = {
   loadKnowledge(auth: HappyLearningAuthContext, personId: string): Promise<KnowledgeItem[]>;
   provider: HappyLearningStructuredProvider;
   checkRateLimit?: (userId: string) => Promise<boolean>;
+  issueDetectionToken(userId: string, candidate: HappyLearningConfirmationCandidate): string;
 };
 
 function parseBody(value: unknown): {
@@ -116,17 +118,32 @@ export async function createHappyLearningDetectV2Response(
       semanticMemory,
     }),
   })).filter(({ semantic }) => semantic.status !== "already_known");
-  return Response.json({
-    candidates: classified.map(({ candidate, semantic }) => ({
-      ...candidate,
-      id: candidateId(person.id, candidate.captureType, candidate.value),
-      personId: person.id,
-      personName: person.name,
-      source: "chat_message" as const,
-      requiresConfirmation: true as const,
-      schemaVersion: HAPPY_LEARNING_DETECTION_SCHEMA_VERSION,
-      authorization: "detection_only" as const,
-      semanticStatus: semantic.status as "new" | "conflict",
-    })),
-  }, { status: 200, headers: { "Cache-Control": "no-store" } });
+  let responseCandidates: HappyLearningDetectV2Response["candidates"];
+  try {
+    responseCandidates = classified.map(({ candidate, semantic }) => {
+      const confirmationCandidate: HappyLearningConfirmationCandidate = {
+        id: candidateId(person.id, candidate.captureType, candidate.value),
+        personId: person.id,
+        captureType: candidate.captureType,
+        value: candidate.value,
+        polarity: candidate.polarity,
+        semanticTags: candidate.semanticTags,
+        evidenceText: candidate.evidenceText,
+        schemaVersion: HAPPY_LEARNING_DETECTION_SCHEMA_VERSION,
+      };
+      return {
+        ...candidate,
+        ...confirmationCandidate,
+        personName: person.name,
+        source: "chat_message" as const,
+        requiresConfirmation: true as const,
+        authorization: "detection_only" as const,
+        semanticStatus: semantic.status as "new" | "conflict",
+        detectionToken: dependencies.issueDetectionToken(auth.userId, confirmationCandidate),
+      };
+    });
+  } catch {
+    return Response.json(EMPTY, { status: 200, headers: { "Cache-Control": "no-store" } });
+  }
+  return Response.json({ candidates: responseCandidates }, { status: 200, headers: { "Cache-Control": "no-store" } });
 }

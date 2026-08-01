@@ -40,6 +40,7 @@ const FACT_CATEGORIES: Readonly<Record<string, string>> = {
   work: "work",
   birthday: "important_date",
   holiday: "important_date",
+  personal_fact: "general",
 };
 
 function legacySemantics(type: string): LegacySemantics {
@@ -76,6 +77,14 @@ function legacySemantics(type: string): LegacySemantics {
   }
 
   return { kind: "note", category: null, polarity: null };
+}
+
+function taggedPolarity(row: MemoryRow): KnowledgePolarity | null {
+  if (row.source !== "chat_message") return null;
+  const tags = new Set(row.ai_tags ?? []);
+  if (tags.has("dislike")) return "dislikes";
+  if (tags.has("like")) return "likes";
+  return null;
 }
 
 function cleanText(value: string | null): string | null {
@@ -116,7 +125,7 @@ export function mapLegacyMemoryToKnowledge(row: MemoryRow): KnowledgeItem {
     eventId: row.event_id,
     kind: semantics.kind,
     category: semantics.category,
-    polarity: semantics.polarity,
+    polarity: semantics.polarity ?? taggedPolarity(row),
     title: cleanText(row.title),
     value: canonicalValue(row),
     occurredOn: row.occurred_on,

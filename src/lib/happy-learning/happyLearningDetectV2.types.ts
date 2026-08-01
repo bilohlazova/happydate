@@ -16,6 +16,7 @@ export type HappyLearningDetectionCandidate = HappyLearningCandidate & {
   schemaVersion: typeof HAPPY_LEARNING_DETECTION_SCHEMA_VERSION;
   authorization: "detection_only";
   semanticStatus: "new" | "conflict";
+  detectionToken: string;
 };
 
 export type HappyLearningDetectV2Response = {

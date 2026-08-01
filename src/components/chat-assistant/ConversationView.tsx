@@ -23,6 +23,7 @@ interface ConversationViewProps {
   happyLearning: ChatHappyLearningViewState;
   onRetry: (messageId: string) => void;
   onDismissHappyLearningCandidate: (candidateId: string) => void;
+  onSaveHappyLearningCandidate: (candidate: HappyLearningDetectionCandidate) => Promise<"created" | "already_known" | "error">;
   onScroll: () => void;
 }
 
@@ -41,6 +42,7 @@ export default function ConversationView({
   happyLearning,
   onRetry,
   onDismissHappyLearningCandidate,
+  onSaveHappyLearningCandidate,
   onScroll,
 }: ConversationViewProps) {
   return (
@@ -76,6 +78,7 @@ export default function ConversationView({
                       key={candidate.id}
                       candidate={candidate}
                       onDismiss={onDismissHappyLearningCandidate}
+                      onSave={onSaveHappyLearningCandidate}
                     />
                   ))}
                 </div>

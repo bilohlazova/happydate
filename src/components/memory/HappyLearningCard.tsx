@@ -1,18 +1,22 @@
 "use client";
 
-import { Brain, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { Brain, Check, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { HappyLearningDetectionCandidate } from "@/lib/happy-learning/happyLearningDetectV2.types";
 
 export function HappyLearningCard({
   candidate,
   onDismiss,
+  onSave,
 }: {
   candidate: HappyLearningDetectionCandidate;
   onDismiss: (candidateId: string) => void;
+  onSave: (candidate: HappyLearningDetectionCandidate) => Promise<"created" | "already_known" | "error">;
 }) {
   const t = useTranslations("memoryCapture.learning");
   const conflict = candidate.semanticStatus === "conflict";
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "already_known" | "error">("idle");
   const labelKey = candidate.semanticTags.includes("favorite_color")
     ? "favorite_color"
     : candidate.semanticTags.includes("profession")
@@ -40,10 +44,25 @@ export function HappyLearningCard({
             <span className="font-bold">{t(`labels.${labelKey}`)}:</span>{" "}
             <span className="[overflow-wrap:anywhere]">{candidate.value}</span>
           </p>
-          <p className="mt-2 text-xs font-semibold leading-4 text-slate-500">{t("unavailable")}</p>
+          {(conflict || status !== "idle") && (
+            <p className="mt-2 text-xs font-semibold leading-4 text-slate-500" role="status">
+              {conflict ? t("conflictUnavailable") : status === "saving" ? t("saving") : status === "saved" ? t("saved") : status === "already_known" ? t("already_known") : t("error")}
+            </p>
+          )}
           <div className="mt-3 flex flex-wrap gap-2">
-            <button type="button" disabled className="min-h-10 rounded-xl bg-sky-600 px-3 text-xs font-extrabold text-white opacity-55">
-              {t(conflict ? "update" : "save")}
+            <button
+              type="button"
+              disabled={conflict || status === "saving" || status === "saved" || status === "already_known"}
+              onClick={async () => {
+                if (conflict) return;
+                setStatus("saving");
+                const result = await onSave(candidate);
+                setStatus(result === "created" ? "saved" : result);
+              }}
+              className="min-h-10 rounded-xl bg-sky-600 px-3 text-xs font-extrabold text-white disabled:opacity-55"
+            >
+              {(status === "saved" || status === "already_known") && <Check className="mr-1 inline size-3.5" aria-hidden="true" />}
+              {t(conflict ? "update" : status === "saving" ? "saving" : "save")}
             </button>
             <button type="button" onClick={() => onDismiss(candidate.id)} className="min-h-10 rounded-xl px-3 text-xs font-extrabold text-slate-600 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300">
               {t("notNow")}

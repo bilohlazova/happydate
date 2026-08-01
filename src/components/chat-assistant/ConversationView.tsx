@@ -1,14 +1,11 @@
 import type { RefObject } from "react";
-import { MemoryCaptureCard } from "@/components/memory/MemoryCaptureCard";
-import type { MemoryCaptureCandidate } from "@/lib/memory-capture";
+import { HappyLearningCard } from "@/components/memory/HappyLearningCard";
+import type { HappyLearningDetectionCandidate } from "@/lib/happy-learning/happyLearningDetectV2.types";
 import type { ChatMessage } from "./types";
 
-export type ChatMemoryCaptureViewState = {
-  candidates: MemoryCaptureCandidate[];
+export type ChatHappyLearningViewState = {
+  candidates: HappyLearningDetectionCandidate[];
   detectedForMessageId: string | null;
-  savingCandidateId: string | null;
-  retryNonceByCandidateId: Record<string, number>;
-  error: string | null;
 };
 
 interface ConversationViewProps {
@@ -23,10 +20,9 @@ interface ConversationViewProps {
   rateLimitLabel: string;
   retryInLabel: (seconds: number) => string;
   now: number;
-  memoryCapture: ChatMemoryCaptureViewState;
+  happyLearning: ChatHappyLearningViewState;
   onRetry: (messageId: string) => void;
-  onConfirmMemoryCandidate: (candidateId: string) => void;
-  onDismissMemoryCandidate: (candidateId: string) => void;
+  onDismissHappyLearningCandidate: (candidateId: string) => void;
   onScroll: () => void;
 }
 
@@ -42,10 +38,9 @@ export default function ConversationView({
   rateLimitLabel,
   retryInLabel,
   now,
-  memoryCapture,
+  happyLearning,
   onRetry,
-  onConfirmMemoryCandidate,
-  onDismissMemoryCandidate,
+  onDismissHappyLearningCandidate,
   onScroll,
 }: ConversationViewProps) {
   return (
@@ -73,25 +68,17 @@ export default function ConversationView({
                 </div>
               )}
             </div>
-            {message.id === memoryCapture.detectedForMessageId && memoryCapture.candidates.length > 0 && (
+            {message.id === happyLearning.detectedForMessageId && happyLearning.candidates.length > 0 && (
               <div className="mt-3 max-w-[92%]">
                 <div className="space-y-2">
-                  {memoryCapture.candidates.map((candidate) => (
-                    <MemoryCaptureCard
-                      key={`${candidate.id}:${memoryCapture.retryNonceByCandidateId[candidate.id] ?? 0}`}
+                  {happyLearning.candidates.map((candidate) => (
+                    <HappyLearningCard
+                      key={candidate.id}
                       candidate={candidate}
-                      loading={memoryCapture.savingCandidateId === candidate.id}
-                      onConfirm={onConfirmMemoryCandidate}
-                      onDismiss={onDismissMemoryCandidate}
-                      className="p-3 sm:p-4"
+                      onDismiss={onDismissHappyLearningCandidate}
                     />
                   ))}
                 </div>
-                {memoryCapture.error && (
-                  <p className="mt-2 rounded-2xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 ring-1 ring-rose-100">
-                    {memoryCapture.error}
-                  </p>
-                )}
               </div>
             )}
           </div>

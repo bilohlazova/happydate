@@ -15,6 +15,7 @@ export type HappyLearningDetectionCandidate = HappyLearningCandidate & {
   requiresConfirmation: true;
   schemaVersion: typeof HAPPY_LEARNING_DETECTION_SCHEMA_VERSION;
   authorization: "detection_only";
+  semanticStatus: "new" | "conflict";
 };
 
 export type HappyLearningDetectV2Response = {

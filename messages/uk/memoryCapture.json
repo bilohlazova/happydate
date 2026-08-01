@@ -29,5 +29,29 @@
       "disliked_gift": "Уникати: {value}",
       "preferred_style": "Бажаний стиль: {value}"
     }
+  },
+  "learning": {
+    "title": "Я дізнався щось важливе про {personName}",
+    "conflictTitle": "Раніше було збережено іншу інформацію про {personName}.",
+    "unavailable": "Запам’ятовування незабаром стане доступним.",
+    "save": "Запам’ятати",
+    "update": "Оновити",
+    "notNow": "Не зараз",
+    "ariaCard": "Пропозиція запам’ятати інформацію про {personName}",
+    "labels": {
+      "preference": "Любить",
+      "interest": "Цікавиться",
+      "hobby": "Хобі",
+      "dislike": "Не любить",
+      "favorite": "Улюблене",
+      "wish": "Мріє про",
+      "personal_fact": "Важлива інформація",
+      "experience": "Спогад",
+      "gift_idea": "Ідея подарунка"
+      ,"favorite_color": "Улюблений колір"
+      ,"profession": "Працює як"
+      ,"clothing_size": "Розмір"
+      ,"pet": "Домашня тварина"
+    }
   }
 }

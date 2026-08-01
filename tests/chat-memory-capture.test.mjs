@@ -252,7 +252,7 @@ test("chat candidates reuse existing builder, source and duplicate filtering", (
   assert.equal(candidates[0].value, "мотоцикли");
 });
 
-test("detect endpoint is authenticated, ownership-scoped, non-persistent and keeps chat streaming separate", async () => {
+test("v1 detect endpoint remains authenticated, ownership-scoped and isolated from general chat", async () => {
   const detectRoute = await readFile(path.join(root, "src/app/api/memory-capture/detect/route.ts"), "utf8");
   const chatRoute = await readFile(path.join(root, "src/app/api/ai-chat/route.ts"), "utf8");
   const modal = await readFile(path.join(root, "src/components/ChatAssistantModal.tsx"), "utf8");
@@ -276,9 +276,9 @@ test("detect endpoint is authenticated, ownership-scoped, non-persistent and kee
   assert.doesNotMatch(detectRoute, /\.from\("memories"\)/);
 
   assert.doesNotMatch(chatRoute, /memory-capture|MemoryCapture|candidate|JSON\.stringify\(\{[^}]*memory/);
-  assert.match(modal, /\/api\/memory-capture\/detect/);
-  assert.match(modal, /confirmMemoryCaptureCandidate/);
+  assert.doesNotMatch(modal, /confirmMemoryCaptureCandidate/);
+  assert.doesNotMatch(modal, /shouldRunChatMemoryDetection/);
+  assert.match(modal, /requestHappyLearningDetection/);
   assert.match(modal, /AbortController/);
-  assert.match(modal, /memoryDetectionRequestRef/);
   assert.match(confirmRoute, /"chat_message"/);
 });

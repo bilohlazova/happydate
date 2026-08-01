@@ -29,5 +29,29 @@
       "disliked_gift": "Unikać: {value}",
       "preferred_style": "Preferowany styl: {value}"
     }
+  },
+  "learning": {
+    "title": "Dowiedziałem się czegoś ważnego o {personName}",
+    "conflictTitle": "Wcześniej zapisano inną informację o {personName}.",
+    "unavailable": "Zapamiętywanie będzie dostępne wkrótce.",
+    "save": "Zapamiętaj",
+    "update": "Zaktualizuj",
+    "notNow": "Nie teraz",
+    "ariaCard": "Propozycja zapamiętania informacji o {personName}",
+    "labels": {
+      "preference": "Lubi",
+      "interest": "Interesuje się",
+      "hobby": "Hobby",
+      "dislike": "Nie lubi",
+      "favorite": "Ulubione",
+      "wish": "Marzy o",
+      "personal_fact": "Ważna informacja",
+      "experience": "Wspomnienie",
+      "gift_idea": "Pomysł na prezent"
+      ,"favorite_color": "Ulubiony kolor"
+      ,"profession": "Pracuje jako"
+      ,"clothing_size": "Rozmiar"
+      ,"pet": "Zwierzę"
+    }
   }
 }

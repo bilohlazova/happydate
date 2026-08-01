@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import type { AssistantChatLocale } from "../assistant/chatContract.ts";
 import { extractHappyLearningCandidates } from "./extractHappyLearningCandidates.server.ts";
+import { checkHappyLearningSemanticStatus } from "./checkHappyLearningSemanticStatus.server.ts";
+import { buildSemanticMemoryProjection } from "../semantic-memory/index.ts";
+import type { KnowledgeItem } from "../knowledge/index.ts";
 import {
   HAPPY_LEARNING_DETECTION_SCHEMA_VERSION,
   type HappyLearningDetectV2Response,
@@ -17,6 +20,7 @@ const EMPTY: HappyLearningDetectV2Response = { candidates: [] };
 export type HappyLearningDetectV2Dependencies = {
   authenticate(request: Request): Promise<HappyLearningAuthContext | null>;
   findOwnedPerson(auth: HappyLearningAuthContext, personId: string): Promise<HappyLearningOwnedPerson | null>;
+  loadKnowledge(auth: HappyLearningAuthContext, personId: string): Promise<KnowledgeItem[]>;
   provider: HappyLearningStructuredProvider;
   checkRateLimit?: (userId: string) => Promise<boolean>;
 };
@@ -89,8 +93,31 @@ export async function createHappyLearningDetectV2Response(
     locale: body.locale,
     resolvedPerson: person,
   }, dependencies.provider);
+  if (!result.candidates.length) {
+    return Response.json(EMPTY, { status: 200, headers: { "Cache-Control": "no-store" } });
+  }
+  let knowledge: KnowledgeItem[];
+  try {
+    knowledge = await dependencies.loadKnowledge(auth, person.id);
+  } catch {
+    return Response.json(EMPTY, { status: 200, headers: { "Cache-Control": "no-store" } });
+  }
+  const semanticMemory = buildSemanticMemoryProjection({
+    people: [person],
+    knowledge,
+    currentDate: new Date(0),
+  });
+  const classified = result.candidates.map((candidate) => ({
+    candidate,
+    semantic: checkHappyLearningSemanticStatus({
+      personId: person.id,
+      candidate,
+      knowledge,
+      semanticMemory,
+    }),
+  })).filter(({ semantic }) => semantic.status !== "already_known");
   return Response.json({
-    candidates: result.candidates.map((candidate) => ({
+    candidates: classified.map(({ candidate, semantic }) => ({
       ...candidate,
       id: candidateId(person.id, candidate.captureType, candidate.value),
       personId: person.id,
@@ -99,6 +126,7 @@ export async function createHappyLearningDetectV2Response(
       requiresConfirmation: true as const,
       schemaVersion: HAPPY_LEARNING_DETECTION_SCHEMA_VERSION,
       authorization: "detection_only" as const,
+      semanticStatus: semantic.status as "new" | "conflict",
     })),
   }, { status: 200, headers: { "Cache-Control": "no-store" } });
 }

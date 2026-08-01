@@ -3,6 +3,7 @@ import { createConfiguredAssistantRateLimiter } from "@/lib/assistant/rateLimite
 import {
   authenticateHappyLearningRequest,
   findOwnedHappyLearningPerson,
+  loadOwnedHappyLearningKnowledge,
 } from "@/lib/happy-learning/happyLearningAccess.server";
 import { createHappyLearningDetectV2Response } from "@/lib/happy-learning/happyLearningDetectV2.server";
 import { createOpenAiHappyLearningProvider } from "@/lib/happy-learning/openAiHappyLearningProvider.server";
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
   return createHappyLearningDetectV2Response(request, {
     authenticate: authenticateHappyLearningRequest,
     findOwnedPerson: findOwnedHappyLearningPerson,
+    loadKnowledge: loadOwnedHappyLearningKnowledge,
     provider: createOpenAiHappyLearningProvider(),
     checkRateLimit: async (userId) => {
       if (!limiter) throw new Error("rate_limiter_unavailable");

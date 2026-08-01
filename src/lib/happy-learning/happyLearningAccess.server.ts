@@ -1,4 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
+import { mapLegacyMemoriesToKnowledge, type KnowledgeItem } from "../knowledge/index.ts";
+import { MEMORY_ROW_COLUMNS, type MemoryRow } from "../repositories/memory.types.ts";
 import type { HappyLearningOwnedPerson } from "./happyLearningDetectV2.types.ts";
 
 export type HappyLearningAuthContext = {
@@ -46,4 +48,23 @@ export async function findOwnedHappyLearningPerson(
     .maybeSingle();
   if (error || !data || typeof data.id !== "string" || typeof data.name !== "string") return null;
   return { id: data.id, name: data.name };
+}
+
+/** Read-only owned-person Knowledge catalog used for semantic status checks. */
+export async function loadOwnedHappyLearningKnowledge(
+  auth: HappyLearningAuthContext,
+  personId: string,
+): Promise<KnowledgeItem[]> {
+  const supabase = client(auth.accessToken);
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("memories")
+    .select(MEMORY_ROW_COLUMNS)
+    .eq("user_id", auth.userId)
+    .eq("person_id", personId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .returns<MemoryRow[]>();
+  if (error) throw new Error("happy_learning_knowledge_unavailable");
+  return mapLegacyMemoriesToKnowledge(data ?? []);
 }

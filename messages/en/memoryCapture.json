@@ -29,5 +29,29 @@
       "disliked_gift": "Avoid: {value}",
       "preferred_style": "Preferred style: {value}"
     }
+  },
+  "learning": {
+    "title": "I learned something important about {personName}",
+    "conflictTitle": "Different information about {personName} was saved earlier.",
+    "unavailable": "Remembering will be available soon.",
+    "save": "Remember",
+    "update": "Update",
+    "notNow": "Not now",
+    "ariaCard": "Suggestion to remember information about {personName}",
+    "labels": {
+      "preference": "Likes",
+      "interest": "Interested in",
+      "hobby": "Hobby",
+      "dislike": "Dislikes",
+      "favorite": "Favorite",
+      "wish": "Dreams of",
+      "personal_fact": "Important detail",
+      "experience": "Memory",
+      "gift_idea": "Gift idea"
+      ,"favorite_color": "Favorite color"
+      ,"profession": "Works as"
+      ,"clothing_size": "Size"
+      ,"pet": "Pet"
+    }
   }
 }

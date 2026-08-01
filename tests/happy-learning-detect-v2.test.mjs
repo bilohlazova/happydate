@@ -39,6 +39,16 @@ function rawCandidate(value = "fishing", overrides = {}) {
   };
 }
 
+function knownKnowledge(id, value, overrides = {}) {
+  return {
+    id, personId: "person-1", eventId: null, kind: "preference", category: "interest", polarity: null,
+    title: null, value, occurredOn: null, importance: 0, tags: ["interest"], summary: null,
+    state: "active", aiEligible: true, createdAt: "2026-01-01", updatedAt: null, legacyType: "interest",
+    evidence: { sourceKind: "manual", sourceId: id, originalText: value, capturedAt: "2026-01-01" },
+    classification: null, compatibility: { valueText: value, contentText: null }, ...overrides,
+  };
+}
+
 function dependencies(overrides = {}) {
   return {
     authenticate: async (req) => req.headers.has("authorization")
@@ -47,6 +57,7 @@ function dependencies(overrides = {}) {
     findOwnedPerson: async (_auth, personId) => personId === "person-1"
       ? { id: "person-1", name: "Server Ivan" }
       : null,
+    loadKnowledge: async () => [],
     provider: async () => ({ candidates: [rawCandidate()] }),
     ...overrides,
   };
@@ -71,6 +82,7 @@ test("authenticated owned person receives a server-bound detection-only candidat
     requiresConfirmation: true,
     schemaVersion: "happy-learning-detection-v2",
     authorization: "detection_only",
+    semanticStatus: "new",
   });
   assert.match(body.candidates[0].id, /^happy-learning:[a-f0-9]{24}$/);
 });
@@ -150,6 +162,28 @@ test("server schema removes uncertain, question, temporary, sensitive and inferr
     provider: async () => ({ candidates: decisions.map((decision) => rawCandidate("fishing", { decision })) }),
   }));
   assert.deepEqual(await payload(response), { candidates: [] });
+});
+
+test("detect-v2 suppresses known facts, returns conflicts and keeps new facts", async () => {
+  const known = await createHappyLearningDetectV2Response(request(validBody()), dependencies({
+    loadKnowledge: async () => [knownKnowledge("known-private-id", "Fishing")],
+  }));
+  assert.deepEqual(await payload(known), { candidates: [] });
+
+  const conflict = await createHappyLearningDetectV2Response(request(validBody()), dependencies({
+    provider: async () => ({ candidates: [rawCandidate("fishing", {
+      captureType: "dislike", polarity: "dislikes", semanticTags: ["dislike", "interest"],
+    })] }),
+    loadKnowledge: async () => [knownKnowledge("conflict-private-id", "Fishing", {
+      polarity: "likes", tags: ["like", "interest"],
+    })],
+  }));
+  const conflictBody = await payload(conflict);
+  assert.equal(conflictBody.candidates[0].semanticStatus, "conflict");
+  assert.equal(JSON.stringify(conflictBody).includes("conflict-private-id"), false);
+
+  const fresh = await payload(await createHappyLearningDetectV2Response(request(validBody()), dependencies()));
+  assert.equal(fresh.candidates[0].semanticStatus, "new");
 });
 
 test("malformed output and provider failures or timeouts return an empty success", async () => {

@@ -1,8 +1,34 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import type { HomeFeaturedEvent } from "@/lib/home/home.types";
+import type { ReminderRecord } from "@/lib/repositories/reminders";
+import ReminderActions from "./ReminderActions";
 
-export default function FeaturedEventCard({ event, preferencesLabel }: { event: HomeFeaturedEvent; preferencesLabel: string }) {
+interface FeaturedEventCardProps {
+  event: HomeFeaturedEvent;
+  preferencesLabel: string;
+  reminder: ReminderRecord | null;
+  reminderBusy: boolean;
+  reminderError: string | null;
+  reminderLabels: React.ComponentProps<typeof ReminderActions>["labels"];
+  onCompleteReminder: () => void;
+  onSnoozeReminder: () => void;
+  onUndoReminder: () => void;
+  onPickGift: () => void;
+}
+
+export default function FeaturedEventCard({
+  event,
+  preferencesLabel,
+  reminder,
+  reminderBusy,
+  reminderError,
+  reminderLabels,
+  onCompleteReminder,
+  onSnoozeReminder,
+  onUndoReminder,
+  onPickGift,
+}: FeaturedEventCardProps) {
   return (
     <section className="mt-7 overflow-hidden rounded-[1.5rem] border border-slate-100 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.06)] sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -34,6 +60,20 @@ export default function FeaturedEventCard({ event, preferencesLabel }: { event: 
       <Link href={event.href} className="hd-button mt-4 min-h-11 w-full border border-sky-200 bg-white text-sky-700 hover:bg-sky-50">
         {event.ctaLabel}<ChevronRight size={16} aria-hidden="true" />
       </Link>
+      {reminder && (
+        <ReminderActions
+          reminder={reminder}
+          eventIsToday={event.daysUntil === 0}
+          canPickGift={Boolean(event.personId)}
+          busy={reminderBusy}
+          error={reminderError}
+          labels={reminderLabels}
+          onComplete={onCompleteReminder}
+          onSnooze={onSnoozeReminder}
+          onUndo={onUndoReminder}
+          onPickGift={onPickGift}
+        />
+      )}
     </section>
   );
 }

@@ -52,6 +52,17 @@
     "personCta": "Personenprofil ansehen",
     "eventCta": "Im Kalender ansehen"
   },
+  "reminder": {
+    "deliveryReady": "Happy erinnert dich: {count, plural, one {# wichtige Aufgabe wartet} other {# wichtige Aufgaben warten}} auf dich.",
+    "completed": "Als erledigt markiert",
+    "complete": "Ich habe gratuliert",
+    "snooze": "In 3 Stunden erinnern",
+    "snoozed": "Erinnerung verschoben",
+    "undo": "Rückgängig",
+    "pickGift": "Geschenk auswählen",
+    "pickGiftPrompt": "Hilf mir, ein Geschenk für {name} auszuwählen. Nutze nur Informationen, die ich in HappyDate gespeichert habe.",
+    "error": "Die Änderung konnte nicht gespeichert werden. Bitte versuche es erneut."
+  },
   "metrics": {
     "savedGifts": "{count} gespeicherte Ideen",
     "notes": "{count} Notizen",

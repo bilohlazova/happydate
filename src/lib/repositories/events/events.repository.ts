@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
-import type { EventSummary } from "./events.types";
+import type { EnsureBirthdayOccurrenceInput, EventSummary } from "./events.types";
 
 type EventsTableRow = {
   id: string;
@@ -49,4 +49,51 @@ export async function getEvents(): Promise<EventSummary[]> {
     console.error("[events.repository] getEvents unexpected failure:", error);
     return [];
   }
+}
+
+export async function ensureBirthdayOccurrence({
+  personId,
+  personName,
+  occurrenceDate,
+}: EnsureBirthdayOccurrenceInput): Promise<string> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError) throw new Error(`[events.repository] Authentication failed: ${userError.message}`);
+  if (!user) throw new Error("[events.repository] Authentication required");
+
+  const title = `Birthday: ${personName.replace(/\s+/g, " ").trim()}`;
+  const identity = {
+    user_id: user.id,
+    person_id: personId,
+    date: occurrenceDate,
+    category: "birthday",
+  };
+  const { data, error } = await supabase
+    .from("events")
+    .upsert({
+      ...identity,
+      title,
+      person_name: personName,
+      is_important: true,
+    }, {
+      onConflict: "user_id,person_id,date,category",
+      ignoreDuplicates: true,
+    })
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(`[events.repository] Birthday occurrence failed: ${error.message}`);
+  if (data && typeof data.id === "string") return data.id;
+
+  const { data: existing, error: existingError } = await supabase
+    .from("events")
+    .select("id")
+    .match(identity)
+    .single();
+  if (existingError) throw new Error(`[events.repository] Birthday occurrence reload failed: ${existingError.message}`);
+  if (!existing || typeof existing.id !== "string") {
+    throw new Error("[events.repository] Invalid birthday occurrence response");
+  }
+  return existing.id;
 }

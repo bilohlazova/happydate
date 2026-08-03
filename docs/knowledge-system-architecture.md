@@ -147,11 +147,15 @@ The final architecture permits `memories` table access only inside the
 Knowledge Repository. Existing exceptions are migration debt, not approved
 extension points.
 
-Currently known exception:
+Currently known compatibility exceptions:
 
-- `src/lib/repositories/home/home.repository.ts` reads `memories` directly. It
-  remains unchanged until the dedicated Home stage to preserve current
-  behavior.
+- `src/lib/repositories/memoryRepository.ts` still owns the Notes-specific
+  `memories` projection and legacy create/update/delete paths. These remain
+  migration debt for the universal Memory Capture and cleanup stages.
+
+Home is no longer an exception: `src/lib/repositories/home/home.repository.ts`
+loads canonical Knowledge through `knowledgeRepository.ts` and projects it for
+Home consumers.
 
 New code must not add another direct `memories` query outside
 `knowledgeRepository.ts` or an explicitly documented legacy compatibility

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import type { AssistantIdentityKind } from "./chatConfig.ts";
+import { readSupabasePublicConfig } from "../supabase/publicConfig.ts";
 
 export type AssistantRequestIdentity = { kind: AssistantIdentityKind; key: string };
 
@@ -17,13 +18,10 @@ function normalizedGuestAddress(request: Request): string {
 export async function getAssistantRequestIdentity(request: Request): Promise<AssistantRequestIdentity> {
   const authorization = request.headers.get("authorization");
   const accessToken = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const supabaseKey = (
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )?.trim();
+  const publicSupabaseConfig = readSupabasePublicConfig();
 
-  if (accessToken && supabaseUrl && supabaseKey) {
-    const supabase = createClient(supabaseUrl, supabaseKey, {
+  if (accessToken && publicSupabaseConfig) {
+    const supabase = createClient(publicSupabaseConfig.url, publicSupabaseConfig.key, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
     const { data, error } = await supabase.auth.getUser(accessToken);

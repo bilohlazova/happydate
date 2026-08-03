@@ -5,3 +5,9 @@ export interface EventSummary {
   category?: string;
   notes?: string;
 }
+
+export interface EnsureBirthdayOccurrenceInput {
+  personId: string;
+  personName: string;
+  occurrenceDate: string;
+}

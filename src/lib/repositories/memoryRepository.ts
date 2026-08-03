@@ -102,10 +102,14 @@ export async function getCurrentMemoryUserId(): Promise<string | null> {
 export async function getNotesMemoryPeople(): Promise<NotesMemoryPerson[]> {
   const { data } = await supabase
     .from("people")
-    .select("id, name, relation")
+    .select("id, name, relationship, relation_label")
     .order("name");
 
-  return data ?? [];
+  return (data ?? []).map((person) => ({
+    id: person.id,
+    name: person.name,
+    relation: person.relation_label ?? person.relationship ?? null,
+  }));
 }
 
 /**

@@ -59,11 +59,18 @@ async function loadPeople(userId: string): Promise<HomePerson[]> {
 async function loadEvents(userId: string): Promise<HomeStoredEvent[]> {
   const { data, error } = await supabase
     .from("events")
-    .select("id, title, date, category, notes")
+    .select("id, title, date, category, notes, person_id")
     .eq("user_id", userId)
     .order("date", { ascending: true });
   if (error) throw new HomeRepositoryError("events", error.message);
-  return (data ?? []) as HomeStoredEvent[];
+  return (data ?? []).map((event) => ({
+    id: event.id,
+    title: event.title,
+    date: event.date,
+    category: event.category ?? null,
+    notes: event.notes ?? null,
+    personId: event.person_id ?? null,
+  }));
 }
 
 async function loadKnowledge(userId: string): Promise<{

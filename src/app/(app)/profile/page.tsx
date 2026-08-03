@@ -316,22 +316,21 @@ export default function ProfilePage() {
       setCreatedAt(user.created_at ?? null);
 
       const { data: profile } = await supabase
-        .from("profiles").select("full_name, avatar_url").eq("id", user.id).maybeSingle();
+        .from("profiles").select("full_name, avatar_url, points").eq("id", user.id).maybeSingle();
 
       if (!profile) {
         await supabase.from("profiles").insert({ id: user.id, full_name: "", avatar_url: null });
       } else {
         setFullName(profile.full_name ?? "");
         setAvatarPath(profile.avatar_url ?? null);
+        setPoints(profile.points ?? 0);
       }
 
-      const [{ data: bal }, { data: survey }, { data: sub }] = await Promise.all([
-        supabase.from("points_balance").select("balance").eq("user_id", user.id).maybeSingle(),
+      const [{ data: survey }, { data: sub }] = await Promise.all([
         supabase.from("user_survey").select("is_completed").eq("user_id", user.id).maybeSingle(),
         supabase.from("subscriptions").select("status").eq("user_id", user.id).eq("status", "active").maybeSingle(),
       ]);
 
-      setPoints(bal?.balance ?? 0);
       setSurveyCompleted(Boolean(survey?.is_completed));
       setHasCare(!!sub);
     };

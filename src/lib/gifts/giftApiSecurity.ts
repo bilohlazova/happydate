@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { OwnedGiftPerson } from "../repositories/giftIntelligenceRepository.server.ts";
+import { readSupabasePublicConfig } from "../supabase/publicConfig.ts";
 
 export interface GiftAccessDependencies {
   authenticate(request: Request): Promise<string | null>;
@@ -13,13 +14,9 @@ export type GiftAccessResult =
 export async function authenticateGiftRequest(request: Request): Promise<string | null> {
   const token = request.headers.get("authorization")
     ?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const key = (
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )?.trim();
-  if (!token || !url || !key) return null;
-  const client = createClient(url, key, {
+  const publicSupabaseConfig = readSupabasePublicConfig();
+  if (!token || !publicSupabaseConfig) return null;
+  const client = createClient(publicSupabaseConfig.url, publicSupabaseConfig.key, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
   const { data, error } = await client.auth.getUser(token);
@@ -38,4 +35,3 @@ export async function resolveGiftAccess(
     ? { ok: true, person }
     : { ok: false, status: 404, error: "person_not_found" };
 }
-

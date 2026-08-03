@@ -48,7 +48,41 @@ function nextBirthday(value: string, now: Date): Date | null {
   return occurrence;
 }
 
+function searchableText(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+function isStoredBirthdayDuplicate(
+  event: HomeRepositoryData["events"][number],
+  birthdayEvents: HomeEvent[],
+  peopleById: ReadonlyMap<string, HomePerson>,
+): boolean {
+  if (event.category?.trim().toLowerCase() !== "birthday") return false;
+  const date = localDate(event.date);
+  if (!date) return false;
+  const dateOnly = toDateOnly(date);
+
+  if (event.personId) {
+    return birthdayEvents.some((birthday) => (
+      birthday.personId === event.personId && birthday.date === dateOnly
+    ));
+  }
+
+  const normalizedTitle = ` ${searchableText(event.title)} `;
+  return birthdayEvents.some((birthday) => {
+    if (birthday.date !== dateOnly || !birthday.personId) return false;
+    const person = peopleById.get(birthday.personId);
+    const normalizedName = person ? searchableText(person.name) : "";
+    return normalizedName.length > 0 && normalizedTitle.includes(` ${normalizedName} `);
+  });
+}
+
 function normalizeEvents(people: HomePerson[], storedEvents: HomeRepositoryData["events"], now: Date): HomeEvent[] {
+  const peopleById = new Map(people.map((person) => [person.id, person]));
   const birthdayEvents = people.flatMap((person): HomeEvent[] => {
     if (!person.birthday) return [];
     const date = nextBirthday(person.birthday, now);
@@ -69,6 +103,7 @@ function normalizeEvents(people: HomePerson[], storedEvents: HomeRepositoryData[
   });
 
   const regularEvents = storedEvents.flatMap((event): HomeEvent[] => {
+    if (isStoredBirthdayDuplicate(event, birthdayEvents, peopleById)) return [];
     const date = localDate(event.date);
     if (!date) return [];
     const remaining = daysUntil(date, now);
@@ -80,9 +115,9 @@ function normalizeEvents(people: HomePerson[], storedEvents: HomeRepositoryData[
       title: event.title,
       date: toDateOnly(date),
       category,
-      personId: null,
-      personName: null,
-      relationLabel: null,
+      personId: event.personId ?? null,
+      personName: event.personId ? peopleById.get(event.personId)?.name ?? null : null,
+      relationLabel: event.personId ? peopleById.get(event.personId)?.relationLabel ?? null : null,
       isImportant: category ? IMPORTANT_CATEGORIES.has(category) : false,
       href: "/dashboard",
       daysUntil: remaining,

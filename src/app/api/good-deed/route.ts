@@ -3,11 +3,13 @@ import { NextResponse, NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { Resend } from "resend";
+import { requireSupabasePublicConfig } from "@/lib/supabase/publicConfig";
 
 /* ───────────────── Supabase ───────────────── */
+const publicSupabaseConfig = requireSupabasePublicConfig();
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  publicSupabaseConfig.url,
+  publicSupabaseConfig.key,
 );
 
 /* ───────────────── Resend ───────────────── */

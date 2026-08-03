@@ -1,9 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
+import { requireSupabasePublicConfig } from "@/lib/supabase/publicConfig";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabasePublishableKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const { url: supabaseUrl, key: supabasePublishableKey } =
+  requireSupabasePublicConfig();
 
 export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
   auth: {

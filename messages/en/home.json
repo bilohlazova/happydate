@@ -52,6 +52,17 @@
     "personCta": "View person profile",
     "eventCta": "View in calendar"
   },
+  "reminder": {
+    "deliveryReady": "Happy reminder: {count, plural, one {# important action is} other {# important actions are}} waiting for you.",
+    "completed": "Marked as completed",
+    "complete": "I congratulated them",
+    "snooze": "Remind me in 3 hours",
+    "snoozed": "Reminder postponed",
+    "undo": "Undo",
+    "pickGift": "Choose a gift",
+    "pickGiftPrompt": "Help me choose a gift for {name}, using only the information I saved in HappyDate.",
+    "error": "The change could not be saved. Please try again."
+  },
   "metrics": {
     "savedGifts": "{count} saved ideas",
     "notes": "{count} notes",

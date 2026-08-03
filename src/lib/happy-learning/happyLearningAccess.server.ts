@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { mapLegacyMemoriesToKnowledge, type KnowledgeItem } from "../knowledge/index.ts";
 import { MEMORY_ROW_COLUMNS, type MemoryRow } from "../repositories/memory.types.ts";
 import type { HappyLearningOwnedPerson } from "./happyLearningDetectV2.types.ts";
+import { readSupabasePublicConfig } from "../supabase/publicConfig.ts";
 
 export type HappyLearningAuthContext = {
   userId: string;
@@ -9,13 +10,9 @@ export type HappyLearningAuthContext = {
 };
 
 function client(accessToken: string) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const key = (
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-    ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )?.trim();
-  if (!url || !key) return null;
-  return createClient(url, key, {
+  const publicSupabaseConfig = readSupabasePublicConfig();
+  if (!publicSupabaseConfig) return null;
+  return createClient(publicSupabaseConfig.url, publicSupabaseConfig.key, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     global: { headers: { Authorization: `Bearer ${accessToken}` } },
   });

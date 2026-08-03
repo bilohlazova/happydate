@@ -52,6 +52,17 @@
     "personCta": "Zobacz profil osoby",
     "eventCta": "Zobacz w kalendarzu"
   },
+  "reminder": {
+    "deliveryReady": "Happy przypomina: {count, plural, one {czeka na Ciebie # ważne działanie} few {czekają na Ciebie # ważne działania} many {czeka na Ciebie # ważnych działań} other {czeka na Ciebie # ważnego działania}}.",
+    "completed": "Oznaczono jako zrobione",
+    "complete": "Już złożyłam życzenia",
+    "snooze": "Przypomnij za 3 godziny",
+    "snoozed": "Przypomnienie odłożone",
+    "undo": "Cofnij",
+    "pickGift": "Wybierz prezent",
+    "pickGiftPrompt": "Pomóż mi wybrać prezent dla {name}, wykorzystując tylko informacje, które zapisałam w HappyDate.",
+    "error": "Nie udało się zapisać zmiany. Spróbuj ponownie."
+  },
   "metrics": {
     "savedGifts": "{count} zapisane pomysły",
     "notes": "{count} notatki",

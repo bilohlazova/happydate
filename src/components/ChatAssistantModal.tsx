@@ -19,6 +19,7 @@ import { supabase } from "@/lib/supabaseClient";
 interface ChatAssistantModalProps {
   open: boolean;
   onClose: () => void;
+  initialPrompt?: string | null;
 }
 
 const ACTION_DEFINITIONS = [
@@ -50,7 +51,7 @@ const INITIAL_HAPPY_LEARNING_STATE: ChatHappyLearningState = {
   detectionStatus: "idle",
 };
 
-export default function ChatAssistantModal({ open, onClose }: ChatAssistantModalProps) {
+export default function ChatAssistantModal({ open, onClose, initialPrompt = null }: ChatAssistantModalProps) {
   const t = useTranslations("assistant");
   const locale = useLocale();
   const router = useRouter();
@@ -139,6 +140,12 @@ export default function ChatAssistantModal({ open, onClose }: ChatAssistantModal
       previouslyFocusedRef.current?.focus({ preventScroll: true });
     };
   }, [cancelActiveResponse, closeAssistant, open]);
+
+  useEffect(() => {
+    if (!open || !initialPrompt || messages.length > 0) return;
+    setValue((current) => current.trim() ? current : initialPrompt);
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, [initialPrompt, messages.length, open]);
 
   useEffect(() => {
     const textarea = textareaRef.current;

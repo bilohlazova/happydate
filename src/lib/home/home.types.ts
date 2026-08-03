@@ -27,6 +27,7 @@ export interface HomeStoredEvent {
   date: string;
   category: string | null;
   notes: string | null;
+  personId: string | null;
 }
 
 export type HomeMemory = HomeKnowledgeProjection;

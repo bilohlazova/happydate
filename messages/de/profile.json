@@ -16,6 +16,7 @@
     "title": "Einstellungen", "notifications": "Push-Benachrichtigungen", "enabled": "Aktiviert", "reminders": "Erinnerungen", "threeDaysBefore": "3 Tage vorher", "aiSuggestions": "KI-Vorschläge", "active": "Aktiv",
     "language": { "title": "Anwendungssprache", "description": "Wähle die Sprache der HappyDate-Oberfläche." }
   },
+  "reminderSettings": { "back": "Zurück zum Profil", "title": "Erinnerungseinstellungen", "description": "Lege fest, wann Happy dich erinnern darf und wie oft eine offene Erinnerung wiederholt wird.", "timezone": "Zeitzone", "quietStart": "Ruhezeit von", "quietEnd": "Ruhezeit bis", "repeat": "Bis zur Erledigung wiederholen", "inApp": "Erinnerungen in der App", "pushLater": "Mobile Push-Mitteilungen werden nach der APNs- und FCM-Einrichtung separat aktiviert.", "save": "Speichern", "saving": "Speichern…", "saved": "Einstellungen gespeichert", "error": "Einstellungen konnten nicht gespeichert werden.", "intervals": { "60": "Stündlich", "180": "Alle 3 Stunden", "360": "Alle 6 Stunden", "720": "Alle 12 Stunden", "1440": "Einmal täglich" } },
   "security": { "title": "Sicherheit und Datenschutz", "changePassword": "Passwort ändern", "activeSessions": "Aktive Sitzungen", "privacy": "Datenschutzerklärung", "exportData": "Daten exportieren", "deleteAccount": "Konto löschen" },
   "actions": { "logout": "Abmelden" },
   "states": { "saved": "Gespeichert ✅", "avatarSaved": "Foto aktualisiert ✅" },

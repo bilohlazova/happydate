@@ -64,10 +64,64 @@ test("empty Home and a single or urgent event preserve presentation behavior", (
   const empty = buildHomeViewModel(home([], { people: [], events: [] }), "pl", t, new Date(2026, 6, 17));
   assert.equal(empty.isEmpty, true);
   const one = buildHomeViewModel(home([], {
-    people: [], events: [{ id: "urgent", title: "Today", date: "2026-07-17", category: "personal", notes: null }],
+    people: [], events: [{ id: "urgent", title: "Today", date: "2026-07-17", category: "personal", notes: null, personId: null }],
   }), "pl", t, new Date(2026, 6, 17));
   assert.equal(one.featuredEvent?.id, "urgent");
   assert.equal(one.featuredEvent?.daysUntil, 0);
+});
+
+test("stored birthday and person birthday render as one event for the same occurrence", () => {
+  const model = buildHomeViewModel(home([], {
+    people: [{ id: "dima", name: "Діма", birthday: "1990-08-03", relationLabel: "Брат", gender: "male" }],
+    events: [{
+      id: "stored-birthday",
+      title: "Birthday: Діма",
+      date: "2026-08-03",
+      category: "birthday",
+      notes: null,
+      personId: "dima",
+    }],
+  }), "uk", t, new Date(2026, 7, 3));
+
+  assert.deepEqual(model.upcomingEvents.map((event) => event.id), ["birthday-dima"]);
+});
+
+test("legacy unlinked birthday is deduplicated by person name and date", () => {
+  const model = buildHomeViewModel(home([], {
+    people: [{ id: "dima", name: "Діма", birthday: "1990-08-03", relationLabel: null, gender: null }],
+    events: [{
+      id: "legacy-birthday",
+      title: "Birthday: Діма",
+      date: "2026-08-03",
+      category: "birthday",
+      notes: null,
+      personId: null,
+    }],
+  }), "uk", t, new Date(2026, 7, 3));
+
+  assert.deepEqual(model.upcomingEvents.map((event) => event.id), ["birthday-dima"]);
+});
+
+test("different people with birthdays on the same date remain separate", () => {
+  const model = buildHomeViewModel(home([], {
+    people: [
+      { id: "dima", name: "Діма", birthday: "1990-08-03", relationLabel: null, gender: null },
+      { id: "denys", name: "Денис", birthday: "1991-08-03", relationLabel: null, gender: null },
+    ],
+    events: [{
+      id: "dima-stored",
+      title: "Birthday: Діма",
+      date: "2026-08-03",
+      category: "birthday",
+      notes: null,
+      personId: "dima",
+    }],
+  }), "uk", t, new Date(2026, 7, 3));
+
+  assert.deepEqual(
+    model.upcomingEvents.map((event) => event.id).sort(),
+    ["birthday-denys", "birthday-dima"],
+  );
 });
 
 test("multiple people, equal dates and event ordering stay deterministic", () => {

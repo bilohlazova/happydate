@@ -4,7 +4,7 @@
     "resultCount": "{count, plural, one {# entry} other {# entries}}"
   },
   "search": {
-    "placeholder": "Search memories, people, tags…",
+    "placeholder": "Search notes, people, events…",
     "clear": "Clear search",
     "noResults": "No results for “{query}”",
     "results": "{count, plural, one {# result} other {# results}} for “{query}”"
@@ -49,7 +49,8 @@
     "noContent": "No content",
     "imageCount": "{count, plural, one {# image} other {# images}}",
     "options": "Entry options",
-    "personMeta": "About: {name}"
+    "personMeta": "About: {name}",
+    "eventMeta": "Event: {title}"
   },
   "editor": {
     "addNote": "Add note",
@@ -76,7 +77,9 @@
     "journalContent": "Entry content",
     "images": "Images",
     "choosePerson": "Choose a person",
-    "noAssignedPerson": "No assigned person"
+    "noAssignedPerson": "No assigned person",
+    "event": "Event (optional)",
+    "noAssignedEvent": "No assigned event"
   },
   "placeholders": {
     "noteTitle": "Note title",
@@ -99,7 +102,8 @@
     "close": "Close",
     "edit": "Edit",
     "delete": "Delete",
-    "addImage": "Add image"
+    "deleteConfirm": "Delete this entry permanently?",
+    "addImage": "Add image", "retry": "Try again", "dismiss": "Dismiss"
   },
   "validation": {
     "noteTitleOrContent": "Add a title or entry content.",
@@ -114,6 +118,8 @@
     "saveFailed": "Could not save. Try again.",
     "signIn": "Sign in again before saving."
   },
+  "audio": { "transcript": "Transcript", "label": "Voice note", "record": "Record voice", "stop": "Stop recording · {seconds}s", "remove": "Remove voice recording", "hint": "Maximum length is 5 minutes. The recording is stored privately.", "unsupported": "This device does not support audio recording or playback.", "permissionError": "Microphone access failed. Check the permission in Settings.", "uploadFailed": "The voice recording could not be uploaded. The note was not saved." },
+  "camera": { "takePhoto": "Take photo", "chooseGallery": "Choose from gallery", "opening": "Opening camera…", "permissionError": "Camera access is unavailable. Check the permission in Settings.", "captureFailed": "The photo could not be captured. Try again.", "invalidImage": "Choose a JPEG, PNG, WebP, HEIC or HEIF image up to 10 MB." },
   "states": {
     "loading": "Loading memories...",
     "emptyAll": "You have no entries yet.",
@@ -125,7 +131,7 @@
     "noMatches": "No matching entries found.",
     "tryAgain": "Nothing matches “{query}”. Try another search.",
     "chooseOther": "Choose another person or add a new entry.",
-    "addOrFilter": "Add a new entry or choose another filter."
+    "addOrFilter": "Add a new entry or choose another filter.", "offline": "You are offline. Notes remain available to view, but changes cannot be saved yet.", "offlineAction": "There is no internet connection. Your draft remains in the editor—try again when the connection returns.", "loadFailed": "Notes could not be loaded", "loadFailedHint": "Check your connection and try again.", "deleteFailed": "The entry could not be deleted. It remains in the list."
   },
   "dates": {
     "today": "Today",
@@ -150,6 +156,6 @@
     "removeNewImage": "Remove new image {index}",
     "closeLightbox": "Close preview",
     "previousImage": "Previous image",
-    "nextImage": "Next image"
+    "nextImage": "Next image", "imageViewer": "Image viewer"
   }
 }

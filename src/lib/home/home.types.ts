@@ -5,6 +5,7 @@ import type {
   AssistantMemoryGroupContext,
   AssistantPersonContext,
 } from "@/lib/assistant/chatContract";
+import type { DailyBriefing } from "./buildDailyBriefing";
 
 export type HomeEventSource = "event" | "birthday";
 
@@ -122,7 +123,7 @@ export interface HomeViewModel {
   };
   todayInsights: HomeInsight[];
   stats: { importantCount: number };
-  assistantActions: { briefText: string };
+  assistantActions: { briefText: string; briefing: DailyBriefing };
   featuredEvent: HomeFeaturedEvent | null;
   upcomingEvents: HomeUpcomingEvent[];
   recommendations: HomeRecommendation[];

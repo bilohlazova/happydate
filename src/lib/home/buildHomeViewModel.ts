@@ -10,6 +10,7 @@ import type {
   HomeViewModel,
 } from "./home.types";
 import type { AppLocale } from "@/i18n/config";
+import { buildDailyBriefing } from "./buildDailyBriefing.ts";
 
 const IMPORTANT_CATEGORIES = new Set(["birthday", "anniversary"]);
 
@@ -273,8 +274,17 @@ export function buildHomeViewModel(data: HomeRepositoryData, locale: AppLocale, 
 
   const todayInsights = insights.slice(0, 3);
   const importantCount = todayInsights.length;
-  const briefParts = [t("brief.intro", { count: importantCount })];
-  if (featuredCard) briefParts.push(t("brief.featured", { title: featuredCard.title, countdown: featuredCard.countdownLabel }));
+  const briefing = buildDailyBriefing({
+    name,
+    events,
+    featured,
+    memories: data.memories,
+    formatCountdown: (value) => formatCountdown(t, value),
+    eventTitle: (event) => event.source === "birthday"
+      ? t("events.birthdayTitle", { name: event.personName ?? event.title })
+      : event.title,
+    t,
+  });
 
   return {
     locale,
@@ -282,7 +292,7 @@ export function buildHomeViewModel(data: HomeRepositoryData, locale: AppLocale, 
     greeting: { name, title: name ? t("greeting.named", { name }) : t("greeting.fallback"), subtitle: t("greeting.subtitle") },
     todayInsights,
     stats: { importantCount },
-    assistantActions: { briefText: briefParts.join(" ") },
+    assistantActions: { briefText: briefing.text, briefing },
     featuredEvent: featuredCard,
     upcomingEvents: buildUpcoming(events, locale, t),
     recommendations,

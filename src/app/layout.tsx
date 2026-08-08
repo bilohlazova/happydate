@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTimeZone } from "next-intl/server";
 import "./globals.css";
-import "react-big-calendar/lib/css/react-big-calendar.css";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";

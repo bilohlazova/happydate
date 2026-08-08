@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import PeopleSelect from "@/components/people/PeopleSelect";
 import { supabase } from "@/lib/supabaseClient";
-import { createMemory } from "@/lib/repositories/memoryRepository";
+import { createKnowledge } from "@/lib/repositories/knowledgeRepository";
 import { MobileUI } from "@/lib/theme/mobile";
 import { useTranslations } from "next-intl";
 
@@ -70,7 +70,7 @@ function AddMemoryForm() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ── Submit: real persistence via createMemory() ──────────────────────
+  // ── Submit: canonical Knowledge persistence ──────────────────────────
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -98,14 +98,16 @@ function AddMemoryForm() {
       setIsSaving(true);
       setError(null);
 
-      await createMemory({
+      await createKnowledge({
         userId,
         personId: personId.trim(),
-        type,
+        legacyType: type,
         title: title.trim(),
         value: value.trim(),
-        content: content.trim() || undefined,
-        occurredOn: occurredOn || undefined,
+        content: content.trim() || null,
+        occurredOn: occurredOn || null,
+        source: "manual",
+        importance: 0,
       });
 
       if (preselectedPersonId) {
@@ -114,7 +116,7 @@ function AddMemoryForm() {
         router.push("/care");
       }
     } catch (err) {
-      console.error("[AddMemoryPage] createMemory failed:", err);
+      console.error("[AddMemoryPage] createKnowledge failed:", err);
       setError(t("errors.save"));
     } finally {
       setIsSaving(false);

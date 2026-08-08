@@ -14,11 +14,15 @@
   "assistant": {
     "ask": "Zapytaj Happy",
     "listen": "Posłuchaj krótkiego briefu",
+    "pause": "Wstrzymaj brief",
+    "resume": "Wznów brief",
     "stop": "Zatrzymaj brief",
     "read": "Przeczytaj krótki brief",
     "sectionLabel": "Działania Happy",
     "close": "Zamknij",
-    "speechError": "Nie udało się odtworzyć głosu. Brief możesz przeczytać poniżej."
+    "speechError": "Nie udało się odtworzyć głosu. Brief możesz przeczytać poniżej.",
+    "progress": "Postęp briefu audio", "interrupted": "Odtwarzanie zostało przerwane przez system. Naciśnij Posłuchaj, aby bezpiecznie uruchomić brief ponownie."
+    ,"modeLabel": "Długość briefu", "shortMode": "Krótko", "detailedMode": "Szczegółowo"
   },
   "countdown": {
     "today": "dzisiaj",
@@ -43,7 +47,17 @@
   },
   "brief": {
     "intro": "Dzisiaj masz {count} ważne sprawy.",
-    "featured": "Najbliżej: {title}, {countdown}."
+    "featured": "Najbliżej: {title}, {countdown}.",
+    "greetingNamed": "Dzień dobry, {name}.",
+    "greetingFallback": "Dzień dobry.",
+    "todayNone": "Na dziś nie masz ważnych wydarzeń.",
+    "todayEvents": "Dziś pamiętaj o: {events}.",
+    "upcoming": "Następne ważne wydarzenie to {title}, {countdown}.",
+    "savedGiftIdea": "Masz już zapisany pomysł na prezent dla {name}: {value}.",
+    "savedPreference": "Masz zapisaną ważną wskazówkę o {name}: {value}.",
+    "giftOffer": "Jeśli chcesz, pomogę przygotować prezent dla {name}.",
+    "giftQuestion": "Ważna data dla {name} jest już blisko. Chcesz, żebym pomógł wybrać prezent?",
+    "preferenceQuestion": "Jest jeszcze czas, by przygotować się do ważnej daty dla {name}. Chcesz dodać jedną aktualną preferencję?"
   },
   "featured": {
     "importantLabel": "Najbliższa ważna data",

@@ -19,6 +19,7 @@ import {
   type GiftDiscoveryPromptInput,
 } from "@/lib/gift-discovery";
 import { buildMemoryCaptureCandidates } from "@/lib/memory-capture";
+import { authorizeGiftMemoryCandidates } from "@/lib/memory-capture/authorizeGiftMemoryCandidates.server";
 import {
   buildGiftRecommendationContext,
   buildGiftRecommendationInstructions,
@@ -223,10 +224,17 @@ export async function POST(req: Request) {
       validated = repairedValidated;
     }
     const legacyIdeas = mapSuggestionsToLegacyIdeas(validated.suggestions);
-    const memoryCandidates = buildMemoryCaptureCandidates({
+    const legacyMemoryCandidates = buildMemoryCaptureCandidates({
       context: giftRecommendationContext,
       discoveryAnswers: discoveryRequest.answers,
       aiResponse: parsed,
+    });
+    const memoryCandidates = authorizeGiftMemoryCandidates({
+      userId: ownedPerson.userId,
+      person: { id: person.id, name: person.name?.trim() || "Contact" },
+      knowledge,
+      candidates: legacyMemoryCandidates,
+      tokenSecret: process.env.HAPPY_LEARNING_TOKEN_SECRET?.trim() ?? "",
     });
 
     /* ================= SAVE CACHE ================= */

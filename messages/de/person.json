@@ -17,6 +17,14 @@
     "askHappy": "Happy fragen",
     "addNote": "Notiz hinzufügen",
     "birthdayCountdown": "{days, plural, =0 {Geburtstag heute} =1 {Geburtstag morgen} other {Geburtstag in # Tagen}}",
+    "gifts": {
+      "title": "Geschenke und gespeicherte Optionen", "subtitle": "Plane Geschenke für {name} und speichere hilfreiche Links.", "loading": "Geschenke werden geladen…", "error": "Die Aktion konnte nicht ausgeführt werden. Bitte erneut versuchen.",
+      "ideaPlaceholder": "Zum Beispiel Kleid, Buch oder Blumen", "addIdea": "Idee hinzufügen", "emptyIdeas": "Füge die erste Geschenkidee hinzu.",
+      "linksTitle": "Gespeicherte Links", "urlPlaceholder": "https://shop.de/geschenk", "linkTitlePlaceholder": "Name der Option (optional)", "saveLink": "Link speichern", "emptyLinks": "Für diese Person gibt es noch keine Links.",
+      "deleteLink": "Link löschen", "confirmDeleteLink": "Diesen gespeicherten Link löschen?", "confirmGiven": "Bestätigen, dass „{gift}“ an {name} verschenkt wurde? Es wird im Geschenkverlauf gespeichert.",
+      "legacyReadOnly": "Älterer Notizeintrag – sichtbar, aber der Status kann nicht geändert werden.", "linkDisclaimer": "Links und Shop-Daten werden von dir gespeichert. HappyDate garantiert nicht deren Aktualität.",
+      "lifecycle": { "idea": "Idee", "selected": "Ausgewählt", "purchased": "Gekauft", "given": "Verschenkt" }, "actions": { "selected": "Auswählen", "purchased": "Als gekauft markieren", "given": "Als verschenkt markieren" }
+    },
     "health": {
       "starting": "Happy lernt diese Person gerade kennen",
       "partial": "Happy kennt diese Person teilweise",

@@ -116,6 +116,7 @@ function toViewModel(gift: GiftRecord): GiftItemViewModel {
     personId: gift.personId,
     eventId: gift.eventId,
     date: gift.occurredOn ?? gift.createdAt,
+    canChangeLifecycle: gift.sourceKnowledgeId === null,
   };
 }
 

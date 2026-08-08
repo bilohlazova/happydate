@@ -14,7 +14,6 @@ export interface HappyBrain {
   people: PersonSummary[];
   upcomingBirthdays: PersonSummary[];
   importantMemories: KnowledgeItem[];
-  recentNotes: unknown[];
   upcomingEvents: EventSummary[];
 }
 
@@ -126,7 +125,6 @@ export async function loadBrain(
     people,
     upcomingBirthdays,
     importantMemories: memories,
-    recentNotes: [],
     upcomingEvents,
   };
 }

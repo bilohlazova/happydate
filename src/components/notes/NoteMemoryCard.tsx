@@ -9,17 +9,21 @@ import { normalizeStoredMemoryType } from "@/lib/repositories/memory.types";
 import type {
   NotesMemoryPerson,
   NotesMemoryRow,
+  NotesMemoryEvent,
 } from "@/lib/repositories/memory.types";
 
 interface NoteMemoryCardProps {
   memory: NotesMemoryRow;
   person: NotesMemoryPerson | null;
+  event: NotesMemoryEvent | null;
+  audioDisplayUrl: string | null;
   displayImageUrls: string[];
   menuOpen: boolean;
   onMenuToggle: () => void;
   onMenuClose: () => void;
   onEdit: (memory: NotesMemoryRow) => void;
-  onDelete: (memoryId: string) => void;
+  onDelete: (memory: NotesMemoryRow) => void;
+  deleting: boolean;
   onOpenLightbox: (urls: string[], index: number) => void;
 }
 
@@ -47,12 +51,15 @@ function hideFailedImage(event: SyntheticEvent<HTMLImageElement>) {
 export default function NoteMemoryCard({
   memory,
   person,
+  event,
+  audioDisplayUrl,
   displayImageUrls,
   menuOpen,
   onMenuToggle,
   onMenuClose,
   onEdit,
   onDelete,
+  deleting,
   onOpenLightbox,
 }: NoteMemoryCardProps) {
   const t = useTranslations("notes");
@@ -113,6 +120,7 @@ export default function NoteMemoryCard({
               aria-label={t("card.options")}
               aria-expanded={menuOpen}
               aria-haspopup="menu"
+              disabled={deleting}
             >
               •••
             </button>
@@ -136,9 +144,10 @@ export default function NoteMemoryCard({
                   type="button"
                   role="menuitem"
                   className="hd-card-menu-item danger"
+                  disabled={deleting}
                   onClick={() => {
                     onMenuClose();
-                    onDelete(memory.id);
+                    onDelete(memory);
                   }}
                 >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -175,11 +184,28 @@ export default function NoteMemoryCard({
               {part}
             </span>
           ))}
+          {event && (
+            <span>
+              <span className="hd-card-meta-separator" aria-hidden="true">·</span>
+              {t("card.eventMeta", { title: event.title })}
+            </span>
+          )}
         </div>
 
         <div className={`hd-card-text${presentation.contentIsFallback ? " is-fallback" : ""}`}>
           {presentation.content}
         </div>
+
+        {audioDisplayUrl && (
+          <div>
+            <audio className="hd-card-audio" controls preload="metadata" src={audioDisplayUrl}>
+              {t("audio.unsupported")}
+            </audio>
+            {memory.transcript_text && (
+              <p className="hd-audio-transcript">{t("audio.transcript")}: {memory.transcript_text}</p>
+            )}
+          </div>
+        )}
 
         {tags.length > 0 && (
           <div className="hd-card-tags">

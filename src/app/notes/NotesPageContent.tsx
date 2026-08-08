@@ -1,24 +1,30 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
 import MemoryEditorSheet from "@/components/notes/MemoryEditorSheet";
 import type { MemoryEditorSubmitInput } from "@/components/notes/MemoryEditorSheet";
 import NoteMemoryCard from "@/components/notes/NoteMemoryCard";
 import {
   createMemoryImageSignedUrls,
+  createMemoryAudioSignedUrl,
+  deleteMemoryImageObjects,
+  deleteMemoryAudioObject,
   createNotesMemory,
   deleteMemory as deleteMemoryRecord,
   filterMemories,
   getCurrentMemoryUserId,
   getNotesMemoryPeople,
+  getNotesMemoryEvents,
   listMemories,
   updateNotesMemory,
   uploadMemoryImages,
+  uploadMemoryAudio,
 } from "@/lib/repositories/memoryRepository";
 import type { UploadMemoryImagesResult } from "@/lib/repositories/memoryRepository";
 import type {
   NotesMemoryPerson,
+  NotesMemoryEvent,
   NotesMemoryRow,
   NotesPrimaryFilter,
 } from "@/lib/repositories/memory.types";
@@ -49,7 +55,12 @@ export default function NotesPageContent() {
   const t = useTranslations("notes");
   const [memories,       setMemories]       = useState<NotesMemoryRow[]>([]);
   const [people,         setPeople]         = useState<NotesMemoryPerson[]>([]);
+  const [events,         setEvents]         = useState<NotesMemoryEvent[]>([]);
   const [loading,        setLoading]        = useState(true);
+  const [loadError,      setLoadError]      = useState(false);
+  const [mutationError,  setMutationError]  = useState<string | null>(null);
+  const [deletingId,     setDeletingId]     = useState<string | null>(null);
+  const [isOnline,       setIsOnline]       = useState(true);
   const [primaryFilter,  setPrimaryFilter]  = useState<NotesPrimaryFilter>("all");
   const [filterPersonId, setFilterPersonId] = useState<string>("all");
 
@@ -66,6 +77,9 @@ export default function NotesPageContent() {
   const [editingMemory,  setEditingMemory]  = useState<NotesMemoryRow | null>(null);
   const [selectedNewType, setSelectedNewType] = useState<NotesRawType>("note");
   const [imageDisplayUrls, setImageDisplayUrls] = useState<Record<string, string>>({});
+  const [audioDisplayUrls, setAudioDisplayUrls] = useState<Record<string, string>>({});
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const typeSheetFirstOptionRef = useRef<HTMLButtonElement>(null);
 
   // ── Search ──
   const [search, setSearch] = useState("");
@@ -75,12 +89,22 @@ export default function NotesPageContent() {
     setPeople(await getNotesMemoryPeople());
   }, []);
 
+  const loadEvents = useCallback(async () => {
+    const userId = await getCurrentMemoryUserId();
+    if (!userId) return;
+    setEvents(await getNotesMemoryEvents(userId));
+  }, []);
+
   const loadMemories = useCallback(async () => {
     const userId = await getCurrentMemoryUserId();
     if (!userId) return;
     const rows = await listMemories({ userId });
     const storedImageValues = rows.flatMap((memory) => memory.images ?? []);
     const resolvedImages = await createMemoryImageSignedUrls(storedImageValues);
+    const resolvedAudio = await Promise.all(rows.map(async (memory) => ({
+      id: memory.id,
+      signedUrl: await createMemoryAudioSignedUrl(memory.audio_url),
+    })));
     const displayUrls: Record<string, string> = {};
 
     for (const image of resolvedImages) {
@@ -90,16 +114,59 @@ export default function NotesPageContent() {
     }
 
     setImageDisplayUrls(displayUrls);
+    setAudioDisplayUrls(Object.fromEntries(
+      resolvedAudio.flatMap((audio) => audio.signedUrl ? [[audio.id, audio.signedUrl]] : []),
+    ));
     setMemories(rows);
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      await Promise.all([loadPeople(), loadMemories()]);
+  const refreshNotes = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      await Promise.all([loadPeople(), loadEvents(), loadMemories()]);
+    } catch {
+      setLoadError(true);
+    } finally {
       setLoading(false);
-    })();
-  }, [loadPeople, loadMemories]);
+    }
+  }, [loadEvents, loadPeople, loadMemories]);
+
+  useEffect(() => { void refreshNotes(); }, [refreshNotes]);
+
+  useEffect(() => {
+    const updateConnection = () => setIsOnline(navigator.onLine);
+    updateConnection();
+    window.addEventListener("online", updateConnection);
+    window.addEventListener("offline", updateConnection);
+    return () => {
+      window.removeEventListener("online", updateConnection);
+      window.removeEventListener("offline", updateConnection);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!showTypeSheet) return;
+    typeSheetFirstOptionRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setShowTypeSheet(false);
+      addButtonRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showTypeSheet]);
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeLightbox();
+      if (event.key === "ArrowLeft" && lightboxUrls.length > 1) lbPrev();
+      if (event.key === "ArrowRight" && lightboxUrls.length > 1) lbNext();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
 
   // ── Filter + Search ──
   // Search matches: note text, person name, ai_tags
@@ -107,6 +174,7 @@ export default function NotesPageContent() {
   const filtered = filterMemories({
     memories,
     people,
+    events,
     primaryFilter,
     personId: filterPersonId,
     search,
@@ -167,7 +235,8 @@ export default function NotesPageContent() {
     setEditingMemory(null);
   }
 
-  async function saveMemory({ state, newFiles }: MemoryEditorSubmitInput) {
+  async function saveMemory({ state, newFiles, audioFile }: MemoryEditorSubmitInput) {
+    if (!navigator.onLine) throw new Error("OFFLINE");
     const userId = await getCurrentMemoryUserId();
     if (!userId) throw new Error("AUTH_REQUIRED");
 
@@ -182,17 +251,35 @@ export default function NotesPageContent() {
       ...state,
       existingImages: allImages,
     };
+    const uploadedAudio = audioFile ? await uploadMemoryAudio(audioFile) : null;
+    if (uploadedAudio?.error || (audioFile && !uploadedAudio?.objectPath)) {
+      if (uploadResult.objectPaths.length) await deleteMemoryImageObjects(uploadResult.objectPaths);
+      throw new Error("AUDIO_UPLOAD_FAILED");
+    }
+    const nextAudioUrl = (uploadedAudio?.objectPath ?? state.audioUrl) || null;
+    const previousAudioUrl = editingMemory?.audio_url ?? null;
 
-    if (editingMemory) {
-      await updateNotesMemory(
-        editingMemory.id,
-        buildMemoryEditorUpdatePatch(stateWithImages)
-      );
-    } else {
-      await createNotesMemory({
-        userId,
-        ...buildMemoryEditorCreateFields(stateWithImages),
-      });
+    try {
+      if (editingMemory) {
+        await updateNotesMemory(
+          editingMemory.id,
+          { ...buildMemoryEditorUpdatePatch(stateWithImages), audioUrl: nextAudioUrl }
+        );
+      } else {
+        await createNotesMemory({
+          userId,
+          ...buildMemoryEditorCreateFields(stateWithImages),
+          audioUrl: nextAudioUrl,
+        });
+      }
+    } catch (error) {
+      if (uploadedAudio?.objectPath) await deleteMemoryAudioObject(uploadedAudio.objectPath);
+      if (uploadResult.objectPaths.length) await deleteMemoryImageObjects(uploadResult.objectPaths);
+      throw error;
+    }
+
+    if (previousAudioUrl && previousAudioUrl !== nextAudioUrl) {
+      await deleteMemoryAudioObject(previousAudioUrl);
     }
 
     await loadMemories();
@@ -205,10 +292,25 @@ export default function NotesPageContent() {
   }
 
   // ── Delete ──
-  async function deleteMemory(id: string) {
+  async function deleteMemory(memory: NotesMemoryRow) {
     setMenuOpenId(null);
-    await deleteMemoryRecord(id);
-    loadMemories();
+    if (!window.confirm(t("actions.deleteConfirm"))) return;
+    if (!navigator.onLine) {
+      setMutationError(t("states.offlineAction"));
+      return;
+    }
+    setDeletingId(memory.id);
+    setMutationError(null);
+    try {
+      await deleteMemoryRecord(memory.id);
+      if (memory.images?.length) await deleteMemoryImageObjects(memory.images);
+      if (memory.audio_url) await deleteMemoryAudioObject(memory.audio_url);
+      await loadMemories();
+    } catch {
+      setMutationError(t("states.deleteFailed"));
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   // ── Lightbox ──
@@ -461,6 +563,14 @@ export default function NotesPageContent() {
 
         /* ── Loading / Empty ── */
         .hd-loading { text-align: center; padding: 52px 28px; color: #aeaeb2; font-size: 14px; }
+        .hd-status-banner {
+          width: calc(100% - 32px); max-width: calc(var(--hd-screen-max) - 32px);
+          margin: 0 auto 12px; border-radius: 14px; padding: 12px 14px;
+          font-size: 14px; line-height: 1.4; color: #6b4300; background: #fff4d6;
+          display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        }
+        .hd-status-banner.is-error { color: #9b1c17; background: #fff0ef; }
+        .hd-status-retry { border: 0; background: transparent; color: #007aff; font: inherit; font-weight: 650; padding: 8px; cursor: pointer; }
         .hd-empty { text-align: center; padding: 72px 28px; }
         .hd-empty-glyph { font-size: 38px; margin-bottom: 14px; opacity: .25; }
         .hd-empty-title { font-size: 17px; font-weight: 600; color: #000; margin-bottom: 6px; letter-spacing: -.2px; }
@@ -639,6 +749,25 @@ export default function NotesPageContent() {
         }
         .hd-photo-upload:active { background: #f2f2f7; }
         .hd-photo-upload:disabled { opacity: .45; cursor: default; }
+        .hd-photo-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        @media (max-width: 390px) {
+          .hd-photo-actions { grid-template-columns: 1fr; }
+        }
+
+        .hd-audio-preview {
+          position: relative; display: flex; align-items: center;
+          padding: 10px 38px 10px 10px; border-radius: 12px; background: #fff;
+        }
+        .hd-audio-preview audio, .hd-card-audio { width: 100%; min-height: 42px; }
+        .hd-card-audio { margin-top: 12px; }
+        .hd-audio-transcript { margin: 6px 0 0; color: #636366; font-size: 13px; line-height: 1.4; }
+        .hd-audio-hint { margin: 6px 2px 0; color: #8e8e93; font-size: 12px; line-height: 1.35; }
+        .hd-audio-wave { height: 20px; display: inline-flex; align-items: center; gap: 2px; }
+        .hd-audio-wave i {
+          display: block; width: 3px; height: 6px; border-radius: 999px;
+          background: #ff3b30; animation: hdAudioWave .7s ease-in-out infinite alternate;
+        }
+        @keyframes hdAudioWave { to { height: 20px; } }
 
         .hd-previews { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
         .hd-preview-item {
@@ -748,6 +877,10 @@ export default function NotesPageContent() {
           font-size: 13px; color: #8e8e93; font-weight: 400;
         }
         .hd-search-hint strong { color: #000; font-weight: 600; }
+        @media (prefers-reduced-motion: reduce) {
+          .hd-page *, .hd-page *::before, .hd-page *::after,
+          .hd-modal-overlay *, .hd-lightbox * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+        }
       `}</style>
 
       {/* Close menu on outside tap */}
@@ -760,13 +893,25 @@ export default function NotesPageContent() {
 
       <div className="hd-page">
 
+        {!isOnline && (
+          <div className="hd-status-banner" role="status" aria-live="polite">
+            <span>{t("states.offline")}</span>
+          </div>
+        )}
+        {mutationError && (
+          <div className="hd-status-banner is-error" role="alert">
+            <span>{mutationError}</span>
+            <button type="button" className="hd-status-retry" onClick={() => setMutationError(null)}>{t("actions.dismiss")}</button>
+          </div>
+        )}
+
         {/* ── HEADER ── */}
         <div className="hd-header">
           <div className="hd-header-left">
             <h1>{t("page.title")}</h1>
             <p>{t("page.resultCount", { count: filtered.length })}</p>
           </div>
-          <button className="hd-add-btn" onClick={() => setShowTypeSheet(true)} aria-label={t("accessibility.add")}>
+          <button ref={addButtonRef} className="hd-add-btn" onClick={() => setShowTypeSheet(true)} aria-label={t("accessibility.add")}>
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
             </svg>
@@ -870,9 +1015,18 @@ export default function NotesPageContent() {
 
         {/* ── NOTES FEED — clean, no AI chips inside ── */}
         <div className="hd-feed">
-          {loading && <div className="hd-loading">{t("states.loading")}</div>}
+          {loading && <div className="hd-loading" role="status" aria-live="polite">{t("states.loading")}</div>}
 
-          {!loading && filtered.length === 0 && (
+          {!loading && loadError && (
+            <div className="hd-empty" role="alert">
+              <div className="hd-empty-glyph" aria-hidden="true">↻</div>
+              <div className="hd-empty-title">{t("states.loadFailed")}</div>
+              <div className="hd-empty-sub">{t("states.loadFailedHint")}</div>
+              <button type="button" className="hd-status-retry" onClick={() => void refreshNotes()}>{t("actions.retry")}</button>
+            </div>
+          )}
+
+          {!loading && !loadError && filtered.length === 0 && (
             <div className="hd-empty">
               <div className="hd-empty-glyph">🕊️</div>
               <div className="hd-empty-title">
@@ -890,8 +1044,9 @@ export default function NotesPageContent() {
             </div>
           )}
 
-          {filtered.map(memory => {
+          {!loadError && filtered.map(memory => {
             const person = people.find(p => p.id === memory.person_id) ?? null;
+            const event = events.find(item => item.id === memory.event_id) ?? null;
             const imgs = (memory.images ?? []).flatMap((storedValue) => {
               const displayUrl = imageDisplayUrls[storedValue];
               return displayUrl ? [displayUrl] : [];
@@ -902,12 +1057,15 @@ export default function NotesPageContent() {
                 key={memory.id}
                 memory={memory}
                 person={person}
+                event={event}
+                audioDisplayUrl={audioDisplayUrls[memory.id] ?? null}
                 displayImageUrls={imgs}
                 menuOpen={menuOpenId === memory.id}
                 onMenuToggle={() => setMenuOpenId(menuOpenId === memory.id ? null : memory.id)}
                 onMenuClose={() => setMenuOpenId(null)}
                 onEdit={openEdit}
                 onDelete={deleteMemory}
+                deleting={deletingId === memory.id}
                 onOpenLightbox={openLightbox}
               />
             );
@@ -917,7 +1075,7 @@ export default function NotesPageContent() {
 
       {/* ── LIGHTBOX ── */}
       {lightboxOpen && (
-        <div className="hd-lightbox" onClick={closeLightbox} role="dialog" aria-label={t("accessibility.closeLightbox")}>
+        <div className="hd-lightbox" onClick={closeLightbox} role="dialog" aria-modal="true" aria-label={t("accessibility.imageViewer")}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             className="hd-lightbox-img"
@@ -944,12 +1102,13 @@ export default function NotesPageContent() {
             if (event.target === event.currentTarget) setShowTypeSheet(false);
           }}
         >
-          <div className="hd-type-sheet">
+          <div className="hd-type-sheet" role="dialog" aria-modal="true" aria-labelledby="notes-type-sheet-title">
             <div className="hd-modal-handle" />
-            <div className="hd-type-sheet-title">{t("typeSelector.title")}</div>
+            <div className="hd-type-sheet-title" id="notes-type-sheet-title">{t("typeSelector.title")}</div>
             <div className="hd-type-options">
               {NOTES_TYPE_OPTIONS.map(option => (
                 <button
+                  ref={option === NOTES_TYPE_OPTIONS[0] ? typeSheetFirstOptionRef : undefined}
                   key={option.type}
                   type="button"
                   className="hd-type-option"
@@ -977,7 +1136,9 @@ export default function NotesPageContent() {
           type={editingMemory ? editingMemory.type : selectedNewType}
           memory={editingMemory}
           people={people}
+          events={events}
           imageDisplayUrls={imageDisplayUrls}
+          audioDisplayUrl={editingMemory ? audioDisplayUrls[editingMemory.id] ?? null : null}
           onCancel={closeModal}
           onSubmit={saveMemory}
         />

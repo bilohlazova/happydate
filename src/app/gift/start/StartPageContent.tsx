@@ -10,19 +10,19 @@ import {
   type GiftDiscoveryAnswerValue,
 } from "@/components/gift/GiftDiscoveryPanel";
 import { GiftRecommendationCard } from "@/components/gift/GiftRecommendationCard";
-import { MemoryCaptureCard } from "@/components/memory/MemoryCaptureCard";
+import { HappyLearningCard } from "@/components/memory/HappyLearningCard";
 import type {
   GiftDiscoveryAnswers,
   GiftDiscoveryQuestion,
   GiftDiscoveryQuestionType,
 } from "@/lib/gift-discovery";
-import type { MemoryCaptureCandidate } from "@/lib/memory-capture";
+import type { HappyLearningDetectionCandidate } from "@/lib/happy-learning/happyLearningDetectV2.types";
+import { confirmHappyLearningCandidateWithSession } from "@/lib/happy-learning/happyLearningClient";
 import type { GiftWorkspaceViewModel } from "@/lib/gifts/gift.types";
 import {
   requestGiftRecommendations,
   type GiftRecommendationsResult,
 } from "@/lib/gifts/giftRecommendationClient";
-import { confirmMemoryCaptureCandidate } from "@/lib/memoryCaptureClient";
 import { submitLegacyGiftRequest } from "@/lib/gifts/giftRequestCompatibility";
 import { MobileUI } from "@/lib/theme/mobile";
 import { GiftWorkspacePanel } from "./GiftWorkspacePanel";
@@ -77,7 +77,6 @@ export default function GiftStartPage({
   const [skippedDiscoveryQuestions, setSkippedDiscoveryQuestions] = useState<string[]>([]);
   const [dismissedMemoryCandidateIds, setDismissedMemoryCandidateIds] = useState<string[]>([]);
   const [savedMemoryCandidateIds, setSavedMemoryCandidateIds] = useState<string[]>([]);
-  const [savingMemoryCandidateId, setSavingMemoryCandidateId] = useState<string | null>(null);
   const [memoryCaptureStatus, setMemoryCaptureStatus] = useState<{
     kind: "saved" | "alreadySaved" | "saveFailed";
     candidateId: string;
@@ -232,8 +231,8 @@ export default function GiftStartPage({
   }
 
   function visibleMemoryCandidates(
-    candidates: readonly MemoryCaptureCandidate[] | undefined,
-  ): MemoryCaptureCandidate[] {
+    candidates: readonly HappyLearningDetectionCandidate[] | undefined,
+  ): HappyLearningDetectionCandidate[] {
     const dismissed = new Set(dismissedMemoryCandidateIds);
     const saved = new Set(savedMemoryCandidateIds);
     return (candidates ?? []).filter(
@@ -351,27 +350,26 @@ export default function GiftStartPage({
     });
   }
 
-  async function handleMemoryCandidateConfirm(candidateId: string) {
-    if (!personId || recommendations.status !== "success") return;
-    const candidate = recommendations.memoryCandidates.find((item) => item.id === candidateId);
-    if (!candidate) return;
+  async function handleMemoryCandidateConfirm(
+    candidate: HappyLearningDetectionCandidate,
+  ): Promise<"created" | "already_known" | "error"> {
+    if (!personId || candidate.personId !== personId) return "error";
 
-    setSavingMemoryCandidateId(candidateId);
     setMemoryCaptureStatus(null);
-    const result = await confirmMemoryCaptureCandidate({ personId, candidate });
+    const result = await confirmHappyLearningCandidateWithSession(candidate);
 
     if (result.ok) {
-      setSavedMemoryCandidateIds((current) => [...new Set([...current, candidateId])]);
+      setSavedMemoryCandidateIds((current) => [...new Set([...current, candidate.id])]);
       setMemoryCaptureStatus({
-        kind: result.status === "already_exists" ? "alreadySaved" : "saved",
-        candidateId,
+        kind: result.status === "already_known" ? "alreadySaved" : "saved",
+        candidateId: candidate.id,
       });
+      return result.status;
     } else {
-      setMemoryCaptureStatus({ kind: "saveFailed", candidateId });
+      setMemoryCaptureStatus({ kind: "saveFailed", candidateId: candidate.id });
       setMemoryCaptureRetryNonce((current) => current + 1);
+      return "error";
     }
-
-    setSavingMemoryCandidateId(null);
   }
 
   function handleMemoryCandidateDismiss(candidateId: string) {
@@ -558,13 +556,11 @@ export default function GiftStartPage({
                 )}
 
                 {activeMemoryCandidate && (
-                  <MemoryCaptureCard
+                  <HappyLearningCard
                     key={`${activeMemoryCandidate.id}:${memoryCaptureRetryNonce}`}
-                    className="mt-3"
                     candidate={activeMemoryCandidate}
-                    onConfirm={handleMemoryCandidateConfirm}
+                    onSave={handleMemoryCandidateConfirm}
                     onDismiss={handleMemoryCandidateDismiss}
-                    loading={savingMemoryCandidateId === activeMemoryCandidate.id}
                   />
                 )}
 

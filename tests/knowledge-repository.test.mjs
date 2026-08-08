@@ -21,6 +21,7 @@ test("canonical Knowledge Repository exposes the staged API", async () => {
     "createKnowledge",
     "updateKnowledge",
     "archiveKnowledge",
+    "deleteKnowledge",
   ]) {
     assert.match(source, new RegExp(`export async function ${method}\\b`));
   }
@@ -41,12 +42,12 @@ test("canonical Repository has no upper-layer dependencies", async () => {
   }
 });
 
-test("legacy Memory Repository no longer depends on Brain", async () => {
+test("Memory compatibility adapter delegates projection and CRUD without raw readers", async () => {
   const source = await readFile(legacyRepositoryPath, "utf8");
 
   assert.equal(source.includes("@/lib/brain/"), false);
-  assert.match(source, /listKnowledgeRows/);
-  assert.match(source, /listKnowledgeRowsForPerson/);
+  assert.match(source, /listNotesKnowledgeProjection/);
+  assert.doesNotMatch(source, /getActiveMemories|getMemoriesForPerson|getBrainMemories/);
 });
 
 test("canonical reads use explicit columns instead of select star", async () => {

@@ -387,9 +387,9 @@ operations, and complete raw chat history.
 | Care Brain | Brain engines, reminders, Home builder | Strong foundation; fragmented contracts |
 | Conversation Brain | Assistant contract/server/context, Chat modal | Strong foundation; orchestration mixed with UI |
 | Gifts | Gift domain, Gift Intelligence, Gift Discovery, Gift workspace | Canonical foundation; expand lifecycle and links |
-| Home | canonical Home loader plus separate presentation classification | Partially migrated |
-| Calendar | custom Dashboard calendar plus `react-big-calendar` components | Duplicate implementations |
-| Notes | Notes UI and legacy Memory repository | Feature-rich legacy consumer |
+| Home | canonical Home loader plus structured daily briefing, accessible lifecycle-aware player and timed care prompts | Stage 12 complete |
+| Calendar | one person-aware mobile calendar connected to Reminder lifecycle | Stage 10 complete |
+| Notes | person- and Event-aware Notes UI with private image/audio capture over canonical Knowledge persistence | Stage 11 complete, including resilience and accessibility |
 | Actions | API routes, repository methods, client helpers, UI handlers | Distributed; formalize |
 | Mobile | Capacitor iOS/Android and Camera | Remote wrapper foundation |
 
@@ -400,12 +400,14 @@ The following are documented migration debt, not approved extension patterns:
 - direct Supabase access from large UI screens such as Dashboard, Profile,
   People Add, Survey, and Reviews;
 - direct event CRUD inside Dashboard;
-- legacy Notes reads and writes through `memoryRepository`;
+- Notes-specific UI and image operations through the canonical-delegating
+  `memoryRepository` adapter;
 - multiple Person and Event DTOs with overlapping meanings;
 - duplicated calendar implementations;
 - Home presentation code that still performs some memory classification;
 - Action transitions distributed across components, clients, and routes;
-- v1 and v2 Memory Capture endpoints operating in parallel;
+- versioned Happy Learning internals behind one canonical pair of Memory
+  Capture endpoints;
 - legacy Happy modules overlapping newer Brain, Home, and Assistant modules;
 - incomplete database migrations and RLS documentation.
 

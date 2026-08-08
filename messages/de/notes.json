@@ -4,7 +4,7 @@
     "resultCount": "{count, plural, one {# Eintrag} other {# Einträge}}"
   },
   "search": {
-    "placeholder": "Erinnerungen, Personen, Tags suchen…",
+    "placeholder": "Notizen, Personen, Ereignisse suchen…",
     "clear": "Suche löschen",
     "noResults": "Keine Ergebnisse für „{query}“",
     "results": "{count, plural, one {# Ergebnis} other {# Ergebnisse}} für „{query}“"
@@ -49,7 +49,8 @@
     "noContent": "Kein Inhalt",
     "imageCount": "{count, plural, one {# Bild} other {# Bilder}}",
     "options": "Eintragsoptionen",
-    "personMeta": "Über: {name}"
+    "personMeta": "Über: {name}",
+    "eventMeta": "Ereignis: {title}"
   },
   "editor": {
     "addNote": "Notiz hinzufügen",
@@ -76,7 +77,9 @@
     "journalContent": "Eintragsinhalt",
     "images": "Bilder",
     "choosePerson": "Person auswählen",
-    "noAssignedPerson": "Keine zugeordnete Person"
+    "noAssignedPerson": "Keine zugeordnete Person",
+    "event": "Ereignis (optional)",
+    "noAssignedEvent": "Kein zugeordnetes Ereignis"
   },
   "placeholders": {
     "noteTitle": "Notiztitel",
@@ -99,7 +102,8 @@
     "close": "Schließen",
     "edit": "Bearbeiten",
     "delete": "Löschen",
-    "addImage": "Bild hinzufügen"
+    "deleteConfirm": "Diesen Eintrag dauerhaft löschen?",
+    "addImage": "Bild hinzufügen", "retry": "Erneut versuchen", "dismiss": "Schließen"
   },
   "validation": {
     "noteTitleOrContent": "Füge einen Titel oder Inhalt hinzu.",
@@ -114,6 +118,8 @@
     "saveFailed": "Speichern fehlgeschlagen. Versuche es erneut.",
     "signIn": "Melde dich vor dem Speichern erneut an."
   },
+  "audio": { "transcript": "Transkript", "label": "Sprachnotiz", "record": "Stimme aufnehmen", "stop": "Aufnahme stoppen · {seconds} Sek.", "remove": "Sprachaufnahme entfernen", "hint": "Maximale Länge: 5 Minuten. Die Aufnahme wird privat gespeichert.", "unsupported": "Dieses Gerät unterstützt keine Audioaufnahme oder -wiedergabe.", "permissionError": "Kein Zugriff auf das Mikrofon. Prüfe die Berechtigung in den Einstellungen.", "uploadFailed": "Die Sprachaufnahme konnte nicht hochgeladen werden. Die Notiz wurde nicht gespeichert." },
+  "camera": { "takePhoto": "Foto aufnehmen", "chooseGallery": "Aus Galerie wählen", "opening": "Kamera wird geöffnet…", "permissionError": "Kein Zugriff auf die Kamera. Prüfe die Berechtigung in den Einstellungen.", "captureFailed": "Das Foto konnte nicht aufgenommen werden. Versuche es erneut.", "invalidImage": "Wähle ein JPEG-, PNG-, WebP-, HEIC- oder HEIF-Bild bis 10 MB." },
   "states": {
     "loading": "Erinnerungen werden geladen...",
     "emptyAll": "Du hast noch keine Einträge.",
@@ -125,7 +131,7 @@
     "noMatches": "Keine passenden Einträge gefunden.",
     "tryAgain": "Nichts passt zu „{query}“. Versuche eine andere Suche.",
     "chooseOther": "Wähle eine andere Person oder füge einen neuen Eintrag hinzu.",
-    "addOrFilter": "Füge einen Eintrag hinzu oder wähle einen anderen Filter."
+    "addOrFilter": "Füge einen Eintrag hinzu oder wähle einen anderen Filter.", "offline": "Keine Verbindung. Notizen können angesehen, Änderungen aber noch nicht gespeichert werden.", "offlineAction": "Keine Internetverbindung. Dein Entwurf bleibt im Editor — versuche es nach Wiederherstellung der Verbindung erneut.", "loadFailed": "Notizen konnten nicht geladen werden", "loadFailedHint": "Prüfe deine Verbindung und versuche es erneut.", "deleteFailed": "Der Eintrag konnte nicht gelöscht werden. Er bleibt in der Liste."
   },
   "dates": {
     "today": "Heute",
@@ -150,6 +156,6 @@
     "removeNewImage": "Neues Bild {index} entfernen",
     "closeLightbox": "Vorschau schließen",
     "previousImage": "Vorheriges Bild",
-    "nextImage": "Nächstes Bild"
+    "nextImage": "Nächstes Bild", "imageViewer": "Bildanzeige"
   }
 }

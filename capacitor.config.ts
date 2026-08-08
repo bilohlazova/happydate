@@ -8,6 +8,11 @@ const config: CapacitorConfig = {
     url: 'https://happydate.vercel.app',
     cleartext: true,
   },
+  plugins: {
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'banner', 'list'],
+    },
+  },
 };
 
 export default config;

@@ -4,7 +4,10 @@ import type {
 } from "../gift-intelligence";
 import type { GiftDiscoveryPromptInput } from "../gift-discovery/index.ts";
 import type { GiftDiscoveryAnswers } from "../gift-discovery/index.ts";
-import type { MemoryCaptureCandidate } from "../memory-capture";
+import {
+  parseHappyLearningDetectV2Response,
+} from "../happy-learning/happyLearningClient.ts";
+import type { HappyLearningDetectionCandidate } from "../happy-learning/happyLearningDetectV2.types.ts";
 
 export interface LegacyGiftIdea {
   title?: unknown;
@@ -48,7 +51,7 @@ export type GiftRecommendationsResult =
       suggestions: GiftRecommendationSuggestion[];
       followUpQuestions: string[];
       discovery: GiftDiscoveryPromptInput | null;
-      memoryCandidates: MemoryCaptureCandidate[];
+      memoryCandidates: HappyLearningDetectionCandidate[];
       usedLegacyFallback: boolean;
       cached: boolean;
     }
@@ -99,23 +102,8 @@ function discovery(value: unknown): GiftDiscoveryPromptInput | null {
   return isDiscoveryPromptInput(value) ? value : null;
 }
 
-function isMemoryCaptureCandidate(value: unknown): value is MemoryCaptureCandidate {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Record<string, unknown>;
-  return (
-    typeof candidate.id === "string" &&
-    typeof candidate.type === "string" &&
-    typeof candidate.value === "string" &&
-    candidate.confidence === "high" &&
-    typeof candidate.source === "string" &&
-    candidate.requiresConfirmation === true
-  );
-}
-
-function memoryCandidates(value: unknown): MemoryCaptureCandidate[] {
-  return Array.isArray(value)
-    ? value.filter(isMemoryCaptureCandidate)
-    : [];
+function memoryCandidates(value: unknown): HappyLearningDetectionCandidate[] {
+  return parseHappyLearningDetectV2Response({ candidates: value }).candidates;
 }
 
 export function mapLegacyIdeaToStructuredSuggestion(

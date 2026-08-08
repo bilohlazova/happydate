@@ -16,6 +16,7 @@ const candidate = {
   polarity: "likes",
   semanticTags: ["interest", "like"],
   evidenceText: "Ivan likes fishing",
+  source: "chat_message",
   schemaVersion: "happy-learning-detection-v2",
 };
 
@@ -24,7 +25,7 @@ function token(overrides = {}, options = {}) {
 }
 
 function request(candidateOverride = {}, tokenValue = token(candidateOverride)) {
-  return new Request("http://localhost/api/memory-capture/confirm-v2", {
+  return new Request("http://localhost/api/memory-capture/confirm", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer access" },
     body: JSON.stringify({ detectionToken: tokenValue, candidate: { ...candidate, ...candidateOverride } }),
@@ -137,22 +138,20 @@ test("conflict and lost ownership do not persist", async () => {
   assert.equal(writes, 0);
 });
 
-test("architecture keeps v1 and Gift flow unchanged while UI uses confirm-v2 safely", async () => {
-  const [route, client, card, modal, semantic, v1] = await Promise.all([
-    readFile("src/app/api/memory-capture/confirm-v2/route.ts", "utf8"),
+test("architecture uses one canonical confirmation path safely", async () => {
+  const [route, client, card, modal, semantic] = await Promise.all([
+    readFile("src/app/api/memory-capture/confirm/route.ts", "utf8"),
     readFile("src/lib/happy-learning/happyLearningClient.ts", "utf8"),
     readFile("src/components/memory/HappyLearningCard.tsx", "utf8"),
     readFile("src/components/ChatAssistantModal.tsx", "utf8"),
     readFile("src/lib/semantic-memory/buildSemanticMemoryProjection.ts", "utf8"),
-    readFile("src/app/api/memory-capture/confirm/route.ts", "utf8"),
   ]);
   assert.match(route, /createHappyLearningConfirmV2Response/);
-  assert.match(client, /\/api\/memory-capture\/confirm-v2/);
+  assert.match(client, /MEMORY_CAPTURE_ENDPOINTS\.canonical\.confirm/);
   assert.match(card, /status === "saving"/);
   assert.match(card, /disabled=\{conflict \|\| status === "saving"/);
   assert.match(modal, /homeContext\.refresh\(\)/);
   assert.match(modal, /router\.refresh\(\)/);
   assert.doesNotMatch(semantic, /happy-learning/);
-  assert.match(v1, /resolveGiftAccess/);
   assert.doesNotMatch(card, /supabase|\.from\(|\.insert\(/);
 });

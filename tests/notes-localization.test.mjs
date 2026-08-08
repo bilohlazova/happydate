@@ -16,7 +16,7 @@ async function translator(locale) {
 test("Notes title, search, filters, types, selector, editor, validation and a11y exist in five locales", async () => {
   for (const locale of locales) {
     const t = await translator(locale);
-    for (const key of ["page.title", "search.placeholder", "filters.all", "filters.people", "types.other", "typeSelector.noteDescription", "editor.addMemory", "validation.giftIdeaRequired", "upload.failed", "accessibility.closeLightbox"]) {
+    for (const key of ["page.title", "search.placeholder", "filters.all", "filters.people", "types.other", "typeSelector.noteDescription", "editor.addMemory", "fields.event", "fields.noAssignedEvent", "card.eventMeta", "audio.record", "audio.stop", "audio.transcript", "camera.takePhoto", "camera.chooseGallery", "camera.permissionError", "states.offline", "states.offlineAction", "states.loadFailed", "states.deleteFailed", "actions.retry", "validation.giftIdeaRequired", "upload.failed", "accessibility.closeLightbox", "accessibility.imageViewer"]) {
       assert.ok(t(key).trim(), `${locale}:${key}`);
     }
   }
@@ -56,12 +56,14 @@ test("Notes implementation preserves user data, raw types, routes, filters and s
   const editor = await readFile(path.join(root, "src/components/notes/MemoryEditorSheet.tsx"), "utf8");
   const card = await readFile(path.join(root, "src/components/notes/NoteMemoryCard.tsx"), "utf8");
   assert.match(page, /filterMemories\(\{/);
+  assert.match(page, /getNotesMemoryEvents/);
   assert.match(page, /createMemoryImageSignedUrls/);
   assert.match(page, /setShowModal\(true\)/);
   assert.doesNotMatch(page, /\/pl\/notes|\/en\/notes/);
-  assert.doesNotMatch(editor, /error\.message/);
+  assert.doesNotMatch(editor, /setFormError\([^)]*error\.message/);
   assert.match(card, /memory\.content_text/);
   assert.match(card, /normalizeStoredMemoryType\(memory\.type\)/);
+  assert.match(card, /card\.eventMeta/);
 });
 
 test("German Notes layout keeps fluid mobile controls and type descriptions", async () => {

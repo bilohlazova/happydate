@@ -4,7 +4,7 @@
     "resultCount": "{count, plural, one {# zapis} few {# zapisy} many {# zapisów} other {# zapisu}}"
   },
   "search": {
-    "placeholder": "Szukaj wspomnień, osób, tagów…",
+    "placeholder": "Szukaj notatek, osób, wydarzeń…",
     "clear": "Wyczyść wyszukiwanie",
     "noResults": "Brak wyników dla „{query}”",
     "results": "{count, plural, one {# wynik} few {# wyniki} many {# wyników} other {# wyniku}} dla „{query}”"
@@ -49,7 +49,8 @@
     "noContent": "Brak treści",
     "imageCount": "{count, plural, one {# zdjęcie} few {# zdjęcia} many {# zdjęć} other {# zdjęcia}}",
     "options": "Opcje zapisu",
-    "personMeta": "O osobie: {name}"
+    "personMeta": "O osobie: {name}",
+    "eventMeta": "Wydarzenie: {title}"
   },
   "editor": {
     "addNote": "Dodaj notatkę",
@@ -76,7 +77,9 @@
     "journalContent": "Treść wpisu",
     "images": "Zdjęcia",
     "choosePerson": "Wybierz osobę",
-    "noAssignedPerson": "Bez przypisanej osoby"
+    "noAssignedPerson": "Bez przypisanej osoby",
+    "event": "Wydarzenie (opcjonalnie)",
+    "noAssignedEvent": "Bez przypisanego wydarzenia"
   },
   "placeholders": {
     "noteTitle": "Tytuł notatki",
@@ -99,7 +102,8 @@
     "close": "Zamknij",
     "edit": "Edytuj",
     "delete": "Usuń",
-    "addImage": "Dodaj zdjęcie"
+    "deleteConfirm": "Usunąć ten zapis bez możliwości przywrócenia?",
+    "addImage": "Dodaj zdjęcie", "retry": "Spróbuj ponownie", "dismiss": "Zamknij"
   },
   "validation": {
     "noteTitleOrContent": "Dodaj tytuł lub treść zapisu.",
@@ -114,6 +118,8 @@
     "saveFailed": "Nie udało się zapisać. Spróbuj ponownie.",
     "signIn": "Zaloguj się ponownie przed zapisaniem."
   },
+  "audio": { "transcript": "Transkrypcja", "label": "Notatka głosowa", "record": "Nagraj głos", "stop": "Zatrzymaj nagranie · {seconds} s", "remove": "Usuń nagranie głosowe", "hint": "Maksymalna długość to 5 minut. Nagranie jest przechowywane prywatnie.", "unsupported": "To urządzenie nie obsługuje nagrywania lub odtwarzania dźwięku.", "permissionError": "Nie udało się uzyskać dostępu do mikrofonu. Sprawdź uprawnienia w ustawieniach.", "uploadFailed": "Nie udało się przesłać nagrania głosowego. Notatka nie została zapisana." },
+  "camera": { "takePhoto": "Zrób zdjęcie", "chooseGallery": "Wybierz z galerii", "opening": "Otwieram aparat…", "permissionError": "Brak dostępu do aparatu. Sprawdź uprawnienia w ustawieniach.", "captureFailed": "Nie udało się zrobić zdjęcia. Spróbuj ponownie.", "invalidImage": "Wybierz obraz JPEG, PNG, WebP, HEIC lub HEIF do 10 MB." },
   "states": {
     "loading": "Ładowanie wspomnień...",
     "emptyAll": "Nie masz jeszcze żadnych zapisów.",
@@ -125,7 +131,7 @@
     "noMatches": "Nie znaleziono pasujących zapisów.",
     "tryAgain": "Nic nie pasuje do „{query}”. Spróbuj inaczej.",
     "chooseOther": "Wybierz inną osobę albo dodaj nowy zapis.",
-    "addOrFilter": "Dodaj nowy zapis lub wybierz inny filtr."
+    "addOrFilter": "Dodaj nowy zapis lub wybierz inny filtr.", "offline": "Brak połączenia. Notatki można przeglądać, ale zmian nie można jeszcze zapisać.", "offlineAction": "Brak połączenia z internetem. Szkic pozostał w edytorze — spróbuj ponownie po odzyskaniu połączenia.", "loadFailed": "Nie udało się wczytać notatek", "loadFailedHint": "Sprawdź połączenie i spróbuj ponownie.", "deleteFailed": "Nie udało się usunąć zapisu. Nadal znajduje się na liście."
   },
   "dates": {
     "today": "Dzisiaj",
@@ -150,6 +156,6 @@
     "removeNewImage": "Usuń nowe zdjęcie {index}",
     "closeLightbox": "Zamknij podgląd",
     "previousImage": "Poprzednie zdjęcie",
-    "nextImage": "Następne zdjęcie"
+    "nextImage": "Następne zdjęcie", "imageViewer": "Podgląd obrazu"
   }
 }

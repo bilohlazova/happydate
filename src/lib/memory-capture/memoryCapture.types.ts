@@ -21,8 +21,7 @@ export type MemoryCaptureConfidence = (typeof MEMORY_CAPTURE_CONFIDENCE)[number]
 
 export type MemoryCaptureCandidateSource =
   | "discovery_answer"
-  | "ai_response"
-  | "chat_message";
+  | "ai_response";
 
 export interface MemoryCaptureCandidate {
   id: string;

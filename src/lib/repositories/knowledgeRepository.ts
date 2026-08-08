@@ -11,7 +11,7 @@ import {
   type KnowledgeItem,
   type PersonKnowledgeProfile,
 } from "@/lib/knowledge";
-import { MEMORY_ROW_COLUMNS, type MemoryRow } from "./memory.types";
+import { MEMORY_ROW_COLUMNS, type MemoryRow, type NotesMemoryRow } from "./memory.types";
 import { assertPersistableMemoryImageValues } from "@/lib/storage/memoryImages";
 
 export interface ListKnowledgeInput {
@@ -51,8 +51,10 @@ export interface CreateKnowledgeInput {
   occurredOn?: string | null;
   importance?: number;
   source?: string;
-  images?: string[];
+  images?: string[] | null;
   aiTags?: string[];
+  audioUrl?: string | null;
+  transcriptText?: string | null;
 }
 
 export interface UpdateKnowledgeInput {
@@ -65,11 +67,20 @@ export interface UpdateKnowledgeInput {
   occurredOn?: string | null;
   importance?: number;
   source?: string;
-  images?: string[];
+  images?: string[] | null;
+  audioUrl?: string | null;
+  transcriptText?: string | null;
 }
 
 function repositoryError(operation: string, message: string): Error {
   return new Error(`[knowledgeRepository] ${operation} failed: ${message}`);
+}
+
+async function requireKnowledgeUserId(): Promise<string> {
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw repositoryError("authentication", error.message);
+  if (!data.user) throw repositoryError("authentication", "Authentication required");
+  return data.user.id;
 }
 
 function serverSupabaseClient(): SupabaseClient {
@@ -84,7 +95,9 @@ async function createKnowledgeWithClient(
   client: SupabaseClient,
   input: CreateKnowledgeInput,
 ): Promise<KnowledgeItem> {
-  const images = assertPersistableMemoryImageValues(input.images ?? []);
+  const images = input.images === null
+    ? null
+    : assertPersistableMemoryImageValues(input.images ?? []);
   const { data, error } = await client
     .from("memories")
     .insert({
@@ -99,6 +112,8 @@ async function createKnowledgeWithClient(
       importance: input.importance ?? 0,
       source: input.source ?? "manual",
       images,
+      audio_url: input.audioUrl ?? null,
+      transcript_text: input.transcriptText ?? null,
       ai_tags: input.aiTags ?? [],
       is_active: true,
     })
@@ -111,7 +126,7 @@ async function createKnowledgeWithClient(
 }
 
 /** @internal Raw compatibility read used by legacy repository methods. */
-export async function listKnowledgeRows({
+async function listKnowledgeRows({
   userId,
   includeArchived = false,
 }: ListKnowledgeInput): Promise<MemoryRow[]> {
@@ -133,7 +148,7 @@ export async function listKnowledgeRows({
 }
 
 /** @internal Raw compatibility read used by legacy repository methods. */
-export async function listKnowledgeRowsForPerson({
+async function listKnowledgeRowsForPerson({
   personId,
   includeArchived = false,
 }: GetKnowledgeForPersonInput): Promise<MemoryRow[]> {
@@ -156,12 +171,15 @@ export async function listKnowledgeRowsForPerson({
   return data ?? [];
 }
 
-export async function listKnowledgeRowsForOwnedPersonOnServer({
+async function listOwnedKnowledgeRowsWithClient(
+  client: SupabaseClient,
+  {
   userId,
   personId,
   includeArchived = false,
-}: ListKnowledgeForOwnedPersonInput): Promise<MemoryRow[]> {
-  let query = serverSupabaseClient()
+  }: ListKnowledgeForOwnedPersonInput,
+): Promise<MemoryRow[]> {
+  let query = client
     .from("memories")
     .select(MEMORY_ROW_COLUMNS)
     .eq("user_id", userId)
@@ -179,6 +197,12 @@ export async function listKnowledgeRowsForOwnedPersonOnServer({
     throw repositoryError("listKnowledgeRowsForOwnedPersonOnServer", error.message);
   }
   return data ?? [];
+}
+
+async function listOwnedKnowledgeRowsOnServer(
+  input: ListKnowledgeForOwnedPersonInput,
+): Promise<MemoryRow[]> {
+  return listOwnedKnowledgeRowsWithClient(serverSupabaseClient(), input);
 }
 
 export async function listKnowledge(
@@ -204,8 +228,40 @@ export async function listKnowledgeForOwnedPersonOnServer(
   input: ListKnowledgeForOwnedPersonInput
 ): Promise<KnowledgeItem[]> {
   return mapLegacyMemoriesToKnowledge(
-    await listKnowledgeRowsForOwnedPersonOnServer(input)
+    await listOwnedKnowledgeRowsOnServer(input)
   );
+}
+
+export async function listKnowledgeForOwnedPersonWithClient(
+  client: SupabaseClient,
+  input: ListKnowledgeForOwnedPersonInput,
+): Promise<KnowledgeItem[]> {
+  return mapLegacyMemoriesToKnowledge(
+    await listOwnedKnowledgeRowsWithClient(client, input),
+  );
+}
+
+/** Canonical persistence projection retained for the current Notes UI. */
+export async function listNotesKnowledgeProjection({
+  userId,
+}: ListKnowledgeInput): Promise<NotesMemoryRow[]> {
+  const rows = await listKnowledgeRows({ userId, includeArchived: true });
+  return rows.map((row) => ({
+    id: row.id,
+    content_text: row.content_text,
+    created_at: row.created_at ?? "",
+    person_id: row.person_id,
+    event_id: row.event_id,
+    audio_url: row.audio_url,
+    transcript_text: row.transcript_text,
+    images: row.images,
+    ai_tags: row.ai_tags,
+    ai_summary: row.ai_summary,
+    type: row.type,
+    title: row.title,
+    value_text: row.value_text,
+    occurred_on: row.occurred_on,
+  }));
 }
 
 export async function getKnowledgeContext(
@@ -234,6 +290,7 @@ export async function updateKnowledge(
   memoryId: string,
   input: UpdateKnowledgeInput
 ): Promise<KnowledgeItem> {
+  const userId = await requireKnowledgeUserId();
   const payload: Record<string, unknown> = {};
   if (input.personId !== undefined) payload.person_id = input.personId;
   if (input.eventId !== undefined) payload.event_id = input.eventId;
@@ -245,13 +302,18 @@ export async function updateKnowledge(
   if (input.importance !== undefined) payload.importance = input.importance;
   if (input.source !== undefined) payload.source = input.source;
   if (input.images !== undefined) {
-    payload.images = assertPersistableMemoryImageValues(input.images);
+    payload.images = input.images === null
+      ? null
+      : assertPersistableMemoryImageValues(input.images);
   }
+  if (input.audioUrl !== undefined) payload.audio_url = input.audioUrl;
+  if (input.transcriptText !== undefined) payload.transcript_text = input.transcriptText;
 
   const { data, error } = await supabase
     .from("memories")
     .update(payload)
     .eq("id", memoryId)
+    .eq("user_id", userId)
     .select(MEMORY_ROW_COLUMNS)
     .returns<MemoryRow[]>()
     .single();
@@ -273,4 +335,16 @@ export async function archiveKnowledge(
 
   if (error) throw repositoryError("archiveKnowledge", error.message);
   return mapLegacyMemoryToKnowledge(data);
+}
+
+/** Permanently delete one owned Knowledge record through the canonical RLS client. */
+export async function deleteKnowledge(memoryId: string): Promise<void> {
+  const userId = await requireKnowledgeUserId();
+  const { error } = await supabase
+    .from("memories")
+    .delete()
+    .eq("id", memoryId)
+    .eq("user_id", userId);
+
+  if (error) throw repositoryError("deleteKnowledge", error.message);
 }

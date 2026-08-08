@@ -1,5 +1,11 @@
 import { supabase } from "@/lib/supabaseClient";
-import type { EnsureBirthdayOccurrenceInput, EventSummary } from "./events.types";
+import type {
+  CalendarEventRecord,
+  CreateCalendarEventInput,
+  EnsureBirthdayOccurrenceInput,
+  EventSummary,
+  UpdateCalendarEventInput,
+} from "./events.types";
 
 type EventsTableRow = {
   id: string;
@@ -9,6 +15,104 @@ type EventsTableRow = {
   notes: string | null;
   category: string | null;
 };
+
+const CALENDAR_EVENT_COLUMNS = "id,title,date,notes,category,person_id,person_name,is_important,recurrence_rule";
+
+export class CalendarEventRepositoryError extends Error {
+  readonly operation: "list" | "create" | "update" | "delete" | "import";
+  readonly cause?: unknown;
+
+  constructor(operation: CalendarEventRepositoryError["operation"], cause?: unknown) {
+    super(`calendar_event_${operation}_failed`);
+    this.operation = operation;
+    this.cause = cause;
+  }
+}
+
+function normalizeCalendarEvent(row: unknown): CalendarEventRecord {
+  const value = row as Partial<CalendarEventRecord>;
+  if (typeof value.id !== "string" || typeof value.title !== "string" || typeof value.date !== "string") {
+    throw new CalendarEventRepositoryError("list", new Error("Invalid event row"));
+  }
+  const recurrenceValue = (value as { recurrence_rule?: unknown }).recurrence_rule ?? value.recurrenceRule;
+  const recurrenceRule: CalendarEventRecord["recurrenceRule"] = ["weekly", "monthly", "yearly"].includes(String(recurrenceValue))
+    ? recurrenceValue as CalendarEventRecord["recurrenceRule"]
+    : "none";
+  return {
+    id: value.id,
+    title: value.title,
+    date: value.date,
+    notes: typeof value.notes === "string" ? value.notes : null,
+    category: typeof value.category === "string" ? value.category : null,
+    personId: typeof (value as { person_id?: unknown }).person_id === "string"
+      ? (value as { person_id: string }).person_id
+      : typeof value.personId === "string" ? value.personId : null,
+    personName: typeof (value as { person_name?: unknown }).person_name === "string"
+      ? (value as { person_name: string }).person_name
+      : typeof value.personName === "string" ? value.personName : null,
+    isImportant: (value as { is_important?: unknown }).is_important === true || value.isImportant === true,
+    recurrenceRule,
+  };
+}
+
+export async function listCalendarEvents(userId: string): Promise<CalendarEventRecord[]> {
+  const { data, error } = await supabase
+    .from("events")
+    .select(CALENDAR_EVENT_COLUMNS)
+    .eq("user_id", userId)
+    .order("date", { ascending: true });
+  if (error) throw new CalendarEventRepositoryError("list", error);
+  return (data ?? []).map(normalizeCalendarEvent);
+}
+
+export async function createCalendarEvent(input: CreateCalendarEventInput): Promise<CalendarEventRecord> {
+  const { data, error } = await supabase
+    .from("events")
+    .insert({ user_id: input.userId, title: input.title, date: input.date, notes: input.notes ?? null, category: input.category ?? null, person_id: input.personId ?? null, person_name: input.personName ?? null, is_important: input.isImportant ?? false, recurrence_rule: input.recurrenceRule ?? "none" })
+    .select(CALENDAR_EVENT_COLUMNS)
+    .single();
+  if (error) throw new CalendarEventRepositoryError("create", error);
+  return normalizeCalendarEvent(data);
+}
+
+export async function updateCalendarEvent(input: UpdateCalendarEventInput): Promise<CalendarEventRecord> {
+  const { data, error } = await supabase
+    .from("events")
+    .update({ title: input.title, date: input.date, notes: input.notes ?? null, category: input.category ?? null, person_id: input.personId ?? null, person_name: input.personName ?? null, is_important: input.isImportant ?? false, recurrence_rule: input.recurrenceRule ?? "none" })
+    .eq("id", input.eventId)
+    .eq("user_id", input.userId)
+    .select(CALENDAR_EVENT_COLUMNS)
+    .single();
+  if (error) throw new CalendarEventRepositoryError("update", error);
+  return normalizeCalendarEvent(data);
+}
+
+export async function deleteCalendarEvent(userId: string, eventId: string): Promise<void> {
+  const { error } = await supabase.from("events").delete().eq("id", eventId).eq("user_id", userId);
+  if (error) throw new CalendarEventRepositoryError("delete", error);
+}
+
+export async function importCalendarEvents(
+  userId: string,
+  events: Array<Omit<CreateCalendarEventInput, "userId">>,
+): Promise<CalendarEventRecord[]> {
+  const { data, error } = await supabase
+    .from("events")
+    .insert(events.map((event) => ({
+      user_id: userId,
+      title: event.title,
+      date: event.date,
+      notes: event.notes ?? null,
+      category: event.category ?? null,
+      person_id: event.personId ?? null,
+      person_name: event.personName ?? null,
+      is_important: event.isImportant ?? false,
+      recurrence_rule: event.recurrenceRule ?? "none",
+    })))
+    .select(CALENDAR_EVENT_COLUMNS);
+  if (error) throw new CalendarEventRepositoryError("import", error);
+  return (data ?? []).map(normalizeCalendarEvent);
+}
 
 export async function getEvents(): Promise<EventSummary[]> {
   try {

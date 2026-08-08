@@ -1,22 +1,22 @@
 // src/lib/repositories/memoryRepository.ts
 // ─────────────────────────────────────────────────────────────────────────────
-// Data Layer for Brain — Memory Repository.
-// Read/write access to the `public.memories` table. No business logic,
-// no aggregation, no scoring — that belongs to Brain/services, not here.
+// Compatibility adapter for Notes, manual capture and memory-image storage.
+// All `public.memories` reads/writes are owned by Knowledge Repository.
 // ─────────────────────────────────────────────────────────────────────────────
 import { supabase } from "@/lib/supabaseClient";
-import { mapLegacyMemoryToCompatibilityDto } from "@/lib/knowledge";
-import type { LegacyMemoryKnowledgeDto } from "@/lib/knowledge";
 import {
-  listKnowledgeRows,
-  listKnowledgeRowsForPerson,
+  createKnowledge,
+  deleteKnowledge,
+  listNotesKnowledgeProjection,
+  updateKnowledge,
 } from "./knowledgeRepository";
 import type {
   FilterNotesMemoriesInput,
-  MemoryRow,
   NotesMemoryPerson,
   NotesMemoryRow,
+  NotesMemoryEvent,
 } from "./memory.types";
+import { listCalendarEvents } from "./events";
 import { filterNotesMemories } from "./memory.types";
 import {
   assertPersistableMemoryImageValues,
@@ -27,9 +27,12 @@ import {
   uploadMemoryImageFiles,
 } from "@/lib/storage/memoryImages";
 import {
-  buildCreateNotesMemoryPayload,
-  buildUpdateNotesMemoryPayload,
-} from "@/lib/memories/notesMemoryTypes";
+  createMemoryAudioObjectPath,
+  DEFAULT_MEMORY_AUDIO_SIGNED_URL_EXPIRY,
+  MEMORY_AUDIO_BUCKET,
+  ownedMemoryAudioPath,
+  validateMemoryAudioFile,
+} from "@/lib/storage/memoryAudio";
 import type {
   NotesMemoryCreateFields,
   NotesMemoryUpdatePatch,
@@ -40,9 +43,6 @@ import type {
 } from "@/lib/storage/memoryImages";
 
 export type { MemoryImageUploadError, UploadMemoryImagesResult };
-
-const NOTES_MEMORY_COLUMNS =
-  "id, content_text, created_at, person_id, images, ai_tags, ai_summary, type, title, value_text, occurred_on";
 
 export interface ListMemoriesInput {
   userId: string;
@@ -73,14 +73,9 @@ export interface DeleteMemoryImageObjectsResult {
   failed: Array<{ objectPath: string; error: string }>;
 }
 
-export interface CreateMemoryInput {
-  userId: string;
-  personId: string;
-  type: string;
-  title: string;
-  value: string;
-  content?: string;
-  occurredOn?: string;
+export interface MemoryAudioUploadResult {
+  objectPath: string | null;
+  error: string | null;
 }
 
 /**
@@ -112,20 +107,61 @@ export async function getNotesMemoryPeople(): Promise<NotesMemoryPerson[]> {
   }));
 }
 
+export async function getNotesMemoryEvents(userId: string): Promise<NotesMemoryEvent[]> {
+  const events = await listCalendarEvents(userId);
+  return events.map((event) => ({
+    id: event.id,
+    title: event.title,
+    date: event.date,
+    personId: event.personId,
+  }));
+}
+
+export async function createMemoryAudioSignedUrl(
+  storedValue: string | null,
+  expiresIn = DEFAULT_MEMORY_AUDIO_SIGNED_URL_EXPIRY,
+): Promise<string | null> {
+  if (!storedValue) return null;
+  const userId = await getCurrentMemoryUserId();
+  if (!userId) return null;
+  const objectPath = ownedMemoryAudioPath(storedValue, userId);
+  if (!objectPath) return null;
+  const { data, error } = await supabase.storage
+    .from(MEMORY_AUDIO_BUCKET)
+    .createSignedUrl(objectPath, expiresIn);
+  return error ? null : data.signedUrl;
+}
+
+export async function uploadMemoryAudio(file: File): Promise<MemoryAudioUploadResult> {
+  const userId = await getCurrentMemoryUserId();
+  if (!userId) return { objectPath: null, error: "auth_required" };
+  const validationError = validateMemoryAudioFile(file);
+  if (validationError) return { objectPath: null, error: validationError };
+  const objectPath = createMemoryAudioObjectPath(userId, file.type);
+  const { error } = await supabase.storage.from(MEMORY_AUDIO_BUCKET).upload(objectPath, file);
+  return error ? { objectPath: null, error: error.message } : { objectPath, error: null };
+}
+
+export async function deleteMemoryAudioObject(storedValue: string | null): Promise<boolean> {
+  const userId = await getCurrentMemoryUserId();
+  if (!userId) return false;
+  const objectPath = ownedMemoryAudioPath(storedValue, userId);
+  if (!objectPath) return false;
+  const { error } = await supabase.storage.from(MEMORY_AUDIO_BUCKET).remove([objectPath]);
+  return !error;
+}
+
 /**
  * Fetch the Notes projection for a user, newest first.
  */
 export async function listMemories({
   userId,
 }: ListMemoriesInput): Promise<NotesMemoryRow[]> {
-  const { data } = await supabase
-    .from("memories")
-    .select(NOTES_MEMORY_COLUMNS)
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .returns<NotesMemoryRow[]>();
-
-  return data ?? [];
+  try {
+    return await listNotesKnowledgeProjection({ userId });
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -280,9 +316,19 @@ export async function createNotesMemory(
   input: CreateNotesMemoryInput
 ): Promise<void> {
   const images = assertPersistableMemoryImageValues(input.images);
-  const payload = buildCreateNotesMemoryPayload({ ...input, images });
-
-  await supabase.from("memories").insert(payload);
+  await createKnowledge({
+    userId: input.userId,
+    personId: input.personId ?? null,
+    eventId: input.eventId ?? null,
+    legacyType: input.type,
+    title: input.title ?? null,
+    value: input.valueText ?? null,
+    content: input.contentText ?? null,
+    occurredOn: input.occurredOn ?? null,
+    source: "manual",
+    images: input.images === null ? null : images,
+    audioUrl: input.audioUrl ?? null,
+  });
 }
 
 /**
@@ -299,86 +345,21 @@ export async function updateNotesMemory(
           ...input,
           images: assertPersistableMemoryImageValues(input.images),
         };
-  const payload = buildUpdateNotesMemoryPayload(safeInput);
-
-  await supabase
-    .from("memories")
-    .update(payload)
-    .eq("id", memoryId);
+  await updateKnowledge(memoryId, {
+    ...(safeInput.title !== undefined ? { title: safeInput.title } : {}),
+    ...(safeInput.contentText !== undefined ? { content: safeInput.contentText } : {}),
+    ...(safeInput.valueText !== undefined ? { value: safeInput.valueText } : {}),
+    ...(safeInput.personId !== undefined ? { personId: safeInput.personId } : {}),
+    ...(safeInput.eventId !== undefined ? { eventId: safeInput.eventId } : {}),
+    ...(safeInput.occurredOn !== undefined ? { occurredOn: safeInput.occurredOn } : {}),
+    ...(safeInput.images !== undefined ? { images: safeInput.images } : {}),
+    ...(safeInput.audioUrl !== undefined ? { audioUrl: safeInput.audioUrl } : {}),
+  });
 }
 
 /**
  * Hard-delete a memory, preserving the existing Notes behavior.
  */
 export async function deleteMemory(memoryId: string): Promise<void> {
-  await supabase.from("memories").delete().eq("id", memoryId);
-}
-
-/**
- * Fetch every memory record linked to a given person, regardless of
- * type or active status. Ordered by most recently created first.
- */
-export async function getMemoriesForPerson(
-  personId: string
-): Promise<MemoryRow[]> {
-  return listKnowledgeRowsForPerson({
-    personId,
-    // Preserve the existing behavior of returning inactive records too.
-    includeArchived: true,
-  });
-}
-
-/**
- * Fetch all currently active memory records for a given user
- * (across all people/events), regardless of type. Ordered by most
- * recently created first.
- */
-export async function getActiveMemories(
-  userId: string
-): Promise<MemoryRow[]> {
-  return listKnowledgeRows({ userId });
-}
-
-/**
- * Fetch active memories already mapped to the Brain model.
- */
-export async function getBrainMemories(
-  userId: string
-): Promise<LegacyMemoryKnowledgeDto[]> {
-  const rows = await getActiveMemories(userId);
-  return rows.map(mapLegacyMemoryToCompatibilityDto);
-}
-
-/**
- * Insert a new memory record for a given user/person.
- * Pure write — no validation, no Brain mapping, no navigation.
- */
-export async function createMemory(
-  input: CreateMemoryInput
-): Promise<MemoryRow> {
-  const { data, error } = await supabase
-    .from("memories")
-    .insert({
-      user_id: input.userId,
-      person_id: input.personId,
-      type: input.type,
-      title: input.title,
-      value_text: input.value,
-      content_text: input.content ?? null,
-      occurred_on: input.occurredOn || null,
-      source: "manual",
-      importance: 0,
-      is_active: true,
-    })
-    .select()
-    .returns<MemoryRow[]>()
-    .single();
-
-  if (error) {
-    throw new Error(
-      `[memoryRepository] createMemory failed: ${error.message}`
-    );
-  }
-
-  return data;
+  await deleteKnowledge(memoryId);
 }

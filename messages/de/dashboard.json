@@ -14,10 +14,19 @@
   "form": {
     "new": "Neues Ereignis",
     "edit": "Ereignis bearbeiten",
+    "title": "Ereignistitel",
+    "date": "Ereignisdatum",
+    "notes": "Ereignisnotiz",
     "titlePlaceholder": "Titel des Ereignisses",
     "notePlaceholder": "Notiz (optional)",
+    "person": "Zugehörige Person",
+    "noPerson": "Keine Person ausgewählt",
+    "important": "Wichtiges Ereignis",
+    "importantHint": "Happy erinnert dich weiter, bis es erledigt ist",
+    "recurrence": "Wiederholung",
     "delete": "Ereignis löschen"
   },
+  "recurrence": { "none": "Keine Wiederholung", "weekly": "Wöchentlich", "monthly": "Monatlich", "yearly": "Jährlich" },
   "day": {
     "today": "Heute",
     "empty": "Keine Ereignisse",
@@ -64,6 +73,7 @@
     "loadError": "Ereignisse konnten nicht geladen werden.",
     "addError": "Das Ereignis konnte nicht hinzugefügt werden.",
     "added": "Ereignis hinzugefügt 🎉",
+    "reminderError": "Das Ereignis wurde gespeichert, aber die Erinnerung konnte nicht eingerichtet werden.",
     "saveError": "Änderungen konnten nicht gespeichert werden.",
     "updated": "Aktualisiert ✅",
     "deleteError": "Das Ereignis konnte nicht gelöscht werden.",
@@ -88,5 +98,5 @@
       "cooking": "kocht gern"
     }
   },
-  "accessibility": { "loading": "Kalender wird geladen" }
+  "accessibility": { "loading": "Kalender wird geladen", "calendarLabel": "Kalender für {month}", "dayLabel": "{date}, Ereignisse: {count}", "closeDay": "Tagesereignisse schließen" }
 }

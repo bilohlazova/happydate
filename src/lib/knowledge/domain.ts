@@ -100,24 +100,6 @@ export interface KnowledgeSnapshot {
   unassigned: KnowledgeItem[];
 }
 
-/**
- * Structural compatibility projection consumed by the current Brain. It lives
- * here temporarily so Repository does not depend on an upper product layer.
- */
-export interface LegacyMemoryKnowledgeDto {
-  id: string;
-  personId: string | null;
-  type: string | null;
-  title: string | null;
-  value: string | null;
-  content: string | null;
-  importance: number;
-  occurredOn: string | null;
-  createdAt: string | null;
-  isActive: boolean;
-  eventId: string | null;
-}
-
 export interface KnowledgeContextOptions {
   personIds?: readonly string[];
   limit?: number;

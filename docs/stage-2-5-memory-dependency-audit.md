@@ -1,5 +1,9 @@
 # Stage 2.5 — Memory Dependency Audit
 
+> Historical baseline. The tables below describe the pre-migration state.
+> Resolutions are recorded in the later stage sections and the final Stage 9
+> report; entries must not be interpreted as current runtime dependencies.
+
 - Status: Complete; Stage 3 consumers migrated
 - Date: 2026-07-17
 - Scope: Read-only dependency inventory; no runtime changes
@@ -58,7 +62,7 @@ and must be reconciled during Gift Intelligence.
 | `NotesPageContent.tsx` | Notes CRUD and `NotesMemoryRow` | Compatibility UI | Stage 7 |
 | Notes cards/editor/types | Notes-specific projection and taxonomy | Compatibility UI | Stage 7 |
 | `care/add-memory/page.tsx` | Legacy `createMemory()` | Legacy capture | Stage 7 |
-| `api/ai/gift-suggestions` | Gift Knowledge Context via server repository | Canonical with Notes fallback | Stage 8 fallback cleanup |
+| `api/ai/gift-suggestions` | Gift Knowledge Context via server repository | Canonical; Notes fallback retired in Stage 8.1 | Complete |
 | `storage/memoryImages.ts` | Attachment path validation and upload support | Reusable infrastructure | Stage 7 |
 
 ## Canonical APIs with no production consumer yet
@@ -151,3 +155,15 @@ Nothing identified by this audit is safe to delete before its owning migration
 stage passes tests and production build. In particular, do not remove
 `BrainMemory`, `mapMemory`, `getBrainMemories`, Notes projections, or raw People
 helpers during Stage 3 unless all remaining callers have been proven absent.
+
+## Stage 8.3 resolution
+
+The deletion guard has now been satisfied for the Repository compatibility
+surface. `getMemoriesForPerson`, `getActiveMemories`, `getBrainMemories`,
+`LegacyMemoryKnowledgeDto`, and its mapper were removed after repository-wide
+call-site checks. Notes uses a bounded canonical projection; Brain, Assistant,
+Happy, Gift, Home and People consume `KnowledgeItem`-based models.
+
+`MemoryRow` remains only as the private persistence-row contract used by the
+Knowledge Repository and the legacy-to-canonical mapper. It is no longer a
+consumer-facing Repository result.

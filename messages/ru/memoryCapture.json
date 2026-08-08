@@ -1,34 +1,8 @@
 {
-  "title": "Я узнал кое-что полезное об этом человеке",
-  "description": "Сохрани это только если информация верна.",
-  "save": "Сохранить",
-  "saving": "Сохранение…",
-  "notNow": "Не сейчас",
-  "highConfidence": "Высокая уверенность",
-  "retry": "Попробовать снова",
   "status": {
     "saved": "Сохранено в памяти Happy.",
     "alreadySaved": "Эта информация уже сохранена в памяти Happy.",
     "saveFailed": "Сейчас не удалось сохранить эту информацию. Попробуй ещё раз."
-  },
-  "labels": {
-    "interest": "Любит",
-    "hobby": "Хобби",
-    "favorite_brand": "Любимый бренд",
-    "disliked_gift": "Избегать",
-    "preferred_style": "Предпочитаемый стиль"
-  },
-  "aria": {
-    "card": "Предложение сохранить информацию",
-    "save": "Сохранить информацию: {value}",
-    "notNow": "Отклонить информацию: {value}",
-    "candidate": {
-      "interest": "Любит {value}",
-      "hobby": "Хобби: {value}",
-      "favorite_brand": "Любимый бренд: {value}",
-      "disliked_gift": "Избегать: {value}",
-      "preferred_style": "Предпочитаемый стиль: {value}"
-    }
   },
   "learning": {
     "title": "Я узнал кое-что важное о {personName}",

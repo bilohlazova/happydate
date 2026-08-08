@@ -129,6 +129,7 @@ export async function createHappyLearningDetectV2Response(
         polarity: candidate.polarity,
         semanticTags: candidate.semanticTags,
         evidenceText: candidate.evidenceText,
+        source: "chat_message",
         schemaVersion: HAPPY_LEARNING_DETECTION_SCHEMA_VERSION,
       };
       return {

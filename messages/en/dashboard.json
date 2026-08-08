@@ -14,10 +14,19 @@
   "form": {
     "new": "New event",
     "edit": "Edit event",
+    "title": "Event title",
+    "date": "Event date",
+    "notes": "Event note",
     "titlePlaceholder": "Event title",
     "notePlaceholder": "Note (optional)",
+    "person": "Related person",
+    "noPerson": "No person selected",
+    "important": "Important event",
+    "importantHint": "Happy will keep reminding you until it is done",
+    "recurrence": "Repeat",
     "delete": "Delete event"
   },
+  "recurrence": { "none": "Does not repeat", "weekly": "Every week", "monthly": "Every month", "yearly": "Every year" },
   "day": {
     "today": "Today",
     "empty": "No events",
@@ -61,6 +70,7 @@
     "loadError": "Events could not be loaded.",
     "addError": "The event could not be added.",
     "added": "Event added 🎉",
+    "reminderError": "The event was saved, but its reminder could not be configured.",
     "saveError": "Changes could not be saved.",
     "updated": "Updated ✅",
     "deleteError": "The event could not be deleted.",
@@ -85,5 +95,5 @@
       "cooking": "likes cooking"
     }
   },
-  "accessibility": { "loading": "Loading calendar" }
+  "accessibility": { "loading": "Loading calendar", "calendarLabel": "Calendar for {month}", "dayLabel": "{date}, events: {count}", "closeDay": "Close day events" }
 }

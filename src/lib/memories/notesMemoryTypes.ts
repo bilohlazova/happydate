@@ -112,6 +112,8 @@ export interface MemoryEditorMemoryInput {
   content_text: string | null;
   value_text: string | null;
   person_id: string | null;
+  event_id: string | null;
+  audio_url: string | null;
   occurred_on: string | null;
   images: string[] | null;
 }
@@ -124,8 +126,10 @@ export interface MemoryEditorState {
   contentText: string;
   valueText: string;
   personId: string;
+  eventId: string;
   occurredOn: string;
   existingImages: string[];
+  audioUrl: string;
 }
 
 export interface CreateMemoryEditorInitialStateInput {
@@ -153,8 +157,10 @@ export function createMemoryEditorInitialState({
       contentText: "",
       valueText: "",
       personId: "",
+      eventId: "",
       occurredOn: editorType === "journal" ? today : "",
       existingImages: [],
+      audioUrl: "",
     };
   }
 
@@ -166,11 +172,13 @@ export function createMemoryEditorInitialState({
     contentText: memory?.content_text ?? "",
     valueText: memory?.value_text ?? "",
     personId: editorType === "journal" ? "" : (memory?.person_id ?? ""),
+    eventId: editorType === "journal" ? "" : (memory?.event_id ?? ""),
     occurredOn:
       editorType === "memory" || editorType === "journal"
         ? (memory?.occurred_on ?? "")
         : "",
     existingImages: [...(memory?.images ?? [])],
+    audioUrl: memory?.audio_url ?? "",
   };
 }
 
@@ -190,6 +198,7 @@ export type MemoryEditorField =
   | "contentText"
   | "valueText"
   | "personId"
+  | "eventId"
   | "occurredOn";
 
 export interface MemoryEditorValidationResult {
@@ -233,8 +242,10 @@ export interface NotesMemoryCreateFields {
   contentText?: string | null;
   valueText?: string | null;
   personId?: string | null;
+  eventId?: string | null;
   occurredOn?: string | null;
   images: string[] | null;
+  audioUrl?: string | null;
 }
 
 export interface NotesMemoryUpdatePatch {
@@ -242,8 +253,10 @@ export interface NotesMemoryUpdatePatch {
   contentText?: string | null;
   valueText?: string | null;
   personId?: string | null;
+  eventId?: string | null;
   occurredOn?: string | null;
   images?: string[] | null;
+  audioUrl?: string | null;
 }
 
 export function buildMemoryEditorCreateFields(
@@ -258,17 +271,19 @@ export function buildMemoryEditorCreateFields(
   const contentText = optionalTrimmed(state.contentText);
   const valueText = optionalTrimmed(state.valueText);
   const personId = state.personId || null;
+  const eventId = state.eventId || null;
   const occurredOn = state.occurredOn || null;
 
   switch (state.editorType) {
     case "note":
-      return { type: "note", title, contentText, personId, images };
+      return { type: "note", title, contentText, personId, eventId, images };
     case "memory":
       return {
         type: "memory",
         title,
         contentText,
         personId,
+        eventId,
         occurredOn,
         images,
       };
@@ -276,6 +291,7 @@ export function buildMemoryEditorCreateFields(
       return {
         type: "gift",
         personId,
+        eventId,
         valueText,
         contentText,
         images,
@@ -287,6 +303,7 @@ export function buildMemoryEditorCreateFields(
         contentText,
         occurredOn,
         personId: null,
+        eventId: null,
         images,
       };
   }
@@ -299,21 +316,27 @@ export function buildMemoryEditorUpdatePatch(
   const title = optionalTrimmed(state.title);
   const contentText = optionalTrimmed(state.contentText);
   const personId = state.personId || null;
+  const eventId = state.eventId || null;
+  const audioUrl = state.audioUrl || null;
 
   switch (state.editorType) {
     case "note":
-      return { title, contentText, personId, images };
+      return { title, contentText, personId, eventId, images, audioUrl };
     case "memory":
       return {
         title,
         contentText,
         personId,
+        eventId,
+        audioUrl,
         occurredOn: state.occurredOn || null,
         images,
       };
     case "gift":
       return {
         personId,
+        eventId,
+        audioUrl,
         valueText: optionalTrimmed(state.valueText),
         contentText,
         images,
@@ -324,10 +347,12 @@ export function buildMemoryEditorUpdatePatch(
         contentText,
         occurredOn: state.occurredOn || null,
         personId: null,
+        eventId: null,
+        audioUrl,
         images,
       };
     case "other":
-      return { title, contentText, personId, images };
+      return { title, contentText, personId, eventId, images, audioUrl };
   }
 }
 
@@ -522,6 +547,8 @@ export function buildCreateNotesMemoryPayload(
       : {}),
     ...("valueText" in input ? { value_text: input.valueText ?? null } : {}),
     ...("personId" in input ? { person_id: input.personId ?? null } : {}),
+    ...("eventId" in input ? { event_id: input.eventId ?? null } : {}),
+    ...("audioUrl" in input ? { audio_url: input.audioUrl ?? null } : {}),
     ...("occurredOn" in input
       ? { occurred_on: input.occurredOn ?? null }
       : {}),
@@ -540,6 +567,8 @@ export function buildUpdateNotesMemoryPayload(
       ? { value_text: input.valueText }
       : {}),
     ...(input.personId !== undefined ? { person_id: input.personId } : {}),
+    ...(input.eventId !== undefined ? { event_id: input.eventId } : {}),
+    ...(input.audioUrl !== undefined ? { audio_url: input.audioUrl } : {}),
     ...(input.occurredOn !== undefined
       ? { occurred_on: input.occurredOn }
       : {}),

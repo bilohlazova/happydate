@@ -6,8 +6,6 @@ import test from "node:test";
 const root = process.cwd();
 const scopedFiles = [
   "src/app/(app)/dashboard/page.tsx",
-  "src/components/CalendarToolbar.tsx",
-  "src/components/EventsCalendar.tsx",
   "src/app/care/page.tsx",
   "src/app/care/add-memory/page.tsx",
   "src/components/people/PeopleSelect.tsx",
@@ -36,17 +34,11 @@ test("core routes do not contain known hardcoded Polish UI copy", async () => {
 });
 
 test("calendar labels and dates use presentation translations and active locale", async () => {
-  const [dashboard, calendar, toolbar] = await Promise.all([
-    readFile(path.join(root, scopedFiles[0]), "utf8"),
-    readFile(path.join(root, scopedFiles[2]), "utf8"),
-    readFile(path.join(root, scopedFiles[1]), "utf8"),
-  ]);
+  const dashboard = await readFile(path.join(root, scopedFiles[0]), "utf8");
   assert.match(dashboard, /useLocale\(\)/);
   assert.match(dashboard, /categories\.\$\{c\.value\}/);
   assert.doesNotMatch(dashboard, /Intl\.DateTimeFormat\("pl-PL"/);
-  assert.match(calendar, /DATE_LOCALES/);
-  assert.match(calendar, /useLocale\(\)/);
-  assert.match(toolbar, /dashboard\.navigation/);
+  assert.match(dashboard, /useTranslations\("dashboard"\)/);
 });
 
 test("contact import and validation states are translated while contact names stay raw", async () => {

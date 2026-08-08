@@ -13,7 +13,7 @@ const ELIGIBLE = {
 };
 
 function request(body, authenticated = true) {
-  return new Request("http://localhost/api/memory-capture/detect-v2", {
+  return new Request("http://localhost/api/memory-capture/detect", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -228,12 +228,10 @@ test("rate limit denial is bounded and provider is not called", async () => {
 });
 
 test("detect-v2 has no persistence, Gift, UI, v1 mutation or personal-data logging dependency", async () => {
-  const route = await readFile(new URL("../src/app/api/memory-capture/detect-v2/route.ts", import.meta.url), "utf8");
+  const route = await readFile(new URL("../src/app/api/memory-capture/detect/route.ts", import.meta.url), "utf8");
   const orchestration = await readFile(new URL("../src/lib/happy-learning/happyLearningDetectV2.server.ts", import.meta.url), "utf8");
   const provider = await readFile(new URL("../src/lib/happy-learning/openAiHappyLearningProvider.server.ts", import.meta.url), "utf8");
   const access = await readFile(new URL("../src/lib/happy-learning/happyLearningAccess.server.ts", import.meta.url), "utf8");
-  const v1Detect = await readFile(new URL("../src/app/api/memory-capture/detect/route.ts", import.meta.url), "utf8");
-  const v1Confirm = await readFile(new URL("../src/app/api/memory-capture/confirm/route.ts", import.meta.url), "utf8");
   const combined = `${route}\n${orchestration}\n${provider}\n${access}`;
   assert.match(route, /happy-learning/);
   for (const forbidden of [
@@ -242,7 +240,5 @@ test("detect-v2 has no persistence, Gift, UI, v1 mutation or personal-data loggi
   ]) {
     assert.equal(combined.includes(forbidden), false, forbidden);
   }
-  assert.match(v1Detect, /buildMemoryCaptureCandidates/);
-  assert.match(v1Confirm, /mapMemoryCaptureCandidateToKnowledgeInput/);
   assert.equal(combined.includes("/app/api/"), false);
 });

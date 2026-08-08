@@ -1,4 +1,4 @@
-import type { HappyLearningCandidate } from "./happyLearning.types.ts";
+import type { HappyLearningCandidate, HappyLearningCaptureSource } from "./happyLearning.types.ts";
 
 export const HAPPY_LEARNING_DETECTION_SCHEMA_VERSION = "happy-learning-detection-v2" as const;
 
@@ -11,7 +11,7 @@ export type HappyLearningDetectionCandidate = HappyLearningCandidate & {
   id: string;
   personId: string;
   personName: string;
-  source: "chat_message";
+  source: HappyLearningCaptureSource;
   requiresConfirmation: true;
   schemaVersion: typeof HAPPY_LEARNING_DETECTION_SCHEMA_VERSION;
   authorization: "detection_only";

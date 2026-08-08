@@ -6,6 +6,7 @@ import {
   buildPeoplePageViewModel,
   buildPersonProfileViewModel,
 } from "../src/lib/people/buildPeopleViewModels.ts";
+import { projectPersonSummary } from "../src/lib/repositories/people/projectPersonSummary.ts";
 
 function person(overrides = {}) {
   return {
@@ -164,4 +165,26 @@ test("Stage 6.2 People list consumes one ViewModel and has no legacy read path",
     assert.equal(page.includes(forbidden), false, forbidden);
     assert.equal(content.includes(forbidden), false, forbidden);
   }
+});
+
+test("Stage 6.4 legacy Happy People is a pure canonical compatibility projection", async () => {
+  const compatibility = await readFile(new URL("../src/lib/repositories/people/people.repository.ts", import.meta.url), "utf8");
+  const canonical = await readFile(new URL("../src/lib/repositories/personRepository.ts", import.meta.url), "utf8");
+
+  assert.equal(compatibility.includes('.from("people")'), false);
+  assert.match(compatibility, /getCanonicalPeople\(user\.id\)/);
+  assert.match(canonical, /export const PERSON_SELECT/);
+  assert.equal(canonical.includes('.select("*")'), false);
+
+  const summary = projectPersonSummary(person({
+    relationship: "legacy",
+    relation_label: "Mama",
+    birthday: "1990-07-24",
+  }));
+  assert.equal(summary.firstName, "Anna");
+  assert.equal(summary.relationship, "Mama");
+  assert.deepEqual(
+    [summary.birthday?.getFullYear(), summary.birthday?.getMonth(), summary.birthday?.getDate()],
+    [1990, 6, 24],
+  );
 });

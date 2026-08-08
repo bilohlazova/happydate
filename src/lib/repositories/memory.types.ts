@@ -175,6 +175,9 @@ export interface NotesMemoryRow {
   content_text: string | null;
   created_at: string;
   person_id: string | null;
+  event_id: string | null;
+  audio_url: string | null;
+  transcript_text: string | null;
   images: string[] | null;
   ai_tags: string[] | null;
   ai_summary: string | null;
@@ -182,6 +185,13 @@ export interface NotesMemoryRow {
   title: string | null;
   value_text: string | null;
   occurred_on: string | null;
+}
+
+export interface NotesMemoryEvent {
+  id: string;
+  title: string;
+  date: string;
+  personId: string | null;
 }
 
 /**
@@ -228,6 +238,7 @@ export const NOTES_PRIMARY_EMPTY_MESSAGES: Record<
 export interface FilterNotesMemoriesInput {
   memories: NotesMemoryRow[];
   people: NotesMemoryPerson[];
+  events?: NotesMemoryEvent[];
   primaryFilter: NotesPrimaryFilter;
   personId: string;
   search: string;
@@ -263,6 +274,7 @@ function matchesNotesPrimaryFilter(
 export function filterNotesMemories({
   memories,
   people,
+  events = [],
   primaryFilter,
   personId,
   search,
@@ -282,9 +294,13 @@ export function filterNotesMemories({
   if (!query) return byPerson;
 
   const peopleById = new Map(people.map((person) => [person.id, person]));
+  const eventsById = new Map(events.map((event) => [event.id, event]));
 
   return byPerson.filter((memory) => {
     if (memory.content_text?.toLowerCase().includes(query)) return true;
+    if (memory.title?.toLowerCase().includes(query)) return true;
+    if (memory.value_text?.toLowerCase().includes(query)) return true;
+    if (memory.transcript_text?.toLowerCase().includes(query)) return true;
     if (
       (memory.ai_tags ?? []).some((tag) =>
         tag.toLowerCase().includes(query)
@@ -296,7 +312,9 @@ export function filterNotesMemories({
     const person = memory.person_id
       ? peopleById.get(memory.person_id)
       : undefined;
-    return person?.name.toLowerCase().includes(query) ?? false;
+    if (person?.name.toLowerCase().includes(query)) return true;
+    const event = memory.event_id ? eventsById.get(memory.event_id) : undefined;
+    return event?.title.toLowerCase().includes(query) ?? false;
   });
 }
 

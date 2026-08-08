@@ -1,34 +1,8 @@
 {
-  "title": "Dowiedziałem się czegoś przydatnego o tej osobie",
-  "description": "Zapisz to tylko wtedy, jeśli jest poprawne.",
-  "save": "Zapisz",
-  "saving": "Zapisywanie…",
-  "notNow": "Nie teraz",
-  "highConfidence": "Wysoka pewność",
-  "retry": "Spróbuj ponownie",
   "status": {
     "saved": "Zapisano w pamięci Happy.",
     "alreadySaved": "Ta informacja jest już zapisana w pamięci Happy.",
     "saveFailed": "Nie udało się teraz zapisać tej informacji. Spróbuj ponownie."
-  },
-  "labels": {
-    "interest": "Lubi",
-    "hobby": "Hobby",
-    "favorite_brand": "Ulubiona marka",
-    "disliked_gift": "Unikać",
-    "preferred_style": "Preferowany styl"
-  },
-  "aria": {
-    "card": "Propozycja zapamiętania informacji",
-    "save": "Zapisz informację: {value}",
-    "notNow": "Odrzuć informację: {value}",
-    "candidate": {
-      "interest": "Lubi {value}",
-      "hobby": "Hobby: {value}",
-      "favorite_brand": "Ulubiona marka: {value}",
-      "disliked_gift": "Unikać: {value}",
-      "preferred_style": "Preferowany styl: {value}"
-    }
   },
   "learning": {
     "title": "Dowiedziałem się czegoś ważnego o {personName}",

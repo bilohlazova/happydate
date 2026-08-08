@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import {
   DEFAULT_REMINDER_PREFERENCES,
@@ -10,13 +10,21 @@ import {
   saveReminderPreferences,
   type ReminderPreferences,
 } from "@/lib/repositories/reminders";
+import {
+  disableNativePush,
+  enableNativePush,
+  supportsNativePush,
+} from "@/lib/notifications/pushRegistration";
 
 export default function ReminderSettingsPage() {
   const t = useTranslations("profile.reminderSettings");
+  const locale = useLocale();
   const [value, setValue] = useState<ReminderPreferences>(DEFAULT_REMINDER_PREFERENCES);
   const [status, setStatus] = useState<"loading" | "idle" | "saving" | "saved" | "error">("loading");
+  const [nativePushAvailable, setNativePushAvailable] = useState(false);
 
   useEffect(() => {
+    setNativePushAvailable(supportsNativePush());
     let active = true;
     void getReminderPreferences().then((preferences) => {
       if (active) { setValue(preferences); setStatus("idle"); }
@@ -27,7 +35,16 @@ export default function ReminderSettingsPage() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setStatus("saving");
-    try { await saveReminderPreferences(value); setStatus("saved"); }
+    try {
+      if (nativePushAvailable && value.pushEnabled) {
+        await enableNativePush(locale);
+        await saveReminderPreferences(value);
+      } else {
+        await saveReminderPreferences(value);
+        if (nativePushAvailable) await disableNativePush();
+      }
+      setStatus("saved");
+    }
     catch { setStatus("error"); }
   }
 
@@ -51,7 +68,14 @@ export default function ReminderSettingsPage() {
           </select>
         </label>
         <label className="mt-5 flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-3 text-sm font-bold text-slate-700">{t("inApp")}<input type="checkbox" checked={value.inAppEnabled} onChange={(e) => setValue({ ...value, inAppEnabled: e.target.checked })} /></label>
-        <p className="mt-3 text-xs text-slate-500">{t("pushLater")}</p>
+        {nativePushAvailable ? (
+          <>
+            <label className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-3 text-sm font-bold text-slate-700">{t("push")}<input type="checkbox" checked={value.pushEnabled} onChange={(e) => setValue({ ...value, pushEnabled: e.target.checked })} /></label>
+            <p className="mt-2 text-xs text-slate-500">{t("pushPermission")}</p>
+          </>
+        ) : (
+          <p className="mt-3 text-xs text-slate-500">{t("pushNativeOnly")}</p>
+        )}
         <button className="hd-button mt-6 min-h-12 w-full bg-sky-600 text-white disabled:opacity-50" disabled={status === "loading" || status === "saving"}>{status === "saving" ? t("saving") : t("save")}</button>
         {status === "saved" && <p className="mt-3 text-sm font-bold text-emerald-700">{t("saved")}</p>}
         {status === "error" && <p className="mt-3 text-sm font-bold text-rose-600">{t("error")}</p>}

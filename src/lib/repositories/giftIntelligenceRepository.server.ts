@@ -66,6 +66,7 @@ export async function getCachedGiftIdeas(person: OwnedGiftPerson, occasion: stri
     .select("ideas")
     .eq("person_id", person.id)
     .eq("occasion", occasion)
+    .gt("expires_at", new Date().toISOString())
     .maybeSingle();
   return !error && data?.ideas ? data.ideas : null;
 }
@@ -82,26 +83,19 @@ export async function loadGiftIntelligenceSource(
   };
 }
 
-/** Compatibility fallback until the legacy Notes table is inventoried. */
-export async function loadLegacyGiftNotes(person: OwnedGiftPerson): Promise<string[]> {
-  const { data } = await adminClient()
-    .from("notes")
-    .select("content")
-    .eq("user_id", person.userId)
-    .eq("person_id", person.id)
-    .order("created_at", { ascending: false });
-  return (data ?? [])
-    .map((note) => typeof note.content === "string" ? note.content : "")
-    .filter(Boolean);
-}
-
 export async function saveGiftIdeas(
   person: OwnedGiftPerson,
   occasion: string,
   ideas: unknown,
 ): Promise<void> {
   await adminClient().from("ai_gift_cache").upsert(
-    { person_id: person.id, occasion, ideas, created_at: new Date().toISOString() },
+    {
+      person_id: person.id,
+      occasion,
+      ideas,
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    },
     { onConflict: "person_id,occasion" },
   );
 }

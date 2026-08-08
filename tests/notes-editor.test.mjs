@@ -16,6 +16,8 @@ const existingMemory = {
   content_text: "Treść",
   value_text: null,
   person_id: "person-1",
+  event_id: "event-1",
+  audio_url: "user-1/voice.webm",
   occurred_on: "2026-07-10",
   images: ["user-1/existing.webp"],
 };
@@ -77,6 +79,7 @@ test("journal initialization always clears person_id", () => {
   });
   assert.equal(createState("journal").personId, "");
   assert.equal(editState.personId, "");
+  assert.equal(editState.eventId, "");
 });
 
 test("gift initializes value_text separately from content_text", () => {
@@ -92,6 +95,12 @@ test("gift initializes value_text separately from content_text", () => {
   });
   assert.equal(state.valueText, "Aparat analogowy");
   assert.equal(state.contentText, "Lubi fotografię");
+});
+
+test("edit initialization preserves an existing private audio path", () => {
+  const state = createMemoryEditorInitialState({ mode: "edit", type: "note", memory: existingMemory });
+  assert.equal(state.audioUrl, "user-1/voice.webm");
+  assert.equal(buildMemoryEditorUpdatePatch({ ...state, audioUrl: "" }).audioUrl, null);
 });
 
 test("memory uses occurred_on as a date-only value", () => {
@@ -128,6 +137,7 @@ test("create payload contains only fields relevant to the selected type", () => 
 
   assert.deepEqual(Object.keys(payload).sort(), [
     "content_text",
+    "event_id",
     "images",
     "is_active",
     "person_id",
@@ -136,6 +146,14 @@ test("create payload contains only fields relevant to the selected type", () => 
     "user_id",
     "value_text",
   ]);
+});
+
+test("note and memory preserve an optional event association", () => {
+  const fields = buildMemoryEditorCreateFields(
+    createState("note", { title: "Plan", eventId: "event-1" })
+  );
+  assert.equal(fields.eventId, "event-1");
+  assert.equal(buildCreateNotesMemoryPayload({ userId: "user-1", ...fields }).event_id, "event-1");
 });
 
 test("update does not clear hidden fields", () => {

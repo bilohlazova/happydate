@@ -14,10 +14,19 @@
   "form": {
     "new": "Nowe wydarzenie",
     "edit": "Edytuj wydarzenie",
+    "title": "Nazwa wydarzenia",
+    "date": "Data wydarzenia",
+    "notes": "Notatka do wydarzenia",
     "titlePlaceholder": "Tytuł wydarzenia",
     "notePlaceholder": "Notatka (opcjonalnie)",
+    "person": "Powiązana osoba",
+    "noPerson": "Bez powiązanej osoby",
+    "important": "Ważne wydarzenie",
+    "importantHint": "Happy będzie przypominać, dopóki sprawa nie zostanie wykonana",
+    "recurrence": "Powtarzanie",
     "delete": "Usuń wydarzenie"
   },
+  "recurrence": { "none": "Nie powtarza się", "weekly": "Co tydzień", "monthly": "Co miesiąc", "yearly": "Co rok" },
   "day": {
     "today": "Dziś",
     "empty": "Brak wydarzeń",
@@ -64,6 +73,7 @@
     "loadError": "Nie udało się pobrać wydarzeń.",
     "addError": "Nie udało się dodać.",
     "added": "Dodano wydarzenie 🎉",
+    "reminderError": "Wydarzenie zapisano, ale nie udało się skonfigurować przypomnienia.",
     "saveError": "Nie udało się zapisać.",
     "updated": "Zaktualizowano ✅",
     "deleteError": "Nie udało się usunąć.",
@@ -88,5 +98,5 @@
       "cooking": "lubi gotować"
     }
   },
-  "accessibility": { "loading": "Ładowanie kalendarza" }
+  "accessibility": { "loading": "Ładowanie kalendarza", "calendarLabel": "Kalendarz: {month}", "dayLabel": "{date}, wydarzenia: {count}", "closeDay": "Zamknij wydarzenia dnia" }
 }

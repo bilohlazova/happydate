@@ -31,7 +31,7 @@ export function mapHappyLearningCandidateToKnowledgeInput(input: {
     title: mapping.title,
     value: input.candidate.value,
     content: input.candidate.evidenceText,
-    source: "chat_message",
+    source: input.candidate.source,
     importance: 1,
     aiTags,
   };

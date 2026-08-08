@@ -76,6 +76,7 @@ reimplemented in Home.
 
 - `HomeMemory` remains as a type alias for the stable Home projection so UI
   contracts do not churn.
-- The Knowledge Repository and projection use audited compatibility accessors until legacy fields are
-  retired in Stage 8/9.
-- People and Notes continue to use their legacy paths until their own stages.
+- Historical persistence fields are interpreted only by the audited Knowledge
+  compatibility mapper.
+- People completed its canonical migration in Stage 6. Notes persistence
+  completed its canonical delegation in Stage 8.

@@ -31,13 +31,13 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>HappyDate needs camera access to update your profile photo.</string>
+	<string>HappyDate uses the camera only when you choose to take a photo for a profile or private note.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Potrzebujemy mikrofonu do nagrywania notatek</string>
+	<string>HappyDate uses the microphone only when you record a private voice note.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>HappyDate needs permission to save edited photos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>HappyDate needs photo library access to upload profile pictures.</string>
+	<string>HappyDate uses your photo library only when you choose an image for a profile or private note.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Potrzebujemy rozpoznawania mowy do transkrypcji</string>
 	<key>UILaunchStoryboardName</key>

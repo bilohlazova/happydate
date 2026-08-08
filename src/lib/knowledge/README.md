@@ -55,10 +55,10 @@ for the complete dependency diagram, migration state, and target boundaries.
 - ✅ Gift Intelligence
 - ✅ Gift API Ownership Guard
 - ✅ Home
-- ⬜ People
-- ⬜ Memory Capture
-- ⬜ Migration and cleanup
+- ✅ People
+- ✅ Memory Capture
+- ✅ Migration and cleanup
 
-Repository is canonical and independent. Current product consumers still use
-legacy compatibility paths until their dedicated migration stages are
-completed.
+Repository is canonical and independent. Historical database fields are
+interpreted only at the compatibility-mapper boundary. Notes keeps a bounded
+UI/Storage adapter, but its persistence delegates to the Knowledge Repository.

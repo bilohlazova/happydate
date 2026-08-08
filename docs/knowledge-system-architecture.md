@@ -1,7 +1,7 @@
 # Happy Knowledge System 1.0 — Dependency Architecture
 
-- Status: Target architecture approved; migration in progress
-- Last updated: 2026-07-17
+- Status: Knowledge migration complete
+- Last updated: 2026-08-06
 
 ## Target dependency graph
 
@@ -129,17 +129,17 @@ components, routes, or presentation models.
 |---|---|---|---|
 | Domain model | Canonical | `KnowledgeItem` | Complete |
 | Compatibility mapping | Canonical | `MemoryRow → KnowledgeItem` | Complete |
-| Knowledge Layer | Canonical foundation | Read-only projections | Expand incrementally |
-| Knowledge Repository | Canonical | Supabase → Knowledge | Complete for Stage 2 |
-| Memory Repository | Compatibility | Legacy facade | Remove only during cleanup |
+| Knowledge Layer | Canonical | Read-only projections | Complete; expand by product need |
+| Knowledge Repository | Canonical | Supabase → Knowledge | Complete |
+| Memory Repository | Bounded UI adapter | Notes projection and image lifecycle | Retained intentionally |
 | Dependency audit | Complete | All Memory readers catalogued | Keep document current |
 | Brain engines | Canonical | `KnowledgeItem` | Complete for Stage 3 |
 | Assistant context | Canonical | Knowledge items with parity adapter | Complete for Stage 3 |
 | Gift recommendations | Canonical | Gift Knowledge Context | Complete for Stage 4 |
 | Home | Canonical | Knowledge Layer Home projection | Complete for Stage 5 |
-| People list/profile | Legacy | `MemoryRow` and Brain mapper | Person Knowledge profile |
-| Notes | Legacy UI | Notes-specific projection | Memory Capture transition |
-| Memory Capture | Legacy | Structured Notes/care flows | Universal capture flow |
+| People list/profile | Canonical | Person Knowledge projection | Complete for Stage 6 |
+| Notes | Canonical persistence with UI adapter | Notes-specific Knowledge projection | Complete for Stage 8 |
+| Memory Capture | Canonical | Signed Happy Learning flow | Complete for Stage 7 |
 
 ## Direct Supabase access policy
 
@@ -147,11 +147,9 @@ The final architecture permits `memories` table access only inside the
 Knowledge Repository. Existing exceptions are migration debt, not approved
 extension points.
 
-Currently known compatibility exceptions:
-
-- `src/lib/repositories/memoryRepository.ts` still owns the Notes-specific
-  `memories` projection and legacy create/update/delete paths. These remain
-  migration debt for the universal Memory Capture and cleanup stages.
+`src/lib/repositories/memoryRepository.ts` remains as a Notes UI and Storage
+adapter. Stage 8 removed its direct `memories` access and the manual-capture
+alias. Its Notes persistence delegates to `knowledgeRepository.ts`.
 
 Home is no longer an exception: `src/lib/repositories/home/home.repository.ts`
 loads canonical Knowledge through `knowledgeRepository.ts` and projects it for
@@ -170,13 +168,13 @@ method.
 4. ✅ Gift Intelligence
 4.1. ✅ Gift API Ownership Guard
 5. ✅ Home
-6. ⬜ People
-7. ⬜ Memory Capture
-8. ⬜ Migration hardening and compatibility mode
-9. ⬜ Cleanup and documentation finalization
+6. ✅ People
+7. ✅ Memory Capture
+8. ✅ Migration hardening and compatibility mode
+9. ✅ Cleanup and documentation finalization
 
-Each stage must preserve external behavior, pass the complete verification
-cycle, and stop for approval before the next stage begins.
+All nine migration stages preserve external behavior and passed the complete
+verification cycle. New product work starts from these canonical boundaries.
 
 The complete pre-migration inventory is recorded in
 [`stage-2-5-memory-dependency-audit.md`](./stage-2-5-memory-dependency-audit.md).

@@ -5,6 +5,7 @@ import {
   type HappyLearningDetectionCandidate,
   type HappyLearningDetectV2Response,
 } from "./happyLearningDetectV2.types.ts";
+import { MEMORY_CAPTURE_ENDPOINTS } from "../memory-capture/memoryCaptureEndpoints.ts";
 
 const CAPTURE_TYPES = new Set<string>(HAPPY_LEARNING_CAPTURE_TYPES);
 const SEMANTIC_TAGS = new Set<string>(SEMANTIC_MEMORY_TAGS);
@@ -61,7 +62,7 @@ function parseCandidate(value: unknown): HappyLearningDetectionCandidate | null 
   if (
     !id || !personId || !personName || !candidateValue || !evidenceText || !detectionToken || !decision
     || typeof item.captureType !== "string" || !CAPTURE_TYPES.has(item.captureType)
-    || item.source !== "chat_message"
+    || (item.source !== "chat_message" && item.source !== "gift_discovery")
     || item.requiresConfirmation !== true
     || item.schemaVersion !== HAPPY_LEARNING_DETECTION_SCHEMA_VERSION
     || item.authorization !== "detection_only"
@@ -89,7 +90,7 @@ function parseCandidate(value: unknown): HappyLearningDetectionCandidate | null 
     evidenceText,
     decision,
     confidence: item.confidence as number | null,
-    source: "chat_message",
+    source: item.source,
     requiresConfirmation: true,
     schemaVersion: HAPPY_LEARNING_DETECTION_SCHEMA_VERSION,
     authorization: "detection_only",
@@ -109,7 +110,7 @@ export async function confirmHappyLearningCandidate(input: {
 }, fetcher: typeof fetch = fetch): Promise<HappyLearningConfirmResult> {
   try {
     const { candidate } = input;
-    const response = await fetcher("/api/memory-capture/confirm-v2", {
+    const response = await fetcher(MEMORY_CAPTURE_ENDPOINTS.canonical.confirm, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${input.accessToken}` },
       body: JSON.stringify({
@@ -122,6 +123,7 @@ export async function confirmHappyLearningCandidate(input: {
           polarity: candidate.polarity,
           semanticTags: candidate.semanticTags,
           evidenceText: candidate.evidenceText,
+          source: candidate.source,
           schemaVersion: candidate.schemaVersion,
         },
       }),
@@ -133,6 +135,20 @@ export async function confirmHappyLearningCandidate(input: {
     }
     const allowed = new Set(["expired_token", "invalid_token", "stale_candidate", "person_not_found", "conflict", "rate_limited"]);
     return { ok: false, error: typeof body?.error === "string" && allowed.has(body.error) ? body.error as HappyLearningConfirmError : "save_failed" };
+  } catch {
+    return { ok: false, error: "save_failed" };
+  }
+}
+
+export async function confirmHappyLearningCandidateWithSession(
+  candidate: HappyLearningDetectionCandidate,
+): Promise<HappyLearningConfirmResult> {
+  try {
+    const { supabase } = await import("../supabaseClient.ts");
+    const { data } = await supabase.auth.getSession();
+    const accessToken = data.session?.access_token;
+    if (!accessToken) return { ok: false, error: "invalid_token" };
+    return confirmHappyLearningCandidate({ candidate, accessToken });
   } catch {
     return { ok: false, error: "save_failed" };
   }
@@ -161,7 +177,7 @@ export async function requestHappyLearningDetection(input: {
   signal: AbortSignal;
 }, fetcher: typeof fetch = fetch): Promise<HappyLearningDetectV2Response> {
   try {
-    const response = await fetcher("/api/memory-capture/detect-v2", {
+    const response = await fetcher(MEMORY_CAPTURE_ENDPOINTS.canonical.detect, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

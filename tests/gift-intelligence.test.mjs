@@ -217,7 +217,7 @@ test("ownership verification precedes cache and every protected read", async () 
   ]) assert.ok(route.indexOf(operation) > access, operation);
 });
 
-test("Knowledge and legacy Notes reads are user and person scoped", async () => {
+test("Knowledge reads are user and person scoped with no absent Notes fallback", async () => {
   const [repository, knowledgeRepository] = await Promise.all([
     readFile(
     new URL("../src/lib/repositories/giftIntelligenceRepository.server.ts", import.meta.url),
@@ -236,10 +236,9 @@ test("Knowledge and legacy Notes reads are user and person scoped", async () => 
   const knowledgeRead = repository.slice(repository.indexOf("loadGiftIntelligenceSource"));
   assert.match(knowledgeRead, /listKnowledgeForOwnedPersonOnServer/);
   assert.doesNotMatch(knowledgeRead, /\.from\("memories"\)/);
-  assert.match(knowledgeRepository, /listKnowledgeRowsForOwnedPersonOnServer/);
+  assert.match(knowledgeRepository, /listOwnedKnowledgeRowsOnServer/);
   assert.match(knowledgeRepository, /\.eq\("user_id", userId\)[\s\S]*?\.eq\("person_id", personId\)/);
-  const notesRead = repository.slice(repository.indexOf("loadLegacyGiftNotes"));
-  assert.match(notesRead, /\.from\("notes"\)[\s\S]*?\.eq\("user_id", person\.userId\)[\s\S]*?\.eq\("person_id", person\.id\)/);
+  assert.doesNotMatch(repository, /\.from\("notes"\)|loadLegacyGiftNotes/);
 });
 
 test("cache accepts only an ownership-verified person capability", async () => {

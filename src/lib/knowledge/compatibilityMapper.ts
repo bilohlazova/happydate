@@ -5,7 +5,6 @@ import {
 import type {
   KnowledgeItem,
   KnowledgeKind,
-  LegacyMemoryKnowledgeDto,
   KnowledgePolarity,
   KnowledgeState,
 } from "./domain.ts";
@@ -157,26 +156,4 @@ export function mapLegacyMemoriesToKnowledge(
   rows: readonly MemoryRow[]
 ): KnowledgeItem[] {
   return rows.map(mapLegacyMemoryToKnowledge);
-}
-
-/**
- * Preserve the current Brain-shaped payload without creating a Repository →
- * Brain dependency. This adapter can be removed when Brain adopts Knowledge.
- */
-export function mapLegacyMemoryToCompatibilityDto(
-  row: MemoryRow
-): LegacyMemoryKnowledgeDto {
-  return {
-    id: row.id,
-    personId: row.person_id,
-    type: row.type,
-    title: row.title,
-    value: row.value_text,
-    content: row.content_text,
-    importance: Number.isFinite(row.importance) ? row.importance : 0,
-    occurredOn: row.occurred_on,
-    createdAt: row.created_at,
-    isActive: row.is_active,
-    eventId: row.event_id,
-  };
 }

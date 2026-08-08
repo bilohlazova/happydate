@@ -1,16 +1,13 @@
 import { supabase } from "@/lib/supabaseClient";
+import { getPeople as getCanonicalPeople } from "@/lib/repositories/personRepository";
+import { projectPersonSummary } from "./projectPersonSummary";
 import type { PersonSummary } from "./people.types";
 
-type PeopleTableRow = {
-  id: string;
-  user_id: string;
-  name: string;
-  birthday: string | null;
-  relationship: string | null;
-  notes: string | null;
-  created_at: string | null;
-};
-
+/**
+ * Compatibility projection for the legacy Happy Brain.
+ * Persistence belongs exclusively to personRepository; this module must not
+ * issue a second `public.people` query or invent a second Person contract.
+ */
 export async function getPeople(): Promise<PersonSummary[]> {
   try {
     const {
@@ -28,25 +25,7 @@ export async function getPeople(): Promise<PersonSummary[]> {
       return [];
     }
 
-    const { data, error } = await supabase
-      .from("people")
-      .select("id, user_id, name, birthday, relationship, notes, created_at")
-      .eq("user_id", user.id)
-      .order("name");
-
-    if (error) {
-      console.error("[people.repository] getPeople failed:", error);
-      return [];
-    }
-
-    return ((data ?? []) as PeopleTableRow[]).map((row) => ({
-      id: row.id,
-      firstName: row.name,
-      birthday: row.birthday ? new Date(row.birthday) : undefined,
-      relationship: row.relationship ?? undefined,
-      favoriteThings: [],
-      lastContactAt: undefined,
-    }));
+    return (await getCanonicalPeople(user.id)).map(projectPersonSummary);
   } catch (error) {
     console.error("[people.repository] getPeople unexpected failure:", error);
     return [];

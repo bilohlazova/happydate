@@ -9,9 +9,7 @@ import {
   Bot,
   CalendarDays,
   CheckCircle2,
-  Gift,
   Heart,
-  Lightbulb,
   NotebookPen,
   Sparkles,
   Target,
@@ -19,6 +17,7 @@ import {
 
 import ChatAssistantModal from "@/components/ChatAssistantModal";
 import Avatar from "@/components/people/Avatar";
+import { PersonGiftManager } from "@/components/people/PersonGiftManager";
 import type {
   PersonBrainInsightViewModel,
   PersonKnowledgeValueViewModel,
@@ -73,10 +72,7 @@ export function PersonProfileContent({
           </div>
 
           <div className="flex min-w-0 flex-col gap-3">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-              <KnowledgeSection icon={<Lightbulb />} title={t("profileUi.giftIdeas")} tone="violet" items={viewModel.giftIdeas} empty={t("profileUi.empty.giftIdeas")} />
-              <KnowledgeSection icon={<Gift />} title={t("profileUi.giftHistory")} tone="emerald" items={viewModel.giftHistory} empty={t("profileUi.empty.giftHistory")} />
-            </div>
+            <PersonGiftManager personId={hero.id} personName={hero.name} />
 
             <TimelineSection items={viewModel.timeline} locale={locale} t={t} />
             <BrainSection items={viewModel.brainInsights} t={t} />

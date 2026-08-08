@@ -88,10 +88,11 @@ test("Gift Workspace exposes lifecycle, relations and future recommendation cont
 test("AI Gift Cache compatibility paths remain present and unchanged", async () => {
   const repository = await readFile(new URL("../src/lib/repositories/giftIntelligenceRepository.server.ts", import.meta.url), "utf8");
   const route = await readFile(new URL("../src/app/api/ai/gift-suggestions/route.ts", import.meta.url), "utf8");
-  for (const api of ["getCachedGiftIdeas", "saveGiftIdeas", "loadGiftIntelligenceSource", "loadLegacyGiftNotes"]) {
+  for (const api of ["getCachedGiftIdeas", "saveGiftIdeas", "loadGiftIntelligenceSource"]) {
     assert.match(repository, new RegExp(`export async function ${api}`));
   }
   for (const api of ["getCachedGiftIdeas", "saveGiftIdeas", "loadGiftIntelligenceSource"]) {
     assert.ok(route.includes(`${api}(`));
   }
+  assert.doesNotMatch(repository, /loadLegacyGiftNotes|\.from\("notes"\)/);
 });

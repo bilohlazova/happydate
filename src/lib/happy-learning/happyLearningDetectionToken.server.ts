@@ -5,7 +5,7 @@ export const HAPPY_LEARNING_TOKEN_TTL_SECONDS = 10 * 60;
 
 export type HappyLearningConfirmationCandidate = Pick<
   HappyLearningDetectionCandidate,
-  "id" | "personId" | "captureType" | "value" | "polarity" | "semanticTags" | "evidenceText" | "schemaVersion"
+  "id" | "personId" | "captureType" | "value" | "polarity" | "semanticTags" | "evidenceText" | "source" | "schemaVersion"
 >;
 
 type DetectionTokenClaims = {
@@ -18,7 +18,7 @@ type DetectionTokenClaims = {
   polarity: string | null;
   semanticTags: string[];
   evidenceHash: string;
-  source: "chat_message";
+  source: HappyLearningConfirmationCandidate["source"];
   schemaVersion: string;
   iat: number;
   exp: number;
@@ -38,6 +38,7 @@ function canonicalCandidate(candidate: HappyLearningConfirmationCandidate): stri
     polarity: candidate.polarity,
     semanticTags: candidate.semanticTags,
     evidenceText: candidate.evidenceText,
+    source: candidate.source,
     schemaVersion: candidate.schemaVersion,
   });
 }
@@ -65,7 +66,7 @@ export function issueHappyLearningDetectionToken(input: {
     polarity: input.candidate.polarity,
     semanticTags: [...input.candidate.semanticTags],
     evidenceHash: digest(input.candidate.evidenceText),
-    source: "chat_message",
+    source: input.candidate.source,
     schemaVersion: input.candidate.schemaVersion,
     iat,
     exp: iat + HAPPY_LEARNING_TOKEN_TTL_SECONDS,
@@ -98,7 +99,7 @@ export function verifyHappyLearningDetectionToken(input: {
   }
   const expected = signature(encoded, input.secret);
   if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return { ok: false, error: "invalid_token" };
-  if (!claims || claims.v !== 1 || claims.source !== "chat_message") return { ok: false, error: "invalid_token" };
+  if (!claims || claims.v !== 1 || (claims.source !== "chat_message" && claims.source !== "gift_discovery")) return { ok: false, error: "invalid_token" };
   const now = Math.floor((input.now ?? Date.now()) / 1_000);
   if (!Number.isInteger(claims.iat) || !Number.isInteger(claims.exp) || claims.exp <= now || claims.iat > now + 60) {
     return { ok: false, error: "expired_token" };
@@ -112,6 +113,7 @@ export function verifyHappyLearningDetectionToken(input: {
     || claims.polarity !== input.candidate.polarity
     || JSON.stringify(claims.semanticTags) !== JSON.stringify(input.candidate.semanticTags)
     || claims.evidenceHash !== digest(input.candidate.evidenceText)
+    || claims.source !== input.candidate.source
     || claims.schemaVersion !== input.candidate.schemaVersion
   ) return { ok: false, error: "stale_candidate" };
   return { ok: true, claims };

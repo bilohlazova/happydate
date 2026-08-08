@@ -145,6 +145,51 @@ export async function ensureReminderForOccurrence(
   return mapReminder(parseReminderRow(existing));
 }
 
+export async function activateReminderForOccurrence(
+  input: CreateReminderInput,
+): Promise<ReminderRecord> {
+  const userId = await requireUserId();
+  const actionKind = input.actionKind ?? "congratulate";
+  const { data, error } = await supabase
+    .from("reminders")
+    .upsert({
+      user_id: userId,
+      event_id: input.eventId,
+      occurrence_date: input.occurrenceDate,
+      action_kind: actionKind,
+      state: "pending",
+      next_remind_at: input.nextRemindAt,
+      snoozed_until: null,
+      completed_at: null,
+      cancelled_at: null,
+    }, { onConflict: "user_id,event_id,occurrence_date,action_kind" })
+    .select(REMINDER_COLUMNS)
+    .single();
+  if (error) throw new Error(`[reminders.repository] Activation failed: ${error.message}`);
+  return mapReminder(parseReminderRow(data));
+}
+
+export async function cancelActiveRemindersForEvent(
+  eventId: string,
+  at = new Date(),
+): Promise<void> {
+  const userId = await requireUserId();
+  const timestamp = at.toISOString();
+  const { error } = await supabase
+    .from("reminders")
+    .update({
+      state: "cancelled",
+      next_remind_at: null,
+      snoozed_until: null,
+      cancelled_at: timestamp,
+      updated_at: timestamp,
+    })
+    .eq("event_id", eventId)
+    .eq("user_id", userId)
+    .in("state", ["pending", "snoozed"]);
+  if (error) throw new Error(`[reminders.repository] Event cancellation failed: ${error.message}`);
+}
+
 async function persistTransition(
   id: string,
   transition: (current: ReminderLifecycle) => ReminderLifecycle,

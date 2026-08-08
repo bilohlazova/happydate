@@ -25,8 +25,7 @@ Gift API route
 Gift Intelligence Repository
     ├── people
     ├── canonical memories projection
-    ├── ai_gift_cache
-    └── legacy notes fallback
+    └── bounded ai_gift_cache (7 days)
     ↓
 Compatibility Mapper → KnowledgeItem[]
     ↓
@@ -57,23 +56,16 @@ OpenAI integration remain unchanged.
 
 ## Status of the `notes` table
 
-No schema migration, ownership documentation, or production inventory for this
-table exists in the repository. It cannot safely be classified as duplicated or
-removable, so it remains a temporary Repository-owned fallback:
-
-1. Read canonical active Knowledge for the person.
-2. If canonical Knowledge exists, do not read legacy `notes`.
-3. Otherwise read legacy notes in the previous newest-first order.
-4. Format them exactly like the previous prompt context.
-
-No destructive migration was performed. Stage 8 must inventory and backfill
-unique records before considering fallback removal.
+Stage 8.1 verified against the linked production project that `public.notes`
+does not exist. The unused Repository fallback was removed; Gift Intelligence
+now reads person knowledge only from the canonical `memories` projection. No
+backfill or destructive database operation was necessary.
 
 ## Remaining risks
 
 - Authentication and ownership are enforced by the completed Stage 4.1 guard;
   see `stage-4-1-gift-api-ownership-guard.md`.
-- Cache keys remain `personId + occasion`; Knowledge changes do not invalidate
-  existing cached recommendations.
-- Legacy fallback has limited provenance.
+- Cache keys remain `personId + occasion`, but Stage 8.4 now expires entries
+  after seven days and invalidates every person's cached recommendations when
+  their canonical Knowledge changes.
 - Structured facts remain flattened to the old prompt format for parity.

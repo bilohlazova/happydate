@@ -6,7 +6,6 @@ import {
   getAiEligibleKnowledge,
   getPersonKnowledge,
   mapLegacyMemoryToKnowledge,
-  mapLegacyMemoryToCompatibilityDto,
   selectKnowledgeContext,
 } from "../src/lib/knowledge/index.ts";
 
@@ -110,30 +109,6 @@ test("snapshot groups people, preserves unassigned items and sorts newest first"
   assert.deepEqual(profile?.experiences.map((item) => item.id), ["newer"]);
   assert.deepEqual(snapshot.unassigned.map((item) => item.id), ["free"]);
   assert.equal(getPersonKnowledge(snapshot, "missing"), null);
-});
-
-test("legacy Brain compatibility projection preserves the previous shape", () => {
-  const row = memory({
-    type: "gift",
-    title: "Gift",
-    value_text: "LEGO",
-    content_text: "For birthday",
-    importance: 2,
-  });
-
-  assert.deepEqual(mapLegacyMemoryToCompatibilityDto(row), {
-    id: "memory-1",
-    personId: "person-1",
-    type: "gift",
-    title: "Gift",
-    value: "LEGO",
-    content: "For birthday",
-    importance: 2,
-    occurredOn: null,
-    createdAt: "2026-01-01T00:00:00.000Z",
-    isActive: true,
-    eventId: null,
-  });
 });
 
 test("knowledge context applies person, privacy and bounded limit rules", () => {

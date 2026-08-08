@@ -17,6 +17,14 @@
     "askHappy": "Ask Happy",
     "addNote": "Add note",
     "birthdayCountdown": "{days, plural, =0 {Birthday today} =1 {Birthday tomorrow} other {Birthday in # days}}",
+    "gifts": {
+      "title": "Gifts and saved options", "subtitle": "Plan gifts for {name} and keep useful links.", "loading": "Loading gifts…", "error": "The action could not be completed. Please try again.",
+      "ideaPlaceholder": "For example, a dress, book or flowers", "addIdea": "Add idea", "emptyIdeas": "Add the first gift idea.",
+      "linksTitle": "Saved links", "urlPlaceholder": "https://store.com/gift", "linkTitlePlaceholder": "Option name (optional)", "saveLink": "Save link", "emptyLinks": "There are no links for this person yet.",
+      "deleteLink": "Delete link", "confirmDeleteLink": "Delete this saved link?", "confirmGiven": "Confirm that “{gift}” was given to {name}? It will be added to gift history.",
+      "legacyReadOnly": "Older note record — it can be viewed, but its status cannot be changed.", "linkDisclaimer": "Links and store details are saved by you. HappyDate does not guarantee that they remain current.",
+      "lifecycle": { "idea": "Idea", "selected": "Selected", "purchased": "Purchased", "given": "Given" }, "actions": { "selected": "Select", "purchased": "Mark purchased", "given": "Mark given" }
+    },
     "health": {
       "starting": "Happy is just getting to know this person",
       "partial": "Happy knows this person partly",

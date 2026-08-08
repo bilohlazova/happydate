@@ -35,7 +35,7 @@ export default function HomeDashboard({ viewModel, reminder, inAppDeliveryCount,
       <div className="mx-auto w-full max-w-[980px] px-4 pb-[calc(32px+var(--hd-nav-height)+env(safe-area-inset-bottom))] pt-5 sm:px-6 md:pb-10 md:pt-8">
         <HomeGreeting greeting={viewModel.greeting} />
         <TodaySummary insights={viewModel.todayInsights} count={viewModel.stats.importantCount} statsLabel={t("stats.label")} statsDescription={t("stats.description")} emptyLabel={t("summary.empty")} />
-        <HomeAssistantActions briefText={viewModel.assistantActions.briefText} locale={SPEECH_LOCALES[viewModel.locale] ?? viewModel.locale} onAsk={onAskHappy} labels={{ ask: t("assistant.ask"), listen: t("assistant.listen"), stop: t("assistant.stop"), read: t("assistant.read"), briefTitle: t("assistant.sectionLabel"), close: t("assistant.close"), speechError: t("assistant.speechError") }} />
+        <HomeAssistantActions briefing={viewModel.assistantActions.briefing} locale={SPEECH_LOCALES[viewModel.locale] ?? viewModel.locale} onAsk={onAskHappy} labels={{ ask: t("assistant.ask"), listen: t("assistant.listen"), pause: t("assistant.pause"), resume: t("assistant.resume"), stop: t("assistant.stop"), read: t("assistant.read"), progress: t("assistant.progress"), interrupted: t("assistant.interrupted"), modeLabel: t("assistant.modeLabel"), shortMode: t("assistant.shortMode"), detailedMode: t("assistant.detailedMode"), briefTitle: t("assistant.sectionLabel"), close: t("assistant.close"), speechError: t("assistant.speechError") }} />
 
         {inAppDeliveryCount > 0 && (
           <div className="mt-5 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-950" role="status">

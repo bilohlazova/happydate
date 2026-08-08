@@ -150,6 +150,7 @@ Confirmed drift and risks:
 | `created_at` | timestamptz | no | Persistence metadata |
 | `category` | text | no | Calendar/category rules |
 | `is_important` | boolean | no | Brain eligibility |
+| `recurrence_rule` | text | no | Date-only Event series rule: none, weekly, monthly, yearly |
 | `person_id` | uuid | no | FK to `people.id` |
 | `person_name` | text | no | Denormalized compatibility field |
 
@@ -177,8 +178,8 @@ Confirmed drift and risks:
 | `person_id` | uuid | no | FK to `people.id` |
 | `event_id` | uuid | no | FK to `events.id` |
 | `content_text` | text | no | Long-form capture |
-| `audio_url` | text | no | Voice-note path, not yet used by current Notes UI |
-| `transcript_text` | text | no | Transcript, not yet used by current Notes UI |
+| `audio_url` | text | no | Owner-scoped private voice-note object path used by Notes |
+| `transcript_text` | text | no | Optional transcript displayed and searched by Notes |
 | `images` | text[] | no | Stored image paths/legacy URLs |
 | `ai_summary` | text | no | Legacy AI metadata |
 | `ai_tags` | text[] | no | Compatibility and controlled semantic tags |
@@ -242,8 +243,8 @@ tables: each requires a retain/migrate/retire decision.
 | `user_survey` | `user_id`, `likes[]`, `dislikes[]`, `dream`, `notes`, `is_completed` | Registration/login routing and survey persistence cannot rely on this project | Migrate useful data into onboarding/Knowledge or restore intentionally |
 | `user_special_dates` | `id`, `user_id`, `date`, `label`, `kind` | Survey special dates cannot load/save | Migrate to canonical Events or retire |
 | `gift_requests` | `user_id`, `event_id`, `event_title`, `event_date`, `for_whom`, `gender`, `age`, `interests`, `occasion`, `budget_pln`, `anonymity`, `split_payment`, `delivery`, `notes`, `status`, `created_at` | Legacy concierge submission returns a persistence error | Keep only if concierge service remains in product scope |
-| `ai_gift_cache` | `person_id`, `occasion`, `ideas`, `created_at`; conflict target `person_id,occasion` | Reads degrade to cache miss; save errors are ignored | Replace with canonical cache/session or create with explicit lifecycle |
-| `notes` | `user_id`, `person_id`, `content`, `created_at` | Legacy Gift fallback returns empty; canonical `memories` already owns Notes data | Retire this fallback rather than recreate duplicate knowledge storage |
+| `ai_gift_cache` | Created in Stage 8.4 with `person_id`, `occasion`, `ideas`, `created_at`, `expires_at` | Seven-day server-only cache; invalidated when canonical Knowledge changes | Complete |
+| `notes` | Confirmed absent in Stage 8.1 | Gift fallback retired; canonical `memories` owns Notes data | Complete |
 
 ### 5.2 Separate service/legacy candidates
 
@@ -276,19 +277,18 @@ scheduled use require admin catalog inspection.
 |---|---:|---:|---:|---|---|
 | `avatars` | yes | yes | none reported | none reported | Active upload/remove/public URL |
 | `memory-images` | yes | no | 10 MiB | JPEG, PNG, WebP, HEIC, HEIF | Active signed URL/upload/remove helpers |
-| `memory-audio` | yes | no | none reported | none reported | No active upload/playback consumer found |
+| `memory-audio` | yes | no | 25 MiB | WebM, MP4/M4A, MP3, OGG, WAV | Active signed URL/upload/playback/remove lifecycle |
 | `heaven-videos` | no | expected public URL | unknown | unknown | Active API expects it; upload fails before table insert when file exists |
 
-Storage policies were not exposed by the read-only endpoint and remain
-unverified.
+Storage policies were verified through the linked database catalog. Memory
+image and audio policies enforce the authenticated user id as the first object
+path segment for SELECT, INSERT, UPDATE and DELETE.
 
 Risks:
 
 - Public `avatars` has no reported size or MIME restriction.
-- `memory-audio` is private, which is appropriate, but lacks reported limits
-  and an application lifecycle.
-- `memory-images` has a good bucket-level limit/allowlist, but RLS-equivalent
-  object policies still need catalog review.
+- `memory-audio` and `memory-images` are private, owner-scoped and have bounded
+  MIME/size policies.
 - The `heaven-messages` route uses service role and constructs a public URL for
   a bucket that does not exist remotely.
 
@@ -427,8 +427,8 @@ Step 3 must not create every missing table. First record an explicit decision:
 | `points_balance` | Retire reference unless a real ledger domain is required; do not duplicate `profiles.points` casually |
 | `user_survey` | Migrate useful onboarding facts into canonical profile/Knowledge or explicitly restore |
 | `user_special_dates` | Migrate to Events rather than keep a second date source |
-| `notes` | Retire legacy fallback; `memories`/Knowledge is canonical |
-| `ai_gift_cache` | Replace or restore as an explicitly bounded cache, not Knowledge |
+| `notes` | Retired in Stage 8.1; `memories`/Knowledge is canonical |
+| `ai_gift_cache` | Restored in Stage 8.4 as a bounded server-only cache, not Knowledge |
 | `gift_requests` | Product decision: retain isolated concierge or retire from core |
 | `reviews` | Isolated public-content decision with moderation/RLS |
 | `good_deeds` | Isolated service decision with consent, abuse protection, and retention |
@@ -653,7 +653,42 @@ Migration `20260803190256_reminder_preferences_and_delivery_outbox.sql` adds:
 - quiet-hour evaluation in the User's timezone, row locking with `SKIP LOCKED`,
   and atomic advancement of the next reminder time.
 
-The `/settings/reminders` screen now persists these preferences with five-locale
-copy. Push remains disabled by default. Production does not currently have
-`pg_cron` or `pgmq` enabled, so no recurring Job or external delivery consumer
-was created in this stage.
+The `/settings/reminders` screen persists these preferences with five-locale
+copy. Push remains disabled by default. Migration
+`20260803190836_activate_reminder_cron_and_in_app_delivery.sql` subsequently
+enabled `pg_cron`, scheduled the queue function every minute, and added the
+authenticated in-app delivery-consumption boundary. It does not transmit push.
+
+## 22. Push device registration foundation
+
+Migration `20260804154538_create_push_device_registration.sql` was applied to
+`happydate-prod` on 2026-08-04. It adds a private-by-default device-token store,
+authenticated registration/disable boundaries, and extends the existing Cron
+scheduler so push deliveries enter the outbox only when the User opted in and
+has an enabled native device.
+
+The mobile shell now includes Capacitor Push Notifications for iOS and Android.
+Permission is requested only after an explicit toggle in Reminder Settings;
+web users are not prompted. iOS forwards APNs registration callbacks through
+Capacitor and has the Push Notifications entitlement. Android creates a
+high-importance `happydate-reminders` channel.
+
+This stage intentionally does not transmit queued push deliveries. APNs/FCM
+provider credentials are not stored in the repository and must be configured
+before a service-only delivery worker can be deployed. Push remains opt-in and
+disabled by default until native registration succeeds.
+
+## 23. Server-side push dispatcher
+
+Migration `20260804161414_add_push_dispatch_claims.sql` adds retry scheduling
+and opaque provider acknowledgement storage to the push delivery outbox. The
+`dispatch-push-reminders` Edge Function is restricted to Supabase secret-key
+callers and delivers Android tokens through FCM HTTP v1 and native iOS tokens
+through APNs token authentication.
+
+The dispatcher claims each delivery with an optimistic status transition,
+recovers abandoned processing rows, retries transient failures at most three
+times, and disables device tokens only when APNs or FCM explicitly identifies
+them as invalid. Provider credentials and full device tokens are never logged.
+The function remains safe but operationally dormant until the Apple and
+Firebase secrets are configured and a protected schedule invokes it.

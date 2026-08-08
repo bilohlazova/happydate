@@ -1,34 +1,8 @@
 {
-  "title": "I learned something useful about this person",
-  "description": "Save it only if it is correct.",
-  "save": "Save",
-  "saving": "Saving…",
-  "notNow": "Not now",
-  "highConfidence": "High confidence",
-  "retry": "Try again",
   "status": {
     "saved": "Saved to Happy’s memory.",
     "alreadySaved": "This is already saved in Happy’s memory.",
     "saveFailed": "This could not be saved right now. Try again."
-  },
-  "labels": {
-    "interest": "Likes",
-    "hobby": "Hobby",
-    "favorite_brand": "Favorite brand",
-    "disliked_gift": "Avoid",
-    "preferred_style": "Preferred style"
-  },
-  "aria": {
-    "card": "Suggested memory candidate",
-    "save": "Save memory candidate: {value}",
-    "notNow": "Dismiss memory candidate: {value}",
-    "candidate": {
-      "interest": "Likes {value}",
-      "hobby": "Hobby: {value}",
-      "favorite_brand": "Favorite brand: {value}",
-      "disliked_gift": "Avoid: {value}",
-      "preferred_style": "Preferred style: {value}"
-    }
   },
   "learning": {
     "title": "I learned something important about {personName}",

@@ -17,6 +17,7 @@ function memory(id, type, personId = null, overrides = {}) {
     content_text: `${id} treść`,
     created_at: `2026-07-${String(13 - Number(id.replace(/\D/g, "") || 0)).padStart(2, "0")}T12:00:00.000Z`,
     person_id: personId,
+    event_id: null,
     images: null,
     ai_tags: null,
     ai_summary: null,
@@ -26,7 +27,7 @@ function memory(id, type, personId = null, overrides = {}) {
 }
 
 const memories = [
-  memory("m1", "memory", "kasia", { content_text: "Wieczór w kinie" }),
+  memory("m1", "memory", "kasia", { content_text: "Wieczór w kinie", event_id: "cinema" }),
   memory("m2", "story", "olek"),
   memory("m3", "gift", "olek", { ai_tags: ["rower"] }),
   memory("m4", "journal", "kasia"),
@@ -37,10 +38,13 @@ const memories = [
   memory("m9", "coffee"),
 ];
 
+const events = [{ id: "cinema", title: "Rocznica w kinie", date: "2026-07-10", personId: "kasia" }];
+
 function run(overrides = {}) {
   return filterNotesMemories({
     memories,
     people,
+    events,
     primaryFilter: "all",
     personId: "all",
     search: "",
@@ -54,6 +58,17 @@ function ids(rows) {
 
 test("all returns every record in its existing order", () => {
   assert.deepEqual(ids(run()), ids(memories));
+});
+
+test("search matches title, gift value and linked event title", () => {
+  const rows = [
+    memory("title", "note", null, { title: "Kod do walizki" }),
+    memory("gift-value", "gift", "olek", { value_text: "Analogowy aparat" }),
+    ...memories,
+  ];
+  assert.deepEqual(ids(run({ memories: rows, search: "walizki" })), ["title"]);
+  assert.deepEqual(ids(run({ memories: rows, search: "analogowy" })), ["gift-value"]);
+  assert.deepEqual(ids(run({ memories: rows, search: "rocznica" })), ["m1"]);
 });
 
 test("people returns records with person_id", () => {

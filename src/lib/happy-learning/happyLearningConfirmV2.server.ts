@@ -12,7 +12,7 @@ import { mapHappyLearningCandidateToKnowledgeInput } from "./mapHappyLearningCan
 import { verifyHappyLearningDetectionToken, type HappyLearningConfirmationCandidate } from "./happyLearningDetectionToken.server.ts";
 
 const BODY_KEYS = new Set(["detectionToken", "candidate"]);
-const CANDIDATE_KEYS = new Set(["id", "personId", "captureType", "value", "polarity", "semanticTags", "evidenceText", "schemaVersion"]);
+const CANDIDATE_KEYS = new Set(["id", "personId", "captureType", "value", "polarity", "semanticTags", "evidenceText", "source", "schemaVersion"]);
 const TYPES = new Set<string>(HAPPY_LEARNING_CAPTURE_TYPES);
 const TAGS = new Set<string>(SEMANTIC_MEMORY_TAGS);
 const POLARITIES = new Set(["likes", "dislikes", "avoids", "prefers", "neutral"]);
@@ -37,6 +37,7 @@ function parseCandidate(value: unknown): HappyLearningConfirmationCandidate | nu
   const candidateValue = text(raw.value, HAPPY_LEARNING_LIMITS.maxValueLength);
   const evidenceText = text(raw.evidenceText, HAPPY_LEARNING_LIMITS.maxEvidenceLength);
   if (!id || !personId || !candidateValue || !evidenceText || raw.schemaVersion !== HAPPY_LEARNING_DETECTION_SCHEMA_VERSION) return null;
+  if (raw.source !== "chat_message" && raw.source !== "gift_discovery") return null;
   if (typeof raw.captureType !== "string" || !TYPES.has(raw.captureType)) return null;
   if (raw.polarity !== null && (typeof raw.polarity !== "string" || !POLARITIES.has(raw.polarity))) return null;
   if (!Array.isArray(raw.semanticTags) || raw.semanticTags.length > HAPPY_LEARNING_LIMITS.maxTags) return null;
@@ -45,7 +46,7 @@ function parseCandidate(value: unknown): HappyLearningConfirmationCandidate | nu
     if (typeof tag !== "string" || !TAGS.has(tag) || semanticTags.includes(tag as SemanticMemoryTag)) return null;
     semanticTags.push(tag as SemanticMemoryTag);
   }
-  return { id, personId, captureType: raw.captureType as HappyLearningConfirmationCandidate["captureType"], value: candidateValue, polarity: raw.polarity as HappyLearningConfirmationCandidate["polarity"], semanticTags, evidenceText, schemaVersion: HAPPY_LEARNING_DETECTION_SCHEMA_VERSION };
+  return { id, personId, captureType: raw.captureType as HappyLearningConfirmationCandidate["captureType"], value: candidateValue, polarity: raw.polarity as HappyLearningConfirmationCandidate["polarity"], semanticTags, evidenceText, source: raw.source, schemaVersion: HAPPY_LEARNING_DETECTION_SCHEMA_VERSION };
 }
 
 function response(body: object, status = 200): Response {

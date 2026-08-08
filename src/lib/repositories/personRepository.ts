@@ -14,6 +14,24 @@ import type {
   PersonRow,
 } from "./person.types";
 
+export const PERSON_SELECT = [
+  "id",
+  "user_id",
+  "name",
+  "relationship",
+  "relation_label",
+  "relation_key",
+  "relation_category",
+  "birthday",
+  "notes",
+  "phone",
+  "email",
+  "external_contact_id",
+  "contact_source",
+  "gender",
+  "created_at",
+].join(", ");
+
 export interface CreatePersonInput {
   userId: string;
   name: string;
@@ -49,7 +67,7 @@ export async function getPeople(
 ): Promise<PersonRow[]> {
   const { data, error } = await supabase
     .from("people")
-    .select("*")
+    .select(PERSON_SELECT)
     .eq("user_id", userId)
     .order("name", { ascending: true })
     .returns<PersonRow[]>();
@@ -71,7 +89,7 @@ export async function getPersonById(
 ): Promise<PersonRow | null> {
   const { data, error } = await supabase
     .from("people")
-    .select("*")
+    .select(PERSON_SELECT)
     .eq("id", personId)
     .returns<PersonRow[]>()
     .maybeSingle();
@@ -95,7 +113,7 @@ export async function getOwnedPersonById(
 ): Promise<PersonRow | null> {
   const { data, error } = await supabase
     .from("people")
-    .select("*")
+    .select(PERSON_SELECT)
     .eq("id", personId)
     .eq("user_id", userId)
     .returns<PersonRow[]>()

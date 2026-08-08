@@ -98,17 +98,18 @@ test("general chat starts v2 detection after person resolution without blocking 
   const gift = await readFile(path.join(root, "src/app/gift/start/StartPageContent.tsx"), "utf8");
   const provider = await readFile(path.join(root, "src/lib/happy-learning/openAiHappyLearningProvider.server.ts"), "utf8");
 
-  assert.match(client, /\/api\/memory-capture\/detect-v2/);
+  assert.match(client, /MEMORY_CAPTURE_ENDPOINTS\.canonical\.detect/);
   assert.match(client, /personId: input\.personId[\s\S]*userMessage: input\.userMessage[\s\S]*locale: input\.locale/);
-  assert.doesNotMatch(client, /supabase|createKnowledge|\.insert\(|\.upsert\(/);
+  assert.doesNotMatch(client, /createKnowledge|\.from\(|\.insert\(|\.upsert\(/);
   assert.ok(modal.indexOf("handlePotentialHappyLearning(content") < modal.indexOf("streamAssistantResponse(content"));
   assert.match(modal, /void detectHappyLearningCandidates/);
   assert.match(modal, /resolutionStatus !== "resolved"/);
   assert.match(modal, /candidate\.personId === input\.personId/);
   assert.match(card, /disabled=\{conflict \|\| status === "saving"/);
   assert.match(client, /confirmHappyLearningCandidate/);
-  assert.match(gift, /MemoryCaptureCard/);
-  assert.match(gift, /confirmMemoryCaptureCandidate/);
+  assert.match(gift, /HappyLearningCard/);
+  assert.match(gift, /confirmHappyLearningCandidateWithSession/);
+  assert.doesNotMatch(gift, /confirmMemoryCaptureCandidate/);
   assert.doesNotMatch(provider, /uniqueItems/);
 });
 

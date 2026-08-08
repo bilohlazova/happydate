@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { getBySlug, plans } from "../data";
 
-type Props = { params: { slug: string } };
+type Props = { params: Promise<{ slug: string }> };
 const FEATURE_KEYS = ["f1", "f2", "f3"] as const;
 const INCLUDE_KEYS = ["i1", "i2"] as const;
 const DELIVERY_KEYS = ["d1", "d2", "d3"] as const;
@@ -14,7 +14,8 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const plan = getBySlug(params.slug);
+  const { slug } = await params;
+  const plan = getBySlug(slug);
   if (!plan) return {};
   const t = await getTranslations("static.services.phase3b.heaven");
   const title = `HappyDate – ${t(`plans.${plan.type}.name`)}`;
@@ -36,7 +37,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PlanPage({ params }: Props) {
-  const plan = getBySlug(params.slug);
+  const { slug } = await params;
+  const plan = getBySlug(slug);
   if (!plan) return notFound();
   const t = await getTranslations("static.services.phase3b.heaven");
 

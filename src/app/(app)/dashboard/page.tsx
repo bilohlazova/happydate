@@ -3,13 +3,24 @@
 import { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import type { EventRow } from "@/components/EventsCalendar";
+import type { CalendarEventRecord as EventRow } from "@/lib/repositories/events";
+import type { EventRecurrenceRule } from "@/lib/repositories/events";
+import { expandCalendarEventOccurrences } from "@/lib/events/eventRecurrence";
+import { addLocalDateOnlyDays, formatLocalDateOnly, parseLocalDateOnly } from "@/lib/events/dateOnly";
 import type {
   RealtimeChannel,
   RealtimePostgresChangesPayload,
 } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
+import {
+  createCalendarEvent,
+  deleteCalendarEvent,
+  importCalendarEvents,
+  listCalendarEvents,
+  updateCalendarEvent,
+} from "@/lib/repositories/events";
+import { reconcileCalendarEventReminder } from "@/lib/reminders/calendarEventReminder";
 
 /* ═══════════════════════════════════════════════════
    TYPES
@@ -21,6 +32,27 @@ type PersonRow = {
   birthday: string | null;
   notes?: string | null;
 };
+
+type RealtimeEventRow = Omit<EventRow, "personId" | "personName" | "isImportant" | "recurrenceRule"> & {
+  person_id?: string | null;
+  person_name?: string | null;
+  is_important?: boolean | null;
+  recurrence_rule?: EventRecurrenceRule | null;
+};
+
+function mapRealtimeEvent(row: RealtimeEventRow): EventRow {
+  return {
+    id: row.id,
+    title: row.title,
+    date: row.date,
+    notes: row.notes ?? null,
+    category: row.category ?? null,
+    personId: row.person_id ?? null,
+    personName: row.person_name ?? null,
+    isImportant: row.is_important === true,
+    recurrenceRule: row.recurrence_rule ?? "none",
+  };
+}
 
 /* ═══════════════════════════════════════════════════
    CONSTANTS
@@ -91,10 +123,7 @@ const AI_TOPICS: Array<[RegExp, InsightTopic]> = [
 ═══════════════════════════════════════════════════ */
 
 function ymd(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-    2,
-    "0"
-  )}-${String(d.getDate()).padStart(2, "0")}`;
+  return formatLocalDateOnly(d);
 }
 
 function todayYMD(): string {
@@ -104,7 +133,8 @@ function todayYMD(): string {
 function daysLeft(dateYMD: string): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const dt = new Date(dateYMD + "T00:00:00");
+  const dt = parseLocalDateOnly(dateYMD);
+  if (!dt) return Number.NaN;
   return Math.round((dt.getTime() - today.getTime()) / 86400000);
 }
 
@@ -132,7 +162,7 @@ function formatDateShort(dateYMD: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
-  }).format(new Date(dateYMD + "T00:00:00"));
+  }).format(parseLocalDateOnly(dateYMD) ?? new Date(Number.NaN));
 }
 
 function getInitials(name: string): string {
@@ -417,10 +447,17 @@ function AddEditSheet({
   title,
   notes,
   category,
+  personId,
+  isImportant,
+  recurrenceRule,
+  people,
   setDate,
   setTitle,
   setNotes,
   setCategory,
+  setPersonId,
+  setIsImportant,
+  setRecurrenceRule,
   onCancel,
   onSubmit,
   onDelete,
@@ -430,10 +467,17 @@ function AddEditSheet({
   title: string;
   notes: string;
   category: string;
+  personId: string;
+  isImportant: boolean;
+  recurrenceRule: EventRecurrenceRule;
+  people: PersonRow[];
   setDate: (v: string) => void;
   setTitle: (v: string) => void;
   setNotes: (v: string) => void;
   setCategory: (v: string) => void;
+  setPersonId: (v: string) => void;
+  setIsImportant: (v: boolean) => void;
+  setRecurrenceRule: (v: EventRecurrenceRule) => void;
   onCancel: () => void;
   onSubmit: () => void;
   onDelete?: () => void;
@@ -527,7 +571,9 @@ function AddEditSheet({
           {/* Title — FIX 5: text-[16px] prevents Safari auto-zoom */}
           <div className="flex items-center gap-3 py-2 border-b border-slate-100">
             <span className="text-slate-300 text-lg select-none">✏️</span>
+            <label htmlFor={`${mode}-event-title`} className="sr-only">{t("form.title")}</label>
             <input
+              id={`${mode}-event-title`}
               ref={inputRef}
               type="text"
               placeholder={t("form.titlePlaceholder")}
@@ -542,7 +588,9 @@ function AddEditSheet({
           {/* Date — FIX 5 */}
           <div className="flex items-center gap-3 py-2 border-b border-slate-100">
             <span className="text-slate-300 text-lg select-none">📅</span>
+            <label htmlFor={`${mode}-event-date`} className="sr-only">{t("form.date")}</label>
             <input
+              id={`${mode}-event-date`}
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
@@ -575,10 +623,66 @@ function AddEditSheet({
             </div>
           </div>
 
+          <div className="flex items-center gap-3 py-2 border-b border-slate-100">
+            <span className="text-slate-300 text-lg select-none">🔁</span>
+            <label htmlFor={`${mode}-event-recurrence`} className="sr-only">
+              {t("form.recurrence")}
+            </label>
+            <select
+              id={`${mode}-event-recurrence`}
+              value={recurrenceRule}
+              onChange={(event) => setRecurrenceRule(event.target.value as EventRecurrenceRule)}
+              className="flex-1 min-h-11 bg-transparent text-slate-700 outline-none"
+              style={{ fontSize: "16px" }}
+            >
+              {(["none", "weekly", "monthly", "yearly"] as const).map((rule) => (
+                <option key={rule} value={rule}>{t(`recurrence.${rule}`)}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-3 py-2 border-b border-slate-100">
+            <span className="text-slate-300 text-lg select-none">👤</span>
+            <label htmlFor={`${mode}-event-person`} className="sr-only">
+              {t("form.person")}
+            </label>
+            <select
+              id={`${mode}-event-person`}
+              value={personId}
+              onChange={(e) => setPersonId(e.target.value)}
+              className="flex-1 text-slate-700 outline-none bg-transparent"
+              style={{ fontSize: "16px" }}
+            >
+              <option value="">{t("form.noPerson")}</option>
+              {people.map((person) => (
+                <option key={person.id} value={person.id}>{person.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isImportant}
+            onClick={() => setIsImportant(!isImportant)}
+            className="flex w-full items-center gap-3 rounded-2xl bg-amber-50/70 px-3 py-3 text-left"
+          >
+            <span className="text-lg">🔔</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-slate-800">{t("form.important")}</span>
+              <span className="block text-xs text-slate-500">{t("form.importantHint")}</span>
+            </span>
+            <span className={`relative h-7 w-12 rounded-full transition-colors ${isImportant ? "bg-amber-400" : "bg-slate-200"}`}>
+              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${isImportant ? "translate-x-6" : "translate-x-1"}`} />
+            </span>
+          </button>
+
           {/* Notes — FIX 5 */}
           <div className="flex items-center gap-3 py-2">
             <span className="text-slate-300 text-lg select-none">📝</span>
+            <label htmlFor={`${mode}-event-notes`} className="sr-only">{t("form.notes")}</label>
             <input
+              id={`${mode}-event-notes`}
               type="text"
               placeholder={t("form.notePlaceholder")}
               value={notes}
@@ -638,6 +742,9 @@ function DayDetailSheet({
   return (
     <div
       className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="calendar-day-title"
       onKeyDown={(e) => e.key === "Escape" && onClose()}
     >
       <div
@@ -666,14 +773,14 @@ function DayDetailSheet({
           <div>
             <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
               {new Intl.DateTimeFormat(locale, { weekday: "long" }).format(
-                new Date(dateYMD + "T00:00:00")
+                parseLocalDateOnly(dateYMD) ?? new Date(Number.NaN)
               )}
             </p>
-            <h3 className="text-xl font-extrabold text-slate-900 leading-tight flex items-center gap-2">
+            <h3 id="calendar-day-title" className="text-xl font-extrabold text-slate-900 leading-tight flex items-center gap-2">
               {new Intl.DateTimeFormat(locale, {
                 day: "numeric",
                 month: "long",
-              }).format(new Date(dateYMD + "T00:00:00"))}
+              }).format(parseLocalDateOnly(dateYMD) ?? new Date(Number.NaN))}
               {isToday && (
                 <span className="text-xs font-bold bg-sky-500 text-white px-2 py-0.5 rounded-full">
                   {t("day.today")}
@@ -681,12 +788,21 @@ function DayDetailSheet({
               )}
             </h3>
           </div>
-          <button
-            onClick={() => onAdd(dateYMD)}
-            className="h-9 px-4 rounded-2xl bg-sky-500 text-white text-xs font-bold hover:bg-sky-600 transition-colors shadow-sm shadow-sky-200 flex items-center gap-1.5"
-          >
-            <span className="text-base leading-none">＋</span> {t("common.add")}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onAdd(dateYMD)}
+              className="h-9 px-4 rounded-2xl bg-sky-500 text-white text-xs font-bold hover:bg-sky-600 transition-colors shadow-sm shadow-sky-200 flex items-center gap-1.5"
+            >
+              <span className="text-base leading-none">＋</span> {t("common.add")}
+            </button>
+            <button
+              onClick={onClose}
+              aria-label={t("accessibility.closeDay")}
+              className="h-9 w-9 rounded-xl text-slate-500 hover:bg-slate-100"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Events — scrollable, overscroll-contain stops bounce-through */}
@@ -748,6 +864,9 @@ function DayDetailSheet({
                           <p className="text-xs text-slate-400 mt-0.5 leading-snug">
                             {ev.notes}
                           </p>
+                        )}
+                        {ev.personName && !isBirthday && (
+                          <p className="text-[11px] text-slate-500 mt-1">👤 {ev.personName}</p>
                         )}
                         {insight && (
                           <p className="text-[11px] text-violet-500 mt-1.5 font-medium flex items-center gap-1">
@@ -859,15 +978,23 @@ function CalendarGrid({
   events,
   selectedDate,
   onSelectDate,
+  onNavigateDate,
+  onPreviousMonth,
+  onNextMonth,
 }: {
   year: number;
   month: number;
   events: EventRow[];
   selectedDate: string | null;
   onSelectDate: (ymd: string) => void;
+  onNavigateDate: (ymd: string) => void;
+  onPreviousMonth: () => void;
+  onNextMonth: () => void;
 }) {
   const locale = useLocale();
+  const t = useTranslations("dashboard");
   const today = todayYMD();
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   const firstDay = new Date(year, month, 1);
   const startDow = (firstDay.getDay() + 6) % 7;
@@ -891,8 +1018,29 @@ function CalendarGrid({
   ];
 
   return (
-    <div className="w-full">
-      <div className="grid grid-cols-7 mb-1">
+    <div
+      className="w-full touch-pan-y"
+      role="grid"
+      aria-label={t("accessibility.calendarLabel", {
+        month: new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(year, month, 1)),
+      })}
+      onTouchStart={(event) => {
+        const touch = event.touches[0];
+        touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+      }}
+      onTouchEnd={(event) => {
+        const start = touchStart.current;
+        const touch = event.changedTouches[0];
+        touchStart.current = null;
+        if (!start || !touch) return;
+        const dx = touch.clientX - start.x;
+        const dy = touch.clientY - start.y;
+        if (Math.abs(dx) < 56 || Math.abs(dx) <= Math.abs(dy) * 1.25) return;
+        if (dx < 0) onNextMonth();
+        else onPreviousMonth();
+      }}
+    >
+      <div className="grid grid-cols-7 mb-1" role="row">
         {Array.from({ length: 7 }, (_, index) =>
           new Intl.DateTimeFormat(locale, { weekday: "short" }).format(
             new Date(2024, 0, 1 + index)
@@ -900,13 +1048,14 @@ function CalendarGrid({
         ).map((d) => (
           <div
             key={d}
+            role="columnheader"
             className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider py-2"
           >
             {d}
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-y-0.5">
+      <div className="grid grid-cols-7 gap-y-0.5" role="rowgroup">
         {cells.map((day, idx) => {
           if (!day) return <div key={`e-${idx}`} />;
 
@@ -924,7 +1073,29 @@ function CalendarGrid({
           return (
             <button
               key={dateStr}
+              role="gridcell"
+              data-calendar-date={dateStr}
               onClick={() => onSelectDate(dateStr)}
+              onKeyDown={(event) => {
+                const offsets: Partial<Record<typeof event.key, number>> = {
+                  ArrowLeft: -1,
+                  ArrowRight: 1,
+                  ArrowUp: -7,
+                  ArrowDown: 7,
+                };
+                const offset = offsets[event.key];
+                if (offset === undefined) return;
+                event.preventDefault();
+                const target = addLocalDateOnlyDays(dateStr, offset);
+                if (target) onNavigateDate(target);
+              }}
+              aria-label={t("accessibility.dayLabel", {
+                date: new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+                  .format(parseLocalDateOnly(dateStr) ?? new Date(Number.NaN)),
+                count: dayEvents.length,
+              })}
+              aria-current={isToday ? "date" : undefined}
+              aria-selected={isSelected}
               className={`relative flex flex-col items-center justify-start py-1.5 rounded-xl transition-all active:scale-[.92] min-h-[52px] ${
                 isSelected
                   ? "bg-sky-500 shadow-md shadow-sky-200"
@@ -1145,6 +1316,9 @@ export default function CalendarPage() {
   const [mTitle, setMTitle] = useState("");
   const [mNotes, setMNotes] = useState("");
   const [mCat, setMCat] = useState("personal");
+  const [mPersonId, setMPersonId] = useState("");
+  const [mIsImportant, setMIsImportant] = useState(false);
+  const [mRecurrenceRule, setMRecurrenceRule] = useState<EventRecurrenceRule>("none");
 
   const [editOpen, setEditOpen] = useState(false);
   const [eId, setEId] = useState("");
@@ -1152,6 +1326,9 @@ export default function CalendarPage() {
   const [eDate, setEDate] = useState("");
   const [eNotes, setENotes] = useState("");
   const [eCat, setECat] = useState("personal");
+  const [ePersonId, setEPersonId] = useState("");
+  const [eIsImportant, setEIsImportant] = useState(false);
+  const [eRecurrenceRule, setERecurrenceRule] = useState<EventRecurrenceRule>("none");
 
   const [confirm, setConfirm] = useState<ConfirmState>({ open: false });
   const { toasts, push } = useToasts();
@@ -1169,22 +1346,20 @@ export default function CalendarPage() {
         return;
       }
 
-      const [{ data: evData, error: evErr }, { data: peopleData }] =
-        await Promise.all([
-          supabase
-            .from("events")
-            .select("id,user_id,title,date,notes,category")
-            .eq("user_id", user.id)
-            .order("date", { ascending: true }),
+      const [eventResult, { data: peopleData }] = await Promise.all([
+          listCalendarEvents(user.id).then(
+            (data) => ({ data, error: null }),
+            (error) => ({ data: null, error }),
+          ),
           supabase
             .from("people")
             .select("id,name,birthday,notes")
             .eq("user_id", user.id)
-            .not("birthday", "is", null),
+            .order("name", { ascending: true }),
         ]);
 
-      if (evErr) push({ type: "error", msg: t("toast.loadError") });
-      if (!evErr && evData) setEvents(evData as EventRow[]);
+      if (eventResult.error) push({ type: "error", msg: t("toast.loadError") });
+      if (eventResult.data) setEvents(eventResult.data);
       if (peopleData) setPeople(peopleData as PersonRow[]);
       setLoading(false);
 
@@ -1198,24 +1373,29 @@ export default function CalendarPage() {
             table: "events",
             filter: `user_id=eq.${user.id}`,
           },
-          (payload: RealtimePostgresChangesPayload<EventRow>) => {
+          (payload: RealtimePostgresChangesPayload<RealtimeEventRow>) => {
             const sort = (arr: EventRow[]) =>
               [...arr].sort((a, b) => a.date.localeCompare(b.date));
-            if (payload.eventType === "INSERT")
-              setEvents((p) => sort([...p, payload.new as EventRow]));
-            if (payload.eventType === "UPDATE")
+            if (payload.eventType === "INSERT") {
+              const incoming = mapRealtimeEvent(payload.new as RealtimeEventRow);
+              setEvents((current) => sort([
+                ...current.filter((event) => event.id !== incoming.id),
+                incoming,
+              ]));
+            }
+            if (payload.eventType === "UPDATE") {
+              const incoming = mapRealtimeEvent(payload.new as RealtimeEventRow);
               setEvents((p) =>
                 sort(
                   p.map((e) =>
-                    e.id === (payload.new as EventRow).id
-                      ? (payload.new as EventRow)
-                      : e
+                    e.id === incoming.id ? incoming : e
                   )
                 )
               );
+            }
             if (payload.eventType === "DELETE")
               setEvents((p) =>
-                p.filter((e) => e.id !== (payload.old as EventRow).id)
+                p.filter((e) => e.id !== (payload.old as RealtimeEventRow).id)
               );
           }
         )
@@ -1231,25 +1411,40 @@ export default function CalendarPage() {
   const birthdayEvents = useMemo<EventRow[]>(() => {
     return people
       .filter((p) => !!p.birthday)
-      .map((p) => {
-        const bd = new Date(p.birthday! + "T00:00:00");
+      .flatMap((p): EventRow[] => {
+        const bd = parseLocalDateOnly(p.birthday!);
+        if (!bd) return [];
         const mon = String(bd.getMonth() + 1).padStart(2, "0");
         const day = String(bd.getDate()).padStart(2, "0");
-        return {
+        return [{
           id: `birthday-${p.id}`,
           title: `🎂 ${p.name}`,
-          date: `${currentYear}-${mon}-${day}`,
+          date: `${viewYear}-${mon}-${day}`,
           notes: null,
           category: "birthday",
-        };
+          personId: p.id,
+          personName: p.name,
+          isImportant: true,
+          recurrenceRule: "none",
+        }];
       });
-  }, [people, currentYear]);
+  }, [people, viewYear]);
 
-  const allEvents = useMemo<EventRow[]>(() => {
-    const existingIds = new Set(events.map((e) => e.id));
-    const unique = birthdayEvents.filter((b) => !existingIds.has(b.id));
-    return [...events, ...unique].sort((a, b) => a.date.localeCompare(b.date));
-  }, [events, birthdayEvents]);
+  const allEvents = useMemo(() => {
+    const rangeStart = `${viewYear - 1}-01-01`;
+    const rangeEnd = `${viewYear + 1}-12-31`;
+    const occurrences = expandCalendarEventOccurrences(events, rangeStart, rangeEnd);
+    const persistedBirthdays = new Set(
+      occurrences
+        .filter((event) => event.category === "birthday" && event.personId)
+        .map((event) => `${event.personId}:${event.date}`),
+    );
+    const syntheticBirthdays = birthdayEvents
+      .filter((event) => !persistedBirthdays.has(`${event.personId}:${event.date}`))
+      .map((event) => ({ ...event, sourceEventId: event.id }));
+    return [...occurrences, ...syntheticBirthdays]
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [events, birthdayEvents, viewYear]);
 
   const aiInsights = useMemo<Map<string, string>>(() => {
     const map = new Map<string, string>();
@@ -1285,7 +1480,8 @@ export default function CalendarPage() {
     in30.setDate(today.getDate() + 30);
     return allEvents
       .filter((e) => {
-        const d = new Date(e.date + "T00:00:00");
+        const d = parseLocalDateOnly(e.date);
+        if (!d) return false;
         return d >= today && d <= in30;
       })
       .slice(0, 12);
@@ -1329,7 +1525,18 @@ export default function CalendarPage() {
     setMTitle("");
     setMNotes("");
     setMCat("personal");
+    setMPersonId("");
+    setMIsImportant(false);
+    setMRecurrenceRule("none");
     setAddOpen(true);
+  }, []);
+
+  const mergeEvents = useCallback((incoming: EventRow[]) => {
+    setEvents((current) => {
+      const byId = new Map(current.map((event) => [event.id, event]));
+      incoming.forEach((event) => byId.set(event.id, event));
+      return [...byId.values()].sort((a, b) => a.date.localeCompare(b.date));
+    });
   }, []);
 
   const createEvent = async () => {
@@ -1344,33 +1551,53 @@ export default function CalendarPage() {
       router.replace("/auth/login");
       return;
     }
-    const { error } = await supabase.from("events").insert([
-      {
-        user_id: user.id,
+    try {
+      const created = await createCalendarEvent({
+        userId: user.id,
         title: mTitle.trim(),
         date: mDate,
         notes: mNotes.trim() || null,
         category: mCat,
-      },
-    ]);
-    if (error) push({ type: "error", msg: t("toast.addError") });
-    else push({ type: "success", msg: t("toast.added") });
-    setAddOpen(false);
+        personId: mPersonId || null,
+        personName: people.find((person) => person.id === mPersonId)?.name ?? null,
+        isImportant: mIsImportant,
+        recurrenceRule: mCat === "birthday" ? "none" : mRecurrenceRule,
+      });
+      mergeEvents([created]);
+      try {
+        await reconcileCalendarEventReminder({
+          eventId: created.id,
+          occurrenceDate: created.date,
+          enabled: created.isImportant,
+          recurrenceRule: created.recurrenceRule,
+        });
+      } catch {
+        push({ type: "error", msg: t("toast.reminderError") });
+      }
+      push({ type: "success", msg: t("toast.added") });
+      setAddOpen(false);
+    } catch {
+      push({ type: "error", msg: t("toast.addError") });
+    }
   };
 
   const openEdit = useCallback(
     (id: string) => {
       if (id.startsWith("birthday-")) return;
-      const ev = events.find((e) => e.id === id);
+      const occurrence = allEvents.find((event) => event.id === id);
+      const ev = events.find((event) => event.id === (occurrence?.sourceEventId ?? id));
       if (!ev) return;
       setEId(ev.id);
       setETitle(ev.title);
       setEDate(ev.date);
       setENotes(ev.notes ?? "");
       setECat(ev.category ?? "personal");
+      setEPersonId(ev.personId ?? "");
+      setEIsImportant(ev.isImportant);
+      setERecurrenceRule(ev.recurrenceRule);
       setEditOpen(true);
     },
-    [events]
+    [allEvents, events]
   );
 
   const saveEdit = async () => {
@@ -1380,6 +1607,10 @@ export default function CalendarPage() {
       date: eDate,
       notes: eNotes.trim() || null,
       category: eCat || null,
+      personId: ePersonId || null,
+      personName: people.find((person) => person.id === ePersonId)?.name ?? null,
+      isImportant: eIsImportant,
+      recurrenceRule: eCat === "birthday" ? "none" : eRecurrenceRule,
     };
     if (!snap.title || !snap.date) {
       push({ type: "error", msg: t("validation.required") });
@@ -1392,13 +1623,37 @@ export default function CalendarPage() {
       description: `„${snap.title}" — ${formatDateShort(snap.date, locale)}`,
       confirmText: t("common.save"),
       onConfirm: async () => {
-        const { error } = await supabase
-          .from("events")
-          .update(snap)
-          .eq("id", snap.id);
-        if (error) push({ type: "error", msg: t("toast.saveError") });
-        else push({ type: "success", msg: t("toast.updated") });
-        setEditOpen(false);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return router.replace("/auth/login");
+        try {
+          const updated = await updateCalendarEvent({
+            userId: user.id,
+            eventId: snap.id,
+            title: snap.title,
+            date: snap.date,
+            notes: snap.notes,
+            category: snap.category,
+            personId: snap.personId,
+            personName: snap.personName,
+            isImportant: snap.isImportant,
+            recurrenceRule: snap.recurrenceRule,
+          });
+          mergeEvents([updated]);
+          try {
+            await reconcileCalendarEventReminder({
+              eventId: updated.id,
+              occurrenceDate: updated.date,
+              enabled: updated.isImportant,
+              recurrenceRule: updated.recurrenceRule,
+            });
+          } catch {
+            push({ type: "error", msg: t("toast.reminderError") });
+          }
+          push({ type: "success", msg: t("toast.updated") });
+          setEditOpen(false);
+        } catch {
+          push({ type: "error", msg: t("toast.saveError") });
+        }
       },
     });
   };
@@ -1413,16 +1668,19 @@ export default function CalendarPage() {
         description: `„${ev.title}"`,
         confirmText: t("form.delete"),
         onConfirm: async () => {
-          const { error } = await supabase
-            .from("events")
-            .delete()
-            .eq("id", ev.id);
-          if (error) push({ type: "error", msg: t("toast.deleteError") });
-          else push({ type: "success", msg: t("toast.deleted") });
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return router.replace("/auth/login");
+          try {
+            await deleteCalendarEvent(user.id, ev.id);
+            setEvents((current) => current.filter((event) => event.id !== ev.id));
+            push({ type: "success", msg: t("toast.deleted") });
+          } catch {
+            push({ type: "error", msg: t("toast.deleteError") });
+          }
         },
       });
     },
-    [push, t]
+    [push, router, t]
   );
 
   const handleSelectDate = useCallback((dateYMD: string) => {
@@ -1490,17 +1748,19 @@ export default function CalendarPage() {
         router.replace("/auth/login");
         return;
       }
-      const { error } = await supabase
-        .from("events")
-        .insert(
-          items.map((i) => ({ user_id: user.id, ...i, category: "personal" }))
+      try {
+        const imported = await importCalendarEvents(
+          user.id,
+          items.map((item) => ({ ...item, category: "personal" })),
         );
-      if (error) push({ type: "error", msg: t("toast.importError") });
-      else
+        mergeEvents(imported);
         push({
           type: "success",
           msg: t("toast.imported", { count: items.length }),
         });
+      } catch {
+        push({ type: "error", msg: t("toast.importError") });
+      }
     } catch {
       push({ type: "error", msg: t("toast.fileError") });
     }
@@ -1605,6 +1865,18 @@ export default function CalendarPage() {
               events={allEvents}
               selectedDate={selectedDate}
               onSelectDate={handleSelectDate}
+              onNavigateDate={(dateYMD) => {
+                const date = parseLocalDateOnly(dateYMD);
+                if (!date) return;
+                setViewYear(date.getFullYear());
+                setViewMonth(date.getMonth());
+                setSelectedDate(dateYMD);
+                requestAnimationFrame(() => {
+                  document.querySelector<HTMLElement>(`[data-calendar-date="${dateYMD}"]`)?.focus();
+                });
+              }}
+              onPreviousMonth={prevMonth}
+              onNextMonth={nextMonth}
             />
           )}
         </div>
@@ -1622,7 +1894,8 @@ export default function CalendarPage() {
               events={upcoming}
               insights={aiInsights}
               onTap={(dateYMD) => {
-                const d = new Date(dateYMD + "T00:00:00");
+                const d = parseLocalDateOnly(dateYMD);
+                if (!d) return;
                 setViewYear(d.getFullYear());
                 setViewMonth(d.getMonth());
                 setSelectedDate(dateYMD);
@@ -1707,11 +1980,18 @@ export default function CalendarPage() {
           date={mDate}
           title={mTitle}
           notes={mNotes}
-          category={mCat}
+              category={mCat}
+              personId={mPersonId}
+              isImportant={mIsImportant}
+              recurrenceRule={mRecurrenceRule}
+              people={people}
           setDate={setMDate}
           setTitle={setMTitle}
           setNotes={setMNotes}
-          setCategory={setMCat}
+              setCategory={setMCat}
+              setPersonId={setMPersonId}
+              setIsImportant={setMIsImportant}
+              setRecurrenceRule={setMRecurrenceRule}
           onCancel={() => setAddOpen(false)}
           onSubmit={createEvent}
         />
@@ -1724,11 +2004,18 @@ export default function CalendarPage() {
           date={eDate}
           title={eTitle}
           notes={eNotes}
-          category={eCat}
+              category={eCat}
+              personId={ePersonId}
+              isImportant={eIsImportant}
+              recurrenceRule={eRecurrenceRule}
+              people={people}
           setDate={setEDate}
           setTitle={setETitle}
           setNotes={setENotes}
-          setCategory={setECat}
+              setCategory={setECat}
+              setPersonId={setEPersonId}
+              setIsImportant={setEIsImportant}
+              setRecurrenceRule={setERecurrenceRule}
           onCancel={() => setEditOpen(false)}
           onSubmit={saveEdit}
           onDelete={() => {
@@ -1737,7 +2024,11 @@ export default function CalendarPage() {
               title: eTitle,
               date: eDate,
               notes: eNotes,
-              category: eCat,
+                  category: eCat,
+                  personId: ePersonId || null,
+                  personName: people.find((person) => person.id === ePersonId)?.name ?? null,
+                  isImportant: eIsImportant,
+                  recurrenceRule: eRecurrenceRule,
             });
             setEditOpen(false);
           }}

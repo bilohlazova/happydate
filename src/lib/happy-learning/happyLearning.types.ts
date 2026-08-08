@@ -15,6 +15,7 @@ export const HAPPY_LEARNING_CAPTURE_TYPES = [
 ] as const;
 
 export type HappyLearningCaptureType = (typeof HAPPY_LEARNING_CAPTURE_TYPES)[number];
+export type HappyLearningCaptureSource = "chat_message" | "gift_discovery";
 
 export type HappyLearningDecision = {
   statementStatus: "explicit" | "uncertain" | "question" | "inferred";

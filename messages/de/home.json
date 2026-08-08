@@ -14,11 +14,15 @@
   "assistant": {
     "ask": "Happy fragen",
     "listen": "Kurzes Briefing anhören",
+    "pause": "Briefing pausieren",
+    "resume": "Briefing fortsetzen",
     "stop": "Briefing stoppen",
     "read": "Kurzes Briefing lesen",
     "sectionLabel": "Happy Aktionen",
     "close": "Schließen",
-    "speechError": "Die Sprachausgabe ist fehlgeschlagen. Du kannst das Briefing unten lesen."
+    "speechError": "Die Sprachausgabe ist fehlgeschlagen. Du kannst das Briefing unten lesen.",
+    "progress": "Fortschritt des Audio-Briefings", "interrupted": "Die Wiedergabe wurde vom System unterbrochen. Tippe auf Anhören, um das Briefing sicher neu zu starten."
+    ,"modeLabel": "Länge des Briefings", "shortMode": "Kurz", "detailedMode": "Ausführlich"
   },
   "countdown": {
     "today": "heute",
@@ -43,7 +47,17 @@
   },
   "brief": {
     "intro": "Du hast heute {count} wichtige Punkte.",
-    "featured": "Als Nächstes: {title}, {countdown}."
+    "featured": "Als Nächstes: {title}, {countdown}.",
+    "greetingNamed": "Guten Tag, {name}.",
+    "greetingFallback": "Guten Tag.",
+    "todayNone": "Für heute stehen keine wichtigen Ereignisse an.",
+    "todayEvents": "Heute wichtig: {events}.",
+    "upcoming": "Das nächste wichtige Ereignis ist {title}, {countdown}.",
+    "savedGiftIdea": "Für {name} ist bereits eine Geschenkidee gespeichert: {value}.",
+    "savedPreference": "Zu {name} ist ein wichtiger Hinweis gespeichert: {value}.",
+    "giftOffer": "Wenn du möchtest, helfe ich dir, ein Geschenk für {name} vorzubereiten.",
+    "giftQuestion": "Der wichtige Termin für {name} rückt näher. Möchtest du Hilfe bei der Geschenkauswahl?",
+    "preferenceQuestion": "Für den wichtigen Termin von {name} bleibt noch Zeit. Möchtest du eine aktuelle Vorliebe ergänzen?"
   },
   "featured": {
     "importantLabel": "Nächstes wichtiges Datum",

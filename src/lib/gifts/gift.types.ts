@@ -13,7 +13,42 @@ export interface GiftRecord {
   value: string;
   occurredOn: string | null;
   createdAt: string | null;
-  sourceKnowledgeId: string;
+  sourceKnowledgeId: string | null;
+}
+
+export interface SavedGiftLink {
+  id: string;
+  personId: string;
+  eventId: string | null;
+  giftId: string | null;
+  url: string;
+  title: string | null;
+  merchant: string | null;
+  imageUrl: string | null;
+  priceAmount: number | null;
+  currency: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateGiftInput {
+  personId: string;
+  eventId?: string | null;
+  title: string;
+  lifecycle?: GiftLifecycle;
+  occurredOn?: string | null;
+}
+
+export interface SaveGiftLinkInput {
+  personId: string;
+  eventId?: string | null;
+  giftId?: string | null;
+  url: string;
+  title?: string | null;
+  merchant?: string | null;
+  imageUrl?: string | null;
+  priceAmount?: number | null;
+  currency?: string | null;
 }
 
 export interface GiftItemViewModel {
@@ -23,6 +58,7 @@ export interface GiftItemViewModel {
   personId: string | null;
   eventId: string | null;
   date: string | null;
+  canChangeLifecycle: boolean;
 }
 
 export interface GiftCollectionViewModel {
@@ -38,6 +74,10 @@ export interface GiftCollectionViewModel {
 
 export interface PersonGiftsViewModel extends GiftCollectionViewModel {
   personId: string;
+}
+
+export interface PersonGiftManagementViewModel extends PersonGiftsViewModel {
+  savedLinks: SavedGiftLink[];
 }
 
 export interface EventGiftsViewModel extends GiftCollectionViewModel {

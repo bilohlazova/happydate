@@ -63,5 +63,17 @@ German. Loading, empty, error, and busy states are represented explicitly.
 
 ## Next slice
 
-Connect the AI gift recommendations directly to this workspace so a suggestion
-or returned product URL can be saved for the active Person in one action.
+The AI recommendation cards are now connected to canonical Gift persistence.
+Each suggestion can be saved in one action for the active Person and optional
+Event. The UI prevents repeated clicks, recognizes already-loaded matching
+ideas, and reports saving, saved, and failure states in all five locales.
+
+The current AI contract deliberately contains no product URL. Happy therefore
+stores only the recommendation it actually produced and never fabricates a
+merchant link. Automatic link saving remains blocked until a later retrieval
+layer supplies a separately validated HTTPS product reference.
+
+## Next slice
+
+Refresh the Gift Workspace immediately after a saved recommendation and expose
+the saved idea in the Person timeline without requiring a page reload.

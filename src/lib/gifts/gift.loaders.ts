@@ -58,8 +58,17 @@ export async function loadPersonGiftManagement(
   return { personId, ...buildGiftCollectionViewModel(gifts), savedLinks };
 }
 
-export async function createPersonGiftIdea(personId: string, title: string): Promise<void> {
-  await createGift(await requiredUserId(), { personId, title, lifecycle: "idea" });
+export async function createPersonGiftIdea(
+  personId: string,
+  title: string,
+  eventId?: string | null,
+): Promise<void> {
+  await createGift(await requiredUserId(), {
+    personId,
+    eventId: eventId ?? null,
+    title,
+    lifecycle: "idea",
+  });
 }
 
 export async function changePersonGiftLifecycle(

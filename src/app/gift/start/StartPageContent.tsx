@@ -18,6 +18,7 @@ import type {
 } from "@/lib/gift-discovery";
 import type { HappyLearningDetectionCandidate } from "@/lib/happy-learning/happyLearningDetectV2.types";
 import { confirmHappyLearningCandidateWithSession } from "@/lib/happy-learning/happyLearningClient";
+import { createPersonGiftIdea } from "@/lib/gifts/gift.loaders";
 import type { GiftWorkspaceViewModel } from "@/lib/gifts/gift.types";
 import {
   requestGiftRecommendations,
@@ -73,6 +74,9 @@ export default function GiftStartPage({
   const [recommendations, setRecommendations] = useState<RecommendationState>({ status: "idle" });
   const [recommendationPending, setRecommendationPending] = useState(false);
   const [refreshError, setRefreshError] = useState(false);
+  const [savingSuggestionKey, setSavingSuggestionKey] = useState<string | null>(null);
+  const [savedSuggestionKeys, setSavedSuggestionKeys] = useState<string[]>([]);
+  const [suggestionSaveErrorKey, setSuggestionSaveErrorKey] = useState<string | null>(null);
   const [discoveryAnswers, setDiscoveryAnswers] = useState<GiftDiscoveryAnswers>({});
   const [skippedDiscoveryQuestions, setSkippedDiscoveryQuestions] = useState<string[]>([]);
   const [dismissedMemoryCandidateIds, setDismissedMemoryCandidateIds] = useState<string[]>([]);
@@ -392,6 +396,26 @@ export default function GiftStartPage({
     });
   }
 
+  function recommendationKey(title: string, category: string): string {
+    return `${category}:${title.replace(/\s+/g, " ").trim().toLocaleLowerCase(locale)}`;
+  }
+
+  async function saveSuggestion(title: string, category: string) {
+    if (!personId) return;
+    const key = recommendationKey(title, category);
+    if (savingSuggestionKey || savedSuggestionKeys.includes(key)) return;
+    setSavingSuggestionKey(key);
+    setSuggestionSaveErrorKey(null);
+    try {
+      await createPersonGiftIdea(personId, title, form.eventId);
+      setSavedSuggestionKeys((current) => [...new Set([...current, key])]);
+    } catch {
+      setSuggestionSaveErrorKey(key);
+    } finally {
+      setSavingSuggestionKey(null);
+    }
+  }
+
   return (
     <main className={`${MobileUI.screen} bg-gradient-to-br from-sky-50 via-rose-50 to-amber-50`}>
       <div className={`${MobileUI.container} ${MobileUI.contentBottom} py-4`}>
@@ -469,12 +493,28 @@ export default function GiftStartPage({
                     className="grid gap-3"
                     aria-label={t("recommendations.listAria")}
                   >
-                    {recommendations.suggestions.map((suggestion) => (
-                      <li key={`${suggestion.title}-${suggestion.category}`}>
+                    {recommendations.suggestions.map((suggestion) => {
+                      const suggestionKey = recommendationKey(suggestion.title, suggestion.category);
+                      const alreadyPersisted = workspace?.activeIdeas.some((gift) =>
+                        gift.personId === personId && gift.title.trim().toLocaleLowerCase(locale) === suggestion.title.trim().toLocaleLowerCase(locale)
+                      ) ?? false;
+                      const isSaved = alreadyPersisted || savedSuggestionKeys.includes(suggestionKey);
+                      const isSaving = savingSuggestionKey === suggestionKey;
+                      return (
+                      <li key={suggestionKey}>
                         <GiftRecommendationCard
                           suggestion={suggestion}
                           actions={
                             <div className="flex flex-col gap-2 sm:flex-row">
+                              <button
+                                type="button"
+                                onClick={() => void saveSuggestion(suggestion.title, suggestion.category)}
+                                disabled={isSaved || savingSuggestionKey !== null}
+                                className={`${MobileUI.button} border border-emerald-100 bg-emerald-50 px-4 text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-65`}
+                                aria-label={isSaved ? t("recommendations.saved") : t("recommendations.saveForPerson")}
+                              >
+                                {isSaving ? t("recommendations.saving") : isSaved ? t("recommendations.saved") : t("recommendations.saveForPerson")}
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => applySuggestionToRequest(suggestion.title, suggestion.why)}
@@ -488,11 +528,16 @@ export default function GiftStartPage({
                               >
                                 {t("recommendations.backToForm")}
                               </a>
+                              {suggestionSaveErrorKey === suggestionKey && (
+                                <span role="alert" className="self-center text-xs font-bold text-rose-700">
+                                  {t("recommendations.saveError")}
+                                </span>
+                              )}
                             </div>
                           }
                         />
                       </li>
-                    ))}
+                    );})}
                   </ol>
                 ) : (
                   <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600 ring-1 ring-slate-100" role="status">

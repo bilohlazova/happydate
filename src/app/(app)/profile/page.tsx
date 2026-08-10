@@ -12,6 +12,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { isSupportedLocale } from "@/i18n/config";
 import { formatProfileMemberSince } from "@/lib/profile/profilePresentation";
 import { updateGiftOutcomeLearningEnabled } from "@/lib/repositories/profile/giftOutcomeLearning.repository";
+import { ComingSoonNotice } from "@/components/ui/ComingSoonNotice";
 
 /* ═══════════════════════════════════════════════════════════
    PROFILE PAGE — Account Center
@@ -21,7 +22,24 @@ import { updateGiftOutcomeLearningEnabled } from "@/lib/repositories/profile/gif
    All other UI, iOS fixes, Supabase logic: unchanged.
 ═══════════════════════════════════════════════════════════ */
 
-type SettingRow = { icon: string; label: string; value?: string; href?: string };
+type SettingRow = { icon: string; label: string; value?: string; href?: string; comingSoon?: boolean };
+
+function ProfileSettingRow({ row, soonLabel, danger = false }: { row: SettingRow; soonLabel: string; danger?: boolean }) {
+  const content = (
+    <>
+      <span className="pr-row__icon">{row.icon}</span>
+      <span className="pr-row__label">{row.label}</span>
+      {row.comingSoon ? <span className="pr-row__soon">{soonLabel}</span> : row.value ? <span className="pr-row__value">{row.value}</span> : null}
+      {!row.comingSoon && <span className="pr-row__arrow" aria-hidden="true">›</span>}
+    </>
+  );
+
+  if (row.href && !row.comingSoon) {
+    return <Link href={row.href} className={`pr-row${danger ? " pr-row--danger" : ""}`}>{content}</Link>;
+  }
+
+  return <div className={`pr-row pr-row--future${danger ? " pr-row--danger" : ""}`} aria-disabled="true">{content}</div>;
+}
 
 /* ─────────────────────────────────────────
    PROFILE HERO
@@ -112,6 +130,7 @@ function ProfileHero({
 ───────────────────────────────────────── */
 function CareCard({ hasCare }: { hasCare: boolean }) {
   const translate = useTranslations("profile.care");
+  const futureT = useTranslations("profile.future");
   if (hasCare) {
     return (
       <section className="pr-care-active">
@@ -123,7 +142,7 @@ function CareCard({ hasCare }: { hasCare: boolean }) {
             <p className="pr-care-active__sub">{translate("activeDescription")}</p>
           </div>
         </div>
-        <Link href="/care/manage" className="pr-care-active__manage">{translate("manage")} →</Link>
+        <span className="pr-care-active__manage" aria-disabled="true">{futureT("soon")}</span>
       </section>
     );
   }
@@ -138,7 +157,7 @@ function CareCard({ hasCare }: { hasCare: boolean }) {
           <li>🎁 {translate("perks.gifts")}</li>
           <li>📅 {translate("perks.notifications")}</li>
         </ul>
-        <Link href="/care" className="pr-care-upsell__cta">{translate("tryCare")} →</Link>
+        <span className="pr-care-upsell__cta" aria-disabled="true">{futureT("soon")}</span>
       </div>
     </section>
   );
@@ -195,10 +214,11 @@ function SettingsCard({
   onOutcomeLearningChange: (enabled: boolean) => void;
 }) {
   const translate = useTranslations("profile.settings");
+  const futureT = useTranslations("profile.future");
   const rows: SettingRow[] = [
-    { icon: "🔔", label: translate("notifications"), value: translate("enabled"), href: "/settings/notifications" },
+    { icon: "🔔", label: translate("notifications"), comingSoon: true },
     { icon: "⏰", label: translate("reminders"), value: translate("threeDaysBefore"), href: "/settings/reminders" },
-    { icon: "✨", label: translate("aiSuggestions"), value: translate("active"), href: "/settings/ai" },
+    { icon: "✨", label: translate("aiSuggestions"), comingSoon: true },
   ];
   return (
     <section className="pr-card">
@@ -209,12 +229,7 @@ function SettingsCard({
       <ul className="pr-rows">
         {rows.map(row => (
           <li key={row.label}>
-            <Link href={row.href ?? "#"} className="pr-row">
-              <span className="pr-row__icon">{row.icon}</span>
-              <span className="pr-row__label">{row.label}</span>
-              <span className="pr-row__value">{row.value}</span>
-              <span className="pr-row__arrow" aria-hidden="true">›</span>
-            </Link>
+            <ProfileSettingRow row={row} soonLabel={futureT("soon")} />
           </li>
         ))}
         <li>
@@ -250,12 +265,13 @@ function SettingsCard({
 ───────────────────────────────────────── */
 function SecurityCard() {
   const translate = useTranslations("profile.security");
+  const futureT = useTranslations("profile.future");
   const rows: SettingRow[] = [
-    { icon: "🔑", label: translate("changePassword"), href: "/settings/password" },
-    { icon: "📱", label: translate("activeSessions"), href: "/settings/sessions" },
+    { icon: "🔑", label: translate("changePassword"), comingSoon: true },
+    { icon: "📱", label: translate("activeSessions"), comingSoon: true },
     { icon: "🔒", label: translate("privacy"), href: "/privacy" },
     { icon: "📦", label: translate("exportData"), href: "/settings/export" },
-    { icon: "🗑️", label: translate("deleteAccount"), href: "/settings/delete" },
+    { icon: "🗑️", label: translate("deleteAccount"), comingSoon: true },
   ];
   return (
     <section className="pr-card">
@@ -266,14 +282,7 @@ function SecurityCard() {
       <ul className="pr-rows">
         {rows.map(row => (
           <li key={row.label}>
-            <Link
-              href={row.href ?? "#"}
-              className={`pr-row${row.href === "/settings/delete" ? " pr-row--danger" : ""}`}
-            >
-              <span className="pr-row__icon">{row.icon}</span>
-              <span className="pr-row__label">{row.label}</span>
-              <span className="pr-row__arrow" aria-hidden="true">›</span>
-            </Link>
+            <ProfileSettingRow row={row} soonLabel={futureT("soon")} danger={row.label === translate("deleteAccount")} />
           </li>
         ))}
       </ul>
@@ -426,6 +435,12 @@ export default function ProfilePage() {
         surveyCompleted={surveyCompleted}
         avatarLoading={avatarLoading}
         onPickAvatar={pickAndUpload}
+      />
+
+      <ComingSoonNotice
+        badge={translate("future.soon")}
+        title={translate("future.statusTitle")}
+        description={translate("future.statusDescription")}
       />
 
       <CareCard hasCare={hasCare} />

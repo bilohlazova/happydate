@@ -20,9 +20,9 @@ export default function ChatAssistantHeader({
   onClose,
 }: ChatAssistantHeaderProps) {
   return (
-    <header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200/70 bg-white/75 px-4 py-3 backdrop-blur-xl sm:px-5">
+    <header className="happy-chat-header flex shrink-0 items-center justify-between gap-3 border-b border-slate-200/70 bg-white/75 px-4 py-3 backdrop-blur-xl sm:px-5">
       <div className="flex min-w-0 items-center gap-3">
-        <div className="relative flex h-11 w-11 shrink-0 items-center justify-center" aria-hidden="true">
+        <div className="happy-chat-avatar relative flex h-11 w-11 shrink-0 items-center justify-center" aria-hidden="true">
           <span className="absolute inset-1 rounded-full bg-sky-200/70 blur-md" />
           <span className="relative flex h-10 w-10 items-center justify-center rounded-full border border-sky-200 bg-white text-sm font-black text-sky-700 shadow-[0_8px_20px_rgba(2,132,199,0.16)]">
             H

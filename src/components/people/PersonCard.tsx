@@ -7,7 +7,7 @@ import Panel from "@/components/ui/Panel";
 
 import type { PersonRow } from "@/lib/repositories/person.types";
 import { getRelationshipInfo } from "@/lib/people/relationship";
-import { BookOpen, ChevronRight, Gift, MessageCircle } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { getDateFnsLocale } from "@/i18n/dateLocales";
@@ -68,29 +68,9 @@ export default function PersonCard({
     const memoryText = memoriesCount > 0 ? t("card.memories", { count: memoriesCount }) : t("card.noMemories");
 
     return (
-      <article className="people-person-card group relative overflow-hidden rounded-[0.9rem] bg-white ring-1 ring-slate-100">
-        <div className="absolute inset-y-0 right-0 flex w-32 items-stretch justify-end bg-slate-50">
-          <span
-            className="flex w-10 items-center justify-center bg-sky-500 text-white"
-            aria-label={t("card.addMemory")}
-          >
-            <BookOpen className="h-4 w-4" />
-          </span>
-          <span
-            className="flex w-10 items-center justify-center bg-cyan-500 text-white"
-            aria-label={t("card.giftIdea")}
-          >
-            <Gift className="h-4 w-4" />
-          </span>
-          <span
-            className="flex w-10 items-center justify-center bg-slate-700 text-white"
-            aria-label={t("card.contact")}
-          >
-            <MessageCircle className="h-4 w-4" />
-          </span>
-        </div>
-
-        <div className="people-person-card__content relative grid min-h-[4.25rem] grid-cols-[2.5rem_minmax(0,1fr)_3.75rem_1rem] items-center gap-2.5 bg-white px-3 py-2 transition-transform duration-200 group-hover:-translate-x-10 group-active:-translate-x-10 group-focus-within:-translate-x-10">
+      <article className={`people-person-card people-person-card--${accent.tone} group relative overflow-hidden rounded-[0.9rem] bg-white ring-1 ring-slate-100`}>
+        <span className="people-person-card__accent" aria-hidden="true" />
+        <div className="people-person-card__content relative grid min-h-[4.25rem] grid-cols-[2.5rem_minmax(0,1fr)_3.75rem_1rem] items-center gap-2.5 bg-white px-3 py-2">
           {isFavorite && (
             <span
               className="absolute right-1.5 top-1 text-[0.55rem] leading-none"
@@ -221,20 +201,20 @@ function buildRelationLine(
 
 function getBirthdayAccent(daysUntil: number | null) {
   if (daysUntil === null) {
-    return { text: "text-slate-400" };
+    return { text: "text-slate-400", tone: "none" };
   }
 
   if (daysUntil === 0) {
-    return { text: "text-pink-600" };
+    return { text: "text-pink-600", tone: "today" };
   }
 
   if (daysUntil <= 7) {
-    return { text: "text-sky-600" };
+    return { text: "text-sky-600", tone: "soon" };
   }
 
   if (daysUntil <= 30) {
-    return { text: "text-emerald-600" };
+    return { text: "text-emerald-600", tone: "later" };
   }
 
-  return { text: "text-slate-500" };
+  return { text: "text-slate-500", tone: "none" };
 }

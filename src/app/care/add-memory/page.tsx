@@ -7,6 +7,18 @@ import { supabase } from "@/lib/supabaseClient";
 import { createKnowledge } from "@/lib/repositories/knowledgeRepository";
 import { MobileUI } from "@/lib/theme/mobile";
 import { useTranslations } from "next-intl";
+import {
+  ArrowLeft,
+  BookHeart,
+  BookOpen,
+  Coffee,
+  Film,
+  Flower2,
+  Music2,
+  Palette,
+  ShieldCheck,
+  UtensilsCrossed,
+} from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Add Memory page.
@@ -19,15 +31,15 @@ import { useTranslations } from "next-intl";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MEMORY_TYPES = [
-  { value: "memory" },
-  { value: "flower" },
-  { value: "coffee" },
-  { value: "restaurant" },
-  { value: "food" },
-  { value: "movie" },
-  { value: "book" },
-  { value: "music" },
-  { value: "hobby" },
+  { value: "memory", icon: BookHeart },
+  { value: "flower", icon: Flower2 },
+  { value: "coffee", icon: Coffee },
+  { value: "restaurant", icon: UtensilsCrossed },
+  { value: "food", icon: UtensilsCrossed },
+  { value: "movie", icon: Film },
+  { value: "book", icon: BookOpen },
+  { value: "music", icon: Music2 },
+  { value: "hobby", icon: Palette },
 ] as const;
 
 type MemoryType = (typeof MEMORY_TYPES)[number]["value"];
@@ -124,45 +136,55 @@ function AddMemoryForm() {
   };
 
   return (
-    <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-4`}>
-      <div className={`${MobileUI.container} ${MobileUI.stack}`}>
-        <header>
-          <h1 className={MobileUI.title}>{t("title")}</h1>
-          <p className={MobileUI.pageSubtitle}>{t("subtitle")}</p>
+    <main className={`add-memory-page ${MobileUI.screen} ${MobileUI.contentBottom}`}>
+      <div className="add-memory-layout mx-auto flex w-full flex-col gap-3 px-4 sm:px-5">
+        <header className="add-memory-header flex items-center gap-3">
+          <button type="button" onClick={() => router.back()} aria-label={t("back")} className="add-memory-back">
+            <ArrowLeft aria-hidden="true" />
+          </button>
+          <div className="min-w-0">
+            <h1 className="add-memory-title">{t("title")}</h1>
+            <p className="add-memory-subtitle">{t("subtitle")}</p>
+          </div>
         </header>
 
         <form
           onSubmit={handleSubmit}
-          className={`${MobileUI.card} flex flex-col gap-4 p-4`}
+          className="add-memory-card flex flex-col gap-5 p-4 sm:p-5"
         >
-          <PeopleSelect
-            userId={userId ?? ""}
-            value={personId}
-            onChange={setPersonId}
-            disabled={Boolean(preselectedPersonId)}
-          />
-
-          {/* Typ */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="type" className="text-sm font-bold text-gray-700">
-              {t("type")}
-            </label>
-            <select
-              id="type"
-              value={type}
-              onChange={(e) => setType(e.target.value as MemoryType)}
-              className={MobileUI.input}
-            >
-              {MEMORY_TYPES.map((memoryType) => (
-                <option key={memoryType.value} value={memoryType.value}>
-                  {t(`types.${memoryType.value}`)}
-                </option>
-              ))}
-            </select>
+          <div className="add-memory-field">
+            <PeopleSelect
+              userId={userId ?? ""}
+              value={personId}
+              onChange={setPersonId}
+              disabled={Boolean(preselectedPersonId)}
+            />
           </div>
 
+          <fieldset className="add-memory-type-fieldset">
+            <legend>{t("type")}</legend>
+            <div className="add-memory-types">
+              {MEMORY_TYPES.map((memoryType) => {
+                const Icon = memoryType.icon;
+                const selected = type === memoryType.value;
+                return (
+                  <button
+                    key={memoryType.value}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setType(memoryType.value)}
+                    className={`add-memory-type ${selected ? "add-memory-type--active" : ""}`}
+                  >
+                    <Icon aria-hidden="true" />
+                    <span>{t(`types.${memoryType.value}`)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
           {/* Tytuł */}
-          <div className="flex flex-col gap-1.5">
+          <div className="add-memory-field flex flex-col gap-1.5">
             <label htmlFor="title" className="text-sm font-bold text-gray-700">
               {t("fields.title")}
             </label>
@@ -177,7 +199,7 @@ function AddMemoryForm() {
           </div>
 
           {/* Wartość */}
-          <div className="flex flex-col gap-1.5">
+          <div className="add-memory-field flex flex-col gap-1.5">
             <label htmlFor="value" className="text-sm font-bold text-gray-700">
               {t("fields.value")}
             </label>
@@ -192,7 +214,7 @@ function AddMemoryForm() {
           </div>
 
           {/* Data */}
-          <div className="flex flex-col gap-1.5">
+          <div className="add-memory-field flex flex-col gap-1.5">
             <label
               htmlFor="occurredOn"
               className="text-sm font-bold text-gray-700"
@@ -209,7 +231,7 @@ function AddMemoryForm() {
           </div>
 
           {/* Notatka */}
-          <div className="flex flex-col gap-1.5">
+          <div className="add-memory-field flex flex-col gap-1.5">
             <label
               htmlFor="content"
               className="text-sm font-bold text-gray-700"
@@ -227,13 +249,18 @@ function AddMemoryForm() {
           </div>
 
           {/* Error message */}
-          {error && <p className="text-sm text-rose-600">{error}</p>}
+          {error && <p className="add-memory-error" role="alert">{error}</p>}
+
+          <p className="add-memory-privacy">
+            <ShieldCheck aria-hidden="true" />
+            {t("privacy")}
+          </p>
 
           {/* Zapisz */}
           <button
             type="submit"
             disabled={isSaving || authLoading || !userId}
-            className={`${MobileUI.button} mt-2 bg-rose-500 text-white disabled:opacity-50`}
+            className="add-memory-submit disabled:opacity-50"
           >
             {isSaving ? t("saving") : t("save")}
           </button>

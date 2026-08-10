@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
+  ArrowLeft,
   Ban,
   BookHeart,
   Bot,
@@ -94,15 +95,38 @@ export function PersonProfileContent({
     <>
       <main
         aria-label={t("accessibility.profile", { name: hero.name })}
-        className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-3 sm:pt-5`}
+        className={`person-profile-page ${MobileUI.screen} ${MobileUI.contentBottom}`}
       >
-        <div className="mx-auto grid w-full max-w-[1040px] gap-3 px-4 sm:px-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-4">
-          <div className="flex min-w-0 flex-col gap-3">
-            <ProfileHero
-              model={viewModel}
-              onAsk={() => setAssistantOpen(true)}
-              t={t}
-            />
+        <div className="person-profile-layout mx-auto w-full px-4 sm:px-5">
+          <Link href="/people" className="person-profile-back">
+            <ArrowLeft aria-hidden="true" />
+            {t("profile.back")}
+          </Link>
+
+          <ProfileHero
+            model={viewModel}
+            onAsk={() => setAssistantOpen(true)}
+            t={t}
+          />
+
+          <div className="person-profile-columns mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)] lg:gap-4">
+            <div className="person-profile-primary flex min-w-0 flex-col gap-3">
+              <BrainSection items={viewModel.brainInsights} t={t} />
+              <TimelineSection items={viewModel.timeline} locale={locale} t={t} />
+
+              <PersonGiftManager personId={hero.id} personName={hero.name} onChanged={onProfileChanged} />
+
+              <GiftLearningAuditSection
+                items={viewModel.confirmedGiftOutcomes}
+                aiPreview={viewModel.giftOutcomeAiPreview}
+                profileLearningEnabled={viewModel.giftOutcomeLearningEnabled}
+                locale={locale}
+                onChanged={onProfileChanged}
+                t={t}
+              />
+            </div>
+
+            <div className="person-profile-knowledge flex min-w-0 flex-col gap-3">
 
             <div className="grid gap-3 sm:grid-cols-2">
               <KnowledgeSection personId={hero.id} icon={<Heart />} title={t("profileUi.likes")} tone="rose" items={viewModel.likes} empty={t("profileUi.empty.likes")} onChanged={onProfileChanged} t={t} />
@@ -115,21 +139,6 @@ export function PersonProfileContent({
             <KnowledgeConflictSection personId={hero.id} conflicts={viewModel.knowledgeConflicts} onChanged={onProfileChanged} t={t} />
             <ArchivedKnowledgeSection personId={hero.id} items={viewModel.archivedKnowledge} onChanged={onProfileChanged} t={t} />
           </div>
-
-          <div className="flex min-w-0 flex-col gap-3">
-            <PersonGiftManager personId={hero.id} personName={hero.name} onChanged={onProfileChanged} />
-
-            <GiftLearningAuditSection
-              items={viewModel.confirmedGiftOutcomes}
-              aiPreview={viewModel.giftOutcomeAiPreview}
-              profileLearningEnabled={viewModel.giftOutcomeLearningEnabled}
-              locale={locale}
-              onChanged={onProfileChanged}
-              t={t}
-            />
-
-            <TimelineSection items={viewModel.timeline} locale={locale} t={t} />
-            <BrainSection items={viewModel.brainInsights} t={t} />
           </div>
         </div>
       </main>
@@ -545,7 +554,7 @@ function ProfileHero({
     ? peopleT(`relationships.${hero.relationKey}.${relationVariant}`)
     : hero.relationLabel;
   return (
-    <section className="relative overflow-hidden rounded-[1.4rem] border border-white/80 bg-white/85 p-4 shadow-[0_16px_44px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:p-5">
+    <section className="person-profile-hero relative overflow-hidden rounded-[1.4rem] border border-white/80 bg-white/85 p-4 shadow-[0_16px_44px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:p-5">
       <div className="absolute -right-12 -top-16 h-40 w-40 rounded-full bg-gradient-to-br from-sky-200/60 to-blue-100/10 blur-2xl" aria-hidden="true" />
       <div className="relative flex items-center gap-3.5">
         <Avatar name={hero.name} className="!h-16 !w-16 !shrink-0 !text-xl !shadow-lg sm:!h-20 sm:!w-20 sm:!text-2xl" />
@@ -882,16 +891,16 @@ function KnowledgeChangeHistory({ item, locale, t }: { item: PersonKnowledgeValu
 
 function TimelineSection({ items, locale, t }: { items: PersonTimelineItemViewModel[]; locale: string; t: Translator }) {
   return (
-    <ProfileSection icon={<BookHeart />} title={t("profileUi.timeline")} tone="sky">
+    <ProfileSection icon={<BookHeart />} title={t("profileUi.timeline")} tone="sky" className="person-timeline-card">
       {items.length ? (
-        <ol className="space-y-0.5">
+        <ol className="person-timeline space-y-1">
           {items.map((item, index) => (
-            <li key={item.id} className="grid grid-cols-[1.7rem_minmax(0,1fr)] gap-2.5">
-              <div className="flex flex-col items-center">
-                <span className={`mt-1.5 h-2.5 w-2.5 rounded-full ${item.kind === "gift_given" ? "bg-emerald-400" : item.kind.startsWith("gift_") ? "bg-violet-400" : "bg-sky-400"}`} />
+            <li key={item.id} className="person-timeline__item grid grid-cols-[1.9rem_minmax(0,1fr)] gap-2.5">
+              <div className="person-timeline__rail flex flex-col items-center">
+                <span className={`person-timeline__dot mt-1.5 h-3 w-3 rounded-full ${item.kind === "gift_given" ? "bg-emerald-400" : item.kind.startsWith("gift_") ? "bg-violet-400" : "bg-sky-400"}`} />
                 {index < items.length - 1 && <span className="my-1 min-h-8 w-px flex-1 bg-slate-200" />}
               </div>
-              <div className="pb-3">
+              <div className="person-timeline__content pb-3">
                 <p className="text-sm font-extrabold leading-5 text-slate-800">{item.title}</p>
                 <p className="mt-0.5 text-[0.7rem] font-bold text-slate-400">{formatTimelineDate(item.date, locale)}</p>
                 {item.giftOutcome && <span className="mt-1.5 inline-flex rounded-full bg-emerald-50 px-2 py-1 text-[0.65rem] font-extrabold text-emerald-700">{t(`profileUi.gifts.outcome.${item.giftOutcome}`)}</span>}
@@ -907,7 +916,7 @@ function TimelineSection({ items, locale, t }: { items: PersonTimelineItemViewMo
 
 function BrainSection({ items, t }: { items: PersonBrainInsightViewModel[]; t: Translator }) {
   return (
-    <ProfileSection icon={<Bot />} title={t("profileUi.brain")} tone="violet" accent>
+    <ProfileSection icon={<Bot />} title={t("profileUi.brain")} tone="violet" accent className="person-brain-card">
       {items.length ? (
         <ul className="space-y-2">
           {items.map((item) => (
@@ -927,9 +936,9 @@ function BrainSection({ items, t }: { items: PersonBrainInsightViewModel[]; t: T
   );
 }
 
-function ProfileSection({ icon, title, tone, accent = false, children }: { icon: ReactNode; title: string; tone: keyof typeof toneClasses; accent?: boolean; children: ReactNode }) {
+function ProfileSection({ icon, title, tone, accent = false, className = "", children }: { icon: ReactNode; title: string; tone: keyof typeof toneClasses; accent?: boolean; className?: string; children: ReactNode }) {
   return (
-    <section className={`rounded-[1.2rem] border p-3.5 shadow-[0_10px_28px_rgba(15,23,42,0.05)] backdrop-blur-xl sm:p-4 ${accent ? "border-violet-100 bg-gradient-to-br from-violet-50/90 to-white/90" : "border-white/80 bg-white/85"}`}>
+    <section className={`${className} rounded-[1.2rem] border p-3.5 shadow-[0_10px_28px_rgba(15,23,42,0.05)] backdrop-blur-xl sm:p-4 ${accent ? "border-violet-100 bg-gradient-to-br from-violet-50/90 to-white/90" : "border-white/80 bg-white/85"}`}>
       <div className="mb-3 flex items-center gap-2">
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl [&>svg]:h-4 [&>svg]:w-4 ${toneClasses[tone]}`}>{icon}</span>
         <h2 className="text-sm font-black text-slate-900 sm:text-base">{title}</h2>

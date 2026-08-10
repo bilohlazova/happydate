@@ -508,10 +508,13 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
         router.push(statusActionUrl);
       }
     : null;
+  const activePerson = personContext.activePersonId
+    ? homeContext.people.find((person) => person.id === personContext.activePersonId) ?? null
+    : null;
 
   return (
-    <div className="fixed inset-0 z-[70] bg-slate-950/25 backdrop-blur-[3px] motion-safe:animate-[assistant-fade-in_.18s_ease-out_both]" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && closeAssistant()}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="happy-assistant-title" tabIndex={-1} className="fixed inset-x-0 bottom-0 flex h-[min(88dvh,760px)] flex-col overflow-hidden rounded-t-[28px] border border-white/70 bg-slate-50/95 shadow-[0_24px_80px_rgba(15,23,42,0.24)] backdrop-blur-2xl outline-none motion-safe:animate-[assistant-slide-up_.22s_ease-out_both] md:bottom-6 md:left-auto md:right-6 md:h-[min(78dvh,720px)] md:w-[460px] md:rounded-[28px]">
+    <div className="happy-chat-backdrop fixed inset-0 z-[70] bg-slate-950/25 backdrop-blur-[3px] motion-safe:animate-[assistant-fade-in_.18s_ease-out_both]" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && closeAssistant()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="happy-assistant-title" tabIndex={-1} className="happy-chat-shell fixed inset-x-0 bottom-0 flex h-[min(88dvh,760px)] flex-col overflow-hidden rounded-t-[28px] border border-white/70 bg-slate-50/95 shadow-[0_24px_80px_rgba(15,23,42,0.24)] backdrop-blur-2xl outline-none motion-safe:animate-[assistant-slide-up_.22s_ease-out_both] md:bottom-6 md:left-auto md:right-6 md:h-[min(78dvh,720px)] md:w-[460px] md:rounded-[28px]">
         <ChatAssistantHeader
           title={t("title")}
           subtitle={t("subtitle")}
@@ -522,8 +525,15 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
           onClose={closeAssistant}
         />
 
+        {activePerson && (
+          <div className="happy-chat-context" role="status">
+            <span className="happy-chat-context__dot" aria-hidden="true" />
+            <span>{t("context.person", { name: activePerson.name })}</span>
+          </div>
+        )}
+
         {messages.length === 0 ? (
-          <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-5 sm:px-5" aria-live="polite">
+          <main className="happy-chat-home min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-5 sm:px-5" aria-live="polite">
             <AssistantHome
               greeting={greetingTitle}
               question={t("home.question")}

@@ -95,10 +95,14 @@ export default function LoginPage() {
   };
 
   return (
-    <main className={`${MobileUI.screen} flex items-center justify-center px-4 py-6`}>
-      <div className={`${MobileUI.card} w-full max-w-[430px] p-5`}>
+    <main className={`auth-care-page ${MobileUI.screen} flex items-center justify-center px-4 py-6`}>
+      <div className={`auth-care-card ${MobileUI.card} w-full max-w-[430px] p-5`}>
+        <div className="auth-care-brand" aria-hidden="true"><span>♥</span> HappyDate</div>
+        <p className="auth-care-eyebrow">{translate("brand.eyebrow")}</p>
         <h1 className="mb-1 text-[2rem] font-black leading-tight text-sky-600">{translate("login.title")}</h1>
         <p className="mb-5 text-sm font-semibold leading-5 text-gray-500">{translate("login.subtitle")}</p>
+
+        <div className="auth-care-promise"><span aria-hidden="true">💛</span>{translate("login.promise")}</div>
 
         {errorMsg && (
           <div className="mb-4 rounded-[0.95rem] border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
@@ -111,7 +115,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4" aria-label={translate("accessibility.loginForm")}>
+        <form onSubmit={handleLogin} className="auth-care-form space-y-4" aria-label={translate("accessibility.loginForm")}>
           <div>
             <label className="mb-1.5 block text-sm font-bold text-gray-700" htmlFor="auth-login-email">{translate("common.email")}</label>
             <input
@@ -155,7 +159,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className={`${MobileUI.button} w-full bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-60`}
+            className={`${MobileUI.button} auth-care-submit w-full text-white disabled:opacity-60`}
           >
             {loading ? translate("login.submitting") : translate("login.submit")}
           </button>

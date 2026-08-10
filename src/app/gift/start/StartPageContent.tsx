@@ -11,6 +11,7 @@ import {
 } from "@/components/gift/GiftDiscoveryPanel";
 import { GiftRecommendationCard } from "@/components/gift/GiftRecommendationCard";
 import { HappyLearningCard } from "@/components/memory/HappyLearningCard";
+import { ComingSoonNotice } from "@/components/ui/ComingSoonNotice";
 import type {
   GiftDiscoveryAnswers,
   GiftDiscoveryQuestion,
@@ -429,28 +430,29 @@ export default function GiftStartPage({
   }
 
   return (
-    <main className={`${MobileUI.screen} bg-gradient-to-br from-sky-50 via-rose-50 to-amber-50`}>
-      <div className={`${MobileUI.container} ${MobileUI.contentBottom} py-4`}>
+    <main className={`gift-care-page ${MobileUI.screen}`}>
+      <div className={`gift-care-layout ${MobileUI.contentBottom} mx-auto w-full px-4 py-5 sm:px-5`}>
         {/* HERO */}
-        <header className="mb-6">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 text-sm font-semibold text-sky-700 border border-white/70">
+        <header className="gift-care-hero mb-5">
+          <div className="gift-care-hero__glow" aria-hidden="true"><span>♥</span></div>
+          <div className="gift-care-hero__content">
+          <div className="gift-care-hero__badge inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 text-sm font-semibold text-sky-700 border border-white/70">
             {t("hero.badge")}
           </div>
-          <h1 className={`${MobileUI.title} mt-2`}>
+          <h1 className="gift-care-hero__title mt-3">
             {t("hero.title")}
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="gift-care-hero__subtitle mt-2">
             {t("hero.subtitle")}
           </p>
+          </div>
         </header>
 
-        <GiftWorkspacePanel workspace={liveWorkspace} hasError={workspaceError || workspaceRefreshFailed} />
-
         {personId && (
-          <section className={`${MobileUI.card} mb-4 border-white/60 bg-white/80 p-4 backdrop-blur`}>
+          <section className="gift-care-recommendations mb-4 p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h2 className="font-semibold text-slate-800">
+                <h2 className="gift-care-section-title">
                   {t("recommendations.title")}
                 </h2>
                 <p className="mt-1 text-sm text-slate-600">
@@ -461,7 +463,7 @@ export default function GiftStartPage({
                 type="button"
                 onClick={handleGenerateClick}
                 disabled={recommendations.status === "loading" || recommendationPending}
-                className={`${MobileUI.button} bg-sky-500 px-4 text-white shadow hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60`}
+                className="gift-care-generate min-h-11 rounded-2xl px-4 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label={t("recommendations.generateAria")}
               >
                 {recommendations.status === "loading" || recommendationPending
@@ -515,6 +517,7 @@ export default function GiftStartPage({
                       return (
                       <li key={suggestionKey}>
                         <GiftRecommendationCard
+                          className="gift-care-recommendation-card"
                           suggestion={suggestion}
                           actions={
                             <div className="flex flex-col gap-2 sm:flex-row">
@@ -631,9 +634,20 @@ export default function GiftStartPage({
           </section>
         )}
 
+        <GiftWorkspacePanel workspace={liveWorkspace} hasError={workspaceError || workspaceRefreshFailed} />
+
+        <ComingSoonNotice
+          className="mb-4"
+          badge={t("future.badge")}
+          title={t("future.title")}
+          description={t("future.description")}
+          descriptionId="gift-future-description"
+        />
+
         {/* Wydarzenie */}
-        <section className={`${MobileUI.card} mb-4 border-white/60 bg-white/80 p-4 backdrop-blur`}>
-          <h2 className="font-semibold text-slate-800 mb-3">{t("form.event")}</h2>
+        <fieldset disabled aria-describedby="gift-future-description" className="m-0 min-w-0 border-0 p-0 disabled:opacity-60">
+        <section className="gift-care-form-card mb-4 p-4 sm:p-5" aria-disabled="true">
+          <h2 className="gift-care-section-title mb-3">{t("form.event")}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
             <div className="sm:col-span-2">
               <label className="block text-slate-600 mb-1">{t("form.occasion")}</label>
@@ -661,9 +675,10 @@ export default function GiftStartPage({
         <form
           id="gift-request-form"
           onSubmit={handleSubmit}
-          className={`${MobileUI.card} space-y-4 border-white/60 bg-white/80 p-4 backdrop-blur`}
+          className="gift-care-form-card space-y-4 p-4 sm:p-5"
+          aria-disabled="true"
         >
-          <h2 className="font-semibold text-slate-800">{t("form.details")}</h2>
+          <h2 className="gift-care-section-title">{t("form.details")}</h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -755,6 +770,7 @@ export default function GiftStartPage({
             </p>
           )}
         </form>
+        </fieldset>
       </div>
     </main>
   );

@@ -55,7 +55,7 @@ export function GiftRecommendationCard({
       aria-label={t("aria.card", { title: suggestion.title })}
       className={[
         MobileUI.card,
-        "group overflow-hidden border border-white/70 bg-white/85 p-4 shadow-[0_14px_34px_rgba(15,23,42,0.07)] backdrop-blur transition dark:border-white/10 dark:bg-slate-900/78 dark:shadow-[0_18px_42px_rgba(2,6,23,0.28)] sm:p-5",
+        "gift-recommendation-soul group overflow-hidden border border-white/70 bg-white/85 p-4 shadow-[0_14px_34px_rgba(15,23,42,0.07)] backdrop-blur transition dark:border-white/10 dark:bg-slate-900/78 dark:shadow-[0_18px_42px_rgba(2,6,23,0.28)] sm:p-5",
         className,
       ].join(" ")}
     >

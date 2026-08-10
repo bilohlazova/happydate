@@ -1,6 +1,7 @@
 // src/app/care/page.tsx
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { ComingSoonNotice } from "@/components/ui/ComingSoonNotice";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("care.page");
@@ -24,9 +25,10 @@ export default async function CarePage() {
   const topics = ["technical", "gift", "questions"] as const;
   const icons = { technical: "🗓️", gift: "🎁", questions: "💬" };
   return (
-    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-rose-50 to-amber-50 pb-[calc(var(--hd-nav-height)+env(safe-area-inset-bottom))]">
+    <main className="care-support-page min-h-screen pb-[calc(var(--hd-nav-height)+env(safe-area-inset-bottom))]">
       {/* HERO */}
-      <section className="bg-gradient-to-r from-sky-100 via-pink-100 to-amber-100 px-4 py-12 text-center">
+      <section className="care-support-hero px-4 py-12 text-center">
+        <span className="care-support-hero__badge">{t("availableNow")}</span>
         <h1 className="text-[2.35rem] font-extrabold leading-tight text-slate-900 md:text-5xl">
           💛 HappyDate Care
         </h1>
@@ -37,7 +39,7 @@ export default async function CarePage() {
 
       {/* CZYM JEST CARE */}
       <section className="mx-auto max-w-[var(--hd-screen-wide)] px-4 py-8">
-        <div className="hd-surface p-5">
+        <div className="care-support-card hd-surface p-5">
           <h2 className="text-2xl font-extrabold text-slate-900">
             {t("aboutTitle")}
           </h2>
@@ -52,7 +54,7 @@ export default async function CarePage() {
         </h3>
         <div className="grid gap-3 md:grid-cols-3">
           {topics.map((topic) => (
-            <div key={topic} className="hd-surface p-4">
+            <div key={topic} className="care-support-card hd-surface p-4">
               <div className="text-3xl">{icons[topic]}</div>
               <h4 className="mt-3 font-semibold text-lg">
                 {topicT(`${topic}.title`)}
@@ -67,7 +69,7 @@ export default async function CarePage() {
 
       {/* FILOZOFIA */}
       <section className="mx-auto max-w-[var(--hd-screen-wide)] px-4 py-8">
-        <div className="hd-surface bg-gradient-to-br from-sky-50 to-pink-50 p-5">
+        <div className="care-support-card care-support-approach hd-surface p-5">
           <h3 className="text-2xl font-extrabold text-slate-900">
             {t("approachTitle")}
           </h3>
@@ -75,9 +77,17 @@ export default async function CarePage() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-[var(--hd-screen-wide)] px-4 py-2">
+        <ComingSoonNotice
+          badge={t("future.badge")}
+          title={t("future.title")}
+          description={t("future.description")}
+        />
+      </section>
+
       {/* KONTAKT */}
       <section className="mx-auto max-w-[var(--hd-screen-wide)] px-4 py-8">
-        <div className="hd-surface p-5 text-center">
+        <div className="care-support-contact hd-surface p-5 text-center">
           <h3 className="text-2xl font-extrabold text-slate-900">
             {t("contactTitle")}
           </h3>

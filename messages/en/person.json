@@ -1,6 +1,7 @@
 {
   "profile": {
     "title": "Person profile",
+    "back": "Back to important people",
     "loading": "Loading...",
     "notFound": "Person not found",
     "loadError": "The profile could not be loaded. Please try again."

@@ -355,7 +355,18 @@ export default function NotesPageContent() {
           font-size: clamp(30px, 8.5vw, 36px); font-weight: 750; color: #000;
           letter-spacing: 0; line-height: 1; margin: 0 0 3px;
         }
-        .hd-header-left p { font-size: 13px; color: #aeaeb2; font-weight: 400; margin: 0; }
+        .hd-header-left { min-width: 0; }
+        .hd-header-eyebrow { margin: 0 0 6px; color: #0284c7; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+        .hd-header-left .hd-header-subtitle { max-width: 36ch; margin: 7px 0 0; color: #636366; font-size: 13px; font-weight: 500; line-height: 1.4; }
+        .hd-header-meta { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; border-radius: 999px; background: rgba(255,255,255,.78); padding: 5px 9px; color: #8e8e93; font-size: 11px; font-weight: 650; box-shadow: 0 5px 16px rgba(15,23,42,.04); }
+        .hd-header-meta::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: #34c759; box-shadow: 0 0 0 3px rgba(52,199,89,.12); }
+        .hd-memory-trust {
+          width: calc(100% - 32px); max-width: calc(var(--hd-screen-max) - 32px); margin: 2px auto 13px;
+          padding: 11px 13px; border: 1px solid rgba(186,230,253,.75); border-radius: 15px;
+          background: linear-gradient(145deg,rgba(240,249,255,.96),rgba(255,255,255,.95));
+          color: #475569; font-size: 12px; font-weight: 600; line-height: 1.5;
+        }
+        .hd-memory-trust strong { color: #075985; font-weight: 800; }
 
         .hd-add-btn {
           width: 40px; height: 40px; border-radius: 50%;
@@ -977,14 +988,20 @@ export default function NotesPageContent() {
         {/* ── HEADER ── */}
         <div className="hd-header">
           <div className="hd-header-left">
+            <p className="hd-header-eyebrow">{t("page.eyebrow")}</p>
             <h1>{t("page.title")}</h1>
-            <p>{t("page.resultCount", { count: filtered.length })}</p>
+            <p className="hd-header-subtitle">{t("page.subtitle")}</p>
+            <span className="hd-header-meta">{t("page.resultCount", { count: filtered.length })}</span>
           </div>
           <button ref={addButtonRef} className="hd-add-btn" onClick={() => setShowTypeSheet(true)} aria-label={t("accessibility.add")}>
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
             </svg>
           </button>
+        </div>
+
+        <div className="hd-memory-trust">
+          <strong>{t("page.trustTitle")}</strong> {t("page.trustBody")}
         </div>
 
         {/* ── SEARCH ── */}

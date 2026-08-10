@@ -11,7 +11,7 @@ async function dictionary(locale, namespace) { return JSON.parse(await readFile(
 test("person profile and knowledge labels exist in all locales", async () => {
   for (const locale of locales) {
     const value = await dictionary(locale, "person");
-    for (const text of [value.profile.title, value.knowledge.title, value.knowledge.facts, value.knowledge.completeness, value.knowledge.lastMemory, value.accessibility.profile]) assert.ok(text.trim());
+    for (const text of [value.profile.title, value.profile.back, value.knowledge.title, value.knowledge.facts, value.knowledge.completeness, value.knowledge.lastMemory, value.accessibility.profile]) assert.ok(text.trim());
     for (const text of [value.profileUi.likes, value.profileUi.dislikes, value.profileUi.interests, value.profileUi.giftIdeas, value.profileUi.giftHistory, value.profileUi.importantFacts, value.profileUi.timeline, value.profileUi.brain]) assert.ok(text.trim());
   }
 });

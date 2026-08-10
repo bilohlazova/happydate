@@ -10,6 +10,7 @@ export function PeopleHeader() {
   return (
     <header className="people-page-header flex items-center justify-between gap-3">
       <div>
+        <p className="people-page-header__eyebrow">{t("page.eyebrow")}</p>
         <div className="flex items-center gap-2.5">
           <h1 className="people-page-header__title text-[1.85rem] font-black leading-none text-slate-950 sm:text-[2.1rem]">
             {t("page.title")}

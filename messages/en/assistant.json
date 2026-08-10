@@ -2,6 +2,7 @@
   "title": "Happy",
   "subtitle": "Your personal assistant",
   "status": "Ready to help",
+  "context": { "person": "Talking about: {name}" },
   "newConversation": "New conversation",
   "close": "Close assistant",
   "home": {

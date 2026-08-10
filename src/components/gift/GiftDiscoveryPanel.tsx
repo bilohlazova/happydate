@@ -108,7 +108,7 @@ export function GiftDiscoveryPanel({
       <section
         className={[
           MobileUI.card,
-          "border border-emerald-100 bg-emerald-50/80 p-4 text-emerald-900 backdrop-blur dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100",
+          "gift-discovery-soul border border-emerald-100 bg-emerald-50/80 p-4 text-emerald-900 backdrop-blur dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-100",
           className,
         ].join(" ")}
         role="status"
@@ -136,7 +136,7 @@ export function GiftDiscoveryPanel({
     <section
       className={[
         MobileUI.card,
-        "border border-white/70 bg-white/85 p-4 shadow-[0_14px_34px_rgba(15,23,42,0.07)] backdrop-blur dark:border-white/10 dark:bg-slate-900/78 sm:p-5",
+        "gift-discovery-soul border border-white/70 bg-white/85 p-4 shadow-[0_14px_34px_rgba(15,23,42,0.07)] backdrop-blur dark:border-white/10 dark:bg-slate-900/78 sm:p-5",
         className,
       ].join(" ")}
       aria-labelledby="gift-discovery-title"

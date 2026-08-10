@@ -53,7 +53,11 @@ export default function ReminderSettingsPage() {
   return (
     <SettingsPageShell backLabel={t("back")} title={t("title")} description={t("description")} icon={<BellRing size={22} />}>
       <form onSubmit={submit}>
-        <SettingsSection>
+        <div className="reminder-care-promise">
+          <span aria-hidden="true">💛</span>
+          <div><strong>{t("carePromiseTitle")}</strong><p>{t("carePromiseBody")}</p></div>
+        </div>
+        <SettingsSection title={t("timingTitle")} description={t("timingDescription")}>
           <label className="block text-sm font-extrabold text-slate-700">{t("timezone")}
             <input className="hd-input mt-2" value={value.timezone} onChange={(e) => setValue({ ...value, timezone: e.target.value })} placeholder="Europe/Warsaw" />
           </label>
@@ -66,21 +70,24 @@ export default function ReminderSettingsPage() {
               {REMINDER_INTERVALS.map((minutes) => <option key={minutes} value={minutes}>{t(`intervals.${minutes}`)}</option>)}
             </select>
           </label>
-          <label className="hd-settings-row">{t("inApp")}<input type="checkbox" checked={value.inAppEnabled} onChange={(e) => setValue({ ...value, inAppEnabled: e.target.checked })} /></label>
+        </SettingsSection>
+        <SettingsSection title={t("deliveryTitle")} description={t("deliveryDescription")}>
+          <label className="hd-settings-row">{t("inApp")}<input type="checkbox" checked={value.inAppEnabled} disabled={!value.pushEnabled} onChange={(e) => setValue({ ...value, inAppEnabled: e.target.checked })} /></label>
           {nativePushAvailable ? (
             <>
-              <label className="hd-settings-row">{t("push")}<input type="checkbox" checked={value.pushEnabled} onChange={(e) => setValue({ ...value, pushEnabled: e.target.checked })} /></label>
+              <label className="hd-settings-row">{t("push")}<input type="checkbox" checked={value.pushEnabled} disabled={!value.inAppEnabled} onChange={(e) => setValue({ ...value, pushEnabled: e.target.checked })} /></label>
               <p className="mt-2 text-xs text-slate-500">{t("pushPermission")}</p>
             </>
           ) : (
             <p className="mt-3 text-xs text-slate-500">{t("pushNativeOnly")}</p>
           )}
+          <p className="reminder-channel-note">{t("channelRequired")}</p>
         </SettingsSection>
         <SettingsSection title={reviewT("title")} description={reviewT("description")}>
           <label className="hd-settings-row">{reviewT("home")}<input type="checkbox" checked={value.knowledgeReviewHomeEnabled} onChange={(e) => setValue({ ...value, knowledgeReviewHomeEnabled: e.target.checked })} /></label>
           <label className="hd-settings-row">{reviewT("voice")}<input type="checkbox" checked={value.knowledgeReviewVoiceEnabled} onChange={(e) => setValue({ ...value, knowledgeReviewVoiceEnabled: e.target.checked })} /></label>
         </SettingsSection>
-        <button className="hd-button mt-6 min-h-12 w-full bg-sky-600 text-white disabled:opacity-50" disabled={status === "loading" || status === "saving"}>{status === "saving" ? t("saving") : t("save")}</button>
+        <button className="hd-button reminder-care-save mt-6 min-h-12 w-full text-white disabled:opacity-50" disabled={status === "loading" || status === "saving"}>{status === "saving" ? t("saving") : t("save")}</button>
         {status === "saved" && <p className="mt-3 text-sm font-bold text-emerald-700">{t("saved")}</p>}
         {status === "error" && <p className="mt-3 text-sm font-bold text-rose-600">{t("error")}</p>}
       </form>

@@ -202,18 +202,21 @@ export default function SurveyPage() {
   }
 
   return (
-    <main className={`${MobileUI.screen} ${MobileUI.contentBottom} py-4`}>
-      <div className={`${MobileUI.container} ${MobileUI.card} space-y-5 p-5`}>
-        <h1 className="text-[2rem] font-black leading-tight text-sky-600">
-          {t("title")}
-        </h1>
-        <p className="text-sm font-semibold leading-5 text-gray-600">
-          {t("subtitle")}
-        </p>
+    <main className={`survey-care-page ${MobileUI.screen} ${MobileUI.contentBottom} py-4`}>
+      <div className={`survey-care-shell ${MobileUI.container} space-y-5 p-4 sm:p-5`}>
+        <header className="survey-care-hero">
+          <span className="survey-care-hero__eyebrow">{t("eyebrow")}</span>
+          <h1>{t("title")}</h1>
+          <p>{t("subtitle")}</p>
+          <div className="survey-care-trust">
+            <span aria-hidden="true">🔒</span>
+            <span><strong>{t("privacyTitle")}</strong> {t("privacyBody")}</span>
+          </div>
+        </header>
 
         <form onSubmit={submit} className="space-y-6">
           {/* Likes */}
-          <div>
+          <div className="survey-care-question">
             <label className="mb-1.5 block text-sm font-bold text-gray-700">
               {t("likes")}
             </label>
@@ -227,7 +230,7 @@ export default function SurveyPage() {
           </div>
 
           {/* Dislikes */}
-          <div>
+          <div className="survey-care-question">
             <label className="mb-1.5 block text-sm font-bold text-gray-700">
               {t("dislikes")}
             </label>
@@ -241,7 +244,7 @@ export default function SurveyPage() {
           </div>
 
           {/* Dream */}
-          <div>
+          <div className="survey-care-question">
             <label className="mb-1.5 block text-sm font-bold text-gray-700">
               {t("dream")}
             </label>
@@ -255,7 +258,7 @@ export default function SurveyPage() {
           </div>
 
           {/* Notes */}
-          <div>
+          <div className="survey-care-question">
             <label className="mb-1.5 block text-sm font-bold text-gray-700">
               {t("notes")}
             </label>
@@ -269,7 +272,7 @@ export default function SurveyPage() {
           </div>
 
           {/* Special dates */}
-          <div>
+          <div className="survey-care-question survey-care-dates">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-lg font-semibold text-sky-600">
                 {t("dates")}
@@ -334,7 +337,7 @@ export default function SurveyPage() {
             <button
               type="submit"
               disabled={saving}
-              className={`${MobileUI.button} w-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60`}
+              className={`${MobileUI.button} survey-care-submit w-full text-white disabled:opacity-60`}
             >
               {saving ? t("saving") : t("submit")}
             </button>

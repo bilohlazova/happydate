@@ -60,8 +60,12 @@ export default function AuthCallbackPage() {
   }, [router]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <p className="text-lg text-gray-700" role="status">{translate("loading")}</p>
+    <main className="auth-care-page flex min-h-screen items-center justify-center px-4">
+      <div className="auth-care-card w-full max-w-sm p-6 text-center" role="status">
+        <div className="auth-care-brand justify-center" aria-hidden="true"><span>♥</span> HappyDate</div>
+        <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-sky-100 border-t-sky-500" aria-hidden="true" />
+        <p className="text-sm font-bold text-slate-600">{translate("loading")}</p>
+      </div>
     </main>
   );
 }

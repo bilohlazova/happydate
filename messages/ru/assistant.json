@@ -2,6 +2,7 @@
   "title": "Happy",
   "subtitle": "Ваш личный ассистент",
   "status": "Готов помочь",
+  "context": { "person": "Разговор о: {name}" },
   "newConversation": "Новый разговор",
   "close": "Закрыть ассистента",
   "home": {

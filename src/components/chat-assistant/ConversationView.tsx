@@ -46,11 +46,11 @@ export default function ConversationView({
   onScroll,
 }: ConversationViewProps) {
   return (
-    <div ref={scrollRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-5 sm:px-5" aria-live="polite">
+    <div ref={scrollRef} onScroll={onScroll} className="happy-chat-conversation min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-5 sm:px-5" aria-live="polite">
       <div className="space-y-4 motion-safe:animate-[assistant-conversation-in_.22s_ease-out_both]">
         {messages.map((message) => (
           <div key={message.id} className={`flex flex-col ${message.role === "user" ? "items-end" : "items-start"}`}>
-            <div className={`whitespace-pre-wrap [overflow-wrap:anywhere] px-4 py-3 text-sm leading-6 shadow-sm ${message.role === "user" ? "max-w-[82%] rounded-[20px_20px_6px_20px] bg-sky-600 text-white" : "max-w-[85%] rounded-[20px_20px_20px_6px] border border-slate-200/80 bg-white/85 text-slate-800"}`}>
+            <div className={`happy-chat-message happy-chat-message--${message.role} whitespace-pre-wrap [overflow-wrap:anywhere] px-4 py-3 text-sm leading-6 shadow-sm ${message.role === "user" ? "max-w-[82%] rounded-[20px_20px_6px_20px] bg-sky-600 text-white" : "max-w-[85%] rounded-[20px_20px_20px_6px] border border-slate-200/80 bg-white/85 text-slate-800"}`}>
               {message.role === "assistant" && (
                 <span className="mb-1 block text-[11px] font-extrabold uppercase tracking-[0.12em] text-sky-700">
                   {assistantName}

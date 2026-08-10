@@ -37,12 +37,15 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-6">
+    <main className="auth-care-page flex min-h-screen items-center justify-center p-6">
+      <div className="auth-care-card w-full max-w-md p-6">
+        <div className="auth-care-brand" aria-hidden="true"><span>♥</span> HappyDate</div>
+        <p className="auth-care-eyebrow">{translate("brand.eyebrow")}</p>
         <h1 className="text-2xl font-bold mb-1 text-sky-600">{translate("reset.title")}</h1>
         <p className="text-sm text-gray-500 mb-6">
           {translate("reset.subtitle")}
         </p>
+        <div className="auth-care-promise"><span aria-hidden="true">✉️</span>{translate("reset.promise")}</div>
 
         {err && (
           <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -55,7 +58,7 @@ export default function ResetPasswordPage() {
           </div>
         )}
 
-        <form onSubmit={handleReset} className="space-y-4" aria-label={translate("accessibility.resetForm")}>
+        <form onSubmit={handleReset} className="auth-care-form space-y-4" aria-label={translate("accessibility.resetForm")}>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="auth-reset-email">
               {translate("common.email")}
@@ -67,14 +70,14 @@ export default function ResetPasswordPage() {
               placeholder={translate("common.emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border rounded-md p-2"
+              className="min-h-12 w-full rounded-2xl border p-3 text-base outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-sky-600 text-white py-2 rounded-md hover:bg-sky-700 transition disabled:opacity-60"
+            className="auth-care-submit min-h-12 w-full rounded-2xl px-4 font-extrabold text-white transition disabled:opacity-60"
           >
             {loading ? translate("reset.submitting") : translate("reset.submit")}
           </button>

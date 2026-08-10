@@ -2,6 +2,7 @@
   "title": "Happy",
   "subtitle": "Twój osobisty asystent",
   "status": "Gotowy do pomocy",
+  "context": { "person": "Rozmowa o: {name}" },
   "newConversation": "Nowa rozmowa",
   "close": "Zamknij asystenta",
   "home": {

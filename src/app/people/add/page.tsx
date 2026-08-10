@@ -416,19 +416,19 @@ export default function AddPersonPage() {
   }
 
   return (
-    <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-2.5`}>
-      <div className={`${MobileUI.container} flex flex-col gap-2.5`}>
-        <header className="flex items-center gap-2">
+    <main className={`add-person-page ${MobileUI.screen} ${MobileUI.contentBottom}`}>
+      <div className="add-person-layout mx-auto flex w-full flex-col gap-3 px-4 sm:px-5">
+        <header className="add-person-header flex items-center gap-3">
           <button
             type="button"
             onClick={() => router.back()}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-slate-600 shadow-[0_6px_18px_rgba(15,23,42,0.06)] ring-1 ring-slate-100"
+            className="add-person-back flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-slate-600 shadow-[0_6px_18px_rgba(15,23,42,0.06)] ring-1 ring-slate-100"
             aria-label={t("actions.back")}
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="min-w-0">
-            <h1 className="truncate text-[1.5rem] font-black leading-none text-slate-950">
+            <h1 className="add-person-header__title truncate text-[1.7rem] font-black leading-none text-slate-950">
               {mode === "manual"
                 ? t("title.add")
                 : peopleT(`actions.${modeCopy.titleKey}`)}
@@ -440,6 +440,17 @@ export default function AddPersonPage() {
             </p>
           </div>
         </header>
+
+        <ModeSwitcher
+          activeMode={mode}
+          peopleT={peopleT}
+          onChange={(nextMode) => {
+            setMode(nextMode);
+            setError(null);
+            setStatus(null);
+            router.replace(`/people/add?mode=${nextMode}`);
+          }}
+        />
 
         {mode === "contacts" ? (
           <ContactsFlow
@@ -514,6 +525,41 @@ export default function AddPersonPage() {
   );
 }
 
+function ModeSwitcher({
+  activeMode,
+  peopleT,
+  onChange,
+}: {
+  activeMode: AddMode;
+  peopleT: ReturnType<typeof useTranslations<"people">>;
+  onChange: (mode: AddMode) => void;
+}) {
+  return (
+    <nav className="add-person-modes" aria-label={peopleT("actions.addPerson")}>
+      {(Object.keys(MODE_COPY) as AddMode[]).map((mode) => {
+        const copy = MODE_COPY[mode];
+        const Icon = copy.icon;
+        const selected = activeMode === mode;
+        return (
+          <button
+            key={mode}
+            type="button"
+            aria-current={selected ? "step" : undefined}
+            onClick={() => onChange(mode)}
+            className={`add-person-mode ${selected ? "add-person-mode--active" : ""}`}
+          >
+            <span className="add-person-mode__icon"><Icon aria-hidden="true" /></span>
+            <span className="min-w-0">
+              <strong>{peopleT(`actions.${copy.titleKey}`)}</strong>
+              <small>{peopleT(`actions.${copy.descriptionKey}`)}</small>
+            </span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
 function ContactsFlow({
   contactStep,
   selectedContacts,
@@ -556,7 +602,7 @@ function ContactsFlow({
   const t = useTranslations("personForm.contact");
   if (contactStep === "success") {
     return (
-      <section className="rounded-[1rem] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.055)] ring-1 ring-slate-100">
+      <section className="add-person-card rounded-[1rem] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.055)] ring-1 ring-slate-100">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
             <CheckCircle2 className="h-6 w-6" />
@@ -608,7 +654,7 @@ function ContactsFlow({
     );
 
     return (
-      <section className="rounded-[1rem] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.055)] ring-1 ring-slate-100">
+      <section className="add-person-card rounded-[1rem] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.055)] ring-1 ring-slate-100">
         <h2 className="text-lg font-black text-slate-950">
           {t("selected", { count: selectedContacts.length })}
         </h2>
@@ -678,7 +724,7 @@ function ContactsFlow({
   }
 
   return (
-    <section className="rounded-[1rem] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.055)] ring-1 ring-slate-100">
+    <section className="add-person-card add-person-contact-card rounded-[1rem] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.055)] ring-1 ring-slate-100">
       <div className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.85rem] bg-sky-50 text-sky-600">
           <Contact className="h-5 w-5" />
@@ -784,7 +830,7 @@ function SinglePersonFlow({
 }) {
   const t = useTranslations("personForm");
   return (
-    <section className="rounded-[1rem] bg-white p-3 shadow-[0_8px_24px_rgba(15,23,42,0.055)] ring-1 ring-slate-100">
+    <section className="add-person-card add-person-form-card rounded-[1rem] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.055)] ring-1 ring-slate-100 sm:p-5">
       <div className="mb-3 flex items-center gap-2">
         <span className="flex h-9 w-9 items-center justify-center rounded-[0.8rem] bg-sky-50 text-sky-600">
           <ModeIcon className="h-5 w-5" />
@@ -844,7 +890,7 @@ function SinglePersonFlow({
       <form
         aria-label={t("accessibility.form")}
         onSubmit={onSubmit}
-        className="flex flex-col gap-3"
+        className="add-person-form flex flex-col gap-4"
       >
         <Field label={t("fields.name")} htmlFor="name">
           <input
@@ -919,7 +965,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="add-person-field flex flex-col gap-1.5">
       <label htmlFor={htmlFor} className="text-xs font-black text-slate-600">
         {label}
       </label>

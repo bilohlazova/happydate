@@ -27,8 +27,8 @@ export default function ChatComposer({
   onSend,
 }: ChatComposerProps) {
   return (
-    <footer className="shrink-0 border-t border-slate-200/70 bg-white/85 px-3 pt-3 backdrop-blur-xl sm:px-4">
-      <div className="flex items-end gap-2 rounded-[22px] border border-slate-200 bg-white px-3 py-2 shadow-inner focus-within:border-sky-300 focus-within:ring-2 focus-within:ring-sky-100">
+    <footer className="happy-chat-composer shrink-0 border-t border-slate-200/70 bg-white/85 px-3 pt-3 backdrop-blur-xl sm:px-4">
+      <div className="happy-chat-composer__field flex items-end gap-2 rounded-[22px] border border-slate-200 bg-white px-3 py-2 shadow-inner focus-within:border-sky-300 focus-within:ring-2 focus-within:ring-sky-100">
         <textarea
           ref={textareaRef}
           value={value}

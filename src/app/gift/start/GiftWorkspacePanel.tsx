@@ -1,7 +1,6 @@
 "use client";
 
 import type { GiftWorkspaceViewModel } from "@/lib/gifts/gift.types";
-import { MobileUI } from "@/lib/theme/mobile";
 import { useTranslations } from "next-intl";
 
 interface GiftWorkspacePanelProps {
@@ -16,7 +15,7 @@ export function GiftWorkspacePanel({
   const t = useTranslations("gift");
   if (hasError) {
     return (
-      <section className={`${MobileUI.card} mb-4 border-white/60 bg-white/80 p-4 backdrop-blur`}>
+      <section className="gift-care-workspace mb-4 p-4">
         <p className="text-sm text-slate-600">
           {t("workspace.loadError")}
         </p>
@@ -27,13 +26,13 @@ export function GiftWorkspacePanel({
     return (
       <section
         aria-label={t("workspace.loading")}
-        className={`${MobileUI.card} mb-4 h-20 animate-pulse border-white/60 bg-white/60`}
+        className="gift-care-workspace mb-4 h-20 animate-pulse"
       />
     );
   }
 
   return (
-    <section className={`${MobileUI.card} mb-4 border-white/60 bg-white/80 p-4 backdrop-blur`}>
+    <section className="gift-care-workspace mb-4 p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-semibold text-slate-800">{t("workspace.title")}</h2>

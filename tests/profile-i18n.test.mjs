@@ -65,21 +65,22 @@ test("profile calendar dates preserve the source day without UTC conversion", ()
   assert.equal(parseProfileCalendarDate("not-a-date"), null);
 });
 
-test("Profile routes remain unchanged and unprefixed", async () => {
+test("Profile links only to available routes and leaves future settings non-interactive", async () => {
   const source = await readFile(path.join(root, "src/app/(app)/profile/page.tsx"), "utf8");
   const routes = [
     ...source.matchAll(/href="([^"]+)"/g),
     ...source.matchAll(/href:\s*"([^"]+)"/g),
   ].map((match) => match[1]);
-  assert.deepEqual(routes, [
-    "/survey", "/care/manage", "/care", "/settings/notifications",
-    "/settings/reminders", "/settings/ai", "/settings/password",
-    "/settings/sessions", "/privacy", "/settings/export", "/settings/delete",
-  ]);
+  assert.deepEqual(routes, ["/survey", "/settings/reminders", "/privacy", "/settings/export"]);
   assert.equal(routes.some((route) => /^\/(pl|uk|en|ru|de)(\/|$)/.test(route)), false);
-  for (const route of ["/settings/notifications", "/settings/reminders", "/settings/ai", "/settings/password", "/settings/sessions", "/settings/export", "/settings/delete"]) {
+  for (const route of ["/settings/reminders", "/settings/export"]) {
     assert.match(source, new RegExp(route.replaceAll("/", "\\/")));
   }
+  for (const route of ["/settings/notifications", "/settings/ai", "/settings/password", "/settings/sessions", "/settings/delete", "/care/manage"]) {
+    assert.doesNotMatch(source, new RegExp(route.replaceAll("/", "\\/")));
+  }
+  assert.match(source, /comingSoon: true/);
+  assert.match(source, /aria-disabled="true"/);
 });
 
 test("Profile reuses the shared LanguageSwitcher", async () => {

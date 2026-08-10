@@ -8,19 +8,26 @@ type LegalDocumentProps = {
   title: string;
   effective: string;
   sections: Record<string, LegalSection>;
+  intro?: ReactNode;
 };
 
 export default function LegalDocument({
   title,
   effective,
   sections,
+  intro,
 }: LegalDocumentProps) {
   return (
-    <main className="max-w-4xl mx-auto px-6 py-16 text-slate-800">
-      <h1 className="text-3xl font-bold mb-6">{title}</h1>
-      <p className="text-sm text-slate-500 mb-8">{effective}</p>
+    <main className="legal-document max-w-4xl mx-auto px-6 py-16 text-slate-800">
+      <header className="legal-document__header">
+        <p className="legal-document__brand">HappyDate</p>
+        <h1 className="text-3xl font-bold">{title}</h1>
+        <p className="text-sm text-slate-500">{effective}</p>
+      </header>
 
-      <div className="space-y-8 text-sm leading-relaxed">
+      {intro}
+
+      <div className="legal-document__body space-y-8 text-sm leading-relaxed">
         {Object.entries(sections).map(([key, section]) => (
           <section key={key}>
             <h2 className="font-semibold mb-2">{section.title}</h2>
@@ -42,3 +49,4 @@ export default function LegalDocument({
     </main>
   );
 }
+import type { ReactNode } from "react";

@@ -1,6 +1,7 @@
 {
   "profile": {
     "title": "Personenprofil",
+    "back": "Zurück zu wichtigen Menschen",
     "loading": "Wird geladen...",
     "notFound": "Person nicht gefunden",
     "loadError": "Das Profil konnte nicht geladen werden. Bitte versuche es erneut."

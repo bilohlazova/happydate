@@ -497,8 +497,9 @@ function AddEditSheet({
     <div
       role="dialog"
       aria-modal="true"
+      aria-labelledby={`${mode}-event-sheet-title`}
       // FIX 3: items-end = bottom sheet on mobile, sm:items-center = centered modal on desktop
-      className="fixed inset-0 z-[350] flex items-end sm:items-center justify-center"
+      className="calendar-event-dialog fixed inset-0 z-[350] flex items-end sm:items-center justify-center"
       onKeyDown={(e) => {
         if (e.key === "Escape") onCancel();
         if (
@@ -512,7 +513,7 @@ function AddEditSheet({
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/35 backdrop-blur-[3px]"
+        className="calendar-event-backdrop absolute inset-0 bg-black/35 backdrop-blur-[3px]"
         onClick={onCancel}
       />
 
@@ -527,7 +528,7 @@ function AddEditSheet({
       */}
       <div
         ref={ref}
-        className="
+        className="calendar-event-sheet
           relative
           bg-white
           w-full max-w-lg
@@ -542,21 +543,21 @@ function AddEditSheet({
         style={{ animation: "sheetUp .3s cubic-bezier(.34,1.56,.64,1) both" }}
       >
         {/* Drag handle — visual affordance */}
-        <div className="flex justify-center pt-3 pb-1 sm:hidden">
+        <div className="calendar-event-handle flex justify-center pt-3 pb-1 sm:hidden">
           <div className="w-9 h-[3px] rounded-full bg-slate-200" />
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-2 pb-4 border-b border-slate-100">
+        <div className="calendar-event-header flex items-center justify-between px-5 pt-2 pb-4 border-b border-slate-100">
           <button
             onClick={onCancel}
             className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors px-1 min-h-[44px] flex items-center"
           >
             {t("common.cancel")}
           </button>
-          <p className="text-sm font-bold text-slate-800">
+          <h2 id={`${mode}-event-sheet-title`} className="calendar-event-title text-sm font-bold text-slate-800">
             {mode === "add" ? t("form.new") : t("form.edit")}
-          </p>
+          </h2>
           <button
             onClick={onSubmit}
             disabled={!title || !date}
@@ -567,9 +568,9 @@ function AddEditSheet({
         </div>
 
         {/* Fields */}
-        <div className="px-5 py-4 space-y-4">
+        <div className="calendar-event-fields px-5 py-4 space-y-3">
           {/* Title — FIX 5: text-[16px] prevents Safari auto-zoom */}
-          <div className="flex items-center gap-3 py-2 border-b border-slate-100">
+          <div className="calendar-event-field calendar-event-field--title flex items-center gap-3 py-2 border-b border-slate-100">
             <span className="text-slate-300 text-lg select-none">✏️</span>
             <label htmlFor={`${mode}-event-title`} className="sr-only">{t("form.title")}</label>
             <input
@@ -586,7 +587,7 @@ function AddEditSheet({
           </div>
 
           {/* Date — FIX 5 */}
-          <div className="flex items-center gap-3 py-2 border-b border-slate-100">
+          <div className="calendar-event-field flex items-center gap-3 py-2 border-b border-slate-100">
             <span className="text-slate-300 text-lg select-none">📅</span>
             <label htmlFor={`${mode}-event-date`} className="sr-only">{t("form.date")}</label>
             <input
@@ -600,7 +601,7 @@ function AddEditSheet({
           </div>
 
           {/* Category */}
-          <div className="flex items-center gap-3 py-2 border-b border-slate-100">
+          <div className="calendar-event-field calendar-event-categories flex items-center gap-3 py-2 border-b border-slate-100">
             <span className="text-slate-300 text-lg select-none">🏷️</span>
             <div className="flex gap-2 flex-1 flex-wrap">
               {CATEGORIES_ADD.map((c) => (
@@ -608,7 +609,8 @@ function AddEditSheet({
                   key={c.value}
                   type="button"
                   onClick={() => setCategory(c.value)}
-                  className={`h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all active:scale-[.97] ${
+                  aria-pressed={category === c.value}
+                  className={`calendar-event-category h-10 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all active:scale-[.97] ${
                     category === c.value
                       ? CAT_COLOR[c.value].pill +
                         " " +
@@ -623,7 +625,7 @@ function AddEditSheet({
             </div>
           </div>
 
-          <div className="flex items-center gap-3 py-2 border-b border-slate-100">
+          <div className="calendar-event-field flex items-center gap-3 py-2 border-b border-slate-100">
             <span className="text-slate-300 text-lg select-none">🔁</span>
             <label htmlFor={`${mode}-event-recurrence`} className="sr-only">
               {t("form.recurrence")}
@@ -641,7 +643,7 @@ function AddEditSheet({
             </select>
           </div>
 
-          <div className="flex items-center gap-3 py-2 border-b border-slate-100">
+          <div className="calendar-event-field flex items-center gap-3 py-2 border-b border-slate-100">
             <span className="text-slate-300 text-lg select-none">👤</span>
             <label htmlFor={`${mode}-event-person`} className="sr-only">
               {t("form.person")}
@@ -665,7 +667,7 @@ function AddEditSheet({
             role="switch"
             aria-checked={isImportant}
             onClick={() => setIsImportant(!isImportant)}
-            className="flex w-full items-center gap-3 rounded-2xl bg-amber-50/70 px-3 py-3 text-left"
+            className={`calendar-event-reminder flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left ${isImportant ? "calendar-event-reminder--active bg-amber-50" : "bg-slate-50"}`}
           >
             <span className="text-lg">🔔</span>
             <span className="min-w-0 flex-1">
@@ -678,7 +680,7 @@ function AddEditSheet({
           </button>
 
           {/* Notes — FIX 5 */}
-          <div className="flex items-center gap-3 py-2">
+          <div className="calendar-event-field flex items-center gap-3 py-2">
             <span className="text-slate-300 text-lg select-none">📝</span>
             <label htmlFor={`${mode}-event-notes`} className="sr-only">{t("form.notes")}</label>
             <input
@@ -695,7 +697,7 @@ function AddEditSheet({
 
         {/* Delete */}
         {mode === "edit" && onDelete && (
-          <div className="px-5 pb-6 border-t border-slate-100 pt-4">
+          <div className="calendar-event-delete px-5 pb-6 border-t border-slate-100 pt-4">
             <button
               onClick={onDelete}
               className="w-full h-12 rounded-2xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
@@ -1797,6 +1799,15 @@ export default function CalendarPage() {
             var(--hd-canvas);
         }
         .hd-calendar-toolbar { padding: 22px 16px 13px; }
+        .hd-calendar-purpose {
+          display: flex; align-items: center; gap: 11px; margin: 0 12px 12px; padding: 12px 14px;
+          border: 1px solid rgba(186,230,253,.72); border-radius: 18px;
+          background: linear-gradient(145deg,rgba(240,249,255,.96),rgba(255,251,252,.95));
+          box-shadow: 0 10px 30px rgba(15,23,42,.045);
+        }
+        .hd-calendar-purpose__heart { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 12px; background: #fff; color: #ec4899; font-size: 16px; box-shadow: 0 7px 18px rgba(236,72,153,.1); }
+        .hd-calendar-purpose__eyebrow { color: #0284c7; font-size: 9px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+        .hd-calendar-purpose__text { margin-top: 2px; color: #475569; font-size: 12px; font-weight: 650; line-height: 1.45; }
         .hd-calendar-icon-button {
           display: grid; width: 46px; height: 46px; place-items: center;
           border: 1px solid rgba(226,232,240,.9); border-radius: 15px;
@@ -1891,6 +1902,14 @@ export default function CalendarPage() {
             </button>
           </div>
         </div>
+
+        <section className="hd-calendar-purpose" aria-labelledby="calendar-purpose-title">
+          <span className="hd-calendar-purpose__heart" aria-hidden="true">♥</span>
+          <div>
+            <h1 id="calendar-purpose-title" className="hd-calendar-purpose__eyebrow">{t("purpose.title")}</h1>
+            <p className="hd-calendar-purpose__text">{t("purpose.description")}</p>
+          </div>
+        </section>
 
         <section className="hd-calendar-surface" aria-label={t("accessibility.calendarLabel", { month: new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(viewYear, viewMonth, 1)) })}>
         {/* ── MONTH NAVIGATION ── */}

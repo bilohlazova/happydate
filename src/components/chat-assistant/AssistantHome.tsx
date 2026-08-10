@@ -35,7 +35,7 @@ export default function AssistantHome({
   onSelectAction,
 }: AssistantHomeProps) {
   return (
-    <div className={`mx-auto w-full max-w-md py-1 ${exiting ? "motion-safe:animate-[assistant-home-out_.18s_ease-in_both]" : "motion-safe:animate-[assistant-home-in_.24s_ease-out_both]"}`}>
+    <div className={`happy-chat-home__content mx-auto w-full max-w-md py-1 ${exiting ? "motion-safe:animate-[assistant-home-out_.18s_ease-in_both]" : "motion-safe:animate-[assistant-home-in_.24s_ease-out_both]"}`}>
       <div className="mb-4 px-1">
         <p className="text-sm font-bold text-sky-700">{greeting}</p>
         <h3 className="mt-1 text-balance text-[1.65rem] font-black leading-tight tracking-tight text-slate-950">

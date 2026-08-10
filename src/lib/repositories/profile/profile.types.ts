@@ -5,6 +5,7 @@ export type ApplicationProfile = {
   full_name: string | null;
   avatar_url: string | null;
   preferred_locale: AppLocale | null;
+  gift_outcome_learning_enabled: boolean;
 };
 
 export function parsePreferredLocale(value: unknown): AppLocale | null {

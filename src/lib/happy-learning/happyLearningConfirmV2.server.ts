@@ -84,7 +84,11 @@ export async function createHappyLearningConfirmV2Response(request: Request, dep
   if (semantic.status === "already_known") return response({ ok: true, status: "already_known", knowledgeId: null });
   if (semantic.status === "conflict") return response({ ok: false, error: "conflict" }, 409);
   try {
-    const created = await deps.persist(mapHappyLearningCandidateToKnowledgeInput({ userId: auth.userId, candidate }));
+    const created = await deps.persist(mapHappyLearningCandidateToKnowledgeInput({
+      userId: auth.userId,
+      candidate,
+      confirmedAt: new Date(deps.now ?? Date.now()).toISOString(),
+    }));
     return response({ ok: true, status: "created", knowledgeId: created.id });
   } catch {
     return response({ ok: false, error: "save_failed" }, 500);

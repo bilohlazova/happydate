@@ -6,6 +6,7 @@ import type {
   PersonGender,
   PersonRelationKey,
 } from "./person.types";
+import type { GiftOutcomeValue } from "../gifts/gift.types";
 
 export interface OwnedGiftPerson {
   id: string;
@@ -20,6 +21,14 @@ export interface OwnedGiftPerson {
 export interface GiftIntelligenceSource {
   person: OwnedGiftPerson;
   knowledge: KnowledgeItem[];
+  outcomeLearningEnabled: boolean;
+  confirmedGiftOutcomes: Array<{
+    giftId: string;
+    giftTitle: string;
+    outcome: GiftOutcomeValue;
+    note: string | null;
+    confirmedAt: string;
+  }>;
 }
 
 export class GiftIntelligenceRepositoryError extends Error {
@@ -74,12 +83,43 @@ export async function getCachedGiftIdeas(person: OwnedGiftPerson, occasion: stri
 export async function loadGiftIntelligenceSource(
   person: OwnedGiftPerson,
 ): Promise<GiftIntelligenceSource> {
+  const client = adminClient();
+  const [knowledge, profileResult, giftsResult] = await Promise.all([
+    listKnowledgeForOwnedPersonOnServer({ userId: person.userId, personId: person.id }),
+    client.from("profiles")
+      .select("gift_outcome_learning_enabled")
+      .eq("id", person.userId)
+      .maybeSingle(),
+    client.from("gifts")
+      .select("id, title, recipient_reaction, recipient_reaction_note, recipient_reaction_confirmed_at, recipient_reaction_learning_enabled")
+      .eq("user_id", person.userId)
+      .eq("person_id", person.id)
+      .eq("lifecycle", "given")
+      .not("recipient_reaction", "is", null)
+      .eq("recipient_reaction_learning_enabled", true)
+      .order("recipient_reaction_confirmed_at", { ascending: false }),
+  ]);
+  if (profileResult.error || giftsResult.error) {
+    throw new GiftIntelligenceRepositoryError(
+      "gift_person_lookup_failed",
+      profileResult.error ?? giftsResult.error,
+    );
+  }
+  const outcomeLearningEnabled = profileResult.data?.gift_outcome_learning_enabled !== false;
   return {
     person,
-    knowledge: await listKnowledgeForOwnedPersonOnServer({
-      userId: person.userId,
-      personId: person.id,
-    }),
+    knowledge,
+    outcomeLearningEnabled,
+    confirmedGiftOutcomes: outcomeLearningEnabled
+      ? (giftsResult.data ?? []).flatMap((gift) =>
+          gift.recipient_reaction && gift.recipient_reaction_confirmed_at ? [{
+            giftId: gift.id,
+            giftTitle: gift.title,
+            outcome: gift.recipient_reaction as GiftOutcomeValue,
+            note: gift.recipient_reaction_note,
+            confirmedAt: gift.recipient_reaction_confirmed_at,
+          }] : [])
+      : [],
   };
 }
 

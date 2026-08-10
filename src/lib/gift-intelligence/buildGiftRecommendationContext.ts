@@ -10,6 +10,7 @@ import type {
   GiftRecommendationContext,
   GiftSeasonSignal,
 } from "./giftIntelligence.types.ts";
+import { buildGiftOutcomeLearningSignals } from "./giftOutcomeLearningSignals.ts";
 
 const ACTIVE_GIFT_STATES = new Set<GiftLifecycle>(["idea", "selected", "purchased"]);
 const KNOWLEDGE_KINDS = new Set<KnowledgeKind>([
@@ -268,6 +269,8 @@ export function buildGiftRecommendationContext({
   event = null,
   knowledge = [],
   gifts = [],
+  outcomeLearningEnabled = true,
+  confirmedGiftOutcomes = [],
   budget = null,
   locale,
   currentDate = new Date(),
@@ -307,6 +310,17 @@ export function buildGiftRecommendationContext({
     knowledge: storedKnowledge,
     memories,
     gifts: giftProjection,
+    outcomeLearning: {
+      enabled: outcomeLearningEnabled,
+      evidence: outcomeLearningEnabled
+        ? buildGiftOutcomeLearningSignals(confirmedGiftOutcomes
+          .filter((item) => item.giftId && clean(item.giftTitle) && item.confirmedAt)
+          .map((item) => ({
+            ...item,
+            giftTitle: clean(item.giftTitle)!,
+          })))
+        : [],
+    },
     duplicateAvoidance: {
       previousGiftValues: giftProjection.previous.map((gift) => gift.value),
     },

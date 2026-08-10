@@ -2,6 +2,25 @@ export const GIFT_LIFECYCLE = ["idea", "selected", "purchased", "given"] as cons
 
 export type GiftLifecycle = (typeof GIFT_LIFECYCLE)[number];
 export type ActiveGiftLifecycle = Exclude<GiftLifecycle, "given">;
+export const GIFT_OUTCOME = ["liked", "not_liked", "unsure"] as const;
+export type GiftOutcomeValue = (typeof GIFT_OUTCOME)[number];
+
+export interface GiftOutcome {
+  value: GiftOutcomeValue;
+  note: string | null;
+  confirmedAt: string;
+  learningEnabled: boolean;
+}
+
+export interface GiftSelectionSnapshot {
+  sourceLinkId: string | null;
+  url: string | null;
+  title: string | null;
+  priceAmount: number | null;
+  currency: string | null;
+  decisionNote: string | null;
+  finalizedAt: string;
+}
 
 /** Persistence-agnostic Gift Domain record. */
 export interface GiftRecord {
@@ -14,6 +33,8 @@ export interface GiftRecord {
   occurredOn: string | null;
   createdAt: string | null;
   sourceKnowledgeId: string | null;
+  finalSelection: GiftSelectionSnapshot | null;
+  finalOutcome: GiftOutcome | null;
 }
 
 export interface SavedGiftLink {
@@ -27,6 +48,8 @@ export interface SavedGiftLink {
   imageUrl: string | null;
   priceAmount: number | null;
   currency: string | null;
+  isPreferred: boolean;
+  decisionNote: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -59,6 +82,8 @@ export interface GiftItemViewModel {
   eventId: string | null;
   date: string | null;
   canChangeLifecycle: boolean;
+  finalSelection: GiftSelectionSnapshot | null;
+  finalOutcome: GiftOutcome | null;
 }
 
 export interface GiftCollectionViewModel {

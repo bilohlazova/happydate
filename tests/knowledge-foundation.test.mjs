@@ -30,6 +30,10 @@ function memory(overrides = {}) {
     occurred_on: null,
     importance: 0,
     source: "manual",
+    source_record_id: null,
+    source_excerpt: null,
+    user_confirmed_at: null,
+    capture_schema_version: null,
     is_active: true,
     ...overrides,
   };
@@ -82,6 +86,29 @@ test("mapper does not mutate source arrays", () => {
 
   item.tags.push("changed");
   assert.deepEqual(tags, ["coffee"]);
+});
+
+test("confirmed capture keeps exact auditable provenance", () => {
+  const item = mapLegacyMemoryToKnowledge(memory({
+    source: "chat_message",
+    source_record_id: "happy-learning:candidate-1",
+    source_excerpt: "Ivan likes fishing",
+    user_confirmed_at: "2026-08-09T12:00:00.000Z",
+    capture_schema_version: "happy-learning-detection-v2",
+  }));
+
+  assert.deepEqual(item.evidence, {
+    sourceKind: "chat_message",
+    sourceId: "happy-learning:candidate-1",
+    originalText: "Ivan likes fishing",
+    capturedAt: "2026-08-09T12:00:00.000Z",
+  });
+  assert.deepEqual(item.classification, {
+    confidence: null,
+    classifierVersion: "happy-learning-detection-v2",
+    classifiedAt: "2026-08-09T12:00:00.000Z",
+    userConfirmed: true,
+  });
 });
 
 test("inactive records remain available but cannot enter AI context", () => {

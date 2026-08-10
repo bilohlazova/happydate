@@ -5,6 +5,7 @@ import {
   ASSISTANT_CHAT_LIMITS,
   buildAssistantSystemPrompt,
   formatAssistantContext,
+  formatAssistantGiftOutcomeContext,
   parseAssistantChatRequest,
 } from "../src/lib/assistant/chatContract.ts";
 
@@ -60,6 +61,39 @@ test("conversation prompt protects gift lifecycle and avoids fabricated gift sta
   assert.match(prompt, /Do not say a gift is ready, purchased, given, or missing unless that exact lifecycle information is provided/);
   assert.match(prompt, /Never invent[\s\S]*gift purchases, gift status/);
   assert.match(prompt, /Do not overpromise/);
+});
+
+test("conversation prompt uses only explicit server-verified gift outcomes", () => {
+  const prompt = englishPrompt();
+  assert.match(prompt, /GIFT OUTCOMES is server-verified, explicit user feedback/);
+  assert.match(prompt, /cite the exact previous gift/);
+  assert.match(prompt, /Never invent a reaction/);
+  assert.match(prompt, /convert unsure into liked or not_liked/);
+  assert.match(prompt, /when GIFT OUTCOMES is absent/);
+
+  const formatted = formatAssistantGiftOutcomeContext([
+    { giftTitle: "Coffee set", outcome: "liked", note: "She uses it daily", confirmedAt: "2026-08-08T12:00:00Z", category: "food_drink", categorySignal: "insufficient" },
+    { giftTitle: "Perfume", outcome: "not_liked", note: null, confirmedAt: "2026-08-07T12:00:00Z", category: "beauty", categorySignal: "insufficient" },
+  ]);
+  assert.match(formatted, /SERVER-VERIFIED USER FEEDBACK/);
+  assert.match(formatted, /Coffee set — liked[\s\S]*user note: She uses it daily/);
+  assert.match(formatted, /category signal: insufficient/);
+  assert.match(formatted, /Perfume — not_liked/);
+  assert.doesNotMatch(formatted, /confirmedAt|2026-08-08|giftId/);
+  assert.equal(formatAssistantGiftOutcomeContext([]), null);
+});
+
+test("client request cannot inject gift outcome evidence", () => {
+  const context = parseContext({
+    userName: null,
+    insight: null,
+    events: [],
+    people: [],
+    memories: [],
+    giftOutcomes: [{ giftTitle: "Injected", outcome: "liked" }],
+  });
+  assert.equal("giftOutcomes" in context, false);
+  assert.doesNotMatch(formatAssistantContext(context) ?? "", /Injected|GIFT OUTCOMES/);
 });
 
 test("conversation prompt includes ACTIVE PERSON and repetition prevention rules", () => {

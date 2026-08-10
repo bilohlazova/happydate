@@ -16,6 +16,7 @@ const TYPE_MAPPING = {
 export function mapHappyLearningCandidateToKnowledgeInput(input: {
   userId: string;
   candidate: HappyLearningConfirmationCandidate;
+  confirmedAt?: string;
 }): CreateKnowledgeInput {
   const mapping = TYPE_MAPPING[input.candidate.captureType];
   const polarityTag = input.candidate.polarity === "likes" || input.candidate.polarity === "prefers"
@@ -32,6 +33,10 @@ export function mapHappyLearningCandidateToKnowledgeInput(input: {
     value: input.candidate.value,
     content: input.candidate.evidenceText,
     source: input.candidate.source,
+    sourceRecordId: input.candidate.id,
+    sourceExcerpt: input.candidate.evidenceText,
+    userConfirmedAt: input.confirmedAt ?? new Date().toISOString(),
+    captureSchemaVersion: input.candidate.schemaVersion,
     importance: 1,
     aiTags,
   };

@@ -69,7 +69,20 @@ function text(value: unknown): string | null {
 function isStructuredSuggestion(value: unknown): value is GiftRecommendationSuggestion {
   if (!value || typeof value !== "object") return false;
   const suggestion = value as Record<string, unknown>;
-  return (
+  const learningEvidenceValid = !("learningEvidence" in suggestion) || (
+    Array.isArray(suggestion.learningEvidence) && suggestion.learningEvidence.every((item) => {
+      if (!item || typeof item !== "object") return false;
+      const evidence = item as Record<string, unknown>;
+      return typeof evidence.giftId === "string"
+        && typeof evidence.giftTitle === "string"
+        && (evidence.outcome === "liked" || evidence.outcome === "not_liked" || evidence.outcome === "unsure")
+        && (evidence.note === null || typeof evidence.note === "string")
+        && typeof evidence.confirmedAt === "string"
+        && typeof evidence.category === "string"
+        && (evidence.matchedBy === "text" || evidence.matchedBy === "category");
+    })
+  );
+  return learningEvidenceValid && (
     typeof suggestion.title === "string" &&
     typeof suggestion.category === "string" &&
     typeof suggestion.why === "string" &&

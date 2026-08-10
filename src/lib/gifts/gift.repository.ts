@@ -6,20 +6,38 @@ import {
 } from "./gift.mapper.ts";
 import type { GiftRecord } from "./gift.types.ts";
 import {
+  clearCanonicalGiftOutcome,
   createCanonicalGift,
+  deleteCanonicalGift,
   deleteSavedGiftLink,
   listCanonicalGifts,
   listSavedGiftLinks,
+  moveSavedGiftLink,
   saveGiftLink,
+  setPreferredGiftLink,
   setCanonicalGiftLifecycle,
+  setCanonicalGiftOutcome,
+  setCanonicalGiftOutcomeNote,
+  setCanonicalGiftOutcomeLearning,
+  setCanonicalGiftOutcomeFollowUp,
+  updateCanonicalGiftTitle,
 } from "./gift.persistence.ts";
 
 export {
+  clearCanonicalGiftOutcome as clearGiftOutcome,
   createCanonicalGift as createGift,
+  deleteCanonicalGift as deleteGift,
   deleteSavedGiftLink,
   listSavedGiftLinks,
+  moveSavedGiftLink,
   saveGiftLink,
+  setPreferredGiftLink,
   setCanonicalGiftLifecycle as setGiftLifecycle,
+  setCanonicalGiftOutcome as setGiftOutcome,
+  setCanonicalGiftOutcomeNote as setGiftOutcomeNote,
+  setCanonicalGiftOutcomeLearning as setGiftOutcomeLearning,
+  setCanonicalGiftOutcomeFollowUp as setGiftOutcomeFollowUp,
+  updateCanonicalGiftTitle as updateGiftTitle,
 };
 
 export interface GiftRepositoryScope {
@@ -61,6 +79,13 @@ export async function loadGiftsForPerson(
   personId: string
 ): Promise<GiftRecord[]> {
   return readGifts({ userId, personId });
+}
+
+export async function loadCanonicalGiftsForPerson(
+  userId: string,
+  personId: string,
+): Promise<GiftRecord[]> {
+  return (await listCanonicalGifts(userId)).filter((gift) => gift.personId === personId);
 }
 
 export async function loadGiftsForEvent(

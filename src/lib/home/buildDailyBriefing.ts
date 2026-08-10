@@ -6,7 +6,8 @@ export type DailyBriefingSectionKind =
   | "upcoming"
   | "person-context"
   | "offer"
-  | "care-question";
+  | "care-question"
+  | "post-gift-question";
 
 export type DailyBriefingMode = "short" | "detailed";
 
@@ -40,6 +41,11 @@ interface BuildDailyBriefingInput {
   events: HomeEvent[];
   featured: HomeEvent | null;
   memories: HomeMemory[];
+  pendingGiftOutcome: {
+    id: string;
+    title: string;
+    personName: string;
+  } | null;
   formatCountdown: (daysUntil: number) => string;
   eventTitle: (event: HomeEvent) => string;
   t: HomeTranslate;
@@ -65,6 +71,7 @@ export function buildDailyBriefing({
   events,
   featured,
   memories,
+  pendingGiftOutcome,
   formatCountdown,
   eventTitle,
   t,
@@ -100,6 +107,18 @@ export function buildDailyBriefing({
     });
   }
 
+  if (pendingGiftOutcome) {
+    sections.push({
+      id: `post-gift-${pendingGiftOutcome.id}`,
+      kind: "post-gift-question",
+      text: t("brief.postGiftQuestion", {
+        name: pendingGiftOutcome.personName,
+        gift: safeSpokenValue(pendingGiftOutcome.title) ?? pendingGiftOutcome.title,
+      }),
+      sourceIds: [pendingGiftOutcome.id],
+    });
+  }
+
   if (featured?.personId) {
     const personMemories = memories.filter(
       (memory) => memory.isActive && memory.personId === featured.personId,
@@ -126,7 +145,7 @@ export function buildDailyBriefing({
         text: t("brief.giftOffer", { name: featured.personName ?? featured.title }),
         sourceIds: [featured.id],
       });
-    } else if (featured.isImportant && featured.daysUntil <= 14 && !savedGift) {
+    } else if (!pendingGiftOutcome && featured.isImportant && featured.daysUntil <= 14 && !savedGift) {
       sections.push({
         id: `care-gift-${featured.id}`,
         kind: "care-question",
@@ -134,6 +153,7 @@ export function buildDailyBriefing({
         sourceIds: [featured.id],
       });
     } else if (
+      !pendingGiftOutcome &&
       featured.isImportant &&
       featured.daysUntil <= 30 &&
       featured.daysUntil > 14 &&

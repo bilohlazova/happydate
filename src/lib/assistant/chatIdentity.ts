@@ -3,7 +3,12 @@ import { createClient } from "@supabase/supabase-js";
 import type { AssistantIdentityKind } from "./chatConfig.ts";
 import { readSupabasePublicConfig } from "../supabase/publicConfig.ts";
 
-export type AssistantRequestIdentity = { kind: AssistantIdentityKind; key: string };
+export type AssistantRequestIdentity = {
+  kind: AssistantIdentityKind;
+  key: string;
+  /** Server-verified subject. Never use the client request body as a substitute. */
+  userId?: string;
+};
 
 function hashIdentity(value: string): string {
   return createHash("sha256").update(`assistant-rate-limit:${value}`).digest("hex");
@@ -26,7 +31,11 @@ export async function getAssistantRequestIdentity(request: Request): Promise<Ass
     });
     const { data, error } = await supabase.auth.getUser(accessToken);
     if (!error && data.user?.id) {
-      return { kind: "authenticated", key: hashIdentity(`user:${data.user.id}`) };
+      return {
+        kind: "authenticated",
+        key: hashIdentity(`user:${data.user.id}`),
+        userId: data.user.id,
+      };
     }
   }
 

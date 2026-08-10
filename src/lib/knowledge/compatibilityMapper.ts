@@ -139,12 +139,16 @@ export function mapLegacyMemoryToKnowledge(row: MemoryRow): KnowledgeItem {
     legacyType: type,
     evidence: {
       sourceKind: row.source || "legacy",
-      sourceId: row.id,
-      originalText,
-      capturedAt: row.created_at,
+      sourceId: row.source_record_id ?? row.id,
+      originalText: cleanText(row.source_excerpt) ?? originalText,
+      capturedAt: row.user_confirmed_at ?? row.created_at,
     },
-    // Existing AI fields have no confidence/version/confirmation provenance.
-    classification: null,
+    classification: row.user_confirmed_at ? {
+      confidence: null,
+      classifierVersion: row.capture_schema_version,
+      classifiedAt: row.user_confirmed_at,
+      userConfirmed: true,
+    } : null,
     compatibility: {
       valueText: row.value_text,
       contentText: row.content_text,

@@ -11,6 +11,7 @@ import HappyRecommendationsSection from "./HappyRecommendationsSection";
 import HomeErrorState from "./HomeErrorState";
 import HomeEmptyState from "./HomeEmptyState";
 import type { ReminderRecord } from "@/lib/repositories/reminders";
+import type { GiftOutcomeValue } from "@/lib/gifts/gift.types";
 
 const SPEECH_LOCALES: Record<string, string> = { pl: "pl-PL", uk: "uk-UA", en: "en-US", ru: "ru-RU", de: "de-DE" };
 
@@ -26,9 +27,11 @@ interface HomeDashboardProps {
   onSnoozeReminder: () => void;
   onUndoReminder: () => void;
   onPickGift: () => void;
+  onGiftOutcome: (giftId: string, outcome: GiftOutcomeValue) => Promise<void>;
+  onGiftFollowUp: (giftId: string, action: "snooze" | "dismiss") => Promise<void>;
 }
 
-export default function HomeDashboard({ viewModel, reminder, inAppDeliveryCount, reminderBusy, reminderError, onRetry, onAskHappy, onCompleteReminder, onSnoozeReminder, onUndoReminder, onPickGift }: HomeDashboardProps) {
+export default function HomeDashboard({ viewModel, reminder, inAppDeliveryCount, reminderBusy, reminderError, onRetry, onAskHappy, onCompleteReminder, onSnoozeReminder, onUndoReminder, onPickGift, onGiftOutcome, onGiftFollowUp }: HomeDashboardProps) {
   const t = useTranslations("home");
   return (
     <div className="hd-screen overflow-x-hidden">
@@ -50,7 +53,7 @@ export default function HomeDashboard({ viewModel, reminder, inAppDeliveryCount,
           <>
             {viewModel.featuredEvent && <FeaturedEventCard event={viewModel.featuredEvent} preferencesLabel={t("featured.preferences")} reminder={reminder} reminderBusy={reminderBusy} reminderError={reminderError} reminderLabels={{ completed: t("reminder.completed"), complete: t("reminder.complete"), snooze: t("reminder.snooze"), snoozed: t("reminder.snoozed"), undo: t("reminder.undo"), pickGift: t("reminder.pickGift"), error: t("reminder.error") }} onCompleteReminder={onCompleteReminder} onSnoozeReminder={onSnoozeReminder} onUndoReminder={onUndoReminder} onPickGift={onPickGift} />}
             <UpcomingEventsSection events={viewModel.upcomingEvents} title={t("upcoming.title")} allLabel={t("upcoming.all")} />
-            <HappyRecommendationsSection recommendations={viewModel.recommendations} title={t("recommendations.title")} />
+            <HappyRecommendationsSection recommendations={viewModel.recommendations} title={t("recommendations.title")} onGiftOutcome={onGiftOutcome} onGiftFollowUp={onGiftFollowUp} followUpLabels={{ answerLabel: t("recommendations.giftOutcomeAnswerLabel"), liked: t("recommendations.giftOutcomeLiked"), notLiked: t("recommendations.giftOutcomeNotLiked"), unsure: t("recommendations.giftOutcomeUnsure"), snooze: t("recommendations.giftOutcomeSnooze"), dismiss: t("recommendations.giftOutcomeDismiss"), error: t("recommendations.giftOutcomeActionError") }} />
           </>
         )}
       </div>

@@ -235,11 +235,28 @@ function buildUpcoming(events: HomeEvent[], locale: AppLocale, t: HomeTranslate)
   }));
 }
 
-function buildRecommendations(featured: HomeEvent | null, memories: HomeMemory[], t: HomeTranslate): HomeRecommendation[] {
-  if (!featured?.personId) return [];
-  const classified = classifyMemories(personMemories(memories, featured.personId));
-  const personHref = `/people/${encodeURIComponent(featured.personId)}`;
+function buildRecommendations(
+  featured: HomeEvent | null,
+  data: HomeRepositoryData,
+  t: HomeTranslate,
+): HomeRecommendation[] {
   const recommendations: HomeRecommendation[] = [];
+  const peopleById = new Map(data.people.map((person) => [person.id, person]));
+  const pendingOutcome = (data.pendingGiftOutcomes ?? []).find((gift) => peopleById.has(gift.personId));
+  if (pendingOutcome) {
+    const person = peopleById.get(pendingOutcome.personId)!;
+    recommendations.push({
+      id: `gift-outcome-${pendingOutcome.id}`,
+      icon: "💝",
+      title: t("recommendations.giftOutcomeTitle", { name: person.name }),
+      description: t("recommendations.giftOutcomeDescription", { gift: pendingOutcome.title }),
+      href: `/people/${encodeURIComponent(person.id)}#gift-workspace`,
+      giftFollowUp: { giftId: pendingOutcome.id },
+    });
+  }
+  if (!featured?.personId) return recommendations;
+  const classified = classifyMemories(personMemories(data.memories, featured.personId));
+  const personHref = `/people/${encodeURIComponent(featured.personId)}`;
 
   if (featured.daysUntil <= 30 && classified.gifts.length > 0) {
     recommendations.push({ id: `saved-gifts-${featured.id}`, icon: "🎁", title: t("recommendations.reviewGiftsTitle"), description: t("recommendations.reviewGiftsDescription", { count: classified.gifts.length }), href: personHref });
@@ -261,7 +278,11 @@ export function buildHomeViewModel(data: HomeRepositoryData, locale: AppLocale, 
   const events = normalizeEvents(data.people, data.events, now);
   const featured = selectFeatured(events);
   const featuredCard = buildFeatured(featured, data.memories, locale, t);
-  const recommendations = buildRecommendations(featured, data.memories, t);
+  const recommendations = buildRecommendations(featured, data, t);
+  const pendingGiftOutcome = (data.pendingGiftOutcomes ?? []).flatMap((gift) => {
+    const person = data.people.find((item) => item.id === gift.personId);
+    return person ? [{ id: gift.id, title: gift.title, personName: person.name }] : [];
+  })[0] ?? null;
   const insights = [];
   if (featured) {
     insights.push({ id: `event-${featured.id}`, icon: featured.source === "birthday" ? "🎂" : "📅", title: featured.source === "birthday" ? t("insights.birthday", { name: featured.personName ?? featured.title, countdown: formatCountdown(t, featured.daysUntil) }) : t("insights.event", { title: featured.title, countdown: formatCountdown(t, featured.daysUntil) }) });
@@ -279,6 +300,7 @@ export function buildHomeViewModel(data: HomeRepositoryData, locale: AppLocale, 
     events,
     featured,
     memories: data.memories,
+    pendingGiftOutcome,
     formatCountdown: (value) => formatCountdown(t, value),
     eventTitle: (event) => event.source === "birthday"
       ? t("events.birthdayTitle", { name: event.personName ?? event.title })
@@ -296,7 +318,7 @@ export function buildHomeViewModel(data: HomeRepositoryData, locale: AppLocale, 
     featuredEvent: featuredCard,
     upcomingEvents: buildUpcoming(events, locale, t),
     recommendations,
-    isEmpty: data.people.length === 0 && data.events.length === 0 && data.memories.length === 0,
+    isEmpty: data.people.length === 0 && data.events.length === 0 && data.memories.length === 0 && (data.pendingGiftOutcomes ?? []).length === 0,
     errors: data.errors,
   };
 }

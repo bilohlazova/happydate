@@ -3,6 +3,9 @@ import { buildMemoryInsightForPerson } from "../brain/engines/memoryInsightEngin
 import type { Insight, PersonKnowledge } from "../brain/types.ts";
 import { getAiEligibleKnowledge, type KnowledgeItem } from "../knowledge/index.ts";
 import type { PersonRow } from "../repositories/person.types.ts";
+import type { GiftRecord } from "../gifts/gift.types.ts";
+import { buildGiftOutcomeLearningSignals } from "../gift-intelligence/giftOutcomeLearningSignals.ts";
+import { projectGiftOutcomeAiContext } from "../gift-intelligence/giftOutcomeAiContextPreview.ts";
 import { canonicalRelationKey } from "./canonicalRelation.ts";
 import type {
   PeoplePageViewModel,
@@ -23,6 +26,29 @@ const ACTIVE_GIFT_CATEGORIES = new Set(["idea", "selected", "purchased"]);
 function meaningful(value: string | null | undefined): string | null {
   const normalized = value?.replace(/\s+/g, " ").trim();
   return normalized || null;
+}
+
+function confirmedGiftOutcomes(gifts: readonly GiftRecord[], profileLearningEnabled: boolean): PersonProfileViewModel["confirmedGiftOutcomes"] {
+  const outcomes = gifts.flatMap((gift) => gift.finalOutcome ? [{
+    giftId: gift.id,
+    giftTitle: gift.value,
+    outcome: gift.finalOutcome.value,
+    note: gift.finalOutcome.note,
+    confirmedAt: gift.finalOutcome.confirmedAt,
+    learningEnabled: gift.finalOutcome.learningEnabled,
+  }] : []);
+  const signals = new Map(buildGiftOutcomeLearningSignals(
+    outcomes.filter((item) => profileLearningEnabled && item.learningEnabled),
+  ).map((item) => [item.giftId, item]));
+  return outcomes.map((item) => {
+    const signal = signals.get(item.giftId);
+    return {
+      ...item,
+      aiEligible: profileLearningEnabled && item.learningEnabled,
+      category: signal?.category ?? "other",
+      learningSignal: profileLearningEnabled && item.learningEnabled ? signal?.categorySignal ?? "insufficient" : "history_only",
+    };
+  });
 }
 
 function relationLabel(person: PersonRow): string | null {
@@ -57,7 +83,15 @@ function activeVisible(items: readonly KnowledgeItem[]): KnowledgeItem[] {
 
 function valueModel(item: KnowledgeItem): PersonKnowledgeValueViewModel | null {
   const value = meaningful(item.value) ?? meaningful(item.title) ?? meaningful(item.summary);
-  return value ? { id: item.id, value, category: item.category } : null;
+  return value ? {
+    id: item.id,
+    value,
+    category: item.category,
+    sourceKind: item.evidence.sourceKind,
+    userConfirmed: item.classification?.userConfirmed === true,
+    sourceExcerpt: item.evidence.originalText,
+    capturedAt: item.evidence.capturedAt,
+  } : null;
 }
 
 function values(items: readonly KnowledgeItem[]): PersonKnowledgeValueViewModel[] {
@@ -83,12 +117,16 @@ function personHealth(
   person: PersonRow,
   items: readonly KnowledgeItem[],
   knowledge: PersonKnowledge,
+  gifts: readonly GiftRecord[] = [],
 ): PersonHealthViewModel {
   const missing: PersonHealthArea[] = [];
   if (!person.birthday) missing.push("birthday");
   if (!items.some((item) => item.kind === "preference")) missing.push("preferences");
   if (!knowledge.interests.length && !knowledge.hobbies.length) missing.push("interests");
-  if (!items.some((item) => item.kind === "gift" && item.category !== null && ACTIVE_GIFT_CATEGORIES.has(item.category))) missing.push("giftIdea");
+  if (
+    !gifts.some((gift) => gift.lifecycle !== "given")
+    && !items.some((item) => item.kind === "gift" && item.category !== null && ACTIVE_GIFT_CATEGORIES.has(item.category))
+  ) missing.push("giftIdea");
   if (!items.some((item) => item.kind === "fact")) missing.push("importantFacts");
   if (!knowledge.memoriesCount) missing.push("memories");
 
@@ -139,6 +177,38 @@ function timeline(items: readonly KnowledgeItem[]): PersonTimelineItemViewModel[
     if (!date || !model || (item.kind !== "experience" && !givenGift(item))) return [];
     return [{ id: item.id, kind: givenGift(item) ? "gift_given" : "memory", title: model.value, date }];
   }).sort((first, second) => second.date.localeCompare(first.date) || first.id.localeCompare(second.id));
+}
+
+function canonicalGiftTimeline(gifts: readonly GiftRecord[]): PersonTimelineItemViewModel[] {
+  return gifts.flatMap((gift): PersonTimelineItemViewModel[] => {
+    const date = gift.occurredOn ?? gift.createdAt;
+    if (!date) return [];
+    return [{
+      id: `canonical-${gift.id}`,
+      kind: `gift_${gift.lifecycle}`,
+      title: gift.value,
+      date,
+      ...(gift.finalOutcome ? {
+        giftOutcome: gift.finalOutcome.value,
+        giftOutcomeNote: gift.finalOutcome.note,
+      } : {}),
+    }];
+  });
+}
+
+function mergeGiftValues(
+  legacy: PersonKnowledgeValueViewModel[],
+  canonical: readonly GiftRecord[],
+): PersonKnowledgeValueViewModel[] {
+  const result = [...legacy];
+  const seen = new Set(result.map((item) => item.value.toLocaleLowerCase()));
+  for (const gift of canonical) {
+    const key = gift.value.toLocaleLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push({ id: gift.id, value: gift.value, category: gift.lifecycle, sourceKind: "gift", userConfirmed: false, sourceExcerpt: null, capturedAt: gift.createdAt });
+  }
+  return result;
 }
 
 export function buildPeoplePageViewModel({
@@ -223,19 +293,24 @@ export function buildPeoplePageViewModel({
 export function buildPersonProfileViewModel({
   person,
   knowledge,
+  gifts = [],
+  giftOutcomeLearningEnabled = true,
   currentDate = new Date(),
   isAuthenticated = true,
 }: {
   person: PersonRow | null;
   knowledge: KnowledgeItem[];
+  gifts?: GiftRecord[];
+  giftOutcomeLearningEnabled?: boolean;
   currentDate?: Date;
   isAuthenticated?: boolean;
 }): PersonProfileViewModel {
   if (!person) return {
-    isAuthenticated, found: false, hero: null, likes: [], dislikes: [], interests: [], giftIdeas: [], giftHistory: [], importantFacts: [], timeline: [], brainInsights: [], health: null,
+    isAuthenticated, found: false, hero: null, likes: [], dislikes: [], interests: [], giftIdeas: [], giftHistory: [], importantFacts: [], archivedKnowledge: [], timeline: [], brainInsights: [], confirmedGiftOutcomes: [], giftOutcomeAiPreview: [], giftOutcomeLearningEnabled: false, health: null,
     actions: { addMemoryUrl: null, addGiftIdeaUrl: null, addImportantInformationUrl: null, canAskHappy: false },
   };
   const visible = activeVisible(knowledge).filter((item) => item.personId === person.id);
+  const archived = knowledge.filter((item) => item.personId === person.id && item.state === "archived" && item.kind !== "journal");
   const aiSafe = getAiEligibleKnowledge(visible);
   const [computed] = buildAllPeopleKnowledge({ people: [{ id: person.id, name: person.name }], memories: aiSafe, currentDate });
   const event = birthdayBrainEvent(person, currentDate);
@@ -243,6 +318,7 @@ export function buildPersonProfileViewModel({
   const preferences = visible.filter((item) => item.kind === "preference");
   const interestRecords = preferences.filter((item) => item.category && INTEREST_CATEGORIES.has(item.category));
   const addMemoryUrl = `/care/add-memory?personId=${encodeURIComponent(person.id)}`;
+  const outcomeAudit = confirmedGiftOutcomes(gifts, giftOutcomeLearningEnabled);
   return {
     isAuthenticated,
     found: true,
@@ -258,12 +334,20 @@ export function buildPersonProfileViewModel({
     likes: values(preferences.filter((item) => item.polarity === "likes" || item.polarity === "prefers")),
     dislikes: values(preferences.filter((item) => item.polarity === "dislikes" || item.polarity === "avoids")),
     interests: values(interestRecords),
-    giftIdeas: values(visible.filter((item) => item.kind === "gift" && item.category !== null && ACTIVE_GIFT_CATEGORIES.has(item.category))),
-    giftHistory: values(visible.filter(givenGift)),
+    giftIdeas: mergeGiftValues(
+      values(visible.filter((item) => item.kind === "gift" && item.category !== null && ACTIVE_GIFT_CATEGORIES.has(item.category))),
+      gifts.filter((gift) => gift.lifecycle !== "given"),
+    ),
+    giftHistory: mergeGiftValues(values(visible.filter(givenGift)), gifts.filter((gift) => gift.lifecycle === "given")),
     importantFacts: values(visible.filter((item) => item.kind === "fact")),
-    timeline: timeline(visible),
+    archivedKnowledge: values(archived),
+    timeline: [...timeline(visible), ...canonicalGiftTimeline(gifts)]
+      .sort((first, second) => second.date.localeCompare(first.date) || first.id.localeCompare(second.id)),
     brainInsights: brainInsight(insight),
-    health: personHealth(person, visible, computed),
+    confirmedGiftOutcomes: outcomeAudit,
+    giftOutcomeAiPreview: projectGiftOutcomeAiContext(outcomeAudit.filter((item) => item.aiEligible).map((item) => ({ giftTitle: item.giftTitle, outcome: item.outcome, note: item.note, category: item.category, categorySignal: item.learningSignal === "history_only" ? "insufficient" : item.learningSignal }))),
+    giftOutcomeLearningEnabled,
+    health: personHealth(person, visible, computed, gifts),
     actions: { addMemoryUrl, addGiftIdeaUrl: null, addImportantInformationUrl: null, canAskHappy: true },
   };
 }

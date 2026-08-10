@@ -55,6 +55,8 @@ export function mapKnowledgeToGift(item: KnowledgeItem): GiftRecord | null {
     occurredOn: item.occurredOn,
     createdAt: item.createdAt,
     sourceKnowledgeId: item.id,
+    finalSelection: null,
+    finalOutcome: null,
   };
 }
 
@@ -117,6 +119,8 @@ function toViewModel(gift: GiftRecord): GiftItemViewModel {
     eventId: gift.eventId,
     date: gift.occurredOn ?? gift.createdAt,
     canChangeLifecycle: gift.sourceKnowledgeId === null,
+    finalSelection: gift.finalSelection,
+    finalOutcome: gift.finalOutcome,
   };
 }
 

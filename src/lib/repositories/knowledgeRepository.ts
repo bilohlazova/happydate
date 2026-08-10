@@ -34,6 +34,12 @@ export interface GetKnowledgeContextInput
   extends ListKnowledgeInput,
     KnowledgeContextOptions {}
 
+export interface MutateOwnedPersonKnowledgeInput {
+  userId: string;
+  personId: string;
+  knowledgeId: string;
+}
+
 /**
  * Canonical writes currently target the legacy persistence schema. Fields that
  * cannot be represented losslessly (classification and state history) are
@@ -51,6 +57,10 @@ export interface CreateKnowledgeInput {
   occurredOn?: string | null;
   importance?: number;
   source?: string;
+  sourceRecordId?: string | null;
+  sourceExcerpt?: string | null;
+  userConfirmedAt?: string | null;
+  captureSchemaVersion?: string | null;
   images?: string[] | null;
   aiTags?: string[];
   audioUrl?: string | null;
@@ -111,6 +121,10 @@ async function createKnowledgeWithClient(
       occurred_on: input.occurredOn ?? null,
       importance: input.importance ?? 0,
       source: input.source ?? "manual",
+      source_record_id: input.sourceRecordId ?? null,
+      source_excerpt: input.sourceExcerpt ?? null,
+      user_confirmed_at: input.userConfirmedAt ?? null,
+      capture_schema_version: input.captureSchemaVersion ?? null,
       images,
       audio_url: input.audioUrl ?? null,
       transcript_text: input.transcriptText ?? null,
@@ -121,6 +135,17 @@ async function createKnowledgeWithClient(
     .returns<MemoryRow[]>()
     .single();
 
+  if (error?.code === "23505" && input.sourceRecordId) {
+    const { data: existing, error: existingError } = await client
+      .from("memories")
+      .select(MEMORY_ROW_COLUMNS)
+      .eq("user_id", input.userId)
+      .eq("source", input.source ?? "manual")
+      .eq("source_record_id", input.sourceRecordId)
+      .returns<MemoryRow[]>()
+      .single();
+    if (!existingError && existing) return mapLegacyMemoryToKnowledge(existing);
+  }
   if (error) throw repositoryError("createKnowledge", error.message);
   return mapLegacyMemoryToKnowledge(data);
 }
@@ -325,16 +350,102 @@ export async function updateKnowledge(
 export async function archiveKnowledge(
   memoryId: string
 ): Promise<KnowledgeItem> {
+  const userId = await requireKnowledgeUserId();
   const { data, error } = await supabase
     .from("memories")
     .update({ is_active: false })
     .eq("id", memoryId)
+    .eq("user_id", userId)
     .select(MEMORY_ROW_COLUMNS)
     .returns<MemoryRow[]>()
     .single();
 
   if (error) throw repositoryError("archiveKnowledge", error.message);
   return mapLegacyMemoryToKnowledge(data);
+}
+
+/** Narrow Person Profile mutation: only the value of one active owned item. */
+export async function updateOwnedPersonKnowledgeValue(
+  input: MutateOwnedPersonKnowledgeInput & { value: string },
+): Promise<KnowledgeItem> {
+  const authenticatedUserId = await requireKnowledgeUserId();
+  const value = input.value.replace(/\s+/g, " ").trim();
+  if (authenticatedUserId !== input.userId || !value || value.length > 500) {
+    throw repositoryError("updateOwnedPersonKnowledgeValue", "Invalid knowledge update");
+  }
+  const { data, error } = await supabase
+    .from("memories")
+    .update({ value_text: value })
+    .eq("id", input.knowledgeId)
+    .eq("user_id", authenticatedUserId)
+    .eq("person_id", input.personId)
+    .eq("is_active", true)
+    .select(MEMORY_ROW_COLUMNS)
+    .returns<MemoryRow[]>()
+    .single();
+  if (error) throw repositoryError("updateOwnedPersonKnowledgeValue", error.message);
+  return mapLegacyMemoryToKnowledge(data);
+}
+
+/** Archive one active owned Person fact without deleting its audit history. */
+export async function archiveOwnedPersonKnowledge(
+  input: MutateOwnedPersonKnowledgeInput,
+): Promise<KnowledgeItem> {
+  const authenticatedUserId = await requireKnowledgeUserId();
+  if (authenticatedUserId !== input.userId) {
+    throw repositoryError("archiveOwnedPersonKnowledge", "Invalid owner");
+  }
+  const { data, error } = await supabase
+    .from("memories")
+    .update({ is_active: false })
+    .eq("id", input.knowledgeId)
+    .eq("user_id", authenticatedUserId)
+    .eq("person_id", input.personId)
+    .eq("is_active", true)
+    .select(MEMORY_ROW_COLUMNS)
+    .returns<MemoryRow[]>()
+    .single();
+  if (error) throw repositoryError("archiveOwnedPersonKnowledge", error.message);
+  return mapLegacyMemoryToKnowledge(data);
+}
+
+/** Restore one archived owned Person fact to active Knowledge. */
+export async function restoreOwnedPersonKnowledge(
+  input: MutateOwnedPersonKnowledgeInput,
+): Promise<KnowledgeItem> {
+  const authenticatedUserId = await requireKnowledgeUserId();
+  if (authenticatedUserId !== input.userId) throw repositoryError("restoreOwnedPersonKnowledge", "Invalid owner");
+  const { data, error } = await supabase
+    .from("memories")
+    .update({ is_active: true })
+    .eq("id", input.knowledgeId)
+    .eq("user_id", authenticatedUserId)
+    .eq("person_id", input.personId)
+    .eq("is_active", false)
+    .select(MEMORY_ROW_COLUMNS)
+    .returns<MemoryRow[]>()
+    .single();
+  if (error) throw repositoryError("restoreOwnedPersonKnowledge", error.message);
+  return mapLegacyMemoryToKnowledge(data);
+}
+
+/** Permanently delete one archived owned Person fact after explicit UI confirmation. */
+export async function deleteArchivedOwnedPersonKnowledge(
+  input: MutateOwnedPersonKnowledgeInput,
+): Promise<void> {
+  const authenticatedUserId = await requireKnowledgeUserId();
+  if (authenticatedUserId !== input.userId) throw repositoryError("deleteArchivedOwnedPersonKnowledge", "Invalid owner");
+  const { data, error } = await supabase
+    .from("memories")
+    .delete()
+    .eq("id", input.knowledgeId)
+    .eq("user_id", authenticatedUserId)
+    .eq("person_id", input.personId)
+    .eq("is_active", false)
+    .select("id")
+    .returns<Array<{ id: string }>>()
+    .single();
+  if (error || !data) throw repositoryError("deleteArchivedOwnedPersonKnowledge", error?.message ?? "Record not found");
 }
 
 /** Permanently delete one owned Knowledge record through the canonical RLS client. */

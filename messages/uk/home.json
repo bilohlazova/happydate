@@ -57,7 +57,8 @@
     "savedPreference": "Про {name} збережено важливу підказку: {value}.",
     "giftOffer": "Якщо хочеш, я допоможу підготувати подарунок для {name}.",
     "giftQuestion": "До важливої дати для {name} залишилося небагато часу. Хочеш, я допоможу підібрати подарунок?",
-    "preferenceQuestion": "Є час підготуватися до важливої дати для {name}. Хочеш додати одне актуальне вподобання?"
+    "preferenceQuestion": "Є час підготуватися до важливої дати для {name}. Хочеш додати одне актуальне вподобання?",
+    "postGiftQuestion": "Подарунок «{gift}» для {name} вже вручено. Хочеш розповісти, чи він сподобався?"
   },
   "featured": {
     "importantLabel": "Найближча важлива дата",
@@ -95,7 +96,33 @@
     "addContextTitle": "Додай інформацію про людину",
     "addContextDescription": "Кілька вподобань {name} допоможуть підготуватися до дати.",
     "memoriesTitle": "Повернися до спільних спогадів",
-    "memoriesDescription": "У тебе є {count} збережені спогади."
+    "memoriesDescription": "У тебе є {count} збережені спогади.",
+    "giftOutcomeTitle": "Чи сподобався подарунок {name}?",
+    "giftOutcomeDescription": "Розкажи, як сприйняли подарунок «{gift}». Happy запам’ятає лише твою відповідь.",
+    "giftOutcomeAnswerLabel": "Як сприйняли подарунок?",
+    "giftOutcomeLiked": "Сподобався",
+    "giftOutcomeNotLiked": "Не сподобався",
+    "giftOutcomeUnsure": "Важко сказати",
+    "giftOutcomeSaved": "Відповідь збережено: {outcome}.",
+    "giftOutcomeValue": {
+      "liked": "сподобався",
+      "not_liked": "не сподобався",
+      "unsure": "важко сказати"
+    },
+    "giftOutcomeUndo": "Скасувати",
+    "giftOutcomeUndoing": "Скасовуємо…",
+    "giftOutcomeUndoError": "Не вдалося скасувати відповідь. Спробуй ще раз.",
+    "giftOutcomeAddNote": "Додати нотатку",
+    "giftOutcomeNoteLabel": "Що варто запам’ятати про реакцію?",
+    "giftOutcomeNotePlaceholder": "Наприклад: мамі особливо сподобався колір…",
+    "giftOutcomeSaveNote": "Зберегти нотатку",
+    "giftOutcomeSavingNote": "Зберігаємо…",
+    "giftOutcomeSkipNote": "Не зараз",
+    "giftOutcomeNoteError": "Не вдалося зберегти нотатку. Твоя відповідь уже збережена — спробуй ще раз.",
+    "giftOutcomeNoteCount": "{count}/500",
+    "giftOutcomeSnooze": "Нагадати через 3 дні",
+    "giftOutcomeDismiss": "Не запитувати про цей подарунок",
+    "giftOutcomeActionError": "Не вдалося зберегти вибір. Спробуй ще раз."
   },
   "empty": {
     "title": "Почни з важливої людини або події",

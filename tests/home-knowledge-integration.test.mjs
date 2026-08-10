@@ -186,6 +186,15 @@ test("Home production dependency guard rejects legacy Memory access and interpre
   }
 });
 
+test("Home post-gift prompt reads only owned given Gifts without an outcome", async () => {
+  const repository = await readFile(new URL("../src/lib/repositories/home/home.repository.ts", import.meta.url), "utf8");
+  const loader = await readFile(new URL("../src/lib/home/loadHome.ts", import.meta.url), "utf8");
+  assert.match(repository, /loadPendingGiftOutcomes/);
+  assert.match(repository, /\.eq\("user_id", userId\)[\s\S]*?\.eq\("lifecycle", "given"\)[\s\S]*?\.is\("recipient_reaction", null\)/);
+  assert.match(repository, /\.limit\(10\)/);
+  assert.match(loader, /pendingGiftOutcomes: data\.pendingGiftOutcomes/);
+});
+
 test("Home Loader is the single Knowledge and Brain orchestration boundary", async () => {
   const loader = await readFile(new URL("../src/lib/home/loadHome.ts", import.meta.url), "utf8");
   const repository = await readFile(new URL("../src/lib/repositories/home/home.repository.ts", import.meta.url), "utf8");

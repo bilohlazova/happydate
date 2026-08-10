@@ -56,3 +56,19 @@ test("canonical reads use explicit columns instead of select star", async () => 
   assert.equal(/\.select\(["']\*["']\)/.test(source), false);
   assert.match(source, /MEMORY_ROW_COLUMNS/);
 });
+
+test("confirmed Memory Brain writes are provenance-aware and idempotent", async () => {
+  const [repository, types, migration] = await Promise.all([
+    readFile(repositoryPath, "utf8"),
+    readFile(new URL("../src/lib/repositories/memory.types.ts", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260809170345_add_memory_brain_provenance.sql", import.meta.url), "utf8"),
+  ]);
+
+  for (const field of ["source_record_id", "source_excerpt", "user_confirmed_at", "capture_schema_version"]) {
+    assert.match(types, new RegExp(field));
+    assert.match(repository, new RegExp(field));
+    assert.match(migration, new RegExp(field));
+  }
+  assert.match(migration, /create unique index[\s\S]+user_id, source, source_record_id/i);
+  assert.match(repository, /error\?\.code === "23505"/);
+});

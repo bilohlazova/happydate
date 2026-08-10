@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { PersonProfileContent } from "@/components/people/PersonProfileContent";
@@ -13,36 +13,42 @@ export default function PersonDetailsPage() {
   const [viewModel, setViewModel] = useState<PersonProfileViewModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const requestRef = useRef(0);
+
+  const refreshProfile = useCallback(async (showLoading: boolean) => {
+    if (!personId) return;
+    const request = requestRef.current + 1;
+    requestRef.current = request;
+    try {
+      if (showLoading) setLoading(true);
+      setFailed(false);
+      const profile = await loadPersonProfile(personId);
+      if (requestRef.current === request) setViewModel(profile);
+    } catch (error) {
+      console.error("[PersonDetailsPage] loadPersonProfile failed:", error);
+      if (requestRef.current === request) setFailed(true);
+    } finally {
+      if (showLoading && requestRef.current === request) setLoading(false);
+    }
+  }, [personId]);
 
   useEffect(() => {
-    if (!personId) return;
-    let isMounted = true;
-
-    async function load() {
-      try {
-        setLoading(true);
-        setFailed(false);
-        const profile = await loadPersonProfile(personId);
-        if (isMounted) setViewModel(profile);
-      } catch (error) {
-        console.error("[PersonDetailsPage] loadPersonProfile failed:", error);
-        if (isMounted) setFailed(true);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-
-    void load();
+    void refreshProfile(true);
     return () => {
-      isMounted = false;
+      requestRef.current += 1;
     };
-  }, [personId]);
+  }, [refreshProfile]);
+
+  async function refreshProfileAfterChange() {
+    await refreshProfile(false);
+  }
 
   return (
     <PersonProfileContent
       loading={loading}
       failed={failed}
       viewModel={viewModel}
+      onProfileChanged={refreshProfileAfterChange}
     />
   );
 }

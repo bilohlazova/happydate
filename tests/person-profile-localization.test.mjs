@@ -16,6 +16,17 @@ test("person profile and knowledge labels exist in all locales", async () => {
   }
 });
 
+test("person locales keep only exact timestamped Clipboard success copy", async () => {
+  for (const locale of ["uk", "en", "pl", "ru", "de"]) {
+    const messages = JSON.parse(await readFile(path.join(root, "messages", locale, "person.json"), "utf8"));
+    const audit = messages.profileUi.learningAudit;
+    assert.equal(typeof audit.copyDoneAt, "string");
+    assert.equal(typeof audit.copyLocalOnlyAt, "string");
+    assert.equal("copyDone" in audit, false);
+    assert.equal("copyLocalOnly" in audit, false);
+  }
+});
+
 test("birthday ICU behavior remains complete through shared relationship namespace", async () => {
   for (const locale of locales) {
     const people = await dictionary(locale, "people");

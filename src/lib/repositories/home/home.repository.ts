@@ -6,6 +6,7 @@ import type {
   HomeDataError,
   HomeDataSection,
   HomeMemory,
+  HomePendingGiftOutcome,
   HomePerson,
   HomeProfile,
   HomeRepositoryData,
@@ -73,6 +74,28 @@ async function loadEvents(userId: string): Promise<HomeStoredEvent[]> {
   }));
 }
 
+async function loadPendingGiftOutcomes(userId: string): Promise<HomePendingGiftOutcome[]> {
+  const { data, error } = await supabase
+    .from("gifts")
+    .select("id, person_id, title, occurred_on")
+    .eq("user_id", userId)
+    .eq("lifecycle", "given")
+    .is("recipient_reaction", null)
+    .is("recipient_reaction_follow_up_dismissed_at", null)
+    .or(`recipient_reaction_follow_up_snoozed_until.is.null,recipient_reaction_follow_up_snoozed_until.lte.${new Date().toISOString()}`)
+    .not("person_id", "is", null)
+    .order("occurred_on", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(10);
+  if (error) throw new HomeRepositoryError("gifts", error.message);
+  return (data ?? []).flatMap((gift) => gift.person_id && gift.title?.trim() ? [{
+    id: gift.id,
+    personId: gift.person_id,
+    title: gift.title.trim(),
+    givenAt: gift.occurred_on ?? null,
+  }] : []);
+}
+
 async function loadKnowledge(userId: string): Promise<{
   knowledge: KnowledgeItem[];
   memories: HomeMemory[];
@@ -115,16 +138,18 @@ export async function getHomeRepositoryData(): Promise<HomeRepositoryResult> {
       people: [],
       events: [],
       memories: [],
+      pendingGiftOutcomes: [],
       knowledge: [],
       errors: [],
     };
   }
 
-  const [profileResult, peopleResult, eventsResult, knowledgeResult] = await Promise.all([
+  const [profileResult, peopleResult, eventsResult, knowledgeResult, giftsResult] = await Promise.all([
     loadProfile(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadPeople(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadEvents(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadKnowledge(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
+    loadPendingGiftOutcomes(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
   ]);
 
   const errors: HomeDataError[] = [];
@@ -132,6 +157,7 @@ export async function getHomeRepositoryData(): Promise<HomeRepositoryResult> {
   if (!peopleResult.ok) errors.push(errorFrom(peopleResult.reason, "people"));
   if (!eventsResult.ok) errors.push(errorFrom(eventsResult.reason, "events"));
   if (!knowledgeResult.ok) errors.push(errorFrom(knowledgeResult.reason, "memories"));
+  if (!giftsResult.ok) errors.push(errorFrom(giftsResult.reason, "gifts"));
 
   return {
     userId: user.id,
@@ -145,6 +171,7 @@ export async function getHomeRepositoryData(): Promise<HomeRepositoryResult> {
     people: peopleResult.ok ? peopleResult.value : [],
     events: eventsResult.ok ? eventsResult.value : [],
     memories: knowledgeResult.ok ? knowledgeResult.value.memories : [],
+    pendingGiftOutcomes: giftsResult.ok ? giftsResult.value : [],
     knowledge: knowledgeResult.ok ? knowledgeResult.value.knowledge : [],
     errors,
   };

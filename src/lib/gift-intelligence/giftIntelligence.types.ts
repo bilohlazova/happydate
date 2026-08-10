@@ -1,5 +1,5 @@
 import type { PersonGender, PersonRelationKey } from "../repositories/person.types.ts";
-import type { GiftLifecycle } from "../gifts/gift.types.ts";
+import type { GiftLifecycle, GiftOutcomeValue } from "../gifts/gift.types.ts";
 
 export const GIFT_INTELLIGENCE_MISSING_SIGNALS = [
   "missing_person",
@@ -73,6 +73,31 @@ export interface GiftIntelligenceGiftInput {
   sourceKnowledgeId?: string | null;
 }
 
+export interface GiftOutcomeLearningEvidence {
+  giftId: string;
+  giftTitle: string;
+  outcome: GiftOutcomeValue;
+  note: string | null;
+  confirmedAt: string;
+  /** Deterministic derived category; absent before context projection. */
+  category?: GiftRecommendationCategory;
+}
+
+export type GiftOutcomeCategorySignal =
+  | "insufficient"
+  | "conflicted"
+  | "stable_like"
+  | "stable_avoid";
+
+export interface GiftOutcomeLearningSignal extends GiftOutcomeLearningEvidence {
+  category: GiftRecommendationCategory;
+  categorySignal: GiftOutcomeCategorySignal;
+}
+
+export interface GiftRecommendationLearningEvidence extends GiftOutcomeLearningSignal {
+  matchedBy: "text" | "category";
+}
+
 export interface GiftBudgetInput {
   amount: number | null;
   currency: string | null;
@@ -130,6 +155,10 @@ export interface GiftRecommendationContext {
     }>;
     lifecycleCounts: Record<GiftLifecycle, number>;
   };
+  outcomeLearning: {
+    enabled: boolean;
+    evidence: GiftOutcomeLearningSignal[];
+  };
   duplicateAvoidance: {
     previousGiftValues: string[];
   };
@@ -151,6 +180,8 @@ export interface BuildGiftRecommendationContextInput {
   event?: GiftIntelligenceEventInput | null;
   knowledge?: readonly GiftIntelligenceKnowledgeInput[];
   gifts?: readonly GiftIntelligenceGiftInput[];
+  outcomeLearningEnabled?: boolean;
+  confirmedGiftOutcomes?: readonly GiftOutcomeLearningEvidence[];
   budget?: GiftBudgetInput | null;
   locale: string;
   currentDate?: Date;
@@ -214,6 +245,7 @@ export interface GiftRecommendationSuggestion {
   currency: string | null;
   personalizationSignals: GiftPersonalizationSignal[];
   cautions: GiftRecommendationCaution[];
+  learningEvidence?: GiftRecommendationLearningEvidence[];
 }
 
 export interface GiftRecommendationAiResponse {

@@ -57,7 +57,8 @@
     "savedPreference": "Zu {name} ist ein wichtiger Hinweis gespeichert: {value}.",
     "giftOffer": "Wenn du möchtest, helfe ich dir, ein Geschenk für {name} vorzubereiten.",
     "giftQuestion": "Der wichtige Termin für {name} rückt näher. Möchtest du Hilfe bei der Geschenkauswahl?",
-    "preferenceQuestion": "Für den wichtigen Termin von {name} bleibt noch Zeit. Möchtest du eine aktuelle Vorliebe ergänzen?"
+    "preferenceQuestion": "Für den wichtigen Termin von {name} bleibt noch Zeit. Möchtest du eine aktuelle Vorliebe ergänzen?",
+    "postGiftQuestion": "Das Geschenk „{gift}“ wurde {name} bereits überreicht. Möchtest du sagen, ob es gut angekommen ist?"
   },
   "featured": {
     "importantLabel": "Nächstes wichtiges Datum",
@@ -95,7 +96,33 @@
     "addContextTitle": "Informationen zur Person ergänzen",
     "addContextDescription": "Einige Vorlieben von {name} helfen bei der Vorbereitung.",
     "memoriesTitle": "Gemeinsame Erinnerungen ansehen",
-    "memoriesDescription": "Du hast {count} gespeicherte Erinnerungen."
+    "memoriesDescription": "Du hast {count} gespeicherte Erinnerungen.",
+    "giftOutcomeTitle": "Hat {name} das Geschenk gefallen?",
+    "giftOutcomeDescription": "Sag Happy, wie „{gift}“ angekommen ist. Happy merkt sich nur deine Antwort.",
+    "giftOutcomeAnswerLabel": "Wie kam das Geschenk an?",
+    "giftOutcomeLiked": "Es hat gefallen",
+    "giftOutcomeNotLiked": "Es hat nicht gefallen",
+    "giftOutcomeUnsure": "Schwer zu sagen",
+    "giftOutcomeSaved": "Antwort gespeichert: {outcome}.",
+    "giftOutcomeValue": {
+      "liked": "es hat gefallen",
+      "not_liked": "es hat nicht gefallen",
+      "unsure": "schwer zu sagen"
+    },
+    "giftOutcomeUndo": "Rückgängig",
+    "giftOutcomeUndoing": "Wird rückgängig gemacht…",
+    "giftOutcomeUndoError": "Die Antwort konnte nicht rückgängig gemacht werden. Bitte erneut versuchen.",
+    "giftOutcomeAddNote": "Notiz hinzufügen",
+    "giftOutcomeNoteLabel": "Was soll Happy über die Reaktion speichern?",
+    "giftOutcomeNotePlaceholder": "Zum Beispiel: Mama mochte besonders die Farbe…",
+    "giftOutcomeSaveNote": "Notiz speichern",
+    "giftOutcomeSavingNote": "Wird gespeichert…",
+    "giftOutcomeSkipNote": "Nicht jetzt",
+    "giftOutcomeNoteError": "Die Notiz konnte nicht gespeichert werden. Die Antwort ist bereits gespeichert — bitte erneut versuchen.",
+    "giftOutcomeNoteCount": "{count}/500",
+    "giftOutcomeSnooze": "In 3 Tagen erinnern",
+    "giftOutcomeDismiss": "Nicht mehr nach diesem Geschenk fragen",
+    "giftOutcomeActionError": "Die Auswahl konnte nicht gespeichert werden. Bitte erneut versuchen."
   },
   "empty": {
     "title": "Beginne mit einer wichtigen Person oder einem Ereignis",

@@ -57,7 +57,8 @@
     "savedPreference": "You saved a useful detail about {name}: {value}.",
     "giftOffer": "If you want, I can help you prepare a gift for {name}.",
     "giftQuestion": "The important date for {name} is getting close. Would you like help choosing a gift?",
-    "preferenceQuestion": "There is time to prepare for {name}'s important date. Would you like to add one current preference?"
+    "preferenceQuestion": "There is time to prepare for {name}'s important date. Would you like to add one current preference?",
+    "postGiftQuestion": "The gift “{gift}” has been given to {name}. Would you like to say whether they liked it?"
   },
   "featured": {
     "importantLabel": "Nearest important date",
@@ -95,7 +96,33 @@
     "addContextTitle": "Add information about this person",
     "addContextDescription": "A few preferences for {name} will help you prepare.",
     "memoriesTitle": "Revisit shared memories",
-    "memoriesDescription": "You have {count} saved memories."
+    "memoriesDescription": "You have {count} saved memories.",
+    "giftOutcomeTitle": "Did {name} like the gift?",
+    "giftOutcomeDescription": "Tell Happy how “{gift}” was received. Happy will remember only your answer.",
+    "giftOutcomeAnswerLabel": "How was the gift received?",
+    "giftOutcomeLiked": "They liked it",
+    "giftOutcomeNotLiked": "They did not like it",
+    "giftOutcomeUnsure": "Hard to tell",
+    "giftOutcomeSaved": "Answer saved: {outcome}.",
+    "giftOutcomeValue": {
+      "liked": "they liked it",
+      "not_liked": "they did not like it",
+      "unsure": "hard to tell"
+    },
+    "giftOutcomeUndo": "Undo",
+    "giftOutcomeUndoing": "Undoing…",
+    "giftOutcomeUndoError": "Could not undo the answer. Try again.",
+    "giftOutcomeAddNote": "Add a note",
+    "giftOutcomeNoteLabel": "What should Happy remember about the reaction?",
+    "giftOutcomeNotePlaceholder": "For example: Mum especially liked the colour…",
+    "giftOutcomeSaveNote": "Save note",
+    "giftOutcomeSavingNote": "Saving…",
+    "giftOutcomeSkipNote": "Not now",
+    "giftOutcomeNoteError": "Could not save the note. Your answer is already saved — try again.",
+    "giftOutcomeNoteCount": "{count}/500",
+    "giftOutcomeSnooze": "Remind me in 3 days",
+    "giftOutcomeDismiss": "Do not ask about this gift",
+    "giftOutcomeActionError": "Could not save your choice. Try again."
   },
   "empty": {
     "title": "Start with an important person or event",

@@ -18,7 +18,7 @@ import type {
 } from "@/lib/gift-discovery";
 import type { HappyLearningDetectionCandidate } from "@/lib/happy-learning/happyLearningDetectV2.types";
 import { confirmHappyLearningCandidateWithSession } from "@/lib/happy-learning/happyLearningClient";
-import { createPersonGiftIdea } from "@/lib/gifts/gift.loaders";
+import { createPersonGiftIdea, loadGiftWorkspace } from "@/lib/gifts/gift.loaders";
 import type { GiftWorkspaceViewModel } from "@/lib/gifts/gift.types";
 import {
   requestGiftRecommendations,
@@ -77,6 +77,8 @@ export default function GiftStartPage({
   const [savingSuggestionKey, setSavingSuggestionKey] = useState<string | null>(null);
   const [savedSuggestionKeys, setSavedSuggestionKeys] = useState<string[]>([]);
   const [suggestionSaveErrorKey, setSuggestionSaveErrorKey] = useState<string | null>(null);
+  const [liveWorkspace, setLiveWorkspace] = useState<GiftWorkspaceViewModel | null>(workspace);
+  const [workspaceRefreshFailed, setWorkspaceRefreshFailed] = useState(false);
   const [discoveryAnswers, setDiscoveryAnswers] = useState<GiftDiscoveryAnswers>({});
   const [skippedDiscoveryQuestions, setSkippedDiscoveryQuestions] = useState<string[]>([]);
   const [dismissedMemoryCandidateIds, setDismissedMemoryCandidateIds] = useState<string[]>([]);
@@ -89,6 +91,10 @@ export default function GiftStartPage({
   const requestSequenceRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const personId = sp.get("personId");
+
+  useEffect(() => {
+    setLiveWorkspace(workspace);
+  }, [workspace]);
 
   // ініціалізація форми один раз
   const [form, setForm] = useState<FormState>(() => ({
@@ -409,6 +415,12 @@ export default function GiftStartPage({
     try {
       await createPersonGiftIdea(personId, title, form.eventId);
       setSavedSuggestionKeys((current) => [...new Set([...current, key])]);
+      try {
+        setLiveWorkspace(await loadGiftWorkspace());
+        setWorkspaceRefreshFailed(false);
+      } catch {
+        setWorkspaceRefreshFailed(true);
+      }
     } catch {
       setSuggestionSaveErrorKey(key);
     } finally {
@@ -432,7 +444,7 @@ export default function GiftStartPage({
           </p>
         </header>
 
-        <GiftWorkspacePanel workspace={workspace} hasError={workspaceError} />
+        <GiftWorkspacePanel workspace={liveWorkspace} hasError={workspaceError || workspaceRefreshFailed} />
 
         {personId && (
           <section className={`${MobileUI.card} mb-4 border-white/60 bg-white/80 p-4 backdrop-blur`}>
@@ -495,7 +507,7 @@ export default function GiftStartPage({
                   >
                     {recommendations.suggestions.map((suggestion) => {
                       const suggestionKey = recommendationKey(suggestion.title, suggestion.category);
-                      const alreadyPersisted = workspace?.activeIdeas.some((gift) =>
+                      const alreadyPersisted = liveWorkspace?.activeIdeas.some((gift) =>
                         gift.personId === personId && gift.title.trim().toLocaleLowerCase(locale) === suggestion.title.trim().toLocaleLowerCase(locale)
                       ) ?? false;
                       const isSaved = alreadyPersisted || savedSuggestionKeys.includes(suggestionKey);

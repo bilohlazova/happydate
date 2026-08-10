@@ -13,12 +13,13 @@ const briefing = {
     { id: "u", kind: "upcoming", text: "Birthday soon.", sourceIds: ["event"] },
     { id: "c", kind: "person-context", text: "Saved flowers.", sourceIds: ["memory"] },
     { id: "q", kind: "care-question", text: "Need help?", sourceIds: ["event"] },
+    { id: "p", kind: "post-gift-question", text: "Did they like it?", sourceIds: ["gift"] },
   ],
 };
 
 test("short mode keeps only essential timing while detailed mode includes context and care", () => {
   assert.equal(briefingTextForMode(briefing, "short"), "Hello. Nothing today. Birthday soon.");
-  assert.equal(briefingTextForMode(briefing, "detailed"), "Hello. Nothing today. Birthday soon. Saved flowers. Need help?");
+  assert.equal(briefingTextForMode(briefing, "detailed"), "Hello. Nothing today. Birthday soon. Saved flowers. Need help? Did they like it?");
 });
 
 test("Home mode control is user-selected, persistent and stops current playback before switching", async () => {

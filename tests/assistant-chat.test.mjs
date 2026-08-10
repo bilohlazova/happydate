@@ -326,6 +326,47 @@ test("streaming response reuses history and emits provider chunks", async () => 
   assert.equal(capturedMessages.at(-1).content, "Pomóż mi zaplanować dzień");
 });
 
+test("server-verified gift outcomes are appended as a separate system boundary", async () => {
+  let capturedMessages;
+  const response = await createAssistantChatResponse(
+    validRequest(),
+    async (messages) => {
+      capturedMessages = messages;
+      return (async function* () { yield "ok"; })();
+    },
+    {
+      serverGiftOutcomes: [{
+        giftTitle: "Coffee set",
+        outcome: "liked",
+        note: "Used every morning",
+        confirmedAt: "2026-08-08T12:00:00Z",
+        category: "food_drink",
+        categorySignal: "insufficient",
+      }],
+    },
+  );
+  assert.equal(await response.text(), "ok");
+  const outcomeMessage = capturedMessages.find((item) =>
+    item.role === "system" && item.content.includes("GIFT OUTCOMES FOR ACTIVE PERSON"),
+  );
+  assert.match(outcomeMessage.content, /Coffee set — liked/);
+  assert.doesNotMatch(outcomeMessage.content, /confirmedAt|2026-08-08/);
+});
+
+test("gift outcome loader is server-only, consent-aware and owner-scoped", async () => {
+  const loader = await readFile(new URL("../src/lib/assistant/giftOutcomeContext.server.ts", import.meta.url), "utf8");
+  const route = await readFile(new URL("../src/app/api/ai-chat/route.ts", import.meta.url), "utf8");
+  assert.match(loader, /gift_outcome_learning_enabled/);
+  assert.match(loader, /profile\?\.gift_outcome_learning_enabled === false/);
+  assert.match(loader, /\.eq\("user_id", userId\)/);
+  assert.match(loader, /\.eq\("person_id", personId\)/);
+  assert.match(loader, /\.eq\("lifecycle", "given"\)/);
+  assert.match(loader, /ASSISTANT_GIFT_OUTCOME_LIMIT/);
+  assert.match(route, /identity\.userId/);
+  assert.match(route, /personResolutionStatus === "resolved"/);
+  assert.match(route, /serverGiftOutcomes: giftOutcomes/);
+});
+
 test("provider startup failure returns a safe 503", async () => {
   const response = await createAssistantChatResponse(validRequest(), async () => {
     throw new Error("private provider details");

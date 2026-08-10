@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildHomeViewModel } from "../src/lib/home/buildHomeViewModel.ts";
+import { briefingTextForMode } from "../src/lib/home/buildDailyBriefing.ts";
 
 const messages = {
   "greeting.named": "Cześć, {name}!", "greeting.fallback": "Cześć!", "greeting.subtitle": "Dziś",
@@ -13,6 +14,7 @@ const messages = {
   "recommendations.addGiftTitle": "Add gift", "recommendations.addGiftDescription": "Gift {name}",
   "recommendations.addContextTitle": "Add context", "recommendations.addContextDescription": "Context {name}",
   "recommendations.memoriesTitle": "Memories", "recommendations.memoriesDescription": "{count} memories",
+  "recommendations.giftOutcomeTitle": "Did {name} like it?", "recommendations.giftOutcomeDescription": "How was {gift}?",
   "insights.birthday": "Birthday {name} {countdown}", "insights.event": "{title} {countdown}",
   "insights.savedGifts": "{count} saved", "insights.hasPreferences": "Preferences {name}",
   "brief.intro": "{count} things.", "brief.featured": "{title} {countdown}.",
@@ -24,6 +26,7 @@ const messages = {
   "brief.giftOffer": "I can help with {name}.",
   "brief.giftQuestion": "Choose a gift for {name}?",
   "brief.preferenceQuestion": "Add a preference for {name}?",
+  "brief.postGiftQuestion": "Did {name} like {gift}?",
 };
 const t = (key, values = {}) => Object.entries(values).reduce((value, [name, replacement]) => value.replaceAll(`{${name}}`, String(replacement)), messages[key] ?? key);
 
@@ -108,4 +111,29 @@ test("care question timing asks at most one question only inside preparation win
     people: [{ id: "p1", name: "Ola", birthday: "1990-09-27", relationLabel: "Siostra" }],
   }), "pl", t, new Date(2026, 6, 17));
   assert.equal(distant.assistantActions.briefing.sections.some((section) => section.kind === "care-question"), false);
+});
+
+test("Home asks for at most one explicit post-gift outcome and stops after confirmation", () => {
+  const pending = buildHomeViewModel(data({
+    people: [{ id: "p1", name: "Ola", birthday: "1990-07-20", relationLabel: "Siostra" }],
+    pendingGiftOutcomes: [
+      { id: "new", personId: "p1", title: "Album", givenAt: "2026-07-17" },
+      { id: "old", personId: "p1", title: "Flowers", givenAt: "2026-07-16" },
+    ],
+  }), "pl", t, new Date(2026, 6, 17));
+  const prompts = pending.recommendations.filter((item) => item.id.startsWith("gift-outcome-"));
+  assert.equal(prompts.length, 1);
+  assert.equal(prompts[0].id, "gift-outcome-new");
+  assert.equal(prompts[0].href, "/people/p1#gift-workspace");
+  assert.match(prompts[0].description, /Album/);
+  const detailed = pending.assistantActions.briefing;
+  assert.equal(detailed.sections.filter((section) => section.kind.endsWith("question")).length, 1);
+  assert.match(detailed.text, /Did Ola like Album/);
+  assert.doesNotMatch(briefingTextForMode(detailed, "short"), /Album|Did Ola like/);
+
+  const answered = buildHomeViewModel(data({
+    people: [{ id: "p1", name: "Ola", birthday: null, relationLabel: "Siostra" }],
+    pendingGiftOutcomes: [],
+  }), "pl", t, new Date(2026, 6, 17));
+  assert.equal(answered.recommendations.some((item) => item.id.startsWith("gift-outcome-")), false);
 });

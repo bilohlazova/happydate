@@ -5,6 +5,7 @@ import { parseAssistantChatRequest } from "@/lib/assistant/chatContract";
 import { getAssistantRequestIdentity } from "@/lib/assistant/chatIdentity";
 import { createConfiguredAssistantRateLimiter } from "@/lib/assistant/rateLimiter";
 import { createAssistantChatResponse, type AssistantProviderMessage } from "@/lib/assistant/chatServer";
+import { loadAssistantGiftOutcomeContext } from "@/lib/assistant/giftOutcomeContext.server";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "invalid_request" }, { status: 400 });
   }
 
-  if (!parseAssistantChatRequest(body).success) {
+  const parsed = parseAssistantChatRequest(body);
+  if (!parsed.success) {
     return Response.json({ error: "invalid_request" }, { status: 400 });
   }
 
@@ -32,6 +34,15 @@ export async function POST(request: Request) {
   }
 
   const identity = await getAssistantRequestIdentity(request);
+  const giftOutcomes = identity.kind === "authenticated"
+    && identity.userId
+    && parsed.data.context.activePerson
+    && parsed.data.context.personResolutionStatus === "resolved"
+      ? await loadAssistantGiftOutcomeContext({
+          userId: identity.userId,
+          personId: parsed.data.context.activePerson.id,
+        })
+      : [];
   const rateLimiter = createConfiguredAssistantRateLimiter();
   const apiKey = process.env.OPENAI_API_KEY?.trim();
 
@@ -58,6 +69,11 @@ export async function POST(request: Request) {
         }
       })();
     },
-    { signal: request.signal, identity, rateLimiter },
+    {
+      signal: request.signal,
+      identity,
+      rateLimiter,
+      serverGiftOutcomes: giftOutcomes,
+    },
   );
 }

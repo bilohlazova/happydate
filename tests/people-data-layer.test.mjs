@@ -67,6 +67,26 @@ test("profile projection separates likes, dislikes, interests and important fact
   assert.deepEqual(model.importantFacts.map((item) => item.value), ["Ma kota"]);
 });
 
+test("profile projection carries confirmed source evidence without changing user values", () => {
+  const model = buildPersonProfileViewModel({
+    person: person(),
+    knowledge: [knowledge({
+      value: "Fotografia",
+      classification: { confidence: null, classifierVersion: "v2", classifiedAt: "2026-08-09T12:00:00Z", userConfirmed: true },
+      evidence: { sourceKind: "chat_message", sourceId: "candidate-1", originalText: "Anna lubi fotografię", capturedAt: "2026-08-09T12:00:00Z" },
+    })],
+  });
+  assert.deepEqual(model.likes[0], {
+    id: "knowledge-1",
+    value: "Fotografia",
+    category: "interest",
+    sourceKind: "chat_message",
+    userConfirmed: true,
+    sourceExcerpt: "Anna lubi fotografię",
+    capturedAt: "2026-08-09T12:00:00Z",
+  });
+});
+
 test("only an explicitly confirmed given gift enters history and timeline", () => {
   const confirmed = { confidence: 1, classifierVersion: null, classifiedAt: null, userConfirmed: true };
   const model = buildPersonProfileViewModel({
@@ -87,6 +107,49 @@ test("only an explicitly confirmed given gift enters history and timeline", () =
   assert.equal(JSON.stringify(model).includes("Niepewny"), false);
 });
 
+test("canonical Gift lifecycle appears in profile collections and timeline", () => {
+  const model = buildPersonProfileViewModel({
+    person: person(),
+    knowledge: [],
+    gifts: [
+      { id: "idea", lifecycle: "idea", personId: "person-1", eventId: null, title: "Kindle", value: "Kindle", occurredOn: null, createdAt: "2026-08-01T10:00:00Z", sourceKnowledgeId: null, finalSelection: null, finalOutcome: null },
+      { id: "given", lifecycle: "given", personId: "person-1", eventId: null, title: "Flowers", value: "Flowers", occurredOn: "2026-08-02", createdAt: "2026-08-01T10:00:00Z", sourceKnowledgeId: null, finalSelection: null, finalOutcome: { value: "liked", note: "She smiled", confirmedAt: "2026-08-03T09:00:00Z", learningEnabled: false } },
+    ],
+  });
+  assert.deepEqual(model.giftIdeas.map((item) => item.value), ["Kindle"]);
+  assert.deepEqual(model.giftHistory.map((item) => item.value), ["Flowers"]);
+  assert.deepEqual(model.timeline.map((item) => item.kind), ["gift_given", "gift_idea"]);
+  assert.deepEqual(model.confirmedGiftOutcomes, [{ giftId: "given", giftTitle: "Flowers", outcome: "liked", note: "She smiled", confirmedAt: "2026-08-03T09:00:00Z", learningEnabled: false, aiEligible: false, category: "other", learningSignal: "history_only" }]);
+  assert.equal(model.health?.missingAreas.some((item) => item.id === "giftIdea"), false);
+});
+
+test("Person profile exposes conservative gift learning strength", () => {
+  const model = buildPersonProfileViewModel({
+    person: person(),
+    knowledge: [],
+    gifts: [
+      { id: "one", lifecycle: "given", personId: "person-1", eventId: null, title: "Tulip bouquet", value: "Tulip bouquet", occurredOn: "2026-08-01", createdAt: "2026-08-01T10:00:00Z", sourceKnowledgeId: null, finalSelection: null, finalOutcome: { value: "liked", note: null, confirmedAt: "2026-08-02T09:00:00Z", learningEnabled: true } },
+      { id: "two", lifecycle: "given", personId: "person-1", eventId: null, title: "Rose bouquet", value: "Rose bouquet", occurredOn: "2026-08-03", createdAt: "2026-08-03T10:00:00Z", sourceKnowledgeId: null, finalSelection: null, finalOutcome: { value: "liked", note: null, confirmedAt: "2026-08-04T09:00:00Z", learningEnabled: true } },
+    ],
+  });
+  assert.deepEqual(model.confirmedGiftOutcomes.map((item) => item.learningSignal), ["stable_like", "stable_like"]);
+});
+
+test("profile-level consent overrides per-Gift learning without deleting history", () => {
+  const gift = { id: "one", lifecycle: "given", personId: "person-1", eventId: null, title: "Tulip bouquet", value: "Tulip bouquet", occurredOn: "2026-08-01", createdAt: "2026-08-01T10:00:00Z", sourceKnowledgeId: null, finalSelection: null, finalOutcome: { value: "liked", note: "Loved the colours", confirmedAt: "2026-08-02T09:00:00Z", learningEnabled: true } };
+  const model = buildPersonProfileViewModel({
+    person: person(),
+    knowledge: [],
+    gifts: [gift],
+    giftOutcomeLearningEnabled: false,
+  });
+  assert.equal(model.giftOutcomeLearningEnabled, false);
+  assert.equal(model.confirmedGiftOutcomes[0].learningEnabled, true);
+  assert.equal(model.confirmedGiftOutcomes[0].aiEligible, false);
+  assert.equal(model.confirmedGiftOutcomes[0].learningSignal, "history_only");
+  assert.equal(model.confirmedGiftOutcomes[0].note, "Loved the colours");
+});
+
 test("Person Health uses the six approved areas and never sizes", () => {
   const model = buildPersonProfileViewModel({ person: person({ birthday: null }), knowledge: [] });
   assert.deepEqual(model.health?.missingAreas.map((item) => item.id), [
@@ -103,6 +166,16 @@ test("AI-ineligible knowledge cannot influence Person Brain insights", () => {
     currentDate: new Date(2026, 6, 18),
   });
   assert.equal(JSON.stringify(model.brainInsights).includes("SECRET"), false);
+});
+
+test("archived knowledge is privately projected but excluded from active profile and Brain", () => {
+  const model = buildPersonProfileViewModel({
+    person: person(),
+    knowledge: [knowledge({ id: "archived-fact", state: "archived", value: "Nieaktualny fakt", aiEligible: false })],
+  });
+  assert.deepEqual(model.archivedKnowledge.map((item) => item.value), ["Nieaktualny fakt"]);
+  assert.equal(model.likes.length, 0);
+  assert.equal(JSON.stringify(model.brainInsights).includes("Nieaktualny fakt"), false);
 });
 
 test("Stage 6.1 dependency and ownership guards protect production loaders", async () => {

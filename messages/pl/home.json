@@ -57,7 +57,8 @@
     "savedPreference": "Masz zapisaną ważną wskazówkę o {name}: {value}.",
     "giftOffer": "Jeśli chcesz, pomogę przygotować prezent dla {name}.",
     "giftQuestion": "Ważna data dla {name} jest już blisko. Chcesz, żebym pomógł wybrać prezent?",
-    "preferenceQuestion": "Jest jeszcze czas, by przygotować się do ważnej daty dla {name}. Chcesz dodać jedną aktualną preferencję?"
+    "preferenceQuestion": "Jest jeszcze czas, by przygotować się do ważnej daty dla {name}. Chcesz dodać jedną aktualną preferencję?",
+    "postGiftQuestion": "Prezent „{gift}” został już wręczony {name}. Chcesz powiedzieć, czy się spodobał?"
   },
   "featured": {
     "importantLabel": "Najbliższa ważna data",
@@ -95,7 +96,33 @@
     "addContextTitle": "Dodaj informacje o osobie",
     "addContextDescription": "Kilka upodobań {name} pomoże lepiej przygotować się do daty.",
     "memoriesTitle": "Wróć do wspólnych wspomnień",
-    "memoriesDescription": "Masz {count} zapisane wspomnienia."
+    "memoriesDescription": "Masz {count} zapisane wspomnienia.",
+    "giftOutcomeTitle": "Czy prezent spodobał się {name}?",
+    "giftOutcomeDescription": "Powiedz, jak przyjęto „{gift}”. Happy zapamięta tylko Twoją odpowiedź.",
+    "giftOutcomeAnswerLabel": "Jak przyjęto prezent?",
+    "giftOutcomeLiked": "Spodobał się",
+    "giftOutcomeNotLiked": "Nie spodobał się",
+    "giftOutcomeUnsure": "Trudno powiedzieć",
+    "giftOutcomeSaved": "Odpowiedź zapisana: {outcome}.",
+    "giftOutcomeValue": {
+      "liked": "spodobał się",
+      "not_liked": "nie spodobał się",
+      "unsure": "trudno powiedzieć"
+    },
+    "giftOutcomeUndo": "Cofnij",
+    "giftOutcomeUndoing": "Cofanie…",
+    "giftOutcomeUndoError": "Nie udało się cofnąć odpowiedzi. Spróbuj ponownie.",
+    "giftOutcomeAddNote": "Dodaj notatkę",
+    "giftOutcomeNoteLabel": "Co Happy ma zapamiętać o reakcji?",
+    "giftOutcomeNotePlaceholder": "Na przykład: mamie szczególnie spodobał się kolor…",
+    "giftOutcomeSaveNote": "Zapisz notatkę",
+    "giftOutcomeSavingNote": "Zapisywanie…",
+    "giftOutcomeSkipNote": "Nie teraz",
+    "giftOutcomeNoteError": "Nie udało się zapisać notatki. Odpowiedź jest już zapisana — spróbuj ponownie.",
+    "giftOutcomeNoteCount": "{count}/500",
+    "giftOutcomeSnooze": "Przypomnij za 3 dni",
+    "giftOutcomeDismiss": "Nie pytaj o ten prezent",
+    "giftOutcomeActionError": "Nie udało się zapisać wyboru. Spróbuj ponownie."
   },
   "empty": {
     "title": "Zacznij od ważnej osoby lub wydarzenia",

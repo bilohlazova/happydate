@@ -19,7 +19,8 @@ test("recommendation save is guarded against repeated clicks and reports result"
   assert.match(page, /if \(savingSuggestionKey \|\| savedSuggestionKeys\.includes\(key\)\) return/);
   assert.match(page, /disabled=\{isSaved \|\| savingSuggestionKey !== null\}/);
   assert.match(page, /suggestionSaveErrorKey === suggestionKey/);
-  assert.match(page, /workspace\?\.activeIdeas\.some/);
+  assert.match(page, /liveWorkspace\?\.activeIdeas\.some/);
+  assert.match(page, /setLiveWorkspace\(await loadGiftWorkspace\(\)\)/);
 });
 
 test("recommendation save copy has exact locale parity", async () => {

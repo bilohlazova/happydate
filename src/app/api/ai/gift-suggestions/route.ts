@@ -24,6 +24,7 @@ import {
   buildGiftRecommendationContext,
   buildGiftRecommendationInstructions,
   buildGiftRepairInstructions,
+  applyGiftOutcomeRecommendationPolicy,
   giftRecommendationJsonSchema,
   mapSuggestionsToLegacyIdeas,
   validateGiftRecommendations,
@@ -134,7 +135,10 @@ export async function POST(req: Request) {
     }
     const ownedPerson = access.person;
 
-    const cached = hasDiscoverySessionInput
+    const { person, knowledge, outcomeLearningEnabled, confirmedGiftOutcomes } =
+      await loadGiftIntelligenceSource(ownedPerson);
+    const usesOutcomeLearning = outcomeLearningEnabled && confirmedGiftOutcomes.length > 0;
+    const cached = hasDiscoverySessionInput || usesOutcomeLearning
       ? null
       : await getCachedGiftIdeas(ownedPerson, occasion);
 
@@ -147,7 +151,6 @@ export async function POST(req: Request) {
 
     /* ================= LOAD PERSON ================= */
 
-    const { person, knowledge } = await loadGiftIntelligenceSource(ownedPerson);
     const baseGiftRecommendationContext = buildGiftRecommendationContext({
       person: {
         id: person.id,
@@ -165,6 +168,8 @@ export async function POST(req: Request) {
       },
       knowledge,
       gifts: mapKnowledgeToGifts(knowledge),
+      outcomeLearningEnabled,
+      confirmedGiftOutcomes,
       budget: body.budget ? {
         amount: typeof body.budget.amount === "number" ? body.budget.amount : null,
         currency: typeof body.budget.currency === "string" ? body.budget.currency : null,
@@ -223,6 +228,14 @@ export async function POST(req: Request) {
       );
       validated = repairedValidated;
     }
+    validated = {
+      ...validated,
+      suggestions: applyGiftOutcomeRecommendationPolicy(
+        validated.suggestions,
+        giftRecommendationContext.outcomeLearning.evidence,
+        giftRecommendationContext.outcomeLearning.enabled,
+      ),
+    };
     const legacyIdeas = mapSuggestionsToLegacyIdeas(validated.suggestions);
     const legacyMemoryCandidates = buildMemoryCaptureCandidates({
       context: giftRecommendationContext,

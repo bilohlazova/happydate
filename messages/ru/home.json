@@ -57,7 +57,8 @@
     "savedPreference": "О {name} сохранена важная подсказка: {value}.",
     "giftOffer": "Если хочешь, я помогу подготовить подарок для {name}.",
     "giftQuestion": "До важной даты для {name} осталось немного времени. Хочешь, я помогу подобрать подарок?",
-    "preferenceQuestion": "Есть время подготовиться к важной дате для {name}. Хочешь добавить одно актуальное предпочтение?"
+    "preferenceQuestion": "Есть время подготовиться к важной дате для {name}. Хочешь добавить одно актуальное предпочтение?",
+    "postGiftQuestion": "Подарок «{gift}» для {name} уже вручён. Хочешь рассказать, понравился ли он?"
   },
   "featured": {
     "importantLabel": "Ближайшая важная дата",
@@ -95,7 +96,33 @@
     "addContextTitle": "Добавь информацию о человеке",
     "addContextDescription": "Несколько предпочтений {name} помогут подготовиться к дате.",
     "memoriesTitle": "Вернись к общим воспоминаниям",
-    "memoriesDescription": "У тебя есть {count} сохранённые воспоминания."
+    "memoriesDescription": "У тебя есть {count} сохранённые воспоминания.",
+    "giftOutcomeTitle": "Понравился ли подарок {name}?",
+    "giftOutcomeDescription": "Расскажи, как восприняли подарок «{gift}». Happy запомнит только твой ответ.",
+    "giftOutcomeAnswerLabel": "Как восприняли подарок?",
+    "giftOutcomeLiked": "Понравился",
+    "giftOutcomeNotLiked": "Не понравился",
+    "giftOutcomeUnsure": "Трудно сказать",
+    "giftOutcomeSaved": "Ответ сохранён: {outcome}.",
+    "giftOutcomeValue": {
+      "liked": "понравился",
+      "not_liked": "не понравился",
+      "unsure": "трудно сказать"
+    },
+    "giftOutcomeUndo": "Отменить",
+    "giftOutcomeUndoing": "Отменяем…",
+    "giftOutcomeUndoError": "Не удалось отменить ответ. Попробуй ещё раз.",
+    "giftOutcomeAddNote": "Добавить заметку",
+    "giftOutcomeNoteLabel": "Что Happy стоит запомнить о реакции?",
+    "giftOutcomeNotePlaceholder": "Например: маме особенно понравился цвет…",
+    "giftOutcomeSaveNote": "Сохранить заметку",
+    "giftOutcomeSavingNote": "Сохраняем…",
+    "giftOutcomeSkipNote": "Не сейчас",
+    "giftOutcomeNoteError": "Не удалось сохранить заметку. Ответ уже сохранён — попробуй ещё раз.",
+    "giftOutcomeNoteCount": "{count}/500",
+    "giftOutcomeSnooze": "Напомнить через 3 дня",
+    "giftOutcomeDismiss": "Не спрашивать об этом подарке",
+    "giftOutcomeActionError": "Не удалось сохранить выбор. Попробуй ещё раз."
   },
   "empty": {
     "title": "Начни с важного человека или события",

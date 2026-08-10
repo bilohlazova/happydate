@@ -62,6 +62,8 @@ test("valid owned new candidate persists only token-bound user data", async () =
   assert.deepEqual(saved, {
     userId: "user-1", personId: "person-1", legacyType: "interest", title: "interest", value: "Fishing",
     content: "Ivan likes fishing", source: "chat_message", importance: 1, aiTags: ["interest", "like"],
+    sourceRecordId: "happy-learning:abc", sourceExcerpt: "Ivan likes fishing",
+    userConfirmedAt: new Date(NOW + 1_000).toISOString(), captureSchemaVersion: "happy-learning-detection-v2",
   });
 });
 

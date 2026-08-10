@@ -42,6 +42,7 @@ export function GiftRecommendationCard({
   const locale = useLocale();
   const signalsTitleId = useId();
   const cautionsTitleId = useId();
+  const evidenceTitleId = useId();
   const price = formatGiftRecommendationPrice(
     suggestion.estimatedPrice,
     suggestion.currency,
@@ -135,6 +136,28 @@ export function GiftRecommendationCard({
               >
                 <span aria-hidden="true">{GIFT_RECOMMENDATION_SIGNAL_ICONS[signal]}</span>
                 {t(giftRecommendationSignalKey(signal))}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {suggestion.learningEvidence && suggestion.learningEvidence.length > 0 && (
+        <section
+          className="mt-4 rounded-2xl bg-emerald-50/80 p-3 ring-1 ring-emerald-100 dark:bg-emerald-400/10 dark:ring-emerald-400/20"
+          aria-labelledby={evidenceTitleId}
+        >
+          <h4 id={evidenceTitleId} className="text-xs font-black uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-200">
+            {t("learningEvidenceTitle")}
+          </h4>
+          <ul className="mt-2 space-y-2">
+            {suggestion.learningEvidence.map((evidence) => (
+              <li key={evidence.giftId} className="text-sm font-semibold text-emerald-950 dark:text-emerald-50">
+                {t(`learningOutcomes.${evidence.outcome}`, { gift: evidence.giftTitle })}
+                <span className="ml-1 text-xs font-medium opacity-75">
+                  · {t(`learningMatch.${evidence.matchedBy}`)}
+                </span>
+                {evidence.note ? <span className="block text-xs font-medium opacity-80">“{evidence.note}”</span> : null}
               </li>
             ))}
           </ul>

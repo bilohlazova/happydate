@@ -11,6 +11,7 @@ import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import { useLocale, useTranslations } from "next-intl";
 import { isSupportedLocale } from "@/i18n/config";
 import { formatProfileMemberSince } from "@/lib/profile/profilePresentation";
+import { updateGiftOutcomeLearningEnabled } from "@/lib/repositories/profile/giftOutcomeLearning.repository";
 
 /* ═══════════════════════════════════════════════════════════
    PROFILE PAGE — Account Center
@@ -184,7 +185,15 @@ function PersonalDataCard({
 /* ─────────────────────────────────────────
    SETTINGS CARD
 ───────────────────────────────────────── */
-function SettingsCard() {
+function SettingsCard({
+  outcomeLearningEnabled,
+  outcomeLearningBusy,
+  onOutcomeLearningChange,
+}: {
+  outcomeLearningEnabled: boolean;
+  outcomeLearningBusy: boolean;
+  onOutcomeLearningChange: (enabled: boolean) => void;
+}) {
   const translate = useTranslations("profile.settings");
   const rows: SettingRow[] = [
     { icon: "🔔", label: translate("notifications"), value: translate("enabled"), href: "/settings/notifications" },
@@ -208,6 +217,26 @@ function SettingsCard() {
             </Link>
           </li>
         ))}
+        <li>
+          <div className="pr-row">
+            <span className="pr-row__icon">🧠</span>
+            <span className="pr-row__label">
+              {translate("giftLearning.title")}
+              <small className="block text-xs font-medium text-slate-500">{translate("giftLearning.description")}</small>
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={outcomeLearningEnabled}
+              aria-label={translate("giftLearning.title")}
+              disabled={outcomeLearningBusy}
+              onClick={() => onOutcomeLearningChange(!outcomeLearningEnabled)}
+              className={`relative h-7 w-12 shrink-0 rounded-full transition ${outcomeLearningEnabled ? "bg-emerald-500" : "bg-slate-300"}`}
+            >
+              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${outcomeLearningEnabled ? "left-6" : "left-1"}`} />
+            </button>
+          </div>
+        </li>
         <li>
           <LanguageSwitcher isAuthenticated variant="profile" />
         </li>
@@ -285,6 +314,8 @@ export default function ProfilePage() {
   const [points,          setPoints]          = useState(0);
   const [surveyCompleted, setSurveyCompleted] = useState(false);
   const [hasCare,         setHasCare]         = useState(false);
+  const [outcomeLearningEnabled, setOutcomeLearningEnabled] = useState(true);
+  const [outcomeLearningBusy, setOutcomeLearningBusy] = useState(false);
 
   /* ── Capacitor Camera upload hook ────────────────────────── */
   const { state: avatarState, pickAndUpload } = useAvatarUpload({
@@ -317,6 +348,8 @@ export default function ProfilePage() {
 
       const { data: profile } = await supabase
         .from("profiles").select("full_name, avatar_url, points").eq("id", user.id).maybeSingle();
+      const { data: learningPreference } = await supabase
+        .from("profiles").select("gift_outcome_learning_enabled").eq("id", user.id).maybeSingle();
 
       if (!profile) {
         await supabase.from("profiles").insert({ id: user.id, full_name: "", avatar_url: null });
@@ -325,6 +358,7 @@ export default function ProfilePage() {
         setAvatarPath(profile.avatar_url ?? null);
         setPoints(profile.points ?? 0);
       }
+      setOutcomeLearningEnabled(learningPreference?.gift_outcome_learning_enabled !== false);
 
       const [{ data: survey }, { data: sub }] = await Promise.all([
         supabase.from("user_survey").select("is_completed").eq("user_id", user.id).maybeSingle(),
@@ -352,6 +386,23 @@ export default function ProfilePage() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.replace("/");
+  };
+
+  const changeOutcomeLearning = async (enabled: boolean) => {
+    if (outcomeLearningBusy) return;
+    const previous = outcomeLearningEnabled;
+    setOutcomeLearningEnabled(enabled);
+    setOutcomeLearningBusy(true);
+    setMessage(null);
+    try {
+      await updateGiftOutcomeLearningEnabled(enabled);
+      setMessage(translate("states.giftLearningSaved"));
+    } catch {
+      setOutcomeLearningEnabled(previous);
+      setMessage(translate("errors.giftLearningSaveFailed"));
+    } finally {
+      setOutcomeLearningBusy(false);
+    }
   };
 
   const avatarFallback = fullName?.[0]?.toUpperCase() ?? email?.[0]?.toUpperCase() ?? "?";
@@ -382,7 +433,11 @@ export default function ProfilePage() {
         onSubmit={save}
       />
 
-      <SettingsCard />
+      <SettingsCard
+        outcomeLearningEnabled={outcomeLearningEnabled}
+        outcomeLearningBusy={outcomeLearningBusy}
+        onOutcomeLearningChange={changeOutcomeLearning}
+      />
       <SecurityCard />
       <LogoutButton onLogout={handleLogout} />
     </main>

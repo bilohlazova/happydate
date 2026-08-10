@@ -159,12 +159,16 @@ export interface MemoryRow {
   occurred_on: string | null;
   importance: number;
   source: MemorySource;
+  source_record_id: string | null;
+  source_excerpt: string | null;
+  user_confirmed_at: string | null;
+  capture_schema_version: string | null;
   is_active: boolean;
 }
 
 /** Explicit full-row projection shared by canonical client/server repositories. */
 export const MEMORY_ROW_COLUMNS =
-  "id, user_id, person_id, event_id, content_text, audio_url, transcript_text, images, ai_summary, ai_tags, ai_emotional_score, created_at, updated_at, type, title, value_text, occurred_on, importance, source, is_active";
+  "id, user_id, person_id, event_id, content_text, audio_url, transcript_text, images, ai_summary, ai_tags, ai_emotional_score, created_at, updated_at, type, title, value_text, occurred_on, importance, source, source_record_id, source_excerpt, user_confirmed_at, capture_schema_version, is_active";
 
 /**
  * Projection used by the Notes screen. Kept separate from MemoryRow because

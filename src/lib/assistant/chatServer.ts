@@ -2,6 +2,8 @@ import { ASSISTANT_CHAT_CONFIG, type AssistantIdentityKind } from "./chatConfig.
 import type { AssistantChatRequest, AssistantConversationItem } from "./chatContract.ts";
 import { buildAssistantSystemPrompt, formatAssistantContext, parseAssistantChatRequest } from "./chatContract.ts";
 import type { AssistantRateLimiter } from "./rateLimiter.ts";
+import type { AssistantGiftOutcomeContext } from "./giftOutcomeContext.server.ts";
+import { formatAssistantGiftOutcomeContext } from "./chatContract.ts";
 
 export type AssistantProviderMessage = AssistantConversationItem | { role: "system"; content: string };
 export type AssistantTextProvider = (
@@ -38,6 +40,7 @@ type ChatResponseOptions = {
   rateLimiter?: AssistantRateLimiter | null;
   logger?: (message: string, diagnostic?: unknown) => void;
   timeoutMs?: number;
+  serverGiftOutcomes?: readonly AssistantGiftOutcomeContext[];
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -138,9 +141,11 @@ export async function createAssistantChatResponse(
 
   const request: AssistantChatRequest = parsed.data;
   const context = formatAssistantContext(request.context);
+  const giftOutcomeContext = formatAssistantGiftOutcomeContext(options.serverGiftOutcomes ?? []);
   const messages: AssistantProviderMessage[] = [
     { role: "system", content: buildAssistantSystemPrompt(request.locale) },
     ...(context ? [{ role: "system" as const, content: context }] : []),
+    ...(giftOutcomeContext ? [{ role: "system" as const, content: giftOutcomeContext }] : []),
     ...request.conversation,
     { role: "user", content: request.message },
   ];

@@ -52,13 +52,19 @@ export interface PersonKnowledgeValueViewModel {
   id: string;
   value: string;
   category: string | null;
+  sourceKind: string;
+  userConfirmed: boolean;
+  sourceExcerpt: string | null;
+  capturedAt: string | null;
 }
 
 export interface PersonTimelineItemViewModel {
   id: string;
-  kind: "memory" | "gift_given";
+  kind: "memory" | "gift_idea" | "gift_selected" | "gift_purchased" | "gift_given";
   title: string;
   date: string;
+  giftOutcome?: import("@/lib/gifts/gift.types").GiftOutcomeValue;
+  giftOutcomeNote?: string | null;
 }
 
 export interface PersonBrainInsightViewModel {
@@ -68,6 +74,18 @@ export interface PersonBrainInsightViewModel {
   title: string;
   description: string | null;
   actionUrl: string | null;
+}
+
+export interface ConfirmedGiftOutcomeViewModel {
+  giftId: string;
+  giftTitle: string;
+  outcome: import("@/lib/gifts/gift.types").GiftOutcomeValue;
+  note: string | null;
+  confirmedAt: string;
+  learningEnabled: boolean;
+  aiEligible: boolean;
+  category: import("@/lib/gift-intelligence/giftIntelligence.types").GiftRecommendationCategory;
+  learningSignal: import("@/lib/gift-intelligence/giftIntelligence.types").GiftOutcomeCategorySignal | "history_only";
 }
 
 export interface PersonProfileViewModel {
@@ -88,8 +106,12 @@ export interface PersonProfileViewModel {
   giftIdeas: PersonKnowledgeValueViewModel[];
   giftHistory: PersonKnowledgeValueViewModel[];
   importantFacts: PersonKnowledgeValueViewModel[];
+  archivedKnowledge: PersonKnowledgeValueViewModel[];
   timeline: PersonTimelineItemViewModel[];
   brainInsights: PersonBrainInsightViewModel[];
+  confirmedGiftOutcomes: ConfirmedGiftOutcomeViewModel[];
+  giftOutcomeAiPreview: import("@/lib/gift-intelligence/giftOutcomeAiContextPreview").GiftOutcomeAiContextPreviewItem[];
+  giftOutcomeLearningEnabled: boolean;
   health: PersonHealthViewModel | null;
   actions: {
     addMemoryUrl: string | null;

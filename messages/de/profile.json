@@ -14,12 +14,13 @@
   "account": { "title": "Persönliche Daten", "name": "Vor- und Nachname", "namePlaceholder": "Wie heißt du?", "save": "Änderungen speichern", "saving": "Wird gespeichert…" },
   "settings": {
     "title": "Einstellungen", "notifications": "Push-Benachrichtigungen", "enabled": "Aktiviert", "reminders": "Erinnerungen", "threeDaysBefore": "3 Tage vorher", "aiSuggestions": "KI-Vorschläge", "active": "Aktiv",
+    "giftLearning": { "title": "Aus Geschenkreaktionen lernen", "description": "Nur bestätigtes Feedback für zukünftige Ideen verwenden." },
     "language": { "title": "Anwendungssprache", "description": "Wähle die Sprache der HappyDate-Oberfläche." }
   },
   "reminderSettings": { "back": "Zurück zum Profil", "title": "Erinnerungseinstellungen", "description": "Lege fest, wann Happy dich erinnern darf und wie oft eine offene Erinnerung wiederholt wird.", "timezone": "Zeitzone", "quietStart": "Ruhezeit von", "quietEnd": "Ruhezeit bis", "repeat": "Bis zur Erledigung wiederholen", "inApp": "Erinnerungen in der App", "push": "System-Push-Mitteilungen", "pushPermission": "Nach dem Speichern fragt HappyDate nach der Systemberechtigung für Mitteilungen.", "pushNativeOnly": "Push-Mitteilungen können in der mobilen HappyDate-App aktiviert werden.", "save": "Speichern", "saving": "Speichern…", "saved": "Einstellungen gespeichert", "error": "Einstellungen konnten nicht gespeichert werden.", "intervals": { "60": "Stündlich", "180": "Alle 3 Stunden", "360": "Alle 6 Stunden", "720": "Alle 12 Stunden", "1440": "Einmal täglich" } },
   "security": { "title": "Sicherheit und Datenschutz", "changePassword": "Passwort ändern", "activeSessions": "Aktive Sitzungen", "privacy": "Datenschutzerklärung", "exportData": "Daten exportieren", "deleteAccount": "Konto löschen" },
   "actions": { "logout": "Abmelden" },
-  "states": { "saved": "Gespeichert ✅", "avatarSaved": "Foto aktualisiert ✅" },
-  "errors": { "saveFailed": "Die Änderungen konnten nicht gespeichert werden. Bitte versuche es erneut.", "avatarSaveFailed": "Das Foto wurde hochgeladen, aber das Profil konnte nicht aktualisiert werden.", "uploadFailed": "Das Foto konnte nicht hochgeladen werden. Bitte versuche es erneut." },
+  "states": { "saved": "Gespeichert ✅", "avatarSaved": "Foto aktualisiert ✅", "giftLearningSaved": "Lerneinstellung gespeichert ✅" },
+  "errors": { "saveFailed": "Die Änderungen konnten nicht gespeichert werden. Bitte versuche es erneut.", "avatarSaveFailed": "Das Foto wurde hochgeladen, aber das Profil konnte nicht aktualisiert werden.", "uploadFailed": "Das Foto konnte nicht hochgeladen werden. Bitte versuche es erneut.", "giftLearningSaveFailed": "Die Lerneinstellung konnte nicht gespeichert werden." },
   "accessibility": { "pageLabel": "Benutzerprofil", "changeAvatar": "Profilfoto ändern" }
 }

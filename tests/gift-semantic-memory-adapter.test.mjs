@@ -166,6 +166,7 @@ test("GiftRecommendationContext is powered by semantic projection while preservi
     "event",
     "generatedAt",
     "gifts",
+    "outcomeLearning",
     "knowledge",
     "locale",
     "memories",

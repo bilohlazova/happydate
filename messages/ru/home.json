@@ -58,7 +58,8 @@
     "giftOffer": "Если хочешь, я помогу подготовить подарок для {name}.",
     "giftQuestion": "До важной даты для {name} осталось немного времени. Хочешь, я помогу подобрать подарок?",
     "preferenceQuestion": "Есть время подготовиться к важной дате для {name}. Хочешь добавить одно актуальное предпочтение?",
-    "postGiftQuestion": "Подарок «{gift}» для {name} уже вручён. Хочешь рассказать, понравился ли он?"
+    "postGiftQuestion": "Подарок «{gift}» для {name} уже вручён. Хочешь рассказать, понравился ли он?",
+    "knowledgeReviewQuestion": "Я давно не уточнял одну деталь о {name}: «{value}». Она всё ещё актуальна?"
   },
   "featured": {
     "importantLabel": "Ближайшая важная дата",
@@ -99,6 +100,8 @@
     "memoriesDescription": "У тебя есть {count} сохранённые воспоминания.",
     "giftOutcomeTitle": "Понравился ли подарок {name}?",
     "giftOutcomeDescription": "Расскажи, как восприняли подарок «{gift}». Happy запомнит только твой ответ.",
+    "knowledgeReviewTitle": "Уточни одну деталь о {name}",
+    "knowledgeReviewDescription": "Это всё ещё актуально: «{value}»?",
     "giftOutcomeAnswerLabel": "Как восприняли подарок?",
     "giftOutcomeLiked": "Понравился",
     "giftOutcomeNotLiked": "Не понравился",

@@ -135,12 +135,12 @@ export function PeoplePageContent({
   const activeFilterCount = getActiveFilterCount(appliedFilters);
 
   return (
-    <main className={`${MobileUI.screen} ${MobileUI.contentBottom} pt-2.5`}>
-      <div className={`${MobileUI.container} flex flex-col gap-2`}>
+    <main className={`people-page ${MobileUI.screen} ${MobileUI.contentBottom}`}>
+      <div className={`people-page__container ${MobileUI.container} flex flex-col gap-3`}>
         <PeopleHeader />
 
         <div
-          className={`grid gap-2 overflow-hidden transition-all duration-300 ${
+          className={`people-overview grid gap-2 overflow-hidden transition-all duration-300 ${
             compactChrome
               ? "max-h-0 -translate-y-1 opacity-0"
               : "max-h-36 translate-y-0 opacity-100"
@@ -156,7 +156,7 @@ export function PeoplePageContent({
           <HappyRecommendationCard recommendation={recommendation} />
         </div>
 
-        <div className="sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-20 -mx-4 bg-slate-50/95 px-4 py-1 backdrop-blur sm:-mx-5 sm:px-5">
+        <div className="people-search-dock sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-20 -mx-4 px-4 py-2 backdrop-blur sm:-mx-5 sm:px-5">
           <PeopleSearch
             value={query}
             onChange={setQuery}
@@ -299,7 +299,7 @@ function PeopleList({
   t: ReturnType<typeof useTranslations<"people">>;
 }) {
   if (loading) {
-    return <PeopleMessage>{t("states.loading")}</PeopleMessage>;
+    return <PeopleLoadingState label={t("states.loading")} />;
   }
 
   if (peopleCount === 0) {
@@ -416,9 +416,9 @@ function PeopleSection({
   }
 
   return (
-    <section>
+    <section className="people-section">
       <div className="mb-1 flex items-end justify-between gap-3 px-1">
-        <h2 className="text-[0.75rem] font-black uppercase tracking-wide text-slate-500">
+        <h2 className="people-section__title text-[0.75rem] font-black uppercase tracking-wide text-slate-500">
           {title}
         </h2>
         {caption && (
@@ -773,6 +773,20 @@ function PeopleMessage({ children }: { children: ReactNode }) {
     <div className={`${MobileUI.card} p-5 text-sm font-semibold text-slate-500`}>
       {children}
     </div>
+  );
+}
+
+function PeopleLoadingState({ label }: { label: string }) {
+  return (
+    <section className="people-loading" role="status" aria-label={label}>
+      <span className="sr-only">{label}</span>
+      {Array.from({ length: 4 }, (_, index) => (
+        <div key={index} className="people-loading__row">
+          <span className="people-loading__avatar" />
+          <span className="people-loading__copy"><i /><i /></span>
+        </div>
+      ))}
+    </section>
   );
 }
 

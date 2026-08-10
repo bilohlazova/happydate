@@ -22,6 +22,7 @@ import {
   undoReminderCompletion,
   type ReminderRecord,
 } from "@/lib/repositories/reminders";
+import { recordKnowledgeReviewInteraction } from "@/lib/repositories/knowledgeReviewInteractions.repository";
 
 const safeStorage = {
   getItem: (key: string): string | null => {
@@ -141,6 +142,9 @@ export default function HomePageClient() {
           (key, values) => homeT(key as never, values as never),
         );
         setViewModel(nextViewModel);
+        if (nextViewModel.recommendations.some((item) => item.knowledgeReview)) {
+          void recordKnowledgeReviewInteraction("home", "shown");
+        }
         if (!nextViewModel.isAuthenticated || !nextViewModel.featuredEvent) return;
         try {
           const nextReminder = await ensureHomeReminder(nextViewModel.featuredEvent);

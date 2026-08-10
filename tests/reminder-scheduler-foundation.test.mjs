@@ -6,6 +6,7 @@ import test from "node:test";
 const root = process.cwd();
 const migrationPath = path.join(root, "supabase/migrations/20260803190256_reminder_preferences_and_delivery_outbox.sql");
 const activationMigrationPath = path.join(root, "supabase/migrations/20260803190836_activate_reminder_cron_and_in_app_delivery.sql");
+const knowledgeReviewMigrationPath = path.join(root, "supabase/migrations/20260810174656_add_knowledge_review_channel_preferences.sql");
 
 test("preferences enforce timezone, quiet hours, repeat cadence and owner RLS", async () => {
   const sql = await readFile(migrationPath, "utf8");
@@ -32,6 +33,26 @@ test("reminder settings route persists localized user-controlled policy", async 
   assert.match(route, /repeatIntervalMinutes/);
   assert.match(repository, /Intl\.DateTimeFormat/);
   assert.match(repository, /reminder_preferences/);
+});
+
+test("knowledge review channels are explicit owner preferences with safe defaults", async () => {
+  const sql = await readFile(knowledgeReviewMigrationPath, "utf8");
+  const route = await readFile(path.join(root, "src/app/(app)/settings/reminders/page.tsx"), "utf8");
+  const repository = await readFile(path.join(root, "src/lib/repositories/reminders/reminderPreferences.repository.ts"), "utf8");
+  const homeRepository = await readFile(path.join(root, "src/lib/repositories/home/home.repository.ts"), "utf8");
+  assert.match(sql, /knowledge_review_home_enabled boolean not null default true/i);
+  assert.match(sql, /knowledge_review_voice_enabled boolean not null default true/i);
+  assert.match(repository, /knowledge_review_home_enabled/);
+  assert.match(repository, /knowledge_review_voice_enabled/);
+  assert.match(route, /knowledgeReviewHomeEnabled/);
+  assert.match(route, /knowledgeReviewVoiceEnabled/);
+  assert.match(homeRepository, /reviewPreferencesResult\.ok[\s\S]*?homeEnabled: false, voiceEnabled: false/);
+  for (const locale of ["uk", "en", "pl", "de", "ru"]) {
+    const messages = JSON.parse(await readFile(path.join(root, "messages", locale, "profile.json"), "utf8"));
+    for (const key of ["title", "description", "home", "voice"]) {
+      assert.equal(typeof messages.knowledgeReviewSettings[key], "string", `${locale}:${key}`);
+    }
+  }
 });
 
 test("cron queues due reminders without exposing the service scheduler", async () => {

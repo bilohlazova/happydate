@@ -40,6 +40,14 @@ export interface MutateOwnedPersonKnowledgeInput {
   knowledgeId: string;
 }
 
+export interface KnowledgeChangeHistoryRow {
+  id: string;
+  memory_id: string;
+  previous_value: string;
+  new_value: string;
+  changed_at: string;
+}
+
 /**
  * Canonical writes currently target the legacy persistence schema. Fields that
  * cannot be represented losslessly (classification and state history) are
@@ -237,6 +245,27 @@ export async function listKnowledge(
   return mapLegacyMemoriesToKnowledge(rows);
 }
 
+/** Raw owner export retained behind the canonical Knowledge persistence boundary. */
+export async function exportOwnedKnowledgeRows(userId: string): Promise<MemoryRow[]> {
+  const authenticatedUserId = await requireKnowledgeUserId();
+  if (authenticatedUserId !== userId) throw repositoryError("exportOwnedKnowledgeRows", "Invalid owner");
+  const result: MemoryRow[] = [];
+  const pageSize = 500;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("memories")
+      .select(MEMORY_ROW_COLUMNS)
+      .eq("user_id", authenticatedUserId)
+      .order("created_at", { ascending: true })
+      .range(from, from + pageSize - 1)
+      .returns<MemoryRow[]>();
+    if (error) throw repositoryError("exportOwnedKnowledgeRows", error.message);
+    const page = data ?? [];
+    result.push(...page);
+    if (page.length < pageSize) return result;
+  }
+}
+
 export async function getKnowledgeForPerson(
   input: GetKnowledgeForPersonInput
 ): Promise<PersonKnowledgeProfile | null> {
@@ -264,6 +293,23 @@ export async function listKnowledgeForOwnedPersonWithClient(
   return mapLegacyMemoriesToKnowledge(
     await listOwnedKnowledgeRowsWithClient(client, input),
   );
+}
+
+export async function listKnowledgeChangeHistoryForOwnedPerson(
+  input: { userId: string; personId: string },
+): Promise<KnowledgeChangeHistoryRow[]> {
+  const authenticatedUserId = await requireKnowledgeUserId();
+  if (authenticatedUserId !== input.userId) throw repositoryError("listKnowledgeChangeHistoryForOwnedPerson", "Invalid owner");
+  const { data, error } = await supabase
+    .from("memory_knowledge_changes")
+    .select("id, memory_id, previous_value, new_value, changed_at")
+    .eq("user_id", authenticatedUserId)
+    .eq("person_id", input.personId)
+    .order("changed_at", { ascending: false })
+    .limit(200)
+    .returns<KnowledgeChangeHistoryRow[]>();
+  if (error) throw repositoryError("listKnowledgeChangeHistoryForOwnedPerson", error.message);
+  return data ?? [];
 }
 
 /** Canonical persistence projection retained for the current Notes UI. */
@@ -375,7 +421,7 @@ export async function updateOwnedPersonKnowledgeValue(
   }
   const { data, error } = await supabase
     .from("memories")
-    .update({ value_text: value })
+    .update({ value_text: value, knowledge_reviewed_at: new Date().toISOString(), knowledge_review_snoozed_until: null })
     .eq("id", input.knowledgeId)
     .eq("user_id", authenticatedUserId)
     .eq("person_id", input.personId)
@@ -446,6 +492,48 @@ export async function deleteArchivedOwnedPersonKnowledge(
     .returns<Array<{ id: string }>>()
     .single();
   if (error || !data) throw repositoryError("deleteArchivedOwnedPersonKnowledge", error?.message ?? "Record not found");
+}
+
+export async function resolveOwnedPersonKnowledgeConflict(input: {
+  userId: string;
+  personId: string;
+  winnerId: string;
+  loserIds: string[];
+}): Promise<number> {
+  const authenticatedUserId = await requireKnowledgeUserId();
+  const loserIds = [...new Set(input.loserIds)];
+  if (authenticatedUserId !== input.userId || !input.winnerId || loserIds.length < 1 || loserIds.length > 10 || loserIds.includes(input.winnerId)) {
+    throw repositoryError("resolveOwnedPersonKnowledgeConflict", "Invalid conflict resolution");
+  }
+  const { data, error } = await supabase.rpc("resolve_memory_knowledge_conflict", {
+    p_person_id: input.personId,
+    p_winner_id: input.winnerId,
+    p_loser_ids: loserIds,
+  });
+  if (error || data !== loserIds.length) throw repositoryError("resolveOwnedPersonKnowledgeConflict", error?.message ?? "Incomplete conflict resolution");
+  return data;
+}
+
+export async function reviewOwnedPersonKnowledge(input: MutateOwnedPersonKnowledgeInput & { action: "confirm" | "snooze" }): Promise<KnowledgeItem> {
+  const authenticatedUserId = await requireKnowledgeUserId();
+  if (authenticatedUserId !== input.userId) throw repositoryError("reviewOwnedPersonKnowledge", "Invalid owner");
+  const now = new Date();
+  const payload = input.action === "confirm"
+    ? { knowledge_reviewed_at: now.toISOString(), knowledge_review_snoozed_until: null }
+    : { knowledge_review_snoozed_until: new Date(now.getTime() + 30 * 86_400_000).toISOString() };
+  const { data, error } = await supabase
+    .from("memories")
+    .update(payload)
+    .eq("id", input.knowledgeId)
+    .eq("user_id", authenticatedUserId)
+    .eq("person_id", input.personId)
+    .eq("is_active", true)
+    .not("user_confirmed_at", "is", null)
+    .select(MEMORY_ROW_COLUMNS)
+    .returns<MemoryRow[]>()
+    .single();
+  if (error) throw repositoryError("reviewOwnedPersonKnowledge", error.message);
+  return mapLegacyMemoryToKnowledge(data);
 }
 
 /** Permanently delete one owned Knowledge record through the canonical RLS client. */

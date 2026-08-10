@@ -84,7 +84,7 @@ function ProfileHero({
         </div>
 
         <div className="pr-hero__identity">
-          <h1 className="pr-hero__name">{fullName || translate("hero.defaultName")}</h1>
+          <h2 className="pr-hero__name">{fullName || translate("hero.defaultName")}</h2>
           {email    && <p className="pr-hero__email">{email}</p>}
           {memberSince && (
             <p className="pr-hero__since">
@@ -410,6 +410,11 @@ export default function ProfilePage() {
 
   return (
     <main className="safe-container pr-shell" aria-label={translate("accessibility.pageLabel")}>
+      <header className="pr-page-intro">
+        <span className="pr-page-intro__eyebrow">HappyDate</span>
+        <h1>{translate("title")}</h1>
+        <p>{translate("subtitle")}</p>
+      </header>
       <ProfileHero
         avatarUrl={avatarUrl}
         avatarFallback={avatarFallback}

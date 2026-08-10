@@ -38,7 +38,7 @@ export function HappyRecommendationCard({
   const actionLabel = known ? t("recommendation.giftIdeas") : recommendation.actionLabel;
 
   return (
-    <section className="flex min-h-14 items-center justify-between gap-3 rounded-[0.95rem] bg-blue-50 px-3.5 py-2 shadow-[0_6px_16px_rgba(37,99,235,0.05)]">
+    <section className="people-recommendation flex min-h-16 items-center justify-between gap-3 rounded-[0.95rem] bg-blue-50 px-4 py-3">
       <div className="min-w-0">
         <p className="truncate text-xs font-black text-slate-950">
           {title}

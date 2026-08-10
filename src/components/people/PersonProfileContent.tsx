@@ -33,10 +33,11 @@ import type {
 } from "@/lib/people/peopleData.types";
 import { MobileUI } from "@/lib/theme/mobile";
 import { changePersonGiftOutcomeLearning, confirmPersonGiftOutcome } from "@/lib/gifts/gift.loaders";
-import { archivePersonKnowledge, changePersonKnowledgeValue, permanentlyDeleteArchivedPersonKnowledge, restorePersonKnowledge } from "@/lib/people/people.loaders";
+import { archivePersonKnowledge, changePersonKnowledgeValue, permanentlyDeleteArchivedPersonKnowledge, resolvePersonKnowledgeConflict, restorePersonKnowledge, reviewPersonKnowledge } from "@/lib/people/people.loaders";
 import type { GiftOutcomeValue } from "@/lib/gifts/gift.types";
 import type { ConfirmedGiftOutcomeViewModel } from "@/lib/people/peopleData.types";
 import { GIFT_OUTCOME_AI_CONTEXT_LIMIT, formatGiftOutcomeAiContextExport, formatGiftOutcomeAiContextGeneratedAt, formatGiftOutcomeAiContextTime } from "@/lib/gift-intelligence/giftOutcomeAiContextPreview";
+import { recordKnowledgeReviewInteraction } from "@/lib/repositories/knowledgeReviewInteractions.repository";
 
 type Translator = ReturnType<typeof useTranslations<"person">>;
 const CLIPBOARD_WRITE_TIMEOUT_MS = 10_000;
@@ -110,6 +111,8 @@ export function PersonProfileContent({
 
             <KnowledgeSection personId={hero.id} icon={<Target />} title={t("profileUi.interests")} tone="sky" items={viewModel.interests} empty={t("profileUi.empty.interests")} onChanged={onProfileChanged} t={t} />
             <KnowledgeSection personId={hero.id} icon={<NotebookPen />} title={t("profileUi.importantFacts")} tone="amber" items={viewModel.importantFacts} empty={t("profileUi.empty.importantFacts")} onChanged={onProfileChanged} t={t} />
+            <KnowledgeReviewSection personId={hero.id} review={viewModel.knowledgeReview} onChanged={onProfileChanged} t={t} />
+            <KnowledgeConflictSection personId={hero.id} conflicts={viewModel.knowledgeConflicts} onChanged={onProfileChanged} t={t} />
             <ArchivedKnowledgeSection personId={hero.id} items={viewModel.archivedKnowledge} onChanged={onProfileChanged} t={t} />
           </div>
 
@@ -669,6 +672,7 @@ function KnowledgeSection({ personId, icon, title, tone, items, empty, onChanged
                   <p><span className="font-extrabold text-slate-800">{t("profileUi.knowledgeAudit.source")}:</span> {t(`profileUi.knowledgeAudit.sources.${item.sourceKind === "gift_discovery" ? "gift_discovery" : "chat_message"}`)}</p>
                   {item.sourceExcerpt && <p className="mt-1"><span className="font-extrabold text-slate-800">{t("profileUi.knowledgeAudit.excerpt")}:</span> “{item.sourceExcerpt}”</p>}
                   {item.capturedAt && <p className="mt-1"><span className="font-extrabold text-slate-800">{t("profileUi.knowledgeAudit.confirmedAt")}:</span> {formatAuditDate(item.capturedAt, locale)}</p>}
+                  <KnowledgeChangeHistory item={item} locale={locale} t={t} />
                   {errorId === item.id && <p className="mt-2 font-bold text-rose-600" role="alert">{t("profileUi.knowledgeAudit.error")}</p>}
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button type="button" disabled={Boolean(busyId)} onClick={() => { setDraft(item.value); setEditingId(item.id); setArchiveId(null); }} className="min-h-10 rounded-xl border border-sky-200 px-3 text-xs font-extrabold text-sky-700">{t("profileUi.knowledgeAudit.edit")}</button>
@@ -691,6 +695,7 @@ function KnowledgeSection({ personId, icon, title, tone, items, empty, onChanged
 }
 
 function ArchivedKnowledgeSection({ personId, items, onChanged, t }: { personId: string; items: PersonKnowledgeValueViewModel[]; onChanged?: () => void | Promise<void>; t: Translator }) {
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -740,6 +745,7 @@ function ArchivedKnowledgeSection({ personId, items, onChanged, t }: { personId:
                 <li key={item.id} className="rounded-xl border border-slate-200 bg-white p-3">
                   <p className="text-sm font-extrabold leading-5 text-slate-800 [overflow-wrap:anywhere]">{item.value}</p>
                   {item.sourceExcerpt && <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">“{item.sourceExcerpt}”</p>}
+                  <KnowledgeChangeHistory item={item} locale={locale} t={t} />
                   {errorId === item.id && <p role="alert" className="mt-2 text-xs font-bold text-rose-600">{t("profileUi.knowledgeArchive.error")}</p>}
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button type="button" disabled={Boolean(busyId)} onClick={() => void restore(item)} className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-emerald-200 px-3 text-xs font-extrabold text-emerald-700 disabled:opacity-50"><RotateCcw className="size-3.5" aria-hidden="true" /> {busyId === item.id ? t("profileUi.knowledgeArchive.restoring") : t("profileUi.knowledgeArchive.restore")}</button>
@@ -758,6 +764,119 @@ function ArchivedKnowledgeSection({ personId, items, onChanged, t }: { personId:
         </div>
       )}
     </ProfileSection>
+  );
+}
+
+function KnowledgeConflictSection({ personId, conflicts, onChanged, t }: { personId: string; conflicts: PersonProfileViewModel["knowledgeConflicts"]; onChanged?: () => void | Promise<void>; t: Translator }) {
+  const locale = useLocale();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [errorId, setErrorId] = useState<string | null>(null);
+  if (!conflicts.length) return null;
+
+  async function keep(conflictId: string, winnerId: string, allIds: string[]) {
+    if (busyId) return;
+    setBusyId(winnerId);
+    setErrorId(null);
+    try {
+      await resolvePersonKnowledgeConflict(personId, winnerId, allIds.filter((id) => id !== winnerId));
+      await onChanged?.();
+    } catch {
+      setErrorId(conflictId);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <ProfileSection icon={<BrainCircuit />} title={t("profileUi.knowledgeConflicts.title")} tone="amber" accent>
+      <p className="mb-3 text-xs font-semibold leading-5 text-slate-600">{t("profileUi.knowledgeConflicts.description")}</p>
+      <ul className="space-y-3">
+        {conflicts.map((conflict) => {
+          const ids = conflict.items.map((item) => item.id);
+          return (
+            <li key={conflict.id} className="rounded-2xl border border-amber-200 bg-white p-3">
+              <p className="text-sm font-black text-slate-900">{t("profileUi.knowledgeConflicts.topic", { value: conflict.topic })}</p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {conflict.items.map((item) => (
+                  <div key={item.id} className={`rounded-xl border p-3 ${item.polarity === "positive" ? "border-emerald-200 bg-emerald-50/60" : "border-rose-200 bg-rose-50/60"}`}>
+                    <span className={`inline-flex rounded-full px-2 py-1 text-[0.64rem] font-black uppercase tracking-wide ${item.polarity === "positive" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>{t(`profileUi.knowledgeConflicts.${item.polarity}`)}</span>
+                    <p className="mt-2 text-sm font-extrabold text-slate-800">{item.value}</p>
+                    {item.sourceExcerpt && <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">“{item.sourceExcerpt}”</p>}
+                    {item.capturedAt && <p className="mt-1 text-[0.65rem] font-semibold text-slate-400">{formatAuditDateTime(item.capturedAt, locale)}</p>}
+                    <button type="button" disabled={Boolean(busyId)} onClick={() => void keep(conflict.id, item.id, ids)} className="mt-2 min-h-10 w-full rounded-xl bg-slate-900 px-3 text-xs font-extrabold text-white disabled:opacity-50">{busyId === item.id ? t("profileUi.knowledgeConflicts.resolving") : t("profileUi.knowledgeConflicts.keepThis")}</button>
+                  </div>
+                ))}
+              </div>
+              {errorId === conflict.id && <p role="alert" className="mt-2 text-xs font-bold text-rose-600">{t("profileUi.knowledgeConflicts.error")}</p>}
+              <p className="mt-2 text-[0.7rem] font-semibold leading-5 text-slate-500">{t("profileUi.knowledgeConflicts.archiveNote")}</p>
+            </li>
+          );
+        })}
+      </ul>
+    </ProfileSection>
+  );
+}
+
+function KnowledgeReviewSection({ personId, review, onChanged, t }: { personId: string; review: PersonProfileViewModel["knowledgeReview"]; onChanged?: () => void | Promise<void>; t: Translator }) {
+  const locale = useLocale();
+  const [busy, setBusy] = useState<"confirm" | "snooze" | "archive" | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (review) void recordKnowledgeReviewInteraction("profile", "shown");
+  }, [review?.knowledgeId]);
+  if (!review) return null;
+
+  async function act(action: "confirm" | "snooze" | "archive") {
+    if (busy) return;
+    setBusy(action);
+    setFailed(false);
+    try {
+      if (action === "archive") await archivePersonKnowledge(personId, review!.knowledgeId);
+      else await reviewPersonKnowledge(personId, review!.knowledgeId, action);
+      void recordKnowledgeReviewInteraction(
+        "profile",
+        action === "confirm" ? "confirmed" : action === "snooze" ? "snoozed" : "archived",
+      );
+      await onChanged?.();
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div id="knowledge-review" className="scroll-mt-24">
+    <ProfileSection icon={<Sparkles />} title={t("profileUi.knowledgeReview.title")} tone="sky" accent>
+      <p className="text-sm font-extrabold leading-5 text-slate-900">{t("profileUi.knowledgeReview.question", { value: review.value })}</p>
+      <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{t("profileUi.knowledgeReview.lastConfirmed", { date: formatAuditDate(review.lastConfirmedAt, locale) })}</p>
+      <p className="mt-2 text-xs font-semibold leading-5 text-slate-600">{t("profileUi.knowledgeReview.explanation")}</p>
+      {failed && <p role="alert" className="mt-2 text-xs font-bold text-rose-600">{t("profileUi.knowledgeReview.error")}</p>}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" disabled={Boolean(busy)} onClick={() => void act("confirm")} className="min-h-10 rounded-xl bg-emerald-600 px-3 text-xs font-extrabold text-white disabled:opacity-50">{busy === "confirm" ? t("profileUi.knowledgeReview.saving") : t("profileUi.knowledgeReview.accurate")}</button>
+        <button type="button" disabled={Boolean(busy)} onClick={() => void act("snooze")} className="min-h-10 rounded-xl border border-sky-200 bg-white px-3 text-xs font-extrabold text-sky-700 disabled:opacity-50">{busy === "snooze" ? t("profileUi.knowledgeReview.saving") : t("profileUi.knowledgeReview.later")}</button>
+        <button type="button" disabled={Boolean(busy)} onClick={() => void act("archive")} className="min-h-10 rounded-xl px-3 text-xs font-extrabold text-rose-700 disabled:opacity-50">{busy === "archive" ? t("profileUi.knowledgeReview.saving") : t("profileUi.knowledgeReview.noLongerAccurate")}</button>
+      </div>
+    </ProfileSection>
+    </div>
+  );
+}
+
+function KnowledgeChangeHistory({ item, locale, t }: { item: PersonKnowledgeValueViewModel; locale: string; t: Translator }) {
+  if (!item.changeHistory.length) return null;
+  return (
+    <div className="mt-3 border-t border-slate-100 pt-2">
+      <p className="text-[0.68rem] font-black uppercase tracking-wide text-slate-500">{t("profileUi.knowledgeHistory.title")}</p>
+      <ol className="mt-2 space-y-2">
+        {item.changeHistory.map((change) => (
+          <li key={change.id} className="rounded-lg bg-slate-50 px-2.5 py-2 text-[0.72rem] font-semibold leading-5 text-slate-600">
+            <p><span className="font-extrabold text-slate-700">{t("profileUi.knowledgeHistory.before")}:</span> <span className="line-through">{change.previousValue}</span></p>
+            <p><span className="font-extrabold text-slate-700">{t("profileUi.knowledgeHistory.after")}:</span> {change.newValue}</p>
+            <p className="mt-0.5 text-[0.65rem] text-slate-400">{formatAuditDateTime(change.changedAt, locale)}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
@@ -856,4 +975,10 @@ function formatAuditDate(value: string, locale: string): string {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return value;
   return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(date);
+}
+
+function formatAuditDateTime(value: string, locale: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return value;
+  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(date);
 }

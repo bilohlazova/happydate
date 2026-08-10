@@ -5,6 +5,7 @@ import { MessageCircle, Pause, Play, Volume2 } from "lucide-react";
 import { useSpeechBrief } from "@/hooks/useSpeechBrief";
 import { briefingTextForMode } from "@/lib/home/buildDailyBriefing";
 import type { DailyBriefing, DailyBriefingMode } from "@/lib/home/buildDailyBriefing";
+import { recordKnowledgeReviewInteraction } from "@/lib/repositories/knowledgeReviewInteractions.repository";
 
 const BRIEFING_MODE_KEY = "happydate:briefing-mode";
 
@@ -34,6 +35,9 @@ export default function HomeAssistantActions({ briefing, locale, labels, onAsk }
   };
 
   const handleBrief = () => {
+    if (mode === "detailed" && briefing.sections.some((section) => section.kind === "knowledge-review-question")) {
+      void recordKnowledgeReviewInteraction("voice", "shown");
+    }
     if (!speech.isSupported) {
       setShowText((value) => !value);
       return;

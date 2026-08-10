@@ -887,3 +887,153 @@ without allowing AI inference to become stored fact.
   the canonical `memories.is_active` state protected by existing RLS.
 - The next Memory Brain package is correction history: retain each confirmed
   value change as an audit event instead of only preserving the original source.
+
+## Memory Brain: immutable correction history
+
+- A dedicated `memory_knowledge_changes` table records the previous value, new
+  value, exact change time, source, owner, Person, and canonical Memory ID.
+- An `AFTER UPDATE OF value_text` database trigger writes history only for
+  explicitly confirmed Memory Brain records. The correction and its audit event
+  therefore commit or fail together.
+- The trigger function lives in the private schema, has a fixed empty search
+  path, and is not executable by anonymous or authenticated API callers.
+- Authenticated clients receive SELECT-only access guarded by owner RLS. They
+  cannot insert, update, or delete audit events, so correction history cannot be
+  forged or rewritten from the application.
+- Person Profile shows “before”, “after”, and localized date/time under both
+  active and archived knowledge. History remains attached to exactly one
+  Knowledge ID and never becomes AI input itself.
+- Migration `20260810172409_add_memory_knowledge_change_history.sql` is applied
+  to the linked Supabase project. Remote verification confirms RLS enabled,
+  authenticated SELECT enabled, authenticated INSERT disabled, and the trigger
+  installed. Supabase Performance Advisor reports no issues; Security Advisor
+  reports only pre-existing public push/in-app RPC and leaked-password warnings.
+- The next Memory Brain package is conflict resolution: present contradictory
+  confirmed facts side by side and let the user choose which remains active.
+
+## Memory Brain: confirmed preference conflict resolution
+
+- Person Profile detects conflicts only when active, explicitly user-confirmed
+  preferences have the same normalized value and opposing positive/negative
+  polarity. Legacy uncertainty and one-sided duplicates do not create alerts.
+- Each conflict shows both exact user values, original evidence excerpts, source
+  timing, and a direct “Keep as current” choice. HappyDate never guesses which
+  side is true or silently prefers the newest record.
+- Resolution keeps the chosen Knowledge row active and moves every explicitly
+  presented alternative into the private archive. Sources, correction history,
+  and restore controls remain available.
+- The operation runs through one `SECURITY INVOKER` RPC. It validates the full
+  authenticated owner, Person, winner, loser set, active state, uniqueness, and
+  bounded size before updating; stale or partial input rolls back as one unit.
+- Migration `20260810172946_resolve_memory_knowledge_conflicts_atomically.sql`
+  is applied to linked Supabase. Remote inspection confirms authenticated-only
+  execution, no anonymous execution, and no Security Definer privilege bypass.
+- The next Memory Brain package is proactive review: surface stale confirmed
+  knowledge at a respectful interval and ask whether it is still accurate.
+
+## Memory Brain: respectful knowledge review
+
+- Person Profile offers at most one review question at a time, choosing the
+  oldest eligible explicitly confirmed fact instead of presenting a checklist.
+- A fact becomes eligible 180 days after its last review, or after its original
+  confirmation when it has never been reviewed. Active conflict participants
+  are excluded until the user resolves the contradiction.
+- “Still accurate” records a fresh review time without rewriting the fact or its
+  original evidence. A normal value correction also counts as a fresh review.
+- “Ask in 30 days” stores an exact snooze boundary. “No longer accurate” uses
+  the existing archive flow, preserving source and immutable correction history.
+- Every mutation repeats authenticated owner, Person, Knowledge, active-state,
+  and confirmed-source filters in addition to the existing Memory RLS boundary.
+- Migration `20260810173459_add_memory_knowledge_review_schedule.sql` is applied
+  to linked Supabase and adds review/snooze timestamps plus a partial due-review
+  index. The feature needs no public grants, new table, or privileged RPC.
+- The next Memory Brain package is review orchestration beyond Person Profile:
+  decide when Home or the daily briefing may surface one due review without
+  becoming intrusive.
+
+## Memory Brain: Home review orchestration
+
+- Home receives review metadata only through the canonical Knowledge projection;
+  neither React nor Home presentation reads the `memories` table directly.
+- Across all people, Home selects only the oldest eligible confirmed fact after
+  the same 180-day, snooze, active-state, and unresolved-conflict checks used by
+  Person Profile.
+- A due review appears as one Happy recommendation linked to the exact Person
+  Profile review controls. Home does not duplicate confirm, snooze, archive, or
+  correction mutations.
+- A pending post-gift outcome or a preparation question for an important date
+  suppresses the Home review card and spoken review. Higher-priority care is
+  therefore never displaced by maintenance of long-term memory.
+- The review question is available only in the detailed voice briefing. Short
+  mode remains limited to greeting, today, and upcoming timing, and every
+  detailed briefing still asks at most one question.
+- No Supabase migration was required: this package consumes the authenticated,
+  RLS-protected review timestamps introduced by migration `20260810173459`.
+- The next Memory Brain package is review cadence governance: add an explicit
+  user setting for whether proactive knowledge reviews may appear on Home and
+  in voice briefings.
+
+## Memory Brain: user-controlled review channels
+
+- Reminder Settings now contains two independent consent controls: show a due
+  Knowledge review on Home, and include it in the detailed voice briefing.
+- Existing behavior remains enabled by default, while either channel can be
+  disabled without disabling the other or deleting any saved Knowledge.
+- Home loads only the authenticated owner's preference row through the existing
+  `reminder_preferences` RLS boundary. If that read fails, both review channels
+  fail closed while events, reminders, and other Home content continue loading.
+- The settings repository reads and writes both flags through the same
+  authenticated upsert as quiet hours and delivery cadence. No anonymous grant,
+  privileged function, or authorization metadata is involved.
+- Migration `20260810174656_add_knowledge_review_channel_preferences.sql` is
+  applied to linked Supabase. It adds two non-null boolean columns with explicit
+  defaults and preserves all existing owner SELECT/INSERT/UPDATE policies.
+- Labels and explanations are available in Ukrainian, English, Polish, German,
+  and Russian.
+- The next Memory Brain package is review feedback measurement without content
+  tracking: record privacy-safe aggregate interaction events so cadence can be
+  evaluated before changing the 180-day policy.
+
+## Memory Brain: content-free review measurement
+
+- HappyDate records only a bounded interaction category (`shown`, `confirmed`,
+  `snoozed`, or `archived`) and surface (`home`, `voice`, or `profile`). It never
+  sends Person ID, Knowledge ID, names, fact values, excerpts, notes, or speech.
+- Equal user/channel/action events are deduplicated per UTC day. Re-rendering,
+  pausing, or reopening the app therefore cannot inflate the signal.
+- Home records a display only when the review recommendation enters its
+  ViewModel. Voice records only when the user starts a detailed briefing that
+  actually contains a review question. Profile records display and successful
+  review outcomes.
+- Recording is best-effort after the product action. Analytics failure cannot
+  block confirmation, snooze, archive, Home, or audio playback.
+- Authenticated users may insert only their own current-day category and may
+  read only their own history. Column privileges prevent client-supplied dates;
+  UPDATE and DELETE are not granted. RLS is enabled and anonymous access is
+  revoked.
+- Migration `20260810175228_add_private_knowledge_review_interactions.sql` is
+  applied to linked Supabase. Advisors report no new issue; remaining warnings
+  are the pre-existing push/in-app Security Definer RPCs and leaked-password
+  protection setting.
+- No cadence changes are automated from these signals. Any change to the
+  180-day review policy requires a separate explicit product decision.
+
+## Memory Brain: telemetry retention and account export
+
+- A private pg_cron job removes Knowledge review interaction rows older than
+  365 days every day at 03:17. The job is idempotently installed and does not
+  expose a public cleanup RPC.
+- `/settings/export` is now a real localized account-data export instead of a
+  profile placeholder. It downloads a versioned, timestamped JSON document.
+- Export covers profile, People, Events, active and archived Knowledge, Gifts,
+  saved links, Reminders, reminder settings and deliveries, safe push-device
+  metadata, immutable Knowledge changes, and review interactions.
+- Every collection is paginated in batches of 500. Raw Memory export remains
+  behind the canonical Knowledge Repository instead of creating a parallel
+  `memories` reader.
+- Push registration tokens are explicitly excluded. Authenticated users receive
+  column-level SELECT only for their own non-secret push-device metadata under
+  a dedicated owner RLS policy.
+- Migration `20260810175732_retain_knowledge_review_interactions_for_one_year.sql`
+  is applied to linked Supabase. Remote verification confirms the cron job is
+  active and that the token column is absent from authenticated SELECT grants.

@@ -17,6 +17,11 @@ export interface HomeKnowledgeProjection {
   occurredOn: string | null;
   createdAt: string | null;
   isActive: boolean;
+  polarity?: KnowledgeItem["polarity"];
+  userConfirmed?: boolean;
+  confirmedAt?: string | null;
+  reviewedAt?: string | null;
+  snoozedUntil?: string | null;
 }
 
 function meaningful(value: string | null | undefined): string | null {
@@ -58,6 +63,13 @@ export function projectKnowledgeForHome(
       occurredOn: item.occurredOn,
       createdAt: item.createdAt,
       isActive: true,
+      ...(item.classification?.userConfirmed === true ? {
+        polarity: item.polarity,
+        userConfirmed: true,
+        confirmedAt: item.classification.classifiedAt ?? item.evidence.capturedAt,
+        reviewedAt: item.review?.reviewedAt ?? null,
+        snoozedUntil: item.review?.snoozedUntil ?? null,
+      } : {}),
     });
   }
   return result;

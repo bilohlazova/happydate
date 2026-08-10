@@ -68,7 +68,7 @@ export default function PersonCard({
     const memoryText = memoriesCount > 0 ? t("card.memories", { count: memoriesCount }) : t("card.noMemories");
 
     return (
-      <article className="group relative overflow-hidden rounded-[0.9rem] bg-white shadow-[0_4px_14px_rgba(15,23,42,0.035)] ring-1 ring-slate-100">
+      <article className="people-person-card group relative overflow-hidden rounded-[0.9rem] bg-white ring-1 ring-slate-100">
         <div className="absolute inset-y-0 right-0 flex w-32 items-stretch justify-end bg-slate-50">
           <span
             className="flex w-10 items-center justify-center bg-sky-500 text-white"
@@ -90,7 +90,7 @@ export default function PersonCard({
           </span>
         </div>
 
-        <div className="relative grid min-h-14 grid-cols-[2.25rem_minmax(0,1fr)_3.35rem_1rem] items-center gap-2 bg-white px-2.5 py-1.5 transition-transform duration-200 group-hover:-translate-x-10 group-active:-translate-x-10 group-focus-within:-translate-x-10">
+        <div className="people-person-card__content relative grid min-h-[4.25rem] grid-cols-[2.5rem_minmax(0,1fr)_3.75rem_1rem] items-center gap-2.5 bg-white px-3 py-2 transition-transform duration-200 group-hover:-translate-x-10 group-active:-translate-x-10 group-focus-within:-translate-x-10">
           {isFavorite && (
             <span
               className="absolute right-1.5 top-1 text-[0.55rem] leading-none"

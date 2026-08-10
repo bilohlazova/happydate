@@ -10,6 +10,8 @@ export interface ReminderPreferences {
   repeatIntervalMinutes: ReminderInterval;
   inAppEnabled: boolean;
   pushEnabled: boolean;
+  knowledgeReviewHomeEnabled: boolean;
+  knowledgeReviewVoiceEnabled: boolean;
 }
 
 export const DEFAULT_REMINDER_PREFERENCES: ReminderPreferences = {
@@ -19,6 +21,8 @@ export const DEFAULT_REMINDER_PREFERENCES: ReminderPreferences = {
   repeatIntervalMinutes: 180,
   inAppEnabled: true,
   pushEnabled: false,
+  knowledgeReviewHomeEnabled: true,
+  knowledgeReviewVoiceEnabled: true,
 };
 
 function validTimezone(value: string): string {
@@ -40,7 +44,7 @@ async function userId(): Promise<string> {
 export async function getReminderPreferences(): Promise<ReminderPreferences> {
   const id = await userId();
   const { data, error } = await supabase.from("reminder_preferences")
-    .select("timezone, quiet_hours_start, quiet_hours_end, repeat_interval_minutes, in_app_enabled, push_enabled")
+    .select("timezone, quiet_hours_start, quiet_hours_end, repeat_interval_minutes, in_app_enabled, push_enabled, knowledge_review_home_enabled, knowledge_review_voice_enabled")
     .eq("user_id", id).maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return { ...DEFAULT_REMINDER_PREFERENCES };
@@ -52,6 +56,8 @@ export async function getReminderPreferences(): Promise<ReminderPreferences> {
       ? data.repeat_interval_minutes as ReminderInterval : 180,
     inAppEnabled: Boolean(data.in_app_enabled),
     pushEnabled: Boolean(data.push_enabled),
+    knowledgeReviewHomeEnabled: data.knowledge_review_home_enabled !== false,
+    knowledgeReviewVoiceEnabled: data.knowledge_review_voice_enabled !== false,
   };
 }
 
@@ -67,6 +73,8 @@ export async function saveReminderPreferences(value: ReminderPreferences): Promi
     repeat_interval_minutes: value.repeatIntervalMinutes,
     in_app_enabled: value.inAppEnabled,
     push_enabled: value.pushEnabled,
+    knowledge_review_home_enabled: value.knowledgeReviewHomeEnabled,
+    knowledge_review_voice_enabled: value.knowledgeReviewVoiceEnabled,
   }, { onConflict: "user_id" });
   if (error) throw new Error(error.message);
 }

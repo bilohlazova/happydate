@@ -8,10 +8,10 @@ import { AddPersonMenu } from "@/components/people/AddPersonMenu";
 export function PeopleHeader() {
   const t = useTranslations("people");
   return (
-    <section className="flex items-end justify-between gap-3">
+    <header className="people-page-header flex items-center justify-between gap-3">
       <div>
         <div className="flex items-center gap-2.5">
-          <h1 className="text-[1.85rem] font-black leading-none text-slate-950 sm:text-[2.1rem]">
+          <h1 className="people-page-header__title text-[1.85rem] font-black leading-none text-slate-950 sm:text-[2.1rem]">
             {t("page.title")}
           </h1>
           <HeartHandshake
@@ -19,7 +19,7 @@ export function PeopleHeader() {
             strokeWidth={2.25}
           />
         </div>
-        <p className="mt-0.5 text-[0.85rem] font-semibold leading-snug text-slate-500">
+        <p className="people-page-header__subtitle mt-1 text-[0.85rem] font-semibold leading-snug text-slate-500">
           {t("page.subtitle")}
         </p>
       </div>
@@ -27,6 +27,6 @@ export function PeopleHeader() {
       <div className="shrink-0">
         <AddPersonMenu />
       </div>
-    </section>
+    </header>
   );
 }

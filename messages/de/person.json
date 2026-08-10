@@ -110,6 +110,13 @@
       "restore": "Wiederherstellen", "restoring": "Wird wiederhergestellt…", "delete": "Endgültig löschen", "confirmDelete": "Ja, löschen", "deleting": "Wird gelöscht…", "cancel": "Abbrechen",
       "deleteWarning": "Dies kann nicht rückgängig gemacht werden. Eintrag und Quelle werden endgültig gelöscht.", "error": "Die Aktion konnte nicht ausgeführt werden. Bitte erneut versuchen."
     },
+    "knowledgeHistory": { "title": "Korrekturverlauf", "before": "Vorher", "after": "Nachher" },
+    "knowledgeConflicts": {
+      "title": "Deine Klärung ist erforderlich", "description": "HappyDate hat gegensätzliche bestätigte Einträge gefunden. Wähle den aktuell gültigen Fakt.",
+      "topic": "Zu „{value}“", "positive": "Mag", "negative": "Mag nicht", "keepThis": "Als aktuell behalten", "resolving": "Wird gespeichert…",
+      "archiveNote": "Andere Versionen wandern ins private Archiv und beeinflussen AI nicht mehr.", "error": "Der Widerspruch konnte nicht geklärt werden. Es wurden keine Daten geändert — bitte erneut versuchen."
+    },
+    "knowledgeReview": { "title": "Ist das noch aktuell?", "question": "Trifft „{value}“ noch zu?", "lastConfirmed": "Zuletzt bestätigt: {date}", "explanation": "HappyDate prüft ältere Angaben gelegentlich behutsam, um keine veralteten Ratschläge zu geben.", "accurate": "Ja, noch aktuell", "later": "In 30 Tagen fragen", "noLongerAccurate": "Nicht mehr aktuell", "saving": "Wird gespeichert…", "error": "Die Antwort konnte nicht gespeichert werden. Bitte erneut versuchen." },
     "empty": {
       "likes": "Happy kennt die Vorlieben dieser Person noch nicht.",
       "dislikes": "Es wurde noch nicht gespeichert, was diese Person nicht mag.",

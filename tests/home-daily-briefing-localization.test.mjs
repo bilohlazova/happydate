@@ -7,6 +7,7 @@ const locales = ["pl", "uk", "en", "ru", "de"];
 const required = [
   "greetingNamed", "greetingFallback", "todayNone", "todayEvents", "upcoming",
   "savedGiftIdea", "savedPreference", "giftOffer", "giftQuestion", "preferenceQuestion",
+  "postGiftQuestion", "knowledgeReviewQuestion",
 ];
 
 test("daily briefing copy exists in every supported Home locale", async () => {
@@ -15,6 +16,10 @@ test("daily briefing copy exists in every supported Home locale", async () => {
     for (const key of required) {
       assert.equal(typeof messages.brief[key], "string", `${locale}:brief.${key}`);
       assert.ok(messages.brief[key].trim(), `${locale}:brief.${key}`);
+    }
+    for (const key of ["knowledgeReviewTitle", "knowledgeReviewDescription"]) {
+      assert.equal(typeof messages.recommendations[key], "string", `${locale}:recommendations.${key}`);
+      assert.ok(messages.recommendations[key].trim(), `${locale}:recommendations.${key}`);
     }
   }
 });

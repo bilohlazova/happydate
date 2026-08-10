@@ -1,5 +1,6 @@
 {
   "title": "Profil",
+  "subtitle": "Twoje dane, ustawienia i prywatność w jednym miejscu.",
   "hero": { "defaultName": "Twoje imię", "points": "{points} pkt", "care": "Care", "surveyComplete": "Ankieta", "surveyReward": "+100 pkt" },
   "avatar": { "alt": "Zdjęcie profilowe" },
   "membership": { "memberSince": "Z nami od {date}" },
@@ -18,6 +19,8 @@
     "language": { "title": "Język aplikacji", "description": "Wybierz język interfejsu HappyDate." }
   },
   "reminderSettings": { "back": "Profil", "title": "Ustawienia przypomnień", "description": "Wybierz, kiedy Happy może Ci przypominać i jak często powtarzać niewykonane przypomnienie.", "timezone": "Strefa czasowa", "quietStart": "Cisza od", "quietEnd": "Cisza do", "repeat": "Powtarzaj do wykonania", "inApp": "Przypomnienia w aplikacji", "push": "Systemowe powiadomienia push", "pushPermission": "Po zapisaniu HappyDate poprosi o systemową zgodę na powiadomienia.", "pushNativeOnly": "Powiadomienia push można włączyć w aplikacji mobilnej HappyDate.", "save": "Zapisz", "saving": "Zapisywanie…", "saved": "Ustawienia zapisane", "error": "Nie udało się zapisać ustawień.", "intervals": { "60": "Co godzinę", "180": "Co 3 godziny", "360": "Co 6 godzin", "720": "Co 12 godzin", "1440": "Raz dziennie" } },
+  "knowledgeReviewSettings": { "title": "Sprawdzanie zapisanych informacji", "description": "Pozwól Happy czasem zapytać, czy fakty o ważnych osobach są nadal aktualne.", "home": "Pokazuj na stronie głównej", "voice": "Uwzględniaj w szczegółowym briefingu głosowym" },
+  "exportSettings": { "back": "Profil", "title": "Eksport moich danych", "description": "Pobierz kopię informacji zapisanych w HappyDate w formacie JSON.", "includedTitle": "Co zawiera eksport", "included": "Profil, osoby, wydarzenia, notatki i pamięć, prezenty i linki, przypomnienia, ustawienia, historię zmian oraz techniczne zdarzenia przeglądu wiedzy.", "sensitiveNote": "Plik może zawierać prywatne informacje. Przechowuj go bezpiecznie. Tokeny powiadomień push nie są eksportowane.", "download": "Pobierz moje dane", "preparing": "Przygotowywanie pliku…", "done": "Plik został przygotowany i pobrany.", "error": "Nie udało się przygotować eksportu. Spróbuj ponownie." },
   "security": { "title": "Bezpieczeństwo i prywatność", "changePassword": "Zmień hasło", "activeSessions": "Aktywne sesje", "privacy": "Polityka prywatności", "exportData": "Eksportuj dane", "deleteAccount": "Usuń konto" },
   "actions": { "logout": "Wyloguj się" },
   "states": { "saved": "Zapisano ✅", "avatarSaved": "Zdjęcie zaktualizowane ✅", "giftLearningSaved": "Ustawienie nauki zapisane ✅" },

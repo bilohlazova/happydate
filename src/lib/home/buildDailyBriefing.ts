@@ -1,4 +1,4 @@
-import type { HomeEvent, HomeMemory, HomeTranslate } from "./home.types";
+import type { HomeEvent, HomeKnowledgeReview, HomeMemory, HomeTranslate } from "./home.types";
 
 export type DailyBriefingSectionKind =
   | "greeting"
@@ -7,7 +7,8 @@ export type DailyBriefingSectionKind =
   | "person-context"
   | "offer"
   | "care-question"
-  | "post-gift-question";
+  | "post-gift-question"
+  | "knowledge-review-question";
 
 export type DailyBriefingMode = "short" | "detailed";
 
@@ -46,6 +47,7 @@ interface BuildDailyBriefingInput {
     title: string;
     personName: string;
   } | null;
+  knowledgeReview: HomeKnowledgeReview | null;
   formatCountdown: (daysUntil: number) => string;
   eventTitle: (event: HomeEvent) => string;
   t: HomeTranslate;
@@ -72,6 +74,7 @@ export function buildDailyBriefing({
   featured,
   memories,
   pendingGiftOutcome,
+  knowledgeReview,
   formatCountdown,
   eventTitle,
   t,
@@ -119,6 +122,7 @@ export function buildDailyBriefing({
     });
   }
 
+  let hasCareQuestion = Boolean(pendingGiftOutcome);
   if (featured?.personId) {
     const personMemories = memories.filter(
       (memory) => memory.isActive && memory.personId === featured.personId,
@@ -152,6 +156,7 @@ export function buildDailyBriefing({
         text: t("brief.giftQuestion", { name: featured.personName ?? featured.title }),
         sourceIds: [featured.id],
       });
+      hasCareQuestion = true;
     } else if (
       !pendingGiftOutcome &&
       featured.isImportant &&
@@ -165,7 +170,20 @@ export function buildDailyBriefing({
         text: t("brief.preferenceQuestion", { name: featured.personName ?? featured.title }),
         sourceIds: [featured.id],
       });
+      hasCareQuestion = true;
     }
+  }
+
+  if (!hasCareQuestion && knowledgeReview) {
+    sections.push({
+      id: `knowledge-review-${knowledgeReview.knowledgeId}`,
+      kind: "knowledge-review-question",
+      text: t("brief.knowledgeReviewQuestion", {
+        name: knowledgeReview.personName,
+        value: safeSpokenValue(knowledgeReview.value) ?? knowledgeReview.value,
+      }),
+      sourceIds: [knowledgeReview.knowledgeId],
+    });
   }
 
   const sourceIds = [...new Set(sections.flatMap((section) => section.sourceIds))];

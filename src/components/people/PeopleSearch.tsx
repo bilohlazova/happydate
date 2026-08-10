@@ -18,14 +18,14 @@ export function PeopleSearch({
   const hasActiveFilters = activeFilterCount > 0;
 
   return (
-    <div className="flex items-center">
+    <div className="people-search flex items-center">
       <label className="relative min-w-0 flex-1">
         <span className="sr-only">{t("search.label")}</span>
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
         <input
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="h-11 w-full rounded-[0.9rem] border border-slate-100 bg-white pl-10 pr-12 text-[16px] font-semibold text-slate-800 shadow-[0_6px_18px_rgba(15,23,42,0.045)] outline-none transition placeholder:text-slate-400 focus:border-sky-200 focus:ring-4 focus:ring-sky-100"
+          className="people-search__input h-12 w-full rounded-[0.9rem] border border-slate-100 bg-white pl-10 pr-12 text-[16px] font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-sky-200 focus:ring-4 focus:ring-sky-100"
           placeholder={t("search.placeholder")}
           type="search"
         />

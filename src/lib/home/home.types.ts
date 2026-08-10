@@ -38,9 +38,23 @@ export interface HomePendingGiftOutcome {
   givenAt: string | null;
 }
 
+export interface HomeKnowledgeReview {
+  knowledgeId: string;
+  personId: string;
+  personName: string;
+  value: string;
+  lastConfirmedAt: string;
+  href: string;
+}
+
+export interface HomeKnowledgeReviewPreferences {
+  homeEnabled: boolean;
+  voiceEnabled: boolean;
+}
+
 export type HomeMemory = HomeKnowledgeProjection;
 
-export type HomeDataSection = "profile" | "people" | "events" | "memories" | "gifts";
+export type HomeDataSection = "profile" | "people" | "events" | "memories" | "gifts" | "settings";
 
 export interface HomeDataError {
   section: HomeDataSection;
@@ -56,6 +70,7 @@ export interface HomeRepositoryData {
   events: HomeStoredEvent[];
   memories: HomeMemory[];
   pendingGiftOutcomes: HomePendingGiftOutcome[];
+  knowledgeReviewPreferences: HomeKnowledgeReviewPreferences;
   errors: HomeDataError[];
 }
 
@@ -120,6 +135,7 @@ export interface HomeRecommendation {
   description?: string;
   href: string;
   giftFollowUp?: { giftId: string };
+  knowledgeReview?: { knowledgeId: string };
 }
 
 export interface HomeViewModel {

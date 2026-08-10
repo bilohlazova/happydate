@@ -27,6 +27,9 @@ const messages = {
   "brief.giftQuestion": "Choose a gift for {name}?",
   "brief.preferenceQuestion": "Add a preference for {name}?",
   "brief.postGiftQuestion": "Did {name} like {gift}?",
+  "brief.knowledgeReviewQuestion": "Is {value} about {name} still accurate?",
+  "recommendations.knowledgeReviewTitle": "Review {name}",
+  "recommendations.knowledgeReviewDescription": "Still accurate: {value}?",
 };
 const t = (key, values = {}) => Object.entries(values).reduce((value, [name, replacement]) => value.replaceAll(`{${name}}`, String(replacement)), messages[key] ?? key);
 
@@ -136,4 +139,75 @@ test("Home asks for at most one explicit post-gift outcome and stops after confi
     pendingGiftOutcomes: [],
   }), "pl", t, new Date(2026, 6, 17));
   assert.equal(answered.recommendations.some((item) => item.id.startsWith("gift-outcome-")), false);
+});
+
+test("Home surfaces one oldest due knowledge review only in the detailed briefing", () => {
+  const confirmed = (id, value, confirmedAt, overrides = {}) => ({
+    id, personId: "p1", eventId: null, category: "preference", title: null, value,
+    occurredOn: null, createdAt: confirmedAt, isActive: true, polarity: "likes",
+    userConfirmed: true, confirmedAt, reviewedAt: null, snoozedUntil: null, ...overrides,
+  });
+  const model = buildHomeViewModel(data({
+    people: [{ id: "p1", name: "Ola", birthday: null, relationLabel: "Siostra" }],
+    memories: [
+      confirmed("newer", "Coffee", "2025-06-01T00:00:00.000Z"),
+      confirmed("oldest", "Tea", "2025-01-01T00:00:00.000Z"),
+    ],
+  }), "pl", t, new Date("2026-08-10T12:00:00.000Z"));
+
+  assert.equal(model.recommendations.filter((item) => item.knowledgeReview).length, 1);
+  assert.equal(model.recommendations.find((item) => item.knowledgeReview)?.id, "knowledge-review-oldest");
+  assert.equal(model.recommendations.find((item) => item.knowledgeReview)?.href, "/people/p1#knowledge-review");
+  const questions = model.assistantActions.briefing.sections.filter((section) => section.kind.endsWith("question"));
+  assert.equal(questions.length, 1);
+  assert.equal(questions[0].kind, "knowledge-review-question");
+  assert.match(questions[0].text, /Tea/);
+  assert.doesNotMatch(briefingTextForMode(model.assistantActions.briefing, "short"), /Tea|still accurate/);
+});
+
+test("urgent care, gift feedback, snooze and conflicts suppress Home knowledge review speech", () => {
+  const memory = (id, polarity = "likes", overrides = {}) => ({
+    id, personId: "p1", eventId: null, category: "preference", title: null, value: "Tea",
+    occurredOn: null, createdAt: "2025-01-01T00:00:00.000Z", isActive: true,
+    polarity, userConfirmed: true, confirmedAt: "2025-01-01T00:00:00.000Z",
+    reviewedAt: null, snoozedUntil: null, ...overrides,
+  });
+  const now = new Date("2026-08-10T12:00:00.000Z");
+  const person = { id: "p1", name: "Ola", birthday: "1990-08-15", relationLabel: "Siostra" };
+  const urgent = buildHomeViewModel(data({ people: [person], memories: [memory("due")] }), "pl", t, now);
+  assert.equal(urgent.assistantActions.briefing.sections.filter((section) => section.kind.endsWith("question")).length, 1);
+  assert.equal(urgent.assistantActions.briefing.sections.some((section) => section.kind === "knowledge-review-question"), false);
+  assert.equal(urgent.recommendations.some((item) => item.knowledgeReview), false);
+
+  const gift = buildHomeViewModel(data({ people: [{ ...person, birthday: null }], memories: [memory("due")], pendingGiftOutcomes: [{ id: "gift", personId: "p1", title: "Album", givenAt: "2026-08-09" }] }), "pl", t, now);
+  assert.equal(gift.assistantActions.briefing.sections.some((section) => section.kind === "knowledge-review-question"), false);
+  assert.equal(gift.recommendations.some((item) => item.knowledgeReview), false);
+
+  const snoozed = buildHomeViewModel(data({ people: [{ ...person, birthday: null }], memories: [memory("due", "likes", { snoozedUntil: "2026-09-01T00:00:00.000Z" })] }), "pl", t, now);
+  assert.equal(snoozed.recommendations.some((item) => item.knowledgeReview), false);
+
+  const conflict = buildHomeViewModel(data({ people: [{ ...person, birthday: null }], memories: [memory("yes", "likes"), memory("no", "dislikes")] }), "pl", t, now);
+  assert.equal(conflict.recommendations.some((item) => item.knowledgeReview), false);
+});
+
+test("Home and voice knowledge review preferences operate independently", () => {
+  const memory = {
+    id: "due", personId: "p1", eventId: null, category: "preference", title: null, value: "Tea",
+    occurredOn: null, createdAt: "2025-01-01T00:00:00.000Z", isActive: true,
+    polarity: "likes", userConfirmed: true, confirmedAt: "2025-01-01T00:00:00.000Z",
+    reviewedAt: null, snoozedUntil: null,
+  };
+  const base = { people: [{ id: "p1", name: "Ola", birthday: null, relationLabel: "Siostra" }], memories: [memory] };
+  const now = new Date("2026-08-10T12:00:00.000Z");
+  const homeOnly = buildHomeViewModel(data({ ...base, knowledgeReviewPreferences: { homeEnabled: true, voiceEnabled: false } }), "pl", t, now);
+  assert.equal(homeOnly.recommendations.some((item) => item.knowledgeReview), true);
+  assert.equal(homeOnly.assistantActions.briefing.sections.some((section) => section.kind === "knowledge-review-question"), false);
+
+  const voiceOnly = buildHomeViewModel(data({ ...base, knowledgeReviewPreferences: { homeEnabled: false, voiceEnabled: true } }), "pl", t, now);
+  assert.equal(voiceOnly.recommendations.some((item) => item.knowledgeReview), false);
+  assert.equal(voiceOnly.assistantActions.briefing.sections.some((section) => section.kind === "knowledge-review-question"), true);
+
+  const disabled = buildHomeViewModel(data({ ...base, knowledgeReviewPreferences: { homeEnabled: false, voiceEnabled: false } }), "pl", t, now);
+  assert.equal(disabled.recommendations.some((item) => item.knowledgeReview), false);
+  assert.equal(disabled.assistantActions.briefing.sections.some((section) => section.kind === "knowledge-review-question"), false);
 });

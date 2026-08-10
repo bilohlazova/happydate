@@ -1066,6 +1066,7 @@ function CalendarGrid({
           const isToday = dateStr === today;
           const isSelected = dateStr === selectedDate;
           const dayEvents = eventMap.get(dateStr) ?? [];
+          const hasImportantEvent = dayEvents.some((event) => event.isImportant);
           const dots = [
             ...new Set(dayEvents.map((e) => e.category ?? "default")),
           ].slice(0, 3);
@@ -1128,6 +1129,9 @@ function CalendarGrid({
                     />
                   ))}
                 </div>
+              )}
+              {hasImportantEvent && !isSelected && (
+                <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-400 ring-2 ring-amber-100" aria-hidden="true" />
               )}
             </button>
           );
@@ -1337,10 +1341,12 @@ export default function CalendarPage() {
   /* ── Init + realtime ── */
   useEffect(() => {
     let ch: RealtimeChannel | null = null;
+    let cancelled = false;
     const init = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      if (cancelled) return;
       if (!user) {
         router.replace("/auth/login");
         return;
@@ -1358,13 +1364,17 @@ export default function CalendarPage() {
             .order("name", { ascending: true }),
         ]);
 
+      if (cancelled) return;
+
       if (eventResult.error) push({ type: "error", msg: t("toast.loadError") });
       if (eventResult.data) setEvents(eventResult.data);
       if (peopleData) setPeople(peopleData as PersonRow[]);
       setLoading(false);
 
       ch = supabase
-        .channel("cal-ch")
+        // Each effect instance needs its own channel. React Strict Mode can
+        // briefly overlap async effect lifecycles during development.
+        .channel(`cal-ch-${user.id}-${Math.random().toString(36).slice(2)}`)
         .on(
           "postgres_changes",
           {
@@ -1403,6 +1413,7 @@ export default function CalendarPage() {
     };
     init();
     return () => {
+      cancelled = true;
       if (ch) supabase.removeChannel(ch);
     };
   }, [router, push, t]);
@@ -1778,6 +1789,53 @@ export default function CalendarPage() {
         @keyframes toastIn    { from { opacity:0; transform:translateX(12px); } to { opacity:1; transform:none; } }
         .scrollbar-hide::-webkit-scrollbar { display:none; }
         .scrollbar-hide { -ms-overflow-style:none; scrollbar-width:none; }
+        .hd-calendar-page {
+          position: relative; overflow: hidden;
+          background:
+            radial-gradient(430px 260px at 5% -50px, rgba(14,165,233,.14), transparent 72%),
+            radial-gradient(360px 230px at 105% 210px, rgba(236,72,153,.055), transparent 74%),
+            var(--hd-canvas);
+        }
+        .hd-calendar-toolbar { padding: 22px 16px 13px; }
+        .hd-calendar-icon-button {
+          display: grid; width: 46px; height: 46px; place-items: center;
+          border: 1px solid rgba(226,232,240,.9); border-radius: 15px;
+          background: rgba(255,255,255,.9); box-shadow: var(--hd-shadow-soft);
+        }
+        .hd-calendar-add {
+          border-color: transparent; color: #fff;
+          background: linear-gradient(145deg,var(--hd-brand),var(--hd-brand-strong));
+          box-shadow: 0 10px 24px rgba(2,132,199,.24);
+        }
+        .hd-calendar-month { flex-direction: column; gap: 1px; min-height: 46px; justify-content: center; }
+        .hd-calendar-month-main { display: flex; align-items: baseline; gap: 6px; }
+        .hd-calendar-month-hint { color: var(--hd-brand-strong); font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+        .hd-calendar-surface {
+          margin: 0 12px; padding: 8px 8px 12px; border: 1px solid rgba(255,255,255,.9);
+          border-radius: 24px; background: rgba(255,255,255,.94);
+          box-shadow: 0 18px 48px rgba(15,23,42,.075);
+        }
+        .hd-calendar-month-nav { padding: 0 4px 4px; }
+        .hd-calendar-month-nav button {
+          width: 42px; height: 42px; border: 1px solid #eef2f7;
+          border-radius: 14px; background: #f8fafc; color: #475569; font-size: 21px;
+        }
+        .hd-calendar-grid { padding: 0; }
+        .hd-calendar-legend {
+          display: flex; gap: 11px; margin: 12px 4px 0; padding-top: 11px;
+          overflow-x: auto; border-top: 1px solid #eef2f7; scrollbar-width: none;
+        }
+        .hd-calendar-legend::-webkit-scrollbar { display: none; }
+        .hd-calendar-legend span { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; color: #64748b; font-size: 10px; font-weight: 750; }
+        .hd-calendar-legend i { width: 7px; height: 7px; border-radius: 999px; }
+        .hd-calendar-upcoming { margin: 14px 12px 0; padding: 14px; border-radius: 20px; background: rgba(255,255,255,.82); }
+        .hd-calendar-utils { margin-top: 14px; }
+        @media (min-width: 640px) {
+          .hd-calendar-surface, .hd-calendar-upcoming { margin-inline: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .hd-calendar-page *, .hd-calendar-page *::before, .hd-calendar-page *::after { animation: none !important; transition: none !important; }
+        }
       `}</style>
 
       {/*
@@ -1785,28 +1843,31 @@ export default function CalendarPage() {
         address-bar-collapse bug that causes content to overflow or shift.
         w-full instead of implicit 100% ensures correct width on all breakpoints.
       */}
-      <div className="mx-auto flex min-h-[100dvh] w-full max-w-[var(--hd-screen-max)] flex-col bg-white pb-[calc(var(--hd-nav-height)+env(safe-area-inset-bottom))]">
+      <div className="hd-calendar-page mx-auto flex min-h-[100dvh] w-full max-w-[var(--hd-screen-wide)] flex-col pb-[calc(var(--hd-nav-height)+env(safe-area-inset-bottom))]">
         <ToastStack items={toasts} />
 
         {/* ── TOP BAR ── */}
-        <div className="flex items-center justify-between px-4 pb-2 pt-[calc(env(safe-area-inset-top)+12px)]">
+        <div className="hd-calendar-toolbar flex items-center justify-between pt-[calc(env(safe-area-inset-top)+22px)]">
           <button
             onClick={() => setShowSearch(true)}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors text-lg"
+            className="hd-calendar-icon-button text-slate-500 transition-colors text-lg"
             aria-label={t("search.label")}
           >
             🔍
           </button>
 
-          <button onClick={goToday} className="flex items-center gap-1.5 group">
-            <span className="text-base font-extrabold text-slate-900 group-hover:text-sky-600 transition-colors">
+          <button onClick={goToday} className="hd-calendar-month flex items-center group" aria-label={t("navigation.today")}>
+            <span className="hd-calendar-month-main">
+            <span className="text-xl font-black tracking-[-.035em] text-slate-950 group-hover:text-sky-600 transition-colors">
               {new Intl.DateTimeFormat(locale, { month: "long" }).format(
                 new Date(viewYear, viewMonth, 1)
               )}
             </span>
-            <span className="text-base font-extrabold text-slate-400 group-hover:text-sky-500 transition-colors">
+            <span className="text-lg font-extrabold text-slate-400 group-hover:text-sky-500 transition-colors">
               {viewYear}
             </span>
+            </span>
+            <span className="hd-calendar-month-hint">{t("navigation.today")}</span>
           </button>
 
           <div className="flex items-center gap-1">
@@ -1823,7 +1884,7 @@ export default function CalendarPage() {
             />
             <button
               onClick={() => openAdd()}
-              className="w-9 h-9 rounded-xl flex items-center justify-center bg-sky-500 hover:bg-sky-600 text-white font-bold text-lg shadow-sm shadow-sky-200 transition-all active:scale-[.93]"
+              className="hd-calendar-icon-button hd-calendar-add font-bold text-xl transition-all active:scale-[.93]"
               aria-label={t("navigation.addEvent")}
             >
               ＋
@@ -1831,11 +1892,12 @@ export default function CalendarPage() {
           </div>
         </div>
 
+        <section className="hd-calendar-surface" aria-label={t("accessibility.calendarLabel", { month: new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(viewYear, viewMonth, 1)) })}>
         {/* ── MONTH NAVIGATION ── */}
-        <div className="flex items-center justify-between px-4 pb-2">
+        <div className="hd-calendar-month-nav flex items-center justify-between">
           <button
             onClick={prevMonth}
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors text-sm font-bold"
+            className="flex items-center justify-center transition-colors font-bold"
             aria-label={t("navigation.previousMonth")}
           >
             ‹
@@ -1843,7 +1905,7 @@ export default function CalendarPage() {
           <div className="flex-1" />
           <button
             onClick={nextMonth}
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors text-sm font-bold"
+            className="flex items-center justify-center transition-colors font-bold"
             aria-label={t("navigation.nextMonth")}
           >
             ›
@@ -1851,7 +1913,7 @@ export default function CalendarPage() {
         </div>
 
         {/* ── CALENDAR GRID ── */}
-        <div className="px-3 flex-shrink-0">
+        <div className="hd-calendar-grid flex-shrink-0">
           {loading ? (
             <div
               role="status"
@@ -1880,13 +1942,17 @@ export default function CalendarPage() {
             />
           )}
         </div>
-
-        {/* ── DIVIDER ── */}
-        <div className="mx-4 my-3 border-t border-slate-100" />
+        <div className="hd-calendar-legend" aria-label={t("form.importantHint")}>
+          <span><i className="bg-pink-400" />{t("categories.birthday")}</span>
+          <span><i className="bg-blue-400" />{t("categories.work")}</span>
+          <span><i className="bg-emerald-400" />{t("categories.personal")}</span>
+          <span><i className="bg-amber-400 ring-2 ring-amber-100" />{t("form.important")}</span>
+        </div>
+        </section>
 
         {/* ── UPCOMING STRIP ── */}
         {!loading && upcoming.length > 0 && (
-          <div className="px-4 mb-3">
+          <div className="hd-calendar-upcoming mb-3">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
               {t("navigation.upcoming")}
             </p>
@@ -1926,7 +1992,7 @@ export default function CalendarPage() {
         {/* ── BOTTOM UTILS ── */}
         {!loading && (
           <div
-            className="flex items-center justify-center gap-4 px-4 pb-4 mt-auto"
+            className="hd-calendar-utils flex items-center justify-center gap-4 px-4 pb-4 mt-auto"
             // FIX 6: safe-area-inset-bottom clearance for iPhone home indicator
             style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
           >

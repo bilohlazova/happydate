@@ -15,7 +15,7 @@ export function PeopleSummaryCard({
 }: PeopleSummaryCardProps) {
   const t = useTranslations("people");
   return (
-    <section className="rounded-[0.95rem] bg-white px-3.5 py-2.5 shadow-[0_6px_16px_rgba(15,23,42,0.045)] ring-1 ring-slate-100">
+    <section className="people-summary-card rounded-[0.95rem] bg-white px-4 py-3 ring-1 ring-slate-100">
       <div className="flex items-center justify-between gap-3">
         <p className="text-base font-black leading-5 text-slate-950">
           {t("summary.importantPeople", { count: peopleCount })}

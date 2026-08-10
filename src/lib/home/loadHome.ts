@@ -57,6 +57,7 @@ export async function loadHome({
     events: data.events,
     memories: data.memories,
     pendingGiftOutcomes: data.pendingGiftOutcomes,
+    knowledgeReviewPreferences: data.knowledgeReviewPreferences,
     errors: data.errors,
     personKnowledge: buildAllPeopleKnowledge({
       people,

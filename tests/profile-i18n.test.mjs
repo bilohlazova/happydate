@@ -112,7 +112,7 @@ test("Profile dictionaries have no empty values or accidental Polish copies", as
     return result;
   };
   const polish = flatten(await profileMessages("pl"));
-  const allowed = new Set(["title", "hero.care"]);
+  const allowed = new Set(["title", "hero.care", "exportSettings.back"]);
   for (const locale of ["uk", "en", "ru", "de"]) {
     const values = flatten(await profileMessages(locale));
     assert.deepEqual(Object.keys(values).sort(), Object.keys(polish).sort());

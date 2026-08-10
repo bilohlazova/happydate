@@ -7,6 +7,7 @@ import type {
   HomeDataSection,
   HomeMemory,
   HomePendingGiftOutcome,
+  HomeKnowledgeReviewPreferences,
   HomePerson,
   HomeProfile,
   HomeRepositoryData,
@@ -96,6 +97,19 @@ async function loadPendingGiftOutcomes(userId: string): Promise<HomePendingGiftO
   }] : []);
 }
 
+async function loadKnowledgeReviewPreferences(userId: string): Promise<HomeKnowledgeReviewPreferences> {
+  const { data, error } = await supabase
+    .from("reminder_preferences")
+    .select("knowledge_review_home_enabled, knowledge_review_voice_enabled")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new HomeRepositoryError("settings", error.message);
+  return {
+    homeEnabled: data?.knowledge_review_home_enabled !== false,
+    voiceEnabled: data?.knowledge_review_voice_enabled !== false,
+  };
+}
+
 async function loadKnowledge(userId: string): Promise<{
   knowledge: KnowledgeItem[];
   memories: HomeMemory[];
@@ -139,17 +153,19 @@ export async function getHomeRepositoryData(): Promise<HomeRepositoryResult> {
       events: [],
       memories: [],
       pendingGiftOutcomes: [],
+      knowledgeReviewPreferences: { homeEnabled: false, voiceEnabled: false },
       knowledge: [],
       errors: [],
     };
   }
 
-  const [profileResult, peopleResult, eventsResult, knowledgeResult, giftsResult] = await Promise.all([
+  const [profileResult, peopleResult, eventsResult, knowledgeResult, giftsResult, reviewPreferencesResult] = await Promise.all([
     loadProfile(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadPeople(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadEvents(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadKnowledge(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadPendingGiftOutcomes(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
+    loadKnowledgeReviewPreferences(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
   ]);
 
   const errors: HomeDataError[] = [];
@@ -158,6 +174,7 @@ export async function getHomeRepositoryData(): Promise<HomeRepositoryResult> {
   if (!eventsResult.ok) errors.push(errorFrom(eventsResult.reason, "events"));
   if (!knowledgeResult.ok) errors.push(errorFrom(knowledgeResult.reason, "memories"));
   if (!giftsResult.ok) errors.push(errorFrom(giftsResult.reason, "gifts"));
+  if (!reviewPreferencesResult.ok) errors.push(errorFrom(reviewPreferencesResult.reason, "settings"));
 
   return {
     userId: user.id,
@@ -172,6 +189,9 @@ export async function getHomeRepositoryData(): Promise<HomeRepositoryResult> {
     events: eventsResult.ok ? eventsResult.value : [],
     memories: knowledgeResult.ok ? knowledgeResult.value.memories : [],
     pendingGiftOutcomes: giftsResult.ok ? giftsResult.value : [],
+    knowledgeReviewPreferences: reviewPreferencesResult.ok
+      ? reviewPreferencesResult.value
+      : { homeEnabled: false, voiceEnabled: false },
     knowledge: knowledgeResult.ok ? knowledgeResult.value.knowledge : [],
     errors,
   };

@@ -84,7 +84,51 @@ test("profile projection carries confirmed source evidence without changing user
     userConfirmed: true,
     sourceExcerpt: "Anna lubi fotografię",
     capturedAt: "2026-08-09T12:00:00Z",
+    changeHistory: [],
   });
+});
+
+test("profile projection attaches correction history only to its Knowledge item", () => {
+  const model = buildPersonProfileViewModel({
+    person: person(),
+    knowledge: [knowledge({ id: "corrected", value: "Herbata" }), knowledge({ id: "untouched", value: "Kawa" })],
+    knowledgeChanges: [{ id: "change-1", memory_id: "corrected", previous_value: "Kawa", new_value: "Herbata", changed_at: "2026-08-10T09:30:00Z" }],
+  });
+  const corrected = model.likes.find((item) => item.id === "corrected");
+  const untouched = model.likes.find((item) => item.id === "untouched");
+  assert.deepEqual(corrected?.changeHistory, [{ id: "change-1", previousValue: "Kawa", newValue: "Herbata", changedAt: "2026-08-10T09:30:00Z" }]);
+  assert.deepEqual(untouched?.changeHistory, []);
+});
+
+test("profile detects only opposing explicitly confirmed preferences", () => {
+  const confirmed = { confidence: null, classifierVersion: "v2", classifiedAt: "2026-08-10T10:00:00Z", userConfirmed: true };
+  const model = buildPersonProfileViewModel({
+    person: person(),
+    knowledge: [
+      knowledge({ id: "likes-coffee", value: "Coffee", polarity: "likes", classification: confirmed }),
+      knowledge({ id: "avoids-coffee", value: " coffee ", polarity: "avoids", classification: confirmed }),
+      knowledge({ id: "likes-books", value: "Books", polarity: "likes", classification: confirmed }),
+      knowledge({ id: "legacy-dislike", value: "Books", polarity: "dislikes", classification: null }),
+    ],
+  });
+  assert.equal(model.knowledgeConflicts.length, 1);
+  assert.equal(model.knowledgeConflicts[0].topic.trim(), "Coffee");
+  assert.deepEqual(model.knowledgeConflicts[0].items.map((item) => item.polarity).sort(), ["negative", "positive"]);
+  assert.equal(JSON.stringify(model.knowledgeConflicts).includes("Books"), false);
+});
+
+test("profile reviews at most one stale confirmed fact and respects snooze and conflicts", () => {
+  const confirmed = { confidence: null, classifierVersion: "v2", classifiedAt: "2025-01-01T00:00:00Z", userConfirmed: true };
+  const stale = knowledge({ id: "stale", value: "Tea", classification: confirmed, review: { reviewedAt: null, snoozedUntil: null } });
+  const second = knowledge({ id: "second", value: "Books", classification: { ...confirmed, classifiedAt: "2025-02-01T00:00:00Z" }, review: { reviewedAt: null, snoozedUntil: null } });
+  const due = buildPersonProfileViewModel({ person: person(), knowledge: [second, stale], currentDate: new Date("2026-08-10T12:00:00Z") });
+  assert.deepEqual(due.knowledgeReview, { knowledgeId: "stale", value: "Tea", lastConfirmedAt: "2025-01-01T00:00:00.000Z" });
+
+  const snoozed = buildPersonProfileViewModel({ person: person(), knowledge: [{ ...stale, review: { reviewedAt: null, snoozedUntil: "2026-09-01T00:00:00Z" } }], currentDate: new Date("2026-08-10T12:00:00Z") });
+  assert.equal(snoozed.knowledgeReview, null);
+
+  const conflict = buildPersonProfileViewModel({ person: person(), knowledge: [stale, { ...stale, id: "negative", polarity: "dislikes" }], currentDate: new Date("2026-08-10T12:00:00Z") });
+  assert.equal(conflict.knowledgeReview, null);
 });
 
 test("only an explicitly confirmed given gift enters history and timeline", () => {

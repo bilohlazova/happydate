@@ -58,7 +58,8 @@
     "giftOffer": "If you want, I can help you prepare a gift for {name}.",
     "giftQuestion": "The important date for {name} is getting close. Would you like help choosing a gift?",
     "preferenceQuestion": "There is time to prepare for {name}'s important date. Would you like to add one current preference?",
-    "postGiftQuestion": "The gift “{gift}” has been given to {name}. Would you like to say whether they liked it?"
+    "postGiftQuestion": "The gift “{gift}” has been given to {name}. Would you like to say whether they liked it?",
+    "knowledgeReviewQuestion": "I have not checked one detail about {name} for a while: “{value}”. Is it still accurate?"
   },
   "featured": {
     "importantLabel": "Nearest important date",
@@ -99,6 +100,8 @@
     "memoriesDescription": "You have {count} saved memories.",
     "giftOutcomeTitle": "Did {name} like the gift?",
     "giftOutcomeDescription": "Tell Happy how “{gift}” was received. Happy will remember only your answer.",
+    "knowledgeReviewTitle": "Review one detail about {name}",
+    "knowledgeReviewDescription": "Is this still accurate: “{value}”?",
     "giftOutcomeAnswerLabel": "How was the gift received?",
     "giftOutcomeLiked": "They liked it",
     "giftOutcomeNotLiked": "They did not like it",

@@ -110,6 +110,13 @@
       "restore": "Przywróć", "restoring": "Przywracanie…", "delete": "Usuń na zawsze", "confirmDelete": "Tak, usuń", "deleting": "Usuwanie…", "cancel": "Anuluj",
       "deleteWarning": "Tej czynności nie można cofnąć. Wpis i jego źródło zostaną trwale usunięte.", "error": "Nie udało się wykonać działania. Spróbuj ponownie."
     },
+    "knowledgeHistory": { "title": "Historia poprawek", "before": "Było", "after": "Jest" },
+    "knowledgeConflicts": {
+      "title": "Potrzebne jest Twoje wyjaśnienie", "description": "HappyDate znalazł przeciwne potwierdzone wpisy. Wybierz fakt, który jest aktualny.",
+      "topic": "O „{value}”", "positive": "Lubi", "negative": "Nie lubi", "keepThis": "Zostaw jako aktualne", "resolving": "Zapisywanie…",
+      "archiveNote": "Pozostałe wersje trafią do prywatnego archiwum i przestaną wpływać na AI.", "error": "Nie udało się rozwiązać sprzeczności. Dane nie zostały zmienione — spróbuj ponownie."
+    },
+    "knowledgeReview": { "title": "Czy to nadal aktualne?", "question": "Czy „{value}” jest nadal prawdą?", "lastConfirmed": "Ostatnio potwierdzono: {date}", "explanation": "HappyDate od czasu do czasu delikatnie sprawdza starszą wiedzę, aby nie udzielać nieaktualnych porad.", "accurate": "Tak, nadal aktualne", "later": "Zapytaj za 30 dni", "noLongerAccurate": "Już nieaktualne", "saving": "Zapisywanie…", "error": "Nie udało się zapisać odpowiedzi. Spróbuj ponownie." },
     "empty": {
       "likes": "Happy jeszcze nie zna upodobań tej osoby.",
       "dislikes": "Nie zapisano jeszcze, czego ta osoba nie lubi.",

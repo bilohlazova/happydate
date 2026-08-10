@@ -4,6 +4,7 @@ import type { Insight, PersonKnowledge } from "../brain/types.ts";
 import { getAiEligibleKnowledge, type KnowledgeItem } from "../knowledge/index.ts";
 import type { PersonRow } from "../repositories/person.types.ts";
 import type { GiftRecord } from "../gifts/gift.types.ts";
+import type { KnowledgeChangeHistoryRow } from "../repositories/knowledgeRepository.ts";
 import { buildGiftOutcomeLearningSignals } from "../gift-intelligence/giftOutcomeLearningSignals.ts";
 import { projectGiftOutcomeAiContext } from "../gift-intelligence/giftOutcomeAiContextPreview.ts";
 import { canonicalRelationKey } from "./canonicalRelation.ts";
@@ -13,6 +14,7 @@ import type {
   PersonHealthArea,
   PersonHealthViewModel,
   PersonKnowledgeValueViewModel,
+  PersonKnowledgeConflictViewModel,
   PersonListItemViewModel,
   PersonProfileViewModel,
   PersonTimelineItemViewModel,
@@ -81,7 +83,7 @@ function activeVisible(items: readonly KnowledgeItem[]): KnowledgeItem[] {
   return items.filter((item) => item.state === "active" && item.kind !== "journal");
 }
 
-function valueModel(item: KnowledgeItem): PersonKnowledgeValueViewModel | null {
+function valueModel(item: KnowledgeItem, history: readonly KnowledgeChangeHistoryRow[] = []): PersonKnowledgeValueViewModel | null {
   const value = meaningful(item.value) ?? meaningful(item.title) ?? meaningful(item.summary);
   return value ? {
     id: item.id,
@@ -91,20 +93,78 @@ function valueModel(item: KnowledgeItem): PersonKnowledgeValueViewModel | null {
     userConfirmed: item.classification?.userConfirmed === true,
     sourceExcerpt: item.evidence.originalText,
     capturedAt: item.evidence.capturedAt,
+    changeHistory: history.map((change) => ({
+      id: change.id,
+      previousValue: change.previous_value,
+      newValue: change.new_value,
+      changedAt: change.changed_at,
+    })),
   } : null;
 }
 
-function values(items: readonly KnowledgeItem[]): PersonKnowledgeValueViewModel[] {
+function values(items: readonly KnowledgeItem[], historyByMemoryId: ReadonlyMap<string, readonly KnowledgeChangeHistoryRow[]> = new Map()): PersonKnowledgeValueViewModel[] {
   const seen = new Set<string>();
   const result: PersonKnowledgeValueViewModel[] = [];
   for (const item of items) {
-    const model = valueModel(item);
+    const model = valueModel(item, historyByMemoryId.get(item.id));
     const key = model?.value.toLocaleLowerCase();
     if (!model || !key || seen.has(key)) continue;
     seen.add(key);
     result.push(model);
   }
   return result;
+}
+
+function normalizedConflictValue(value: string): string {
+  return value.normalize("NFKC").replace(/\s+/g, " ").trim().toLocaleLowerCase();
+}
+
+function knowledgeConflicts(items: readonly KnowledgeItem[]): PersonKnowledgeConflictViewModel[] {
+  const groups = new Map<string, KnowledgeItem[]>();
+  for (const item of items) {
+    if (item.kind !== "preference" || item.classification?.userConfirmed !== true || !item.value) continue;
+    if (!["likes", "prefers", "dislikes", "avoids"].includes(item.polarity ?? "")) continue;
+    const key = normalizedConflictValue(item.value);
+    if (!key) continue;
+    const group = groups.get(key) ?? [];
+    group.push(item);
+    groups.set(key, group);
+  }
+  const conflicts: PersonKnowledgeConflictViewModel[] = [];
+  for (const [key, group] of groups) {
+    const hasPositive = group.some((item) => item.polarity === "likes" || item.polarity === "prefers");
+    const hasNegative = group.some((item) => item.polarity === "dislikes" || item.polarity === "avoids");
+    if (!hasPositive || !hasNegative) continue;
+    const sorted = [...group].sort((a, b) => (b.evidence.capturedAt ?? "").localeCompare(a.evidence.capturedAt ?? "") || a.id.localeCompare(b.id));
+    conflicts.push({
+      id: `knowledge-conflict:${sorted.map((item) => item.id).sort().join(":")}`,
+      topic: group[0].value!,
+      items: sorted.map((item) => ({
+        id: item.id,
+        value: item.value!,
+        polarity: item.polarity === "likes" || item.polarity === "prefers" ? "positive" : "negative",
+        sourceExcerpt: item.evidence.originalText,
+        capturedAt: item.evidence.capturedAt,
+      })),
+    });
+  }
+  return conflicts.sort((a, b) => a.topic.localeCompare(b.topic));
+}
+
+function dueKnowledgeReview(items: readonly KnowledgeItem[], conflicts: readonly PersonKnowledgeConflictViewModel[], currentDate: Date): PersonProfileViewModel["knowledgeReview"] {
+  const now = currentDate.getTime();
+  if (!Number.isFinite(now)) return null;
+  const conflictedIds = new Set(conflicts.flatMap((conflict) => conflict.items.map((item) => item.id)));
+  const dueBefore = now - 180 * 86_400_000;
+  const candidates = items.flatMap((item) => {
+    if (item.classification?.userConfirmed !== true || conflictedIds.has(item.id) || !item.value) return [];
+    const baseline = new Date(item.review?.reviewedAt ?? item.classification.classifiedAt ?? item.evidence.capturedAt ?? "").getTime();
+    const snoozedUntil = new Date(item.review?.snoozedUntil ?? "").getTime();
+    if (!Number.isFinite(baseline) || baseline > dueBefore || (Number.isFinite(snoozedUntil) && snoozedUntil > now)) return [];
+    return [{ item, baseline }];
+  }).sort((a, b) => a.baseline - b.baseline || a.item.id.localeCompare(b.item.id));
+  const candidate = candidates[0];
+  return candidate ? { knowledgeId: candidate.item.id, value: candidate.item.value!, lastConfirmedAt: new Date(candidate.baseline).toISOString() } : null;
 }
 
 function givenGift(item: KnowledgeItem): boolean {
@@ -206,7 +266,7 @@ function mergeGiftValues(
     const key = gift.value.toLocaleLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    result.push({ id: gift.id, value: gift.value, category: gift.lifecycle, sourceKind: "gift", userConfirmed: false, sourceExcerpt: null, capturedAt: gift.createdAt });
+    result.push({ id: gift.id, value: gift.value, category: gift.lifecycle, sourceKind: "gift", userConfirmed: false, sourceExcerpt: null, capturedAt: gift.createdAt, changeHistory: [] });
   }
   return result;
 }
@@ -293,6 +353,7 @@ export function buildPeoplePageViewModel({
 export function buildPersonProfileViewModel({
   person,
   knowledge,
+  knowledgeChanges = [],
   gifts = [],
   giftOutcomeLearningEnabled = true,
   currentDate = new Date(),
@@ -300,18 +361,26 @@ export function buildPersonProfileViewModel({
 }: {
   person: PersonRow | null;
   knowledge: KnowledgeItem[];
+  knowledgeChanges?: KnowledgeChangeHistoryRow[];
   gifts?: GiftRecord[];
   giftOutcomeLearningEnabled?: boolean;
   currentDate?: Date;
   isAuthenticated?: boolean;
 }): PersonProfileViewModel {
   if (!person) return {
-    isAuthenticated, found: false, hero: null, likes: [], dislikes: [], interests: [], giftIdeas: [], giftHistory: [], importantFacts: [], archivedKnowledge: [], timeline: [], brainInsights: [], confirmedGiftOutcomes: [], giftOutcomeAiPreview: [], giftOutcomeLearningEnabled: false, health: null,
+    isAuthenticated, found: false, hero: null, likes: [], dislikes: [], interests: [], giftIdeas: [], giftHistory: [], importantFacts: [], archivedKnowledge: [], knowledgeConflicts: [], knowledgeReview: null, timeline: [], brainInsights: [], confirmedGiftOutcomes: [], giftOutcomeAiPreview: [], giftOutcomeLearningEnabled: false, health: null,
     actions: { addMemoryUrl: null, addGiftIdeaUrl: null, addImportantInformationUrl: null, canAskHappy: false },
   };
   const visible = activeVisible(knowledge).filter((item) => item.personId === person.id);
   const archived = knowledge.filter((item) => item.personId === person.id && item.state === "archived" && item.kind !== "journal");
+  const historyByMemoryId = new Map<string, KnowledgeChangeHistoryRow[]>();
+  for (const change of knowledgeChanges) {
+    const history = historyByMemoryId.get(change.memory_id) ?? [];
+    history.push(change);
+    historyByMemoryId.set(change.memory_id, history);
+  }
   const aiSafe = getAiEligibleKnowledge(visible);
+  const conflicts = knowledgeConflicts(visible);
   const [computed] = buildAllPeopleKnowledge({ people: [{ id: person.id, name: person.name }], memories: aiSafe, currentDate });
   const event = birthdayBrainEvent(person, currentDate);
   const insight = buildMemoryInsightForPerson({ person: { id: person.id, name: person.name }, event, memories: aiSafe, currentDate });
@@ -331,16 +400,18 @@ export function buildPersonProfileViewModel({
       birthday: person.birthday,
       daysUntilBirthday: daysUntilBirthday(person.birthday, currentDate),
     },
-    likes: values(preferences.filter((item) => item.polarity === "likes" || item.polarity === "prefers")),
-    dislikes: values(preferences.filter((item) => item.polarity === "dislikes" || item.polarity === "avoids")),
-    interests: values(interestRecords),
+    likes: values(preferences.filter((item) => item.polarity === "likes" || item.polarity === "prefers"), historyByMemoryId),
+    dislikes: values(preferences.filter((item) => item.polarity === "dislikes" || item.polarity === "avoids"), historyByMemoryId),
+    interests: values(interestRecords, historyByMemoryId),
     giftIdeas: mergeGiftValues(
-      values(visible.filter((item) => item.kind === "gift" && item.category !== null && ACTIVE_GIFT_CATEGORIES.has(item.category))),
+      values(visible.filter((item) => item.kind === "gift" && item.category !== null && ACTIVE_GIFT_CATEGORIES.has(item.category)), historyByMemoryId),
       gifts.filter((gift) => gift.lifecycle !== "given"),
     ),
-    giftHistory: mergeGiftValues(values(visible.filter(givenGift)), gifts.filter((gift) => gift.lifecycle === "given")),
-    importantFacts: values(visible.filter((item) => item.kind === "fact")),
-    archivedKnowledge: values(archived),
+    giftHistory: mergeGiftValues(values(visible.filter(givenGift), historyByMemoryId), gifts.filter((gift) => gift.lifecycle === "given")),
+    importantFacts: values(visible.filter((item) => item.kind === "fact"), historyByMemoryId),
+    archivedKnowledge: values(archived, historyByMemoryId),
+    knowledgeConflicts: conflicts,
+    knowledgeReview: dueKnowledgeReview(visible, conflicts, currentDate),
     timeline: [...timeline(visible), ...canonicalGiftTimeline(gifts)]
       .sort((first, second) => second.date.localeCompare(first.date) || first.id.localeCompare(second.id)),
     brainInsights: brainInsight(insight),

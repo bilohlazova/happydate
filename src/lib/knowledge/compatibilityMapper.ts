@@ -149,6 +149,10 @@ export function mapLegacyMemoryToKnowledge(row: MemoryRow): KnowledgeItem {
       classifiedAt: row.user_confirmed_at,
       userConfirmed: true,
     } : null,
+    review: {
+      reviewedAt: row.knowledge_reviewed_at,
+      snoozedUntil: row.knowledge_review_snoozed_until,
+    },
     compatibility: {
       valueText: row.value_text,
       contentText: row.content_text,

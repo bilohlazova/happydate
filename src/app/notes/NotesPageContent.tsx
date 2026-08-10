@@ -877,6 +877,75 @@ export default function NotesPageContent() {
           font-size: 13px; color: #8e8e93; font-weight: 400;
         }
         .hd-search-hint strong { color: #000; font-weight: 600; }
+
+        /* ── HappyDate unified visual language ── */
+        .hd-page {
+          font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+          background:
+            radial-gradient(430px 240px at 5% -30px, rgba(14,165,233,.13), transparent 72%),
+            radial-gradient(360px 220px at 105% 150px, rgba(236,72,153,.055), transparent 74%),
+            var(--hd-canvas);
+          color: var(--hd-text);
+        }
+        .hd-header { padding: 22px 16px 14px; align-items: center; }
+        .hd-header-left h1 {
+          color: var(--hd-text); font-size: clamp(29px,8.5vw,36px);
+          font-weight: 900; letter-spacing: -.045em; line-height: 1.05; margin-bottom: 6px;
+        }
+        .hd-header-left p { color: var(--hd-text-muted); font-weight: 650; }
+        .hd-add-btn {
+          width: 48px; height: 48px; border-radius: 16px;
+          background: linear-gradient(145deg,var(--hd-brand),var(--hd-brand-strong));
+          box-shadow: 0 10px 24px rgba(2,132,199,.25);
+        }
+        .hd-search {
+          margin-bottom: 13px; border: 1px solid var(--hd-border); border-radius: 16px;
+          background: rgba(255,255,255,.92); box-shadow: var(--hd-shadow-soft);
+        }
+        .hd-search input { padding: 13px 0; color: var(--hd-text); font: 600 16px inherit; }
+        .hd-tabs { gap: 8px; padding-bottom: 14px; }
+        .hd-tab {
+          border: 1px solid rgba(226,232,240,.9); border-radius: 14px;
+          background: rgba(255,255,255,.82); color: #475569;
+          font-family: inherit; font-weight: 750;
+        }
+        .hd-tab.on {
+          border-color: var(--hd-text); background: var(--hd-text); color: #fff;
+          box-shadow: 0 7px 18px rgba(15,23,42,.15);
+        }
+        .hd-person-filter { margin: 0 auto 14px; }
+        .hd-person-filter select {
+          border: 1px solid var(--hd-border); border-radius: 14px;
+          background: rgba(255,255,255,.92); color: var(--hd-text);
+          font: 700 14px 'Plus Jakarta Sans',sans-serif; box-shadow: var(--hd-shadow-soft);
+        }
+        .hd-card {
+          border-radius: 20px; border-top: 1px solid rgba(255,255,255,.9);
+          background: rgba(255,255,255,.96); box-shadow: 0 10px 28px rgba(15,23,42,.055);
+        }
+        .hd-loading { color: var(--hd-text-muted); font-weight: 650; }
+        .hd-loading::before {
+          content: ''; display: block; width: 34px; height: 34px; margin: 0 auto 13px;
+          border: 3px solid #e2e8f0; border-top-color: var(--hd-brand); border-radius: 50%;
+          animation: hdSpin .8s linear infinite;
+        }
+        @keyframes hdSpin { to { transform: rotate(360deg); } }
+        .hd-empty {
+          padding: 38px 24px; border: 1px dashed #cbd5e1; border-radius: 24px;
+          background: rgba(255,255,255,.74);
+        }
+        .hd-empty-glyph {
+          display: grid; width: 58px; height: 58px; place-items: center;
+          margin: 0 auto 15px; border-radius: 19px;
+          background: linear-gradient(145deg,#e0f2fe,#fdf2f8); font-size: 27px; opacity: 1;
+        }
+        .hd-empty-title { color: var(--hd-text); font-size: 18px; font-weight: 850; letter-spacing: -.025em; }
+        .hd-empty-sub { color: var(--hd-text-muted); font-size: 14px; line-height: 1.55; }
+        .hd-empty-action {
+          min-height: 46px; margin-top: 18px; padding: 0 18px; border: 0; border-radius: 14px;
+          background: var(--hd-brand-strong); color: #fff; font: 800 14px inherit;
+          box-shadow: 0 9px 20px rgba(2,132,199,.2); cursor: pointer;
+        }
         @media (prefers-reduced-motion: reduce) {
           .hd-page *, .hd-page *::before, .hd-page *::after,
           .hd-modal-overlay *, .hd-lightbox * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -925,6 +994,7 @@ export default function NotesPageContent() {
           </svg>
           <input
             placeholder={t("search.placeholder")}
+            aria-label={t("search.placeholder")}
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -1041,6 +1111,11 @@ export default function NotesPageContent() {
                     ? t("states.chooseOther")
                     : t("states.addOrFilter")}
               </div>
+              {!q && (
+                <button type="button" className="hd-empty-action" onClick={() => setShowTypeSheet(true)}>
+                  {t("actions.add")}
+                </button>
+              )}
             </div>
           )}
 

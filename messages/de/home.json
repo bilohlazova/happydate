@@ -58,7 +58,8 @@
     "giftOffer": "Wenn du möchtest, helfe ich dir, ein Geschenk für {name} vorzubereiten.",
     "giftQuestion": "Der wichtige Termin für {name} rückt näher. Möchtest du Hilfe bei der Geschenkauswahl?",
     "preferenceQuestion": "Für den wichtigen Termin von {name} bleibt noch Zeit. Möchtest du eine aktuelle Vorliebe ergänzen?",
-    "postGiftQuestion": "Das Geschenk „{gift}“ wurde {name} bereits überreicht. Möchtest du sagen, ob es gut angekommen ist?"
+    "postGiftQuestion": "Das Geschenk „{gift}“ wurde {name} bereits überreicht. Möchtest du sagen, ob es gut angekommen ist?",
+    "knowledgeReviewQuestion": "Eine Information über {name} wurde länger nicht geprüft: „{value}“. Ist sie noch aktuell?"
   },
   "featured": {
     "importantLabel": "Nächstes wichtiges Datum",
@@ -99,6 +100,8 @@
     "memoriesDescription": "Du hast {count} gespeicherte Erinnerungen.",
     "giftOutcomeTitle": "Hat {name} das Geschenk gefallen?",
     "giftOutcomeDescription": "Sag Happy, wie „{gift}“ angekommen ist. Happy merkt sich nur deine Antwort.",
+    "knowledgeReviewTitle": "Prüfe eine Information über {name}",
+    "knowledgeReviewDescription": "Ist das noch aktuell: „{value}“?",
     "giftOutcomeAnswerLabel": "Wie kam das Geschenk an?",
     "giftOutcomeLiked": "Es hat gefallen",
     "giftOutcomeNotLiked": "Es hat nicht gefallen",

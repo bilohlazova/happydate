@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
-import { archiveOwnedPersonKnowledge, deleteArchivedOwnedPersonKnowledge, getKnowledgeForPerson, listKnowledge, restoreOwnedPersonKnowledge, updateOwnedPersonKnowledgeValue } from "@/lib/repositories/knowledgeRepository";
+import { archiveOwnedPersonKnowledge, deleteArchivedOwnedPersonKnowledge, getKnowledgeForPerson, listKnowledge, listKnowledgeChangeHistoryForOwnedPerson, resolveOwnedPersonKnowledgeConflict, restoreOwnedPersonKnowledge, reviewOwnedPersonKnowledge, updateOwnedPersonKnowledgeValue } from "@/lib/repositories/knowledgeRepository";
 import { getOwnedPersonById, getPeople } from "@/lib/repositories/personRepository";
 import { loadCanonicalGiftsForPerson } from "@/lib/gifts/gift.repository";
 import { loadGiftOutcomeLearningEnabled } from "@/lib/repositories/profile/giftOutcomeLearning.repository";
@@ -36,12 +36,13 @@ export async function loadPersonProfile(
   const person = await getOwnedPersonById(userId, personId);
   if (!person) return buildPersonProfileViewModel({ person: null, knowledge: [], currentDate });
 
-  const [profile, gifts, giftOutcomeLearningEnabled] = await Promise.all([
+  const [profile, knowledgeChanges, gifts, giftOutcomeLearningEnabled] = await Promise.all([
     getKnowledgeForPerson({ personId, includeArchived: true }),
+    listKnowledgeChangeHistoryForOwnedPerson({ userId, personId }),
     loadCanonicalGiftsForPerson(userId, personId),
     loadGiftOutcomeLearningEnabled(userId),
   ]);
-  return buildPersonProfileViewModel({ person, knowledge: profile?.items ?? [], gifts, giftOutcomeLearningEnabled, currentDate });
+  return buildPersonProfileViewModel({ person, knowledge: profile?.items ?? [], knowledgeChanges, gifts, giftOutcomeLearningEnabled, currentDate });
 }
 
 export async function changePersonKnowledgeValue(personId: string, knowledgeId: string, value: string): Promise<void> {
@@ -66,6 +67,18 @@ export async function permanentlyDeleteArchivedPersonKnowledge(personId: string,
   const userId = await authenticatedUserId();
   if (!userId) throw new Error("Authentication required");
   await deleteArchivedOwnedPersonKnowledge({ userId, personId, knowledgeId });
+}
+
+export async function resolvePersonKnowledgeConflict(personId: string, winnerId: string, loserIds: string[]): Promise<void> {
+  const userId = await authenticatedUserId();
+  if (!userId) throw new Error("Authentication required");
+  await resolveOwnedPersonKnowledgeConflict({ userId, personId, winnerId, loserIds });
+}
+
+export async function reviewPersonKnowledge(personId: string, knowledgeId: string, action: "confirm" | "snooze"): Promise<void> {
+  const userId = await authenticatedUserId();
+  if (!userId) throw new Error("Authentication required");
+  await reviewOwnedPersonKnowledge({ userId, personId, knowledgeId, action });
 }
 
 export type {

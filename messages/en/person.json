@@ -110,6 +110,13 @@
       "restore": "Restore", "restoring": "Restoring…", "delete": "Delete permanently", "confirmDelete": "Yes, delete", "deleting": "Deleting…", "cancel": "Cancel",
       "deleteWarning": "This cannot be undone. The record and its source will be permanently deleted.", "error": "The action could not be completed. Please try again."
     },
+    "knowledgeHistory": { "title": "Correction history", "before": "Before", "after": "After" },
+    "knowledgeConflicts": {
+      "title": "Your clarification is needed", "description": "HappyDate found opposing confirmed records. Choose which fact is current now.",
+      "topic": "About “{value}”", "positive": "Likes", "negative": "Dislikes", "keepThis": "Keep as current", "resolving": "Saving…",
+      "archiveNote": "Other versions will move to the private archive and stop influencing AI.", "error": "The conflict could not be resolved. No data was changed — please try again."
+    },
+    "knowledgeReview": { "title": "Is this still accurate?", "question": "Is “{value}” still true?", "lastConfirmed": "Last confirmed: {date}", "explanation": "HappyDate occasionally checks older knowledge so it does not give outdated advice.", "accurate": "Yes, still accurate", "later": "Ask in 30 days", "noLongerAccurate": "No longer accurate", "saving": "Saving…", "error": "Your answer could not be saved. Please try again." },
     "empty": {
       "likes": "Happy does not know this person's preferences yet.",
       "dislikes": "Nothing has been saved about what this person dislikes.",

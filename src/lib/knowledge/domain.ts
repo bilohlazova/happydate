@@ -77,6 +77,10 @@ export interface KnowledgeItem {
   legacyType: string;
   evidence: KnowledgeEvidence;
   classification: KnowledgeClassification | null;
+  review?: {
+    reviewedAt: string | null;
+    snoozedUntil: string | null;
+  };
   /** Raw values retained only to preserve legacy consumer behavior in migration. */
   compatibility: {
     valueText: string | null;

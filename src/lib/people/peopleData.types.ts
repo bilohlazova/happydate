@@ -56,6 +56,12 @@ export interface PersonKnowledgeValueViewModel {
   userConfirmed: boolean;
   sourceExcerpt: string | null;
   capturedAt: string | null;
+  changeHistory: Array<{
+    id: string;
+    previousValue: string;
+    newValue: string;
+    changedAt: string;
+  }>;
 }
 
 export interface PersonTimelineItemViewModel {
@@ -88,6 +94,18 @@ export interface ConfirmedGiftOutcomeViewModel {
   learningSignal: import("@/lib/gift-intelligence/giftIntelligence.types").GiftOutcomeCategorySignal | "history_only";
 }
 
+export interface PersonKnowledgeConflictViewModel {
+  id: string;
+  topic: string;
+  items: Array<{
+    id: string;
+    value: string;
+    polarity: "positive" | "negative";
+    sourceExcerpt: string | null;
+    capturedAt: string | null;
+  }>;
+}
+
 export interface PersonProfileViewModel {
   isAuthenticated: boolean;
   found: boolean;
@@ -107,6 +125,12 @@ export interface PersonProfileViewModel {
   giftHistory: PersonKnowledgeValueViewModel[];
   importantFacts: PersonKnowledgeValueViewModel[];
   archivedKnowledge: PersonKnowledgeValueViewModel[];
+  knowledgeConflicts: PersonKnowledgeConflictViewModel[];
+  knowledgeReview: {
+    knowledgeId: string;
+    value: string;
+    lastConfirmedAt: string;
+  } | null;
   timeline: PersonTimelineItemViewModel[];
   brainInsights: PersonBrainInsightViewModel[];
   confirmedGiftOutcomes: ConfirmedGiftOutcomeViewModel[];

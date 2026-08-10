@@ -1,6 +1,7 @@
 import type {
   HomeEvent,
   HomeFeaturedEvent,
+  HomeKnowledgeReview,
   HomeMemory,
   HomePerson,
   HomeRecommendation,
@@ -238,6 +239,7 @@ function buildUpcoming(events: HomeEvent[], locale: AppLocale, t: HomeTranslate)
 function buildRecommendations(
   featured: HomeEvent | null,
   data: HomeRepositoryData,
+  knowledgeReview: HomeKnowledgeReview | null,
   t: HomeTranslate,
 ): HomeRecommendation[] {
   const recommendations: HomeRecommendation[] = [];
@@ -252,6 +254,16 @@ function buildRecommendations(
       description: t("recommendations.giftOutcomeDescription", { gift: pendingOutcome.title }),
       href: `/people/${encodeURIComponent(person.id)}#gift-workspace`,
       giftFollowUp: { giftId: pendingOutcome.id },
+    });
+  }
+  if (knowledgeReview) {
+    recommendations.push({
+      id: `knowledge-review-${knowledgeReview.knowledgeId}`,
+      icon: "🧠",
+      title: t("recommendations.knowledgeReviewTitle", { name: knowledgeReview.personName }),
+      description: t("recommendations.knowledgeReviewDescription", { value: knowledgeReview.value }),
+      href: knowledgeReview.href,
+      knowledgeReview: { knowledgeId: knowledgeReview.knowledgeId },
     });
   }
   if (!featured?.personId) return recommendations;
@@ -273,16 +285,73 @@ function buildRecommendations(
   return recommendations.slice(0, 3);
 }
 
+function normalizedConflictValue(value: string): string {
+  return value.normalize("NFKC").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+
+function selectDueKnowledgeReview(data: HomeRepositoryData, now: Date): HomeKnowledgeReview | null {
+  const nowMs = now.getTime();
+  if (!Number.isFinite(nowMs)) return null;
+  const peopleById = new Map(data.people.map((person) => [person.id, person]));
+  const conflictGroups = new Map<string, HomeMemory[]>();
+  for (const memory of data.memories) {
+    if (!memory.personId || memory.category !== "preference" || !memory.userConfirmed || !memory.value) continue;
+    if (!["likes", "prefers", "dislikes", "avoids"].includes(memory.polarity ?? "")) continue;
+    const key = `${memory.personId}:${normalizedConflictValue(memory.value)}`;
+    const group = conflictGroups.get(key) ?? [];
+    group.push(memory);
+    conflictGroups.set(key, group);
+  }
+  const conflictedIds = new Set<string>();
+  for (const group of conflictGroups.values()) {
+    const positive = group.some((item) => item.polarity === "likes" || item.polarity === "prefers");
+    const negative = group.some((item) => item.polarity === "dislikes" || item.polarity === "avoids");
+    if (positive && negative) group.forEach((item) => conflictedIds.add(item.id));
+  }
+  const dueBefore = nowMs - 180 * 86_400_000;
+  const candidates = data.memories.flatMap((memory) => {
+    if (!memory.isActive || !memory.personId || !memory.userConfirmed || !memory.value || conflictedIds.has(memory.id)) return [];
+    const person = peopleById.get(memory.personId);
+    const baseline = new Date(memory.reviewedAt ?? memory.confirmedAt ?? "").getTime();
+    const snoozedUntil = new Date(memory.snoozedUntil ?? "").getTime();
+    if (!person || !Number.isFinite(baseline) || baseline > dueBefore || (Number.isFinite(snoozedUntil) && snoozedUntil > nowMs)) return [];
+    return [{ memory, person, baseline }];
+  }).sort((a, b) => a.baseline - b.baseline || a.memory.id.localeCompare(b.memory.id));
+  const candidate = candidates[0];
+  return candidate ? {
+    knowledgeId: candidate.memory.id,
+    personId: candidate.person.id,
+    personName: candidate.person.name,
+    value: candidate.memory.value!,
+    lastConfirmedAt: new Date(candidate.baseline).toISOString(),
+    href: `/people/${encodeURIComponent(candidate.person.id)}#knowledge-review`,
+  } : null;
+}
+
+function hasHigherPriorityCareQuestion(featured: HomeEvent | null, memories: HomeMemory[]): boolean {
+  if (!featured?.personId || !featured.isImportant) return false;
+  const classified = classifyMemories(personMemories(memories, featured.personId));
+  return (featured.daysUntil <= 14 && classified.gifts.length === 0)
+    || (featured.daysUntil > 14 && featured.daysUntil <= 30 && classified.preferences.length === 0);
+}
+
 export function buildHomeViewModel(data: HomeRepositoryData, locale: AppLocale, t: HomeTranslate, now = new Date()): HomeViewModel {
   const name = resolveHomeUserName(data);
   const events = normalizeEvents(data.people, data.events, now);
   const featured = selectFeatured(events);
   const featuredCard = buildFeatured(featured, data.memories, locale, t);
-  const recommendations = buildRecommendations(featured, data, t);
   const pendingGiftOutcome = (data.pendingGiftOutcomes ?? []).flatMap((gift) => {
     const person = data.people.find((item) => item.id === gift.personId);
     return person ? [{ id: gift.id, title: gift.title, personName: person.name }] : [];
   })[0] ?? null;
+  const dueKnowledgeReview = selectDueKnowledgeReview(data, now);
+  const eligibleKnowledgeReview = pendingGiftOutcome || hasHigherPriorityCareQuestion(featured, data.memories)
+    ? null
+    : dueKnowledgeReview;
+  const reviewPreferences = data.knowledgeReviewPreferences ?? { homeEnabled: true, voiceEnabled: true };
+  const homeKnowledgeReview = reviewPreferences.homeEnabled ? eligibleKnowledgeReview : null;
+  const voiceKnowledgeReview = reviewPreferences.voiceEnabled ? eligibleKnowledgeReview : null;
+  const recommendations = buildRecommendations(featured, data, homeKnowledgeReview, t);
   const insights = [];
   if (featured) {
     insights.push({ id: `event-${featured.id}`, icon: featured.source === "birthday" ? "🎂" : "📅", title: featured.source === "birthday" ? t("insights.birthday", { name: featured.personName ?? featured.title, countdown: formatCountdown(t, featured.daysUntil) }) : t("insights.event", { title: featured.title, countdown: formatCountdown(t, featured.daysUntil) }) });
@@ -301,6 +370,7 @@ export function buildHomeViewModel(data: HomeRepositoryData, locale: AppLocale, 
     featured,
     memories: data.memories,
     pendingGiftOutcome,
+    knowledgeReview: voiceKnowledgeReview,
     formatCountdown: (value) => formatCountdown(t, value),
     eventTitle: (event) => event.source === "birthday"
       ? t("events.birthdayTitle", { name: event.personName ?? event.title })

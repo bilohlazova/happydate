@@ -400,6 +400,8 @@ export default function AssistantCard({ state, profile, nextEvent }: Props) {
   }, []);
 
   useEffect(() => {
+    // A changed assistant state invalidates the active browser utterance.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSpeaking(false);
     if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   }, [state]);

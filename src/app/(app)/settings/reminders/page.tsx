@@ -26,6 +26,8 @@ export default function ReminderSettingsPage() {
   const [nativePushAvailable, setNativePushAvailable] = useState(false);
 
   useEffect(() => {
+    // Native capability exists only after the Capacitor client has mounted.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNativePushAvailable(supportsNativePush());
     let active = true;
     void getReminderPreferences().then((preferences) => {

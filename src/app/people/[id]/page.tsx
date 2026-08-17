@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { PersonProfileContent } from "@/components/people/PersonProfileContent";
 import { loadPersonProfile } from "@/lib/people/people.loaders";
 import type { PersonProfileViewModel } from "@/lib/people/peopleData.types";
+import { logOperationalError } from "@/lib/observability/safeLogger";
 
 export default function PersonDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -25,7 +26,7 @@ export default function PersonDetailsPage() {
       const profile = await loadPersonProfile(personId);
       if (requestRef.current === request) setViewModel(profile);
     } catch (error) {
-      console.error("[PersonDetailsPage] loadPersonProfile failed:", error);
+      logOperationalError("person-details", "profile-load-failed", error);
       if (requestRef.current === request) setFailed(true);
     } finally {
       if (showLoading && requestRef.current === request) setLoading(false);
@@ -33,6 +34,8 @@ export default function PersonDetailsPage() {
   }, [personId]);
 
   useEffect(() => {
+    // Fetch the route-owned profile when its person identifier changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void refreshProfile(true);
     return () => {
       requestRef.current += 1;

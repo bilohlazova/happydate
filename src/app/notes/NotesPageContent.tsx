@@ -76,10 +76,13 @@ export default function NotesPageContent() {
   const [showModal,      setShowModal]      = useState(false);
   const [editingMemory,  setEditingMemory]  = useState<NotesMemoryRow | null>(null);
   const [selectedNewType, setSelectedNewType] = useState<NotesRawType>("note");
+  const [selectedNewPersonId, setSelectedNewPersonId] = useState("");
   const [imageDisplayUrls, setImageDisplayUrls] = useState<Record<string, string>>({});
   const [audioDisplayUrls, setAudioDisplayUrls] = useState<Record<string, string>>({});
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const typeSheetFirstOptionRef = useRef<HTMLButtonElement>(null);
+  const assistantActionConsumedRef = useRef(false);
+  const assistantDraftRef = useRef<{ personId: string | null } | null>(null);
 
   // ── Search ──
   const [search, setSearch] = useState("");
@@ -132,7 +135,11 @@ export default function NotesPageContent() {
     }
   }, [loadEvents, loadPeople, loadMemories]);
 
-  useEffect(() => { void refreshNotes(); }, [refreshNotes]);
+  useEffect(() => {
+    // Initial repository load belongs to the mounted client page lifecycle.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refreshNotes();
+  }, [refreshNotes]);
 
   useEffect(() => {
     const updateConnection = () => setIsOnline(navigator.onLine);
@@ -218,11 +225,37 @@ export default function NotesPageContent() {
   ).length;
 
   // ── Modal ──
-  function openNew(type: NotesRawType) {
+  function openNew(type: NotesRawType, initialPersonId = "") {
     setEditingMemory(null);
     setSelectedNewType(type);
+    setSelectedNewPersonId(initialPersonId);
     setShowModal(true);
   }
+
+  useEffect(() => {
+    if (assistantActionConsumedRef.current) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("action") !== "add-note") return;
+    assistantActionConsumedRef.current = true;
+
+    assistantDraftRef.current = { personId: url.searchParams.get("personId") };
+    url.searchParams.delete("action");
+    url.searchParams.delete("personId");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }, []);
+
+  useEffect(() => {
+    const requestedDraft = assistantDraftRef.current;
+    if (loading || !requestedDraft) return;
+    assistantDraftRef.current = null;
+    const safePersonId = requestedDraft.personId
+      && people.some((person) => person.id === requestedDraft.personId)
+      ? requestedDraft.personId
+      : "";
+    // The person link is accepted only after an owner-scoped People load.
+    // Persistence still requires explicit submission in this Notes-owned form.
+    queueMicrotask(() => openNew("note", safePersonId));
+  }, [loading, people]);
 
   function openEdit(m: NotesMemoryRow) {
     setEditingMemory(m);
@@ -1231,6 +1264,7 @@ export default function NotesPageContent() {
           events={events}
           imageDisplayUrls={imageDisplayUrls}
           audioDisplayUrl={editingMemory ? audioDisplayUrls[editingMemory.id] ?? null : null}
+          initialPersonId={editingMemory ? "" : selectedNewPersonId}
           onCancel={closeModal}
           onSubmit={saveMemory}
         />

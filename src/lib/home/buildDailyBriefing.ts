@@ -85,16 +85,30 @@ export function buildDailyBriefing({
     text: name ? t("brief.greetingNamed", { name }) : t("brief.greetingFallback"),
     sourceIds: [],
   }];
-  const today = events.filter((event) => event.daysUntil === 0).slice(0, 3);
+  const today = events.filter((event) => event.daysUntil === 0).slice(0, 5);
+  const scheduledToday = today.filter((event) => event.timeOfDay);
+  const unscheduledToday = today.filter((event) => !event.timeOfDay);
+  const scheduledText = scheduledToday
+    .map((event) => {
+      const item = `${event.timeOfDay} — ${eventTitle(event)}${event.durationMinutes ? ` (${event.durationMinutes} min)` : ""}`;
+      const location = safeSpokenValue(event.location);
+      const placed = location ? t("brief.eventAtLocation", { event: item, location }) : item;
+      return event.travelBufferMinutes
+        ? t("brief.eventWithTravelBuffer", { event: placed, minutes: event.travelBufferMinutes })
+        : placed;
+    })
+    .join(", ");
+  const unscheduledText = unscheduledToday.map(eventTitle).join(", ");
   sections.push({
     id: "today",
     kind: "today",
     text: today.length === 0
       ? t("brief.todayNone")
-      : t("brief.todayEvents", {
-          count: today.length,
-          events: today.map(eventTitle).join(", "),
-        }),
+      : scheduledToday.length && unscheduledToday.length
+        ? t("brief.todayMixed", { scheduled: scheduledText, unscheduled: unscheduledText })
+        : scheduledToday.length
+          ? t("brief.todayScheduled", { events: scheduledText })
+          : t("brief.todayEvents", { count: today.length, events: unscheduledText }),
     sourceIds: today.map((event) => event.id),
   });
 

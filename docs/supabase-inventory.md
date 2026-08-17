@@ -240,8 +240,8 @@ tables: each requires a retain/migrate/retire decision.
 | Table | Expected columns from code [C] | Current behavior/risk | Decision needed |
 |---|---|---|---|
 | `points_balance` | `user_id`, `balance` | Profile silently displays 0; `profiles.points` already exists | Retire reference or define one canonical points domain |
-| `user_survey` | `user_id`, `likes[]`, `dislikes[]`, `dream`, `notes`, `is_completed` | Registration/login routing and survey persistence cannot rely on this project | Migrate useful data into onboarding/Knowledge or restore intentionally |
-| `user_special_dates` | `id`, `user_id`, `date`, `label`, `kind` | Survey special dates cannot load/save | Migrate to canonical Events or retire |
+| `user_survey` | Private onboarding answers plus completion/reward metadata | Restored in production with owner SELECT only and an authenticated atomic save RPC | Complete foundation; future Memory ingestion must remain explicit and user-controlled |
+| `user_special_dates` | Retired | Survey dates now create canonical yearly Events and retain only their managed Event IDs | Complete |
 | `gift_requests` | `user_id`, `event_id`, `event_title`, `event_date`, `for_whom`, `gender`, `age`, `interests`, `occasion`, `budget_pln`, `anonymity`, `split_payment`, `delivery`, `notes`, `status`, `created_at` | Legacy concierge submission returns a persistence error | Keep only if concierge service remains in product scope |
 | `ai_gift_cache` | Created in Stage 8.4 with `person_id`, `occasion`, `ideas`, `created_at`, `expires_at` | Seven-day server-only cache; invalidated when canonical Knowledge changes | Complete |
 | `notes` | Confirmed absent in Stage 8.1 | Gift fallback retired; canonical `memories` owns Notes data | Complete |
@@ -253,8 +253,8 @@ tables: each requires a retain/migrate/retire decision.
 | `reviews` | `id`, `created_at`, `name`, `email`, `message`, `source`, `published` | Public reviews cannot list or submit | Restore as isolated moderated service or remove route |
 | `good_deeds` | `user_id`, `kind`, `city`, `visit_date`, `visit_time`, `message`, `consent`, `status`, `contact_email` | API insert fails | Separate service decision plus abuse/privacy design |
 | `heaven_messages` | `user_id`, `type`, `recipient_email`, `recipient_name`, `delivery_date`, `message`, `file_url`, `status` | API insert fails; upload bucket is also absent | Separate service decision; do not mix with core care schema |
-| `animations` | `id`, `replicate_prediction_id`, `status`, `result_video_url`, `error` | Replicate webhook fails | Retire or restore with signed webhook and ownership model |
-| `partner_holds` | `id`, `partner_id`, `amount`, `status`, `release_date`, `note` | Authorized cron reaches a missing table and fails | Defer until partner/financial domain is intentionally designed |
+| `animations` | `id`, `replicate_prediction_id`, `status`, `result_video_url`, `error` | No active application consumer; former unsigned webhook now returns 410 without parsing | Retire at the database boundary or restore only with signed webhook and ownership model |
+| `partner_holds` | `id`, `partner_id`, `amount`, `status`, `release_date`, `note` | No active application consumer; former auto-release route now returns 410 without reading secrets | Defer until partner/financial domain is intentionally designed |
 
 These service tables belong outside the core person-care migration unless the
 product explicitly retains their routes. Creating empty tables would make
@@ -425,8 +425,8 @@ Step 3 must not create every missing table. First record an explicit decision:
 | `memories` | Retain as migration source; add canonical fields only through approved Knowledge plan |
 | `subscriptions` | Retain but defer billing expansion; document existing trial function |
 | `points_balance` | Retire reference unless a real ledger domain is required; do not duplicate `profiles.points` casually |
-| `user_survey` | Migrate useful onboarding facts into canonical profile/Knowledge or explicitly restore |
-| `user_special_dates` | Migrate to Events rather than keep a second date source |
+| `user_survey` | Restored as private onboarding source; any future Knowledge promotion requires explicit confirmation |
+| `user_special_dates` | Retired; canonical Events own these dates |
 | `notes` | Retired in Stage 8.1; `memories`/Knowledge is canonical |
 | `ai_gift_cache` | Restored in Stage 8.4 as a bounded server-only cache, not Knowledge |
 | `gift_requests` | Product decision: retain isolated concierge or retire from core |
@@ -692,3 +692,35 @@ times, and disables device tokens only when APNs or FCM explicitly identifies
 them as invalid. Provider credentials and full device tokens are never logged.
 The function remains safe but operationally dormant until the Apple and
 Firebase secrets are configured and a protected schedule invokes it.
+
+## 24. Optional event location foundation
+
+Migration `20260816152306_add_optional_event_location.sql` was applied to
+`happydate-prod` on 2026-08-16. It adds a nullable, human-readable `location`
+field to owned Calendar events with a database-enforced 1–300 character bound.
+Existing Event RLS continues to provide row ownership; no new grants, policy,
+function, index, or public surface was introduced.
+
+Calendar create/edit, Realtime mapping, recurrence projection and ICS
+import/export preserve the value. Home loads it through the existing
+owner-filtered repository, and Assistant receives only the server-reloaded,
+bounded location rather than trusting private event context from the client.
+This is deliberately a place label, not background location tracking or device
+geolocation. Travel-time calculation remains a later, explicit-consent feature.
+
+## 25. User-confirmed pre-event travel buffer
+
+Migration `20260816153214_add_optional_event_travel_buffer.sql` was applied to
+`happydate-prod` on 2026-08-16. It adds a nullable integer
+`travel_buffer_minutes` to owned Calendar events and enforces an explicit
+5–240 minute bound in Postgres. Existing Event RLS remains unchanged; the
+migration adds no grant, policy, function, index, provider integration or
+public access surface.
+
+Calendar create/edit, Realtime mapping and ICS import/export preserve the
+confirmed value. The day planner reserves it immediately before the event,
+includes it in conflict checks and reports travel separately from focus time.
+Home voice briefings and Assistant context may mention only the value reloaded
+through owner-filtered server data. HappyDate does not infer a route, inspect
+device location or track movement; automatic travel estimates remain deferred
+until origin, destination, transport, provider and consent are designed.

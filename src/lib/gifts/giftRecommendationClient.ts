@@ -8,6 +8,7 @@ import {
   parseHappyLearningDetectV2Response,
 } from "../happy-learning/happyLearningClient.ts";
 import type { HappyLearningDetectionCandidate } from "../happy-learning/happyLearningDetectV2.types.ts";
+import { normalizeAiRetryAfter } from "../assistant/aiAvailability.ts";
 
 export interface LegacyGiftIdea {
   title?: unknown;
@@ -24,6 +25,7 @@ export interface GiftSuggestionApiResponse {
   ideas?: unknown;
   error?: unknown;
   cached?: unknown;
+  retryAfter?: unknown;
 }
 
 export interface RequestGiftRecommendationsInput {
@@ -57,7 +59,8 @@ export type GiftRecommendationsResult =
     }
   | {
       ok: false;
-      error: "unauthorized" | "person_not_found" | "request_failed";
+      error: "unauthorized" | "person_not_found" | "daily_ai_budget_exceeded" | "request_failed";
+      retryAfter?: number;
     };
 
 function text(value: unknown): string | null {
@@ -205,6 +208,13 @@ export async function requestGiftRecommendations(
 
   const payload = await response.json().catch(() => ({})) as GiftSuggestionApiResponse;
   if (!response.ok) {
+    if (response.status === 429 && payload.error === "daily_ai_budget_exceeded") {
+      return {
+        ok: false,
+        error: "daily_ai_budget_exceeded",
+        retryAfter: normalizeAiRetryAfter(payload.retryAfter, 3_600),
+      };
+    }
     const error = payload.error === "unauthorized" || payload.error === "person_not_found"
       ? payload.error
       : "request_failed";

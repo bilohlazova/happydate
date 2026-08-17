@@ -76,6 +76,7 @@ test("Auth routes and redirects remain unchanged and unprefixed", async () => {
     "src/app/auth/reset/page.tsx",
     "src/app/auth/callback/page.tsx",
     "src/app/auth/update-password/page.tsx",
+    "src/lib/navigation/safeDeepLink.ts",
   ];
   const sources = await Promise.all(files.map((file) => readFile(path.join(root, file), "utf8")));
   const combined = sources.join("\n");

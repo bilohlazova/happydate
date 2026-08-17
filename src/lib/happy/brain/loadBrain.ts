@@ -4,6 +4,7 @@ import {
   getCurrentMemoryUserId,
 } from "@/lib/repositories/memoryRepository";
 import { listKnowledge } from "@/lib/repositories/knowledgeRepository";
+import { logOperationalWarning } from "@/lib/observability/safeLogger";
 
 import type { PersonSummary } from "@/lib/repositories/people";
 import type { EventSummary } from "@/lib/repositories/events";
@@ -76,7 +77,7 @@ async function getMemoriesForCurrentUser(): Promise<KnowledgeItem[]> {
       });
   } catch {
     if (process.env.NODE_ENV === "development") {
-      console.warn("[happy.loadBrain] Memory data unavailable.");
+      logOperationalWarning("happy-brain", "memory-data-unavailable");
     }
     return [];
   }

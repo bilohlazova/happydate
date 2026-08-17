@@ -33,7 +33,7 @@ export default function UpdatePasswordPage() {
     setMsg(null);
     setErr(null);
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       setErr(translate("validation.passwordTooShort"));
       return;
     }
@@ -89,7 +89,7 @@ export default function UpdatePasswordPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               className="min-h-12 w-full rounded-2xl border p-3 text-base outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
-              minLength={6}
+              minLength={8}
               placeholder="••••••••"
             />
           </div>
@@ -105,7 +105,7 @@ export default function UpdatePasswordPage() {
               onChange={(e) => setPassword2(e.target.value)}
               required
               className="min-h-12 w-full rounded-2xl border p-3 text-base outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
-              minLength={6}
+              minLength={8}
               placeholder="••••••••"
             />
           </div>

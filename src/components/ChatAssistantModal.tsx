@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Gift, Sparkles, Users } from "lucide-react";
+import { CalendarCheck2, CalendarDays, Gift, NotebookPen, Sparkles, Users } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
@@ -11,6 +11,7 @@ import ConversationView, { type ChatHappyLearningViewState } from "@/components/
 import type { AssistantAction, ChatMessage } from "@/components/chat-assistant/types";
 import { useAssistantHomeContext } from "@/hooks/useAssistantHomeContext";
 import { buildConversationHistory } from "@/lib/assistant/chatClient";
+import { classifyAiAvailabilityError } from "@/lib/assistant/aiAvailability";
 import { resolveChatPerson } from "@/lib/chat-person/resolveChatPerson";
 import { confirmHappyLearningCandidate, requestHappyLearningDetection } from "@/lib/happy-learning/happyLearningClient";
 import type { HappyLearningDetectionCandidate } from "@/lib/happy-learning/happyLearningDetectV2.types";
@@ -24,8 +25,10 @@ interface ChatAssistantModalProps {
 
 const ACTION_DEFINITIONS = [
   { id: "gift", icon: Gift },
-  { id: "event", icon: CalendarDays },
-  { id: "people", icon: Users },
+  { id: "event", icon: CalendarDays, destination: "/dashboard?action=add-event" },
+  { id: "note", icon: NotebookPen, destination: "/notes?action=add-note" },
+  { id: "people", icon: Users, destination: "/people" },
+  { id: "dayPlan", icon: CalendarCheck2, destination: "/dashboard?action=plan-day" },
   { id: "inspiration", icon: Sparkles },
 ] as const;
 
@@ -76,12 +79,15 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
   const messageIdRef = useRef(0);
   const localeRef = useRef(locale);
 
-  const actions: AssistantAction[] = ACTION_DEFINITIONS.map(({ id, icon }) => ({
-    id,
-    icon,
-    title: t(`actions.${id}.title`),
-    description: t(`actions.${id}.description`),
-    prompt: t(`actions.${id}.prompt`),
+  const actions: AssistantAction[] = ACTION_DEFINITIONS.map((definition) => ({
+    id: definition.id,
+    icon: definition.icon,
+    title: t(`actions.${definition.id}.title`),
+    description: t(`actions.${definition.id}.description`),
+    prompt: t(`actions.${definition.id}.prompt`),
+    ...("destination" in definition && definition.destination
+      ? { destination: definition.destination }
+      : {}),
   }));
 
   const cancelActiveResponse = useCallback(() => {
@@ -143,6 +149,8 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
 
   useEffect(() => {
     if (!open || !initialPrompt || messages.length > 0) return;
+    // Seed a newly opened controlled composer without overwriting user input.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setValue((current) => current.trim() ? current : initialPrompt);
     requestAnimationFrame(() => textareaRef.current?.focus());
   }, [initialPrompt, messages.length, open]);
@@ -174,7 +182,6 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
   const activeRetryAt = messages.reduce((latest, message) => Math.max(latest, message.retryAt ?? 0), 0);
   useEffect(() => {
     if (!activeRetryAt || activeRetryAt <= Date.now()) return;
-    setRateLimitNow(Date.now());
     const timer = window.setInterval(() => {
       const now = Date.now();
       setRateLimitNow(now);
@@ -198,6 +205,16 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
   }
 
   function selectAction(action: AssistantAction) {
+    if (action.destination) {
+      closeAssistant();
+      const destination = (action.id === "note" || action.id === "event")
+        && personContext.resolutionStatus === "resolved"
+        && personContext.activePersonId
+        ? `${action.destination}&personId=${encodeURIComponent(personContext.activePersonId)}`
+        : action.destination;
+      router.push(destination);
+      return;
+    }
     setValue(action.prompt);
     requestAnimationFrame(() => textareaRef.current?.focus());
   }
@@ -345,13 +362,12 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
       });
       if (!response.ok || !response.body) {
         const failure = await response.json().catch(() => null) as { error?: string; retryAfter?: number } | null;
-        if (response.status === 429 && failure?.error === "rate_limited") {
-          throw Object.assign(new Error("assistant rate limited"), {
-            code: "rate_limited",
-            retryAfter: failure.retryAfter,
-          });
-        }
-        throw new Error("assistant request failed");
+        const availability = classifyAiAvailabilityError({
+          status: response.status,
+          error: failure?.error,
+          retryAfter: failure?.retryAfter,
+        });
+        throw Object.assign(new Error("assistant unavailable"), availability);
       }
 
       const reader = response.body.getReader();
@@ -380,15 +396,17 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
     } catch (error) {
       if (controller.signal.aborted) return;
       const failure = error as { code?: string; retryAfter?: number };
-      const retryAfter = failure.code === "rate_limited"
-        ? Math.max(1, Math.min(600, Number(failure.retryAfter) || 60))
+      const retryAfter = failure.code === "rate_limited" || failure.code === "daily_ai_budget_exceeded"
+        ? Number(failure.retryAfter) || 60
         : null;
       setMessages((current) => current.map((message) =>
         message.id === assistantMessageId
           ? {
               ...message,
               status: "error",
-              errorCode: retryAfter ? "rate_limited" : "request_failed",
+              errorCode: failure.code === "daily_ai_budget_exceeded"
+                ? "daily_ai_budget_exceeded"
+                : retryAfter ? "rate_limited" : "request_failed",
               retryAt: retryAfter ? Date.now() + retryAfter * 1_000 : undefined,
             }
           : message,
@@ -526,9 +544,47 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
         />
 
         {activePerson && (
-          <div className="happy-chat-context" role="status">
+          <div className="happy-chat-context">
             <span className="happy-chat-context__dot" aria-hidden="true" />
-            <span>{t("context.person", { name: activePerson.name })}</span>
+            <span role="status">{t("context.person", { name: activePerson.name })}</span>
+            <span className="happy-chat-context__actions">
+              <button
+                type="button"
+                aria-label={t("context.addNote")}
+                onClick={() => {
+                  const noteAction = actions.find((action) => action.id === "note");
+                  if (noteAction) selectAction(noteAction);
+                }}
+              >
+                <NotebookPen aria-hidden="true" />
+                <span>{t("context.addNote")}</span>
+              </button>
+              <button
+                type="button"
+                aria-label={t("context.addEvent")}
+                onClick={() => {
+                  const eventAction = actions.find((action) => action.id === "event");
+                  if (eventAction) selectAction(eventAction);
+                }}
+              >
+                <CalendarDays aria-hidden="true" />
+                <span>{t("context.addEvent")}</span>
+              </button>
+              <button
+                type="button"
+                aria-label={t("context.giftHelp", { name: activePerson.name })}
+                onClick={() => {
+                  const giftAction = actions.find((action) => action.id === "gift");
+                  if (giftAction) {
+                    setValue(t("context.giftPrompt", { name: activePerson.name }));
+                    requestAnimationFrame(() => textareaRef.current?.focus());
+                  }
+                }}
+              >
+                <Gift aria-hidden="true" />
+                <span>{t("context.gift")}</span>
+              </button>
+            </span>
           </div>
         )}
 
@@ -561,6 +617,7 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
             errorLabel={t("conversation.error")}
             retryLabel={t("conversation.retry")}
             rateLimitLabel={t("conversation.rateLimited")}
+            dailyBudgetLabel={t("conversation.dailyBudget")}
             retryInLabel={(seconds) => t("conversation.retryIn", { seconds })}
             now={rateLimitNow || Date.now()}
             happyLearning={happyLearning}

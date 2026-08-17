@@ -197,12 +197,17 @@ test("Home post-gift prompt reads only owned given Gifts without an outcome", as
 
 test("Home Loader is the single Knowledge and Brain orchestration boundary", async () => {
   const loader = await readFile(new URL("../src/lib/home/loadHome.ts", import.meta.url), "utf8");
+  const orchestration = await readFile(new URL("../src/lib/home/orchestrateHomeBrains.ts", import.meta.url), "utf8");
   const repository = await readFile(new URL("../src/lib/repositories/home/home.repository.ts", import.meta.url), "utf8");
   const assistant = await readFile(new URL("../src/hooks/useAssistantHomeContext.ts", import.meta.url), "utf8");
   assert.match(loader, /getHomeRepositoryData/);
-  assert.match(loader, /buildAllPeopleKnowledge/);
-  assert.match(loader, /buildInsights/);
-  assert.equal((repository.match(/listKnowledge\(/g) ?? []).length, 1);
+  assert.match(loader, /orchestrateHomeBrains/);
+  assert.match(orchestration, /orchestrateThreeBrains/);
+  assert.match(orchestration, /buildAllPeopleKnowledge/);
+  assert.match(orchestration, /buildInsights/);
+  assert.match(orchestration, /buildAssistantMemoryContextFromSemanticMemory/);
+  assert.equal(orchestration.includes("getHomeRepositoryData"), false);
+  assert.equal((repository.match(/listKnowledgeWithClient\(/g) ?? []).length, 1);
   assert.equal(assistant.includes("listKnowledge"), false);
   assert.equal(assistant.includes("getCurrentMemoryUserId"), false);
   assert.match(assistant, /data\.brainInsights/);

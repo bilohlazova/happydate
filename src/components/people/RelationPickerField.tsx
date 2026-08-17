@@ -1,7 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import {
@@ -47,19 +47,18 @@ export function RelationPickerField({
     [gender, peopleT, selectedKey, value]
   );
 
-  useEffect(() => {
-    if (open) {
-      setCustomValue(selectedKey === "other" ? value : "");
-      setCustomOpen(false);
-    }
-  }, [open, selectedKey, value]);
+  function openPicker() {
+    setCustomValue(selectedKey === "other" ? value : "");
+    setCustomOpen(false);
+    setOpen(true);
+  }
 
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs font-black text-slate-600">{formT("fields.relationship")}</label>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={openPicker}
         className={`flex min-h-11 items-center justify-between rounded-[0.95rem] border border-slate-100 bg-white px-4 text-left text-[16px] font-semibold shadow-[0_8px_22px_rgba(15,23,42,0.05)] ${
           displayValue ? "text-slate-800" : "text-slate-400"
         }`}

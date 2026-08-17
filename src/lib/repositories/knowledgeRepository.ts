@@ -159,11 +159,11 @@ async function createKnowledgeWithClient(
 }
 
 /** @internal Raw compatibility read used by legacy repository methods. */
-async function listKnowledgeRows({
+async function listKnowledgeRowsWithClient(client: SupabaseClient, {
   userId,
   includeArchived = false,
 }: ListKnowledgeInput): Promise<MemoryRow[]> {
-  let query = supabase
+  let query = client
     .from("memories")
     .select(MEMORY_ROW_COLUMNS)
     .eq("user_id", userId);
@@ -241,7 +241,16 @@ async function listOwnedKnowledgeRowsOnServer(
 export async function listKnowledge(
   input: ListKnowledgeInput
 ): Promise<KnowledgeItem[]> {
-  const rows = await listKnowledgeRows(input);
+  const rows = await listKnowledgeRowsWithClient(supabase, input);
+  return mapLegacyMemoriesToKnowledge(rows);
+}
+
+/** Owner-scoped Knowledge read for an already authenticated RLS client. */
+export async function listKnowledgeWithClient(
+  client: SupabaseClient,
+  input: ListKnowledgeInput,
+): Promise<KnowledgeItem[]> {
+  const rows = await listKnowledgeRowsWithClient(client, input);
   return mapLegacyMemoriesToKnowledge(rows);
 }
 
@@ -316,7 +325,7 @@ export async function listKnowledgeChangeHistoryForOwnedPerson(
 export async function listNotesKnowledgeProjection({
   userId,
 }: ListKnowledgeInput): Promise<NotesMemoryRow[]> {
-  const rows = await listKnowledgeRows({ userId, includeArchived: true });
+  const rows = await listKnowledgeRowsWithClient(supabase, { userId, includeArchived: true });
   return rows.map((row) => ({
     id: row.id,
     content_text: row.content_text,

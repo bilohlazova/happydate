@@ -31,8 +31,7 @@ test("existing gift CTA routes to the compatible Gift Workspace", async () => {
   assert.match(card, /recommendation\.href/);
 });
 
-test("legacy concierge write is isolated from React", async () => {
-  const compatibility = await source("src/lib/gifts/giftRequestCompatibility.ts");
-  assert.match(compatibility, /from\("gift_requests"\)/);
-  assert.match(compatibility, /notify-gift/);
+test("retired concierge write is absent from React", async () => {
+  const content = await source("src/app/gift/start/StartPageContent.tsx");
+  assert.doesNotMatch(content, /giftRequestCompatibility|gift_requests|notify-gift/);
 });

@@ -18,6 +18,17 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.happydate.app.auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.happydate.app</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
@@ -38,16 +49,10 @@
 	<string>HappyDate needs permission to save edited photos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>HappyDate uses your photo library only when you choose an image for a profile or private note.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Potrzebujemy rozpoznawania mowy do transkrypcji</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
-	<key>UIRequiredDeviceCapabilities</key>
-	<array>
-		<string>armv7</string>
-	</array>
 	<key>UIStatusBarHidden</key>
 	<false/>
 	<key>UIStatusBarStyle</key>

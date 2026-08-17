@@ -52,7 +52,8 @@ test("Gift AI route uses context and discovery as the single structured model pa
   assert.match(route, /skippedQuestions: discoveryRequest\.skippedQuestionIds/);
   assert.match(route, /buildGiftDiscoveryPromptInput\(giftDiscoverySession\)/);
   assert.match(route, /const giftRecommendationPayload = \{\s*context: giftRecommendationContext,\s*discovery: giftDiscoveryPromptInput,\s*\}/);
-  assert.match(route, /input: JSON\.stringify\(payload\)/);
+  assert.match(route, /const serializedPayload = JSON\.stringify\(payload\)/);
+  assert.match(route, /input: serializedPayload/);
   assert.match(route, /generateGiftRecommendations\(\s*giftRecommendationPayload,/);
   assert.match(route, /buildGiftRecommendationInstructions\(giftRecommendationContext, giftDiscoveryPromptInput\)/);
   assert.match(route, /instructions,/);

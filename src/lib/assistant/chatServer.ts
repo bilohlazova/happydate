@@ -2,14 +2,22 @@ import { ASSISTANT_CHAT_CONFIG, type AssistantIdentityKind } from "./chatConfig.
 import type { AssistantChatRequest, AssistantConversationItem } from "./chatContract.ts";
 import { buildAssistantSystemPrompt, formatAssistantContext, parseAssistantChatRequest } from "./chatContract.ts";
 import type { AssistantRateLimiter } from "./rateLimiter.ts";
+import { logAiUsageEvent, logOperationalError, logOperationalWarning } from "../observability/safeLogger.ts";
 import type { AssistantGiftOutcomeContext } from "./giftOutcomeContext.server.ts";
 import { formatAssistantGiftOutcomeContext } from "./chatContract.ts";
+import { ASSISTANT_BEHAVIOR_MANIFEST } from "./assistantBehaviorManifest.ts";
+import { AI_COST_POLICY, estimateInputTokens, estimatedUsd, type AiBudget, type AiBudgetReservation, type AiTokenUsage } from "./aiBudget.ts";
 
 export type AssistantProviderMessage = AssistantConversationItem | { role: "system"; content: string };
+export type AssistantProviderOutput = {
+  stream: AsyncIterable<string>;
+  usage?: Promise<AiTokenUsage | null>;
+};
 export type AssistantTextProvider = (
   messages: AssistantProviderMessage[],
   signal?: AbortSignal,
-) => Promise<AsyncIterable<string>>;
+  reservation?: AiBudgetReservation,
+) => Promise<AsyncIterable<string> | AssistantProviderOutput>;
 
 export type AssistantProviderErrorCode =
   | "missing_api_key"
@@ -41,6 +49,11 @@ type ChatResponseOptions = {
   logger?: (message: string, diagnostic?: unknown) => void;
   timeoutMs?: number;
   serverGiftOutcomes?: readonly AssistantGiftOutcomeContext[];
+  prepareRequest?: (request: AssistantChatRequest) => Promise<{
+    request: AssistantChatRequest;
+    serverGiftOutcomes?: readonly AssistantGiftOutcomeContext[];
+  }>;
+  budget?: AiBudget | null;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -110,7 +123,7 @@ export async function createAssistantChatResponse(
   const options: ChatResponseOptions = optionsOrSignal instanceof AbortSignal
     ? { signal: optionsOrSignal }
     : optionsOrSignal;
-  const logger = options.logger ?? ((message, diagnostic) => console.error(`[assistant-chat] ${message}`, diagnostic));
+  const logger = options.logger ?? ((message, diagnostic) => logOperationalError("assistant-chat", message, diagnostic));
   const parsed = parseAssistantChatRequest(rawBody);
   if (!parsed.success) return Response.json({ error: "invalid_request" }, { status: 400 });
 
@@ -139,9 +152,24 @@ export async function createAssistantChatResponse(
     }
   }
 
-  const request: AssistantChatRequest = parsed.data;
+  let request: AssistantChatRequest = parsed.data;
+  let serverGiftOutcomes = options.serverGiftOutcomes ?? [];
+  if (options.prepareRequest) {
+    try {
+      const prepared = await options.prepareRequest(request);
+      request = prepared.request;
+      serverGiftOutcomes = prepared.serverGiftOutcomes ?? [];
+    } catch {
+      await release?.();
+      logger("verified context unavailable", { category: "verified_context_unavailable" });
+      return Response.json(
+        { error: "service_unavailable" },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+  }
   const context = formatAssistantContext(request.context);
-  const giftOutcomeContext = formatAssistantGiftOutcomeContext(options.serverGiftOutcomes ?? []);
+  const giftOutcomeContext = formatAssistantGiftOutcomeContext(serverGiftOutcomes);
   const messages: AssistantProviderMessage[] = [
     { role: "system", content: buildAssistantSystemPrompt(request.locale) },
     ...(context ? [{ role: "system" as const, content: context }] : []),
@@ -149,10 +177,38 @@ export async function createAssistantChatResponse(
     ...request.conversation,
     { role: "user", content: request.message },
   ];
+  let budgetReservation: AiBudgetReservation | undefined;
+  if (options.budget === null) {
+    await release?.();
+    logger("configuration missing", { category: "ai_budget_missing" });
+    return Response.json({ error: "service_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
+  if (options.budget) {
+    try {
+      const budget = await options.budget.reserve(
+        estimateInputTokens(messages),
+        ASSISTANT_CHAT_CONFIG.maxOutputTokens,
+      );
+      if (!budget.allowed) {
+        await release?.();
+        return Response.json(
+          { error: "daily_ai_budget_exceeded", retryAfter: budget.retryAfterSeconds },
+          { status: 429, headers: { "Retry-After": String(budget.retryAfterSeconds), "Cache-Control": "no-store" } },
+        );
+      }
+      budgetReservation = budget.reservation;
+    } catch {
+      await release?.();
+      logger("infrastructure unavailable", { category: "ai_budget_unavailable" });
+      return Response.json({ error: "service_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    }
+  }
   const abort = combinedAbortSignal(options.signal, options.timeoutMs ?? ASSISTANT_CHAT_CONFIG.requestTimeoutMs);
 
   try {
-    const output = await provider(messages, abort.signal);
+    const providerOutput = await provider(messages, abort.signal, budgetReservation);
+    const output = Symbol.asyncIterator in providerOutput ? providerOutput : providerOutput.stream;
+    const usage = Symbol.asyncIterator in providerOutput ? undefined : providerOutput.usage;
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
@@ -161,6 +217,19 @@ export async function createAssistantChatResponse(
             if (abort.signal.aborted) break;
             if (typeof chunk !== "string") throw Object.assign(new Error("invalid provider response"), { status: 422 });
             if (chunk) controller.enqueue(encoder.encode(chunk));
+          }
+          const actualUsage = await usage;
+          if (actualUsage) {
+            await budgetReservation?.settle(actualUsage).catch(() => {
+              logOperationalWarning("ai-budget", "settlement-skipped", { category: "upstash_unavailable" });
+            });
+            logAiUsageEvent({
+              feature: "assistant",
+              ...actualUsage,
+              estimatedUsd: estimatedUsd(actualUsage),
+              behaviorVersion: ASSISTANT_BEHAVIOR_MANIFEST.behaviorVersion,
+              pricingVersion: AI_COST_POLICY.version,
+            });
           }
           controller.close();
         } catch (error) {
@@ -180,6 +249,7 @@ export async function createAssistantChatResponse(
         "Content-Type": "text/plain; charset=utf-8",
         "Cache-Control": "no-store",
         "X-Content-Type-Options": "nosniff",
+        "X-HappyDate-Assistant-Version": ASSISTANT_BEHAVIOR_MANIFEST.behaviorVersion,
       },
     });
   } catch (error) {

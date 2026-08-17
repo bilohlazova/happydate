@@ -8,6 +8,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { MobileUI } from "@/lib/theme/mobile";
 import { useTranslations } from "next-intl";
 import { mapAuthError } from "@/lib/auth/mapAuthError";
+import { Capacitor } from "@capacitor/core";
+import { nativeAuthRedirect, safePostAuthPath } from "@/lib/navigation/safeDeepLink";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -43,9 +45,9 @@ export default function RegisterPage() {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    const redirectTo = params.get("redirectTo");
+    const redirectTo = safePostAuthPath(params.get("redirectTo"), "/profile");
     if (survey?.is_completed) {
-      router.replace(redirectTo || "/profile");
+      router.replace(redirectTo);
     } else {
       router.replace("/survey");
     }
@@ -72,7 +74,7 @@ export default function RegisterPage() {
       setErrorMsg(translate("validation.emailInvalid"));
       return false;
     }
-    if (password.length < 6) {
+    if (password.length < 8) {
       setErrorMsg(translate("validation.passwordTooShort"));
       return false;
     }
@@ -94,8 +96,11 @@ export default function RegisterPage() {
     // Після підтвердження листа повернемося на /auth/callback,
     // який встановить сесію; потім useEffect перенаправить на /survey
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const next = params.get("redirectTo") || "/survey";
-    const emailRedirectTo = `${appUrl}/auth/callback?next=${encodeURIComponent(next)}`;
+    const next = safePostAuthPath(params.get("redirectTo"), "/survey");
+    const callbackQuery = `next=${encodeURIComponent(next)}`;
+    const emailRedirectTo = Capacitor.isNativePlatform()
+      ? nativeAuthRedirect("/auth/callback", callbackQuery)
+      : `${appUrl}/auth/callback?${callbackQuery}`;
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -185,7 +190,7 @@ export default function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className={`${MobileUI.input} pr-11`}
                 required
-                minLength={6}
+                minLength={8}
               />
               <button
                 type="button"
@@ -209,7 +214,7 @@ export default function RegisterPage() {
               onChange={(e) => setPassword2(e.target.value)}
               className={MobileUI.input}
               required
-              minLength={6}
+              minLength={8}
             />
           </div>
 

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { logOperationalWarning } from "@/lib/observability/safeLogger";
 
 export type KnowledgeReviewInteractionChannel = "home" | "voice" | "profile";
 export type KnowledgeReviewInteractionAction = "shown" | "confirmed" | "snoozed" | "archived";
@@ -20,7 +21,7 @@ export async function recordKnowledgeReviewInteraction(
         onConflict: "user_id,occurred_on,channel,action",
         ignoreDuplicates: true,
       });
-    if (error) console.warn("[knowledge-review-interaction] Record skipped");
+    if (error) logOperationalWarning("knowledge-review-interaction", "record-skipped", error);
   } catch {
     // Measurement is intentionally non-critical and content-free.
   }

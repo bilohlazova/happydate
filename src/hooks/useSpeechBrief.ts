@@ -19,8 +19,10 @@ export function useSpeechBrief(text: string, locale: string) {
   const speakingRef = useRef(false);
   const pausedRef = useRef(false);
 
-  speakingRef.current = speaking;
-  pausedRef.current = paused;
+  useEffect(() => {
+    speakingRef.current = speaking;
+    pausedRef.current = paused;
+  }, [paused, speaking]);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -31,6 +33,8 @@ export function useSpeechBrief(text: string, locale: string) {
 
   useEffect(() => {
     const supported = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+    // Browser speech support can only be detected after hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsSupported(supported);
     if (!supported) return;
 

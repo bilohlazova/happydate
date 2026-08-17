@@ -12,9 +12,6 @@ const scopedReactFiles = [
   "src/app/services/wysluchaj-mnie/page.tsx",
   "src/app/services/zrzutka/page.tsx",
   "src/components/services/ServiceCard.tsx",
-  "src/components/services/GoodDeedForm.tsx",
-  "src/components/services/GoodDeedSteps.tsx",
-  "src/components/services/YouTubeShowcase.tsx",
   "src/components/AIAssistant.tsx",
   "src/components/assistant/AssistantAvatar.tsx",
   "src/components/assistant/AssistantCard.tsx",
@@ -69,36 +66,17 @@ test("Phase 3C scoped production React files contain no known hardcoded Polish U
   }
 });
 
-test("service plan route keeps canonical values while presentation copy is localized", async () => {
-  const [data, page] = await Promise.all([
-    readFile(
-      path.join(
-        root,
-        "src/app/services/wiadomosc-z-nieba/plans/data.ts"
-      ),
-      "utf8"
-    ),
-    readFile(
+test("future service exposes no plan catalogue while legacy route redirects", async () => {
+  const page = await readFile(
       path.join(
         root,
         "src/app/services/wiadomosc-z-nieba/plans/[slug]/page.tsx"
       ),
       "utf8"
-    ),
-  ]);
-
-  for (const value of [
-    "list_cyfrowy",
-    "list_drukowany",
-    "video_cyfrowe",
-    "video_premium",
-  ]) {
-    assert.match(data, new RegExp(`type: "${value}"`));
-  }
-
-  assert.doesNotMatch(data, /List cyfrowy|Wideo premium|Dostawa kurierem/);
-  assert.equal(page.includes("plans.${plan.type}.name"), true);
-  assert.equal(page.includes("order?plan=${plan.type}"), true);
+    );
+  assert.match(page, /redirect\("\/services\/wiadomosc-z-nieba"\)/);
+  assert.match(page, /index: false/);
+  assert.doesNotMatch(page, /plan\.price|order\?plan|plans\.\$\{plan\.type\}/);
 });
 
 test("legal routes render from localized structured content", async () => {

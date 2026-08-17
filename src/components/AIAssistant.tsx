@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -35,6 +35,8 @@ export default function AIAssistant({
   useEffect(() => {
     const h = new Date().getHours();
     if (h >= 5 && h < 12) {
+      // The greeting must use the device's local hour after hydration.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setGreeting(t("greeting.morning"));
       setSubtext(t("subtext.morning"));
     } else if (h >= 12 && h < 18) {
@@ -101,7 +103,7 @@ export default function AIAssistant({
   }
 
   /* ── speech ── */
-  const buildText = useCallback(() => {
+  function buildText() {
     const name = displayName;
     const count = upcoming.length;
     const imp = importantEvent;
@@ -113,7 +115,7 @@ export default function AIAssistant({
       imp ? t("speech.important", { title: imp.title }) : "",
       t("speech.allGood"),
     ].filter(Boolean).join(" ");
-  }, [displayName, greeting, importantEvent, t, upcoming]);
+  }
 
   function handleSpeak() {
     if (!("speechSynthesis" in window)) return;

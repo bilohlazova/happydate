@@ -174,10 +174,12 @@ test("architecture keeps semantic direction, prompt formatting and active-person
     "semanticMemory.types.ts", "semanticMemoryTaxonomy.ts", "buildSemanticMemoryProjection.ts", "index.ts",
   ].map((file) => readFile(new URL(`../src/lib/semantic-memory/${file}`, import.meta.url), "utf8")));
   const loader = await readFile(new URL("../src/lib/home/loadHome.ts", import.meta.url), "utf8");
+  const homeOrchestration = await readFile(new URL("../src/lib/home/orchestrateHomeBrains.ts", import.meta.url), "utf8");
   assert.match(adapter, /semantic-memory/);
   assert.equal(semanticFiles.some((source) => source.includes("/assistant/")), false);
   assert.doesNotMatch(adapter, /formatAssistantContext|resolveChatPerson|activePersonId|ACTIVE PERSON|MEMORIES \(/);
   assert.doesNotMatch(adapter, /lines\.push|•/);
-  assert.match(loader, /buildAssistantMemoryContextFromSemanticMemory/);
-  assert.doesNotMatch(loader, /buildAssistantMemoryContext\(/);
+  assert.match(loader, /orchestrateHomeBrains/);
+  assert.match(homeOrchestration, /buildAssistantMemoryContextFromSemanticMemory/);
+  assert.doesNotMatch(homeOrchestration, /buildAssistantMemoryContext\(/);
 });

@@ -18,6 +18,7 @@ interface ConversationViewProps {
   errorLabel: string;
   retryLabel: string;
   rateLimitLabel: string;
+  dailyBudgetLabel: string;
   retryInLabel: (seconds: number) => string;
   now: number;
   happyLearning: ChatHappyLearningViewState;
@@ -37,6 +38,7 @@ export default function ConversationView({
   errorLabel,
   retryLabel,
   rateLimitLabel,
+  dailyBudgetLabel,
   retryInLabel,
   now,
   happyLearning,
@@ -57,11 +59,11 @@ export default function ConversationView({
                 </span>
               )}
               {message.content || (message.status === "error"
-                ? message.errorCode === "rate_limited" ? rateLimitLabel : errorLabel
+                ? message.errorCode === "daily_ai_budget_exceeded" ? dailyBudgetLabel : message.errorCode === "rate_limited" ? rateLimitLabel : errorLabel
                 : "")}
               {message.role === "assistant" && message.status === "error" && (
                 <div className="mt-2 border-t border-slate-200/80 pt-2">
-                  {message.content && <p className="mb-1.5 text-xs text-slate-500">{message.errorCode === "rate_limited" ? rateLimitLabel : errorLabel}</p>}
+                  {message.content && <p className="mb-1.5 text-xs text-slate-500">{message.errorCode === "daily_ai_budget_exceeded" ? dailyBudgetLabel : message.errorCode === "rate_limited" ? rateLimitLabel : errorLabel}</p>}
                   <button type="button" onClick={() => onRetry(message.id)} disabled={isResponding || Boolean(message.retryAt && message.retryAt > now)} className="min-h-9 rounded-xl px-2 text-xs font-extrabold text-sky-700 transition hover:bg-sky-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300">
                     {message.retryAt && message.retryAt > now
                       ? retryInLabel(Math.max(1, Math.ceil((message.retryAt - now) / 1_000)))

@@ -65,18 +65,18 @@ test("profile calendar dates preserve the source day without UTC conversion", ()
   assert.equal(parseProfileCalendarDate("not-a-date"), null);
 });
 
-test("Profile links only to available routes and leaves future settings non-interactive", async () => {
+test("Profile links to available account controls and leaves only future settings non-interactive", async () => {
   const source = await readFile(path.join(root, "src/app/(app)/profile/page.tsx"), "utf8");
   const routes = [
     ...source.matchAll(/href="([^"]+)"/g),
     ...source.matchAll(/href:\s*"([^"]+)"/g),
   ].map((match) => match[1]);
-  assert.deepEqual(routes, ["/survey", "/settings/reminders", "/privacy", "/settings/export"]);
+  assert.deepEqual(routes, ["/survey", "/settings/reminders", "/settings/reminders", "/auth/reset", "/settings/sessions", "/privacy", "/settings/export", "/settings/delete-account"]);
   assert.equal(routes.some((route) => /^\/(pl|uk|en|ru|de)(\/|$)/.test(route)), false);
-  for (const route of ["/settings/reminders", "/settings/export"]) {
+  for (const route of ["/settings/reminders", "/auth/reset", "/settings/sessions", "/settings/export", "/settings/delete-account"]) {
     assert.match(source, new RegExp(route.replaceAll("/", "\\/")));
   }
-  for (const route of ["/settings/notifications", "/settings/ai", "/settings/password", "/settings/sessions", "/settings/delete", "/care/manage"]) {
+  for (const route of ["/settings/notifications", "/settings/ai", "/settings/password", "/care/manage"]) {
     assert.doesNotMatch(source, new RegExp(route.replaceAll("/", "\\/")));
   }
   assert.match(source, /comingSoon: true/);
@@ -113,7 +113,7 @@ test("Profile dictionaries have no empty values or accidental Polish copies", as
     return result;
   };
   const polish = flatten(await profileMessages("pl"));
-  const allowed = new Set(["title", "hero.care", "exportSettings.back"]);
+  const allowed = new Set(["title", "hero.care", "exportSettings.back", "sessionSettings.back", "deleteAccountSettings.back"]);
   for (const locale of ["uk", "en", "ru", "de"]) {
     const values = flatten(await profileMessages(locale));
     assert.deepEqual(Object.keys(values).sort(), Object.keys(polish).sort());

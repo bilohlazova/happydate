@@ -832,7 +832,7 @@ function KnowledgeReviewSection({ personId, review, onChanged, t }: { personId: 
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     if (review) void recordKnowledgeReviewInteraction("profile", "shown");
-  }, [review?.knowledgeId]);
+  }, [review]);
   if (!review) return null;
 
   async function act(action: "confirm" | "snooze" | "archive") {

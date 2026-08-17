@@ -39,8 +39,9 @@ export interface HappyDateAccountExport {
 
 export async function buildHappyDateAccountExport(): Promise<HappyDateAccountExport> {
   const user = await authenticatedUser();
-  const [profiles, people, events, memories, gifts, giftLinks, reminders, reminderPreferences, reminderDeliveries, pushDevices, knowledgeChanges, knowledgeReviewInteractions] = await Promise.all([
+  const [profiles, survey, people, events, memories, gifts, giftLinks, reminders, reminderPreferences, plannerPreferences, reminderDeliveries, pushDevices, knowledgeChanges, knowledgeReviewInteractions] = await Promise.all([
     exportOwnedRows("profiles", user.id, "id, full_name, phone, preferences, avatar_url, preferred_locale, points, created_at, gift_outcome_learning_enabled", "id"),
+    exportOwnedRows("user_survey", user.id, "user_id, likes, dislikes, dream, notes, is_completed, completed_at, reward_granted_at, special_date_event_ids, created_at, updated_at"),
     exportOwnedRows("people", user.id),
     exportOwnedRows("events", user.id),
     exportOwnedKnowledgeRows(user.id),
@@ -48,6 +49,7 @@ export async function buildHappyDateAccountExport(): Promise<HappyDateAccountExp
     exportOwnedRows("gift_links", user.id),
     exportOwnedRows("reminders", user.id),
     exportOwnedRows("reminder_preferences", user.id),
+    exportOwnedRows("planner_preferences", user.id),
     exportOwnedRows("reminder_deliveries", user.id),
     exportOwnedRows("push_devices", user.id, "id, user_id, platform, locale, enabled, last_seen_at, created_at, updated_at"),
     exportOwnedRows("memory_knowledge_changes", user.id),
@@ -58,7 +60,7 @@ export async function buildHappyDateAccountExport(): Promise<HappyDateAccountExp
     version: 1,
     exportedAt: new Date().toISOString(),
     account: { id: user.id, email: user.email ?? null, createdAt: user.created_at ?? null },
-    data: { profiles, people, events, memories, gifts, giftLinks, reminders, reminderPreferences, reminderDeliveries, pushDevices, knowledgeChanges, knowledgeReviewInteractions },
+    data: { profiles, survey, people, events, memories, gifts, giftLinks, reminders, reminderPreferences, plannerPreferences, reminderDeliveries, pushDevices, knowledgeChanges, knowledgeReviewInteractions },
   };
 }
 

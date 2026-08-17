@@ -6,6 +6,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useTranslations } from "next-intl";
+import { safePostAuthPath } from "@/lib/navigation/safeDeepLink";
+import { logOperationalError } from "@/lib/observability/safeLogger";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -48,10 +50,10 @@ export default function AuthCallbackPage() {
         }
 
         // normal login redirect
-        router.replace(next || "/dashboard");
+        router.replace(safePostAuthPath(next));
 
       } catch (e) {
-        console.error(e);
+        logOperationalError("auth-callback", "exchange-failed", e);
         router.replace("/auth/login");
       }
     };

@@ -1,5 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
+import { logOperationalError } from "@/lib/observability/safeLogger";
 
 import {
   LOCALE_COOKIE_NAME,
@@ -25,7 +26,7 @@ export default getRequestConfig(async ({ locale: explicitLocale }) => {
     timeZone: "UTC",
     onError(error) {
       if (process.env.NODE_ENV === "development") {
-        console.error("[i18n] Translation error:", error);
+        logOperationalError("i18n", "translation-error", error);
       }
     },
     getMessageFallback({ namespace, key }) {

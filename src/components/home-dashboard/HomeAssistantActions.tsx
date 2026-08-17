@@ -18,6 +18,8 @@ export default function HomeAssistantActions({ briefing, locale, labels, onAsk }
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(BRIEFING_MODE_KEY);
+      // Device-local preference is intentionally restored after hydration.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (stored === "short" || stored === "detailed") setMode(stored);
     } catch {
       // Private browsing or device policy may disable local storage.

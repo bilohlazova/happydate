@@ -9,6 +9,8 @@ import Footer from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
 import DesktopAppNav from "@/components/DesktopAppNav";
 import { getAppMetadata } from "@/i18n/metadata";
+import NativeDeepLinkBridge from "@/components/NativeDeepLinkBridge";
+import ClientErrorReporter from "@/components/ClientErrorReporter";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,6 +56,8 @@ export default async function RootLayout({
           messages={messages}
           timeZone={timeZone}
         >
+          <NativeDeepLinkBridge />
+          <ClientErrorReporter />
           <div className="flex min-h-screen flex-col">
 
           {/* HEADER — сам розтягується під статус-бар через paddingTop у Header.tsx */}

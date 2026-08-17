@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { logOperationalWarning } from "@/lib/observability/safeLogger";
 
 /** Повертає publicUrl аватарки (або null) і метод refresh() */
 export function useAvatar(userId?: string | null) {
@@ -17,7 +18,7 @@ export function useAvatar(userId?: string | null) {
       .single();
 
     if (error) {
-      console.warn("profiles select error:", error.message);
+      logOperationalWarning("avatar", "profile-select-failed", error);
       return setUrl(null);
     }
 
@@ -30,6 +31,8 @@ export function useAvatar(userId?: string | null) {
   };
 
   useEffect(() => {
+    // Avatar ownership changes require a fresh storage lookup.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);

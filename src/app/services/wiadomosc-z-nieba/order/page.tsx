@@ -1,21 +1,16 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
-import { Suspense } from "react";
-import OrderPageContent from "./OrderPageContent";
+import { redirect } from "next/navigation";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("static.services.phase3b.heaven.orderPage");
-  return {
-    title: t("metaTitle"),
-    description: t("metaDescription"),
-    alternates: { canonical: "/services/wiadomosc-z-nieba/order" },
-  };
-}
+export const metadata: Metadata = {
+  title: "HappyDate",
+  robots: { index: false, follow: false },
+};
 
-export default function Page() {
-  return (
-    <Suspense fallback={null}>
-      <OrderPageContent />
-    </Suspense>
-  );
+/**
+ * Orders are intentionally unavailable while Message from Heaven remains a
+ * future service. Keeping this redirect protects old bookmarks and shared
+ * links without exposing an inactive checkout form.
+ */
+export default function HeavenOrderPage() {
+  redirect("/services/wiadomosc-z-nieba");
 }

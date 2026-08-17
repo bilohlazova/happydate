@@ -4,4 +4,5 @@
     <string name="title_activity_main">HappyDate</string>
     <string name="package_name">com.happydate.app</string>
     <string name="custom_url_scheme">com.happydate.app</string>
+    <string name="default_notification_channel_id">happydate-reminders</string>
 </resources>

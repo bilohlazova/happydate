@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable react-hooks/set-state-in-effect -- Repository refreshes intentionally reconcile these controlled gift editors. */
+
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Check, ExternalLink, Gift, Link2, LoaderCircle, Pencil, Plus, Star, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -55,7 +57,10 @@ export function PersonGiftManager({ personId, personName, onChanged }: { personI
     }
   }, [personId]);
 
-  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    // Initial person-owned gift workspace load.
+    void reload();
+  }, [reload]);
 
   async function run(key: string, operation: () => Promise<void>) {
     setBusy(key);
@@ -201,7 +206,11 @@ function host(url: string): string { try { return new URL(url).hostname.replace(
 function GiftOutcomeFeedback({ current, busy, question, noteLabel, notePlaceholder, saveLabel, confirmedLabel, learningLabel, learningDescription, options, onSave, onLearningChange }: { current: GiftOutcome | null; busy: boolean; question: string; noteLabel: string; notePlaceholder: string; saveLabel: string; confirmedLabel: string; learningLabel: string; learningDescription: string; options: Record<GiftOutcomeValue, string>; onSave: (outcome: GiftOutcomeValue, note: string | null) => void; onLearningChange: (enabled: boolean) => void }) {
   const [outcome, setOutcome] = useState<GiftOutcomeValue | null>(current?.value ?? null);
   const [note, setNote] = useState(current?.note ?? "");
-  useEffect(() => { setOutcome(current?.value ?? null); setNote(current?.note ?? ""); }, [current]);
+  useEffect(() => {
+    // Reconcile the controlled feedback editor after persistence refreshes it.
+    setOutcome(current?.value ?? null);
+    setNote(current?.note ?? "");
+  }, [current]);
   return <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50/70 p-2.5">
     <div className="flex items-start justify-between gap-2"><p className="text-xs font-extrabold text-amber-950">{question}</p>{current && <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-1 text-[0.62rem] font-black uppercase text-emerald-700">{confirmedLabel}</span>}</div>
     <div className="mt-2 grid grid-cols-3 gap-1.5">{(["liked", "not_liked", "unsure"] as const).map((value) => <button key={value} type="button" disabled={busy} onClick={() => setOutcome(value)} className={`min-h-9 rounded-lg px-1.5 text-xs font-extrabold transition disabled:opacity-45 ${outcome === value ? "bg-amber-500 text-white" : "bg-white text-amber-900"}`}>{options[value]}</button>)}</div>

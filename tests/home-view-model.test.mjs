@@ -20,6 +20,10 @@ const messages = {
   "brief.intro": "{count} things.", "brief.featured": "{title} {countdown}.",
   "brief.greetingNamed": "Hello {name}.", "brief.greetingFallback": "Hello.",
   "brief.todayNone": "Nothing important today.", "brief.todayEvents": "Today: {events}.",
+  "brief.todayScheduled": "Today by time: {events}.",
+  "brief.todayMixed": "Today by time: {scheduled}. Also without a specific time: {unscheduled}.",
+  "brief.eventAtLocation": "{event}, at {location}",
+  "brief.eventWithTravelBuffer": "{event}. Leave {minutes} minutes for travel",
   "brief.upcoming": "Upcoming: {title}, {countdown}.",
   "brief.savedGiftIdea": "Gift for {name}: {value}.",
   "brief.savedPreference": "About {name}: {value}.",
@@ -100,6 +104,34 @@ test("daily briefing never describes a saved gift idea as purchased or given", (
   }), "pl", t, new Date(2026, 6, 17));
   assert.doesNotMatch(model.assistantActions.briefText, /bought|given|purchased/i);
   assert.match(model.assistantActions.briefText, /Gift for Ola: Flowers/);
+});
+
+test("daily briefing orders today's timed events and separates events without a time", () => {
+  const model = buildHomeViewModel(data({ events: [
+    { id: "free", title: "Call Mum", date: "2026-07-17", timeOfDay: null, category: "personal", notes: null },
+    { id: "late", title: "Team sync", date: "2026-07-17", timeOfDay: "14:30", category: "work", notes: null },
+    { id: "early", title: "Dentist", date: "2026-07-17", timeOfDay: "09:00", location: "Main Street 5", travelBufferMinutes: 20, category: "personal", notes: null },
+  ] }), "pl", t, new Date(2026, 6, 17));
+
+  const text = model.assistantActions.briefing.sections.find((section) => section.kind === "today")?.text ?? "";
+  assert.match(text, /09:00 — Dentist, at Main Street 5\. Leave 20 minutes for travel, 14:30 — Team sync/);
+  assert.match(text, /without a specific time: Call Mum/);
+  assert.ok(text.indexOf("Dentist") < text.indexOf("Team sync"));
+  assert.ok(text.indexOf("Team sync") < text.indexOf("Call Mum"));
+  assert.deepEqual(model.assistantActions.briefing.sections.find((section) => section.kind === "today")?.sourceIds, ["early", "late", "free"]);
+});
+
+test("Home cards show a confirmed event time and birthdays remain without one", () => {
+  const timed = buildHomeViewModel(data({ events: [
+    { id: "meeting", title: "Meeting", date: "2026-07-17", timeOfDay: "10:15", category: "work", notes: null },
+  ] }), "pl", t, new Date(2026, 6, 17));
+  assert.equal(timed.featuredEvent?.timeOfDay, "10:15");
+  assert.equal(timed.upcomingEvents[0]?.timeOfDay, "10:15");
+
+  const birthday = buildHomeViewModel(data({
+    people: [{ id: "p1", name: "Ola", birthday: "1990-07-17", relationLabel: "Siostra" }],
+  }), "pl", t, new Date(2026, 6, 17));
+  assert.equal(birthday.featuredEvent?.timeOfDay, null);
 });
 
 test("care question timing asks at most one question only inside preparation windows", () => {

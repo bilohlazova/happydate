@@ -5,7 +5,7 @@ import test from "node:test";
 
 const locales = ["pl", "uk", "en", "ru", "de"];
 const required = [
-  "greetingNamed", "greetingFallback", "todayNone", "todayEvents", "upcoming",
+  "greetingNamed", "greetingFallback", "todayNone", "todayEvents", "todayScheduled", "todayMixed", "eventAtLocation", "eventWithTravelBuffer", "upcoming",
   "savedGiftIdea", "savedPreference", "giftOffer", "giftQuestion", "preferenceQuestion",
   "postGiftQuestion", "knowledgeReviewQuestion",
 ];

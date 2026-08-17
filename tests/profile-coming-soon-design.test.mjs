@@ -9,7 +9,9 @@ test("profile distinguishes working settings from future capabilities", async ()
   assert.match(page, /statusTitle/);
   assert.match(page, /comingSoon: true/);
   assert.match(page, /aria-disabled="true"/);
-  assert.doesNotMatch(page, /href: "\/settings\/(notifications|ai|sessions|delete|password)"/);
+  assert.doesNotMatch(page, /href: "\/settings\/(notifications|ai|delete|password)"/);
   assert.match(page, /href: "\/settings\/reminders"/);
+  assert.match(page, /href: "\/settings\/sessions"/);
+  assert.match(page, /href: "\/auth\/reset"/);
   assert.match(page, /href: "\/settings\/export"/);
 });

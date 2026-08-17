@@ -216,7 +216,7 @@ function SettingsCard({
   const translate = useTranslations("profile.settings");
   const futureT = useTranslations("profile.future");
   const rows: SettingRow[] = [
-    { icon: "🔔", label: translate("notifications"), comingSoon: true },
+    { icon: "🔔", label: translate("notifications"), href: "/settings/reminders" },
     { icon: "⏰", label: translate("reminders"), value: translate("threeDaysBefore"), href: "/settings/reminders" },
     { icon: "✨", label: translate("aiSuggestions"), comingSoon: true },
   ];
@@ -267,11 +267,11 @@ function SecurityCard() {
   const translate = useTranslations("profile.security");
   const futureT = useTranslations("profile.future");
   const rows: SettingRow[] = [
-    { icon: "🔑", label: translate("changePassword"), comingSoon: true },
-    { icon: "📱", label: translate("activeSessions"), comingSoon: true },
+    { icon: "🔑", label: translate("changePassword"), href: "/auth/reset" },
+    { icon: "📱", label: translate("activeSessions"), href: "/settings/sessions" },
     { icon: "🔒", label: translate("privacy"), href: "/privacy" },
     { icon: "📦", label: translate("exportData"), href: "/settings/export" },
-    { icon: "🗑️", label: translate("deleteAccount"), comingSoon: true },
+    { icon: "🗑️", label: translate("deleteAccount"), href: "/settings/delete-account" },
   ];
   return (
     <section className="pr-card">

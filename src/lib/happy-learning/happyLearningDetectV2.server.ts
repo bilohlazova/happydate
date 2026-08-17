@@ -13,6 +13,7 @@ import { HAPPY_LEARNING_LIMITS } from "./happyLearningSchema.ts";
 import type { HappyLearningStructuredProvider } from "./happyLearning.types.ts";
 import type { HappyLearningAuthContext } from "./happyLearningAccess.server.ts";
 import type { HappyLearningConfirmationCandidate } from "./happyLearningDetectionToken.server.ts";
+import { readBoundedJson } from "../server/readBoundedJson.ts";
 
 const LOCALES = new Set<AssistantChatLocale>(["pl", "uk", "en", "ru", "de"]);
 const REQUEST_KEYS = new Set(["personId", "userMessage", "locale"]);
@@ -55,12 +56,11 @@ export async function createHappyLearningDetectV2Response(
   request: Request,
   dependencies: HappyLearningDetectV2Dependencies,
 ): Promise<Response> {
-  let rawBody: unknown;
-  try {
-    rawBody = await request.json();
-  } catch {
+  const parsedBody = await readBoundedJson(request, 8 * 1024);
+  if (!parsedBody.ok) {
     return Response.json(EMPTY, { status: 400, headers: { "Cache-Control": "no-store" } });
   }
+  const rawBody = parsedBody.value;
   const body = parseBody(rawBody);
   if (!body) return Response.json(EMPTY, { status: 400, headers: { "Cache-Control": "no-store" } });
 

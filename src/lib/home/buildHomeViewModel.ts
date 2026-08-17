@@ -94,6 +94,10 @@ function normalizeEvents(people: HomePerson[], storedEvents: HomeRepositoryData[
       source: "birthday",
       title: person.name,
       date: toDateOnly(date),
+      timeOfDay: null,
+      durationMinutes: null,
+      location: null,
+      travelBufferMinutes: null,
       category: "birthday",
       personId: person.id,
       personName: person.name,
@@ -116,6 +120,10 @@ function normalizeEvents(people: HomePerson[], storedEvents: HomeRepositoryData[
       source: "event",
       title: event.title,
       date: toDateOnly(date),
+      timeOfDay: event.timeOfDay ?? null,
+      durationMinutes: event.durationMinutes ?? null,
+      location: event.location ?? null,
+      travelBufferMinutes: event.travelBufferMinutes ?? null,
       category,
       personId: event.personId ?? null,
       personName: event.personId ? peopleById.get(event.personId)?.name ?? null : null,
@@ -126,8 +134,10 @@ function normalizeEvents(people: HomePerson[], storedEvents: HomeRepositoryData[
     }];
   });
 
-  return [...regularEvents, ...birthdayEvents].sort(
-    (first, second) => first.daysUntil - second.daysUntil || first.title.localeCompare(second.title),
+  return [...regularEvents, ...birthdayEvents].sort((first, second) =>
+    first.daysUntil - second.daysUntil
+    || (first.timeOfDay ?? "99:99").localeCompare(second.timeOfDay ?? "99:99")
+    || first.title.localeCompare(second.title),
   );
 }
 

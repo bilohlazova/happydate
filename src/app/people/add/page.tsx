@@ -32,6 +32,7 @@ import {
   type RelationCategory,
 } from "@/components/people/peopleRelations";
 import { MobileUI } from "@/lib/theme/mobile";
+import { logOperationalError } from "@/lib/observability/safeLogger";
 
 type AddMode = "contacts" | "manual" | "card" | "link";
 type ContactStep = "intro" | "confirm" | "success";
@@ -146,6 +147,8 @@ export default function AddPersonPage() {
       nextMode === "card" ||
       nextMode === "link"
     ) {
+      // URL selection is available only in the mounted client environment.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMode(nextMode);
     }
   }, []);
@@ -167,7 +170,6 @@ export default function AddPersonPage() {
 
   useEffect(() => {
     if (!userId) {
-      setExistingPeople([]);
       return;
     }
 
@@ -180,7 +182,7 @@ export default function AddPersonPage() {
         }
       })
       .catch((loadError) => {
-        console.error("[AddPersonPage] getPeople failed:", loadError);
+        logOperationalError("add-person", "existing-people-load-failed", loadError);
       });
 
     return () => {
@@ -257,7 +259,7 @@ export default function AddPersonPage() {
 
       router.push("/people");
     } catch (submitError) {
-      console.error("[AddPersonPage] createPerson failed:", submitError);
+      logOperationalError("add-person", "create-failed", submitError);
       setError(
         mode === "manual" ? t("states.saveError") : t("contact.saveError")
       );
@@ -315,7 +317,7 @@ export default function AddPersonPage() {
       setSelectedContacts(drafts);
       setContactStep("confirm");
     } catch (pickError) {
-      console.error("[AddPersonPage] contact pick failed:", pickError);
+      logOperationalError("add-person", "contact-pick-failed", pickError);
       setStatus(t("contact.denied"));
       setShowContactSettings(true);
     }
@@ -365,7 +367,7 @@ export default function AddPersonPage() {
       setSkippedDuplicateCount(duplicateContacts.length);
       setContactStep("success");
     } catch (importError) {
-      console.error("[AddPersonPage] import contacts failed:", importError);
+      logOperationalError("add-person", "contact-import-failed", importError);
       setError(t("contact.importError"));
     } finally {
       setIsSaving(false);

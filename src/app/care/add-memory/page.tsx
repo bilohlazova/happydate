@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { createKnowledge } from "@/lib/repositories/knowledgeRepository";
 import { MobileUI } from "@/lib/theme/mobile";
 import { useTranslations } from "next-intl";
+import { logOperationalError } from "@/lib/observability/safeLogger";
 import {
   ArrowLeft,
   BookHeart,
@@ -128,7 +129,7 @@ function AddMemoryForm() {
         router.push("/care");
       }
     } catch (err) {
-      console.error("[AddMemoryPage] createKnowledge failed:", err);
+      logOperationalError("add-memory", "create-knowledge-failed", err);
       setError(t("errors.save"));
     } finally {
       setIsSaving(false);

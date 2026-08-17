@@ -1,217 +1,77 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { ComingSoonNotice } from "@/components/ui/ComingSoonNotice";
+
+type Locale = "uk" | "pl" | "en" | "de" | "ru";
+
+const COPY = {
+  uk: {
+    eyebrow: "Майбутній ритуал турботи",
+    title: "Одне привітання. Багато близьких голосів.",
+    intro: "HappyDate допоможе зібрати короткі відео від рідних і друзів у спільну теплу історію — навіть якщо всі живуть у різних містах і країнах.",
+    soonTitle: "Групове повідомлення ще готується",
+    soonText: "Завантаження відео, монтаж, оплата й замовлення зараз недоступні. Ми відкриємо сервіс лише після перевірки згоди учасників, приватного доступу та безпечного зберігання файлів.",
+    storyTitle: "Як це має відчуватися",
+    story: "Не як шаблонна послуга, а як момент присутності: знайомі обличчя, живі голоси та слова, які хочеться зберегти.",
+    flowTitle: "Як працюватиме сервіс",
+    steps: [
+      ["Запросіть близьких", "Створіть приватне запрошення й поясніть, для кого готується сюрприз."],
+      ["Зберіть відео", "Кожен учасник сам підтвердить згоду та завантажить короткий фрагмент."],
+      ["Складіть історію", "Фрагменти можна буде впорядкувати, доповнити підписами й перевірити перед створенням."],
+      ["Поділіться приватно", "Готове повідомлення отримає контрольований доступ і зрозумілий строк зберігання."],
+    ],
+    trustTitle: "Що має бути готове до запуску",
+    trust: ["Явна згода кожного учасника", "Захищене завантаження й приватний доступ", "Модерація та повідомлення про неприйнятний вміст", "Зрозуміле видалення файлів і строк зберігання", "Ліцензована музика та права на матеріали"],
+    close: "Тепло — це не кількість ефектів. Це відчуття, що важливі люди поруч.",
+  },
+  pl: {
+    eyebrow: "Przyszły rytuał troski", title: "Jedno życzenie. Wiele bliskich głosów.",
+    intro: "HappyDate pomoże połączyć krótkie nagrania rodziny i przyjaciół w jedną ciepłą historię — nawet gdy wszyscy mieszkają daleko od siebie.",
+    soonTitle: "Wiadomość grupowa jest jeszcze przygotowywana", soonText: "Przesyłanie filmów, montaż, płatności i zamówienia są obecnie niedostępne. Uruchomimy usługę dopiero po sprawdzeniu zgód, prywatnego dostępu i bezpiecznego przechowywania plików.",
+    storyTitle: "Jak powinno to być odczuwane", story: "Nie jak szablonowa usługa, lecz jak chwila obecności: znajome twarze, prawdziwe głosy i słowa, które warto zachować.", flowTitle: "Jak usługa będzie działać",
+    steps: [["Zaproś bliskich", "Utwórz prywatne zaproszenie i wyjaśnij, dla kogo powstaje niespodzianka."], ["Zbierz nagrania", "Każdy uczestnik sam potwierdzi zgodę i prześle krótki film."], ["Ułóż historię", "Nagrania będzie można uporządkować, podpisać i sprawdzić przed utworzeniem."], ["Udostępnij prywatnie", "Gotowa wiadomość otrzyma kontrolowany dostęp i jasny czas przechowywania."]],
+    trustTitle: "Co musi być gotowe przed startem", trust: ["Wyraźna zgoda każdego uczestnika", "Bezpieczne przesyłanie i prywatny dostęp", "Moderacja i zgłaszanie niewłaściwych treści", "Jasne usuwanie i okres przechowywania", "Licencjonowana muzyka i prawa do materiałów"], close: "Ciepło nie wynika z liczby efektów. To poczucie, że ważni ludzie są blisko.",
+  },
+  en: {
+    eyebrow: "A future care ritual", title: "One greeting. Many familiar voices.", intro: "HappyDate will help bring short videos from family and friends into one warm story — even when everyone lives far apart.", soonTitle: "Group Message is still in preparation", soonText: "Video uploads, editing, payments and orders are not available yet. We will launch only after consent, private access and secure file storage have been thoroughly validated.", storyTitle: "How it should feel", story: "Not like a template service, but a moment of presence: familiar faces, real voices and words worth keeping.", flowTitle: "How it will work", steps: [["Invite loved ones", "Create a private invitation and explain who the surprise is for."], ["Collect videos", "Each participant confirms consent and uploads a short clip."], ["Shape the story", "Arrange, caption and review the clips before creation."], ["Share privately", "The finished message gets controlled access and a clear retention period."]], trustTitle: "What must be ready before launch", trust: ["Explicit consent from every participant", "Secure upload and private access", "Moderation and content reporting", "Clear deletion and retention controls", "Licensed music and media rights"], close: "Warmth is not the number of effects. It is the feeling that important people are close.",
+  },
+  de: {
+    eyebrow: "Ein zukünftiges Fürsorgeritual", title: "Ein Gruß. Viele vertraute Stimmen.", intro: "HappyDate wird kurze Videos von Familie und Freunden zu einer warmen Geschichte verbinden — auch wenn alle weit voneinander entfernt leben.", soonTitle: "Die Gruppennachricht wird noch vorbereitet", soonText: "Video-Uploads, Schnitt, Zahlungen und Bestellungen sind derzeit nicht verfügbar. Der Start erfolgt erst nach Prüfung von Einwilligung, privatem Zugriff und sicherer Speicherung.", storyTitle: "Wie es sich anfühlen soll", story: "Nicht wie ein Standarddienst, sondern wie ein Moment der Nähe: vertraute Gesichter, echte Stimmen und bewahrenswerte Worte.", flowTitle: "So wird es funktionieren", steps: [["Menschen einladen", "Eine private Einladung erstellen und erklären, für wen die Überraschung ist."], ["Videos sammeln", "Jede Person bestätigt selbst die Einwilligung und lädt einen kurzen Clip hoch."], ["Geschichte gestalten", "Clips ordnen, beschriften und vor der Erstellung prüfen."], ["Privat teilen", "Die fertige Nachricht erhält kontrollierten Zugriff und eine klare Speicherfrist."]], trustTitle: "Was vor dem Start bereit sein muss", trust: ["Ausdrückliche Einwilligung aller Beteiligten", "Sicherer Upload und privater Zugriff", "Moderation und Meldung von Inhalten", "Klare Löschung und Speicherfristen", "Lizenzierte Musik und Medienrechte"], close: "Wärme entsteht nicht durch viele Effekte, sondern durch das Gefühl, dass wichtige Menschen nah sind.",
+  },
+  ru: {
+    eyebrow: "Будущий ритуал заботы", title: "Одно поздравление. Много близких голосов.", intro: "HappyDate поможет собрать короткие видео родных и друзей в одну тёплую историю — даже если все живут далеко друг от друга.", soonTitle: "Групповое сообщение ещё готовится", soonText: "Загрузка видео, монтаж, оплата и заказы пока недоступны. Мы запустим сервис только после проверки согласий, приватного доступа и безопасного хранения файлов.", storyTitle: "Каким должен быть этот момент", story: "Не шаблонная услуга, а ощущение присутствия: знакомые лица, живые голоса и слова, которые хочется сохранить.", flowTitle: "Как будет работать сервис", steps: [["Пригласите близких", "Создайте приватное приглашение и объясните, для кого готовится сюрприз."], ["Соберите видео", "Каждый участник сам подтвердит согласие и загрузит короткий фрагмент."], ["Сложите историю", "Фрагменты можно будет упорядочить, подписать и проверить."], ["Поделитесь приватно", "Готовое сообщение получит контролируемый доступ и понятный срок хранения."]], trustTitle: "Что должно быть готово к запуску", trust: ["Явное согласие каждого участника", "Безопасная загрузка и приватный доступ", "Модерация и жалобы на контент", "Понятное удаление и сроки хранения", "Лицензированная музыка и права на материалы"], close: "Тепло — не в количестве эффектов, а в ощущении, что важные люди рядом.",
+  },
+} satisfies Record<Locale, { eyebrow: string; title: string; intro: string; soonTitle: string; soonText: string; storyTitle: string; story: string; flowTitle: string; steps: string[][]; trustTitle: string; trust: string[]; close: string }>;
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("static.services.phase3b.groupMessage");
-  return {
-    title: t("metaTitle"),
-    description: t("metaDescription"),
-    alternates: { canonical: "/services/wiadomosc-grupowa" },
-    robots: { index: true, follow: true },
-  };
+  return { title: t("metaTitle"), description: t("metaDescription"), alternates: { canonical: "/services/wiadomosc-grupowa" }, robots: { index: true, follow: true } };
 }
 
-const STYLES = [
-  { emoji: "😂", key: "humor", color: "#fef9c3", border: "#fde047", text: "#713f12" },
-  { emoji: "😢", key: "tears", color: "#fce7f3", border: "#f9a8d4", text: "#9d174d" },
-  { emoji: "🎉", key: "celebration", color: "#dbeafe", border: "#93c5fd", text: "#1e40af" },
-  { emoji: "🎬", key: "film", color: "#e0f2fe", border: "#7dd3fc", text: "#075985" },
-  { emoji: "🙏", key: "thanks", color: "#dcfce7", border: "#86efac", text: "#065f46" },
-  { emoji: "💼", key: "farewell", color: "#f1f5f9", border: "#cbd5e1", text: "#334155" },
-] as const;
-
-const STEPS = [
-  { n: "01", emoji: "🎯", key: "s1" },
-  { n: "02", emoji: "🔗", key: "s2" },
-  { n: "03", emoji: "✂️", key: "s3" },
-  { n: "04", emoji: "🎁", key: "s4" },
-] as const;
-
-const PACKAGES = [
-  { key: "mini", price: "79 zł", highlight: false },
-  { key: "standard", price: "149 zł", highlight: true },
-  { key: "premium", price: "279 zł", highlight: false },
-] as const;
-
-const OCCASIONS = ["o1", "o2", "o3", "o4", "o5", "o6", "o7", "o8"] as const;
-const FEATURE_KEYS = ["f1", "f2", "f3", "f4", "f5"] as const;
-const FAQ_KEYS = ["f1", "f2", "f3", "f4", "f5"] as const;
-
-export default async function WiadomoscGrupowaPage() {
-  const t = await getTranslations("static.services.phase3b.groupMessage");
-  const commonT = await getTranslations("static.services.phase3b");
-
+export default async function GroupMessagePage() {
+  const locale = (await getLocale()) as Locale;
+  const c = COPY[locale] ?? COPY.uk;
+  const common = await getTranslations("static.services.phase3b");
   return (
-    <main style={{ background: "#f0f9ff", minHeight: "100svh", paddingBottom: 100, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <section style={{
-        background: "linear-gradient(160deg,#1e6fa8 0%,#42a5e8 55%,#29b6f6 100%)",
-        padding: "32px 20px 28px", textAlign: "center",
-        position: "relative", overflow: "hidden",
-      }}>
-        <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: "50%", background: "rgba(255,255,255,.1)" }} />
-        <div style={{ position: "absolute", bottom: -30, left: -30, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,215,0,.1)" }} />
-
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,.85)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12, background: "rgba(255,255,255,.2)", padding: "4px 14px", borderRadius: 20 }}>
-            {t("badge")}
-          </div>
-
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: "#fff", margin: "0 0 10px", lineHeight: 1.2, textShadow: "0 2px 8px rgba(0,0,0,.15)" }}>
-            {t("title")}<br />{t("titleSecond")}
-          </h1>
-
-          <p style={{ fontSize: 13, color: "rgba(255,255,255,.9)", lineHeight: 1.6, maxWidth: 300, margin: "0 auto 18px" }}>
-            {t("subtitle")}
-          </p>
-
-          <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
-            {["🇵🇱", "🇩🇪", "🇬🇧", "🇺🇸", "🇫🇷", "🇮🇹", "🇺🇦", "🇯🇵"].map((flag) => (
-              <div key={flag} style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, border: "2px solid rgba(255,255,255,.3)" }}>
-                {flag}
-              </div>
-            ))}
-          </div>
-
-          <Link href="#pakiety" style={{ display: "inline-block", background: "#ffd600", color: "#1a1040", borderRadius: 20, padding: "12px 28px", fontSize: 15, fontWeight: 800, textDecoration: "none", boxShadow: "0 4px 16px rgba(0,0,0,.2)" }}>
-            {t("orderVideo")}
-          </Link>
-
-          <div style={{ marginTop: 12 }}>
-            <Link href="/services" style={{ fontSize: 12, color: "rgba(255,255,255,.6)", textDecoration: "none" }}>
-              {commonT("backToServices")}
-            </Link>
-          </div>
-        </div>
+    <main className="group-preview">
+      <section className="group-preview__hero">
+        <Link href="/services" className="group-preview__back">← {common("backToServices")}</Link>
+        <div className="group-preview__faces" aria-hidden="true"><span>👩🏻</span><span>👨🏽</span><span>👵🏻</span><span>👧🏼</span></div>
+        <p className="group-preview__eyebrow">{c.eyebrow}</p>
+        <h1>{c.title}</h1><p>{c.intro}</p>
       </section>
-
-      <section style={{ padding: "20px 16px 8px" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#0369a1", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "center", marginBottom: 12 }}>
-          {t("occasionsTitle")}
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-          {OCCASIONS.map((key) => (
-            <div key={key} style={{ fontSize: 12, fontWeight: 600, color: "#0369a1", background: "#e0f2fe", border: "1.5px solid #7dd3fc", borderRadius: 20, padding: "5px 12px", whiteSpace: "nowrap" }}>
-              {t(`occasions.${key}`)}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section style={{ padding: "20px 16px 8px" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#0369a1", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "center", marginBottom: 12 }}>
-          {t("stylesTitle")}
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          {STYLES.map((style) => (
-            <div key={style.key} style={{ background: style.color, borderRadius: 16, border: `1.5px solid ${style.border}`, padding: "12px" }}>
-              <div style={{ fontSize: 24, marginBottom: 5 }}>{style.emoji}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: style.text, marginBottom: 3 }}>{t(`styles.${style.key}.name`)}</div>
-              <div style={{ fontSize: 11, color: style.text, opacity: 0.8, lineHeight: 1.4 }}>{t(`styles.${style.key}.desc`)}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section style={{ padding: "20px 16px 8px" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#0369a1", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "center", marginBottom: 12 }}>
-          {commonT("howItWorks")}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {STEPS.map((step) => (
-            <div key={step.n} style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #bae6fd", padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 14, background: "linear-gradient(135deg,#bae6fd,#fef08a)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <span style={{ fontSize: 9, fontWeight: 800, color: "#0369a1" }}>{step.n}</span>
-                <span style={{ fontSize: 18 }}>{step.emoji}</span>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1040", marginBottom: 2 }}>{t(`steps.${step.key}.title`)}</div>
-                <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.4 }}>{t(`steps.${step.key}.desc`)}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section style={{ padding: "20px 16px 8px" }} id="pakiety">
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#0369a1", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "center", marginBottom: 12 }}>
-          {t("packagesTitle")}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {PACKAGES.map((pack) => (
-            <div key={pack.key} style={{
-              background: "#fff", borderRadius: 18,
-              border: pack.highlight ? "2px solid #42a5e8" : "1.5px solid #bae6fd",
-              padding: "16px", position: "relative",
-            }}>
-              {pack.highlight && (
-                <div style={{ position: "absolute", top: -10, right: 16, background: "linear-gradient(135deg,#1e6fa8,#42a5e8)", color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 12px", borderRadius: 20 }}>
-                  {commonT("mostPopular")}
-                </div>
-              )}
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8 }}>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: "#1a1040" }}>{t(`packages.${pack.key}.name`)}</div>
-                  <div style={{ fontSize: 11, color: "#64748b" }}>{t(`packages.${pack.key}.clips`)}{t("clipsSeparator")}{t(`packages.${pack.key}.time`)}</div>
-                </div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: "#42a5e8" }}>{pack.price}</div>
-              </div>
-              <div style={{ height: 1, background: "#bae6fd", marginBottom: 10 }} />
-              <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
-                {FEATURE_KEYS.map((key) => (
-                  <div key={key} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: "#475569" }}>
-                    <span style={{ color: "#22c55e", fontSize: 14, flexShrink: 0 }}>✓</span> {t(`packages.${pack.key}.features.${key}`)}
-                  </div>
-                ))}
-              </div>
-              <Link href="/survey?flow=group-message" style={{
-                display: "block", textAlign: "center",
-                background: pack.highlight ? "linear-gradient(135deg,#1e6fa8,#42a5e8)" : "#e0f2fe",
-                color: pack.highlight ? "#fff" : "#0369a1",
-                borderRadius: 12, padding: "11px",
-                fontSize: 13, fontWeight: 700, textDecoration: "none",
-              }}>
-                {t("orderPackage", { name: t(`packages.${pack.key}.name`) })}
-              </Link>
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: 12, fontSize: 12, color: "#64748b", textAlign: "center" }}>
-          {t("quoteText")}{" "}
-          <Link href="/survey?flow=group-message-custom" style={{ color: "#42a5e8", fontWeight: 700, textDecoration: "none" }}>
-            {t("quoteCta")}
-          </Link>
-        </div>
-      </section>
-
-      <section style={{ padding: "20px 16px 0" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#0369a1", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "center", marginBottom: 12 }}>
-          {commonT("faq")}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {FAQ_KEYS.map((key) => (
-            <details key={key} style={{ background: "#fff", borderRadius: 14, border: "1.5px solid #bae6fd", padding: "12px 14px" }}>
-              <summary style={{ fontSize: 13, fontWeight: 700, color: "#1a1040", cursor: "pointer", listStyle: "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                {t(`faqs.${key}.q`)} <span style={{ color: "#42a5e8", fontSize: 16, flexShrink: 0, marginLeft: 8 }}>›</span>
-              </summary>
-              <p style={{ fontSize: 12, color: "#64748b", marginTop: 8, lineHeight: 1.5 }}>{t(`faqs.${key}.a`)}</p>
-            </details>
-          ))}
-        </div>
-      </section>
-
-      <section style={{ padding: "20px 16px 0" }}>
-        <div style={{ background: "linear-gradient(135deg,#1e6fa8,#42a5e8,#29b6f6)", borderRadius: 20, padding: "22px 16px", color: "#fff", textAlign: "center" }}>
-          <div style={{ fontSize: 20, marginBottom: 6 }}>🎬</div>
-          <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 6 }}>{t("ctaTitle")}</div>
-          <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 16, lineHeight: 1.5 }}>
-            {t("ctaText")}
-          </div>
-          <Link href="/survey?flow=group-message" style={{ display: "inline-block", background: "#ffd600", color: "#1a1040", borderRadius: 14, padding: "12px 28px", fontSize: 15, fontWeight: 800, textDecoration: "none", boxShadow: "0 4px 12px rgba(0,0,0,.2)" }}>
-            {t("orderVideo")}
-          </Link>
-        </div>
-      </section>
+      <div className="group-preview__body">
+        <ComingSoonNotice
+          badge={{ uk: "Скоро", pl: "Wkrótce", en: "Coming soon", de: "Demnächst", ru: "Скоро" }[locale] ?? "Скоро"}
+          title={c.soonTitle}
+          description={c.soonText}
+        />
+        <section className="group-preview__story"><span>▶</span><div><h2>{c.storyTitle}</h2><p>{c.story}</p></div></section>
+        <section><h2>{c.flowTitle}</h2><div className="group-preview__steps">{c.steps.map(([title, text], i) => <article key={title}><b>{String(i + 1).padStart(2, "0")}</b><div><h3>{title}</h3><p>{text}</p></div></article>)}</div></section>
+        <section className="group-preview__trust"><div><span>🛡️</span><h2>{c.trustTitle}</h2></div><ul>{c.trust.map(item => <li key={item}>✓ {item}</li>)}</ul></section>
+        <blockquote>“{c.close}”</blockquote>
+      </div>
     </main>
   );
 }

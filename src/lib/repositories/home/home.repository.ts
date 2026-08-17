@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
-import { listKnowledge } from "@/lib/repositories/knowledgeRepository";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { listKnowledgeWithClient } from "@/lib/repositories/knowledgeRepository";
 import { projectKnowledgeForHome } from "@/lib/knowledge";
 import type { KnowledgeItem } from "@/lib/knowledge";
 import type {
@@ -26,8 +27,8 @@ class HomeRepositoryError extends Error {
   }
 }
 
-async function loadProfile(userId: string): Promise<HomeProfile | null> {
-  const { data, error } = await supabase
+async function loadProfile(client: SupabaseClient, userId: string): Promise<HomeProfile | null> {
+  const { data, error } = await client
     .from("profiles")
     .select("full_name")
     .eq("id", userId)
@@ -36,8 +37,8 @@ async function loadProfile(userId: string): Promise<HomeProfile | null> {
   return data ? { fullName: data.full_name ?? null } : null;
 }
 
-async function loadPeople(userId: string): Promise<HomePerson[]> {
-  const { data, error } = await supabase
+async function loadPeople(client: SupabaseClient, userId: string): Promise<HomePerson[]> {
+  const { data, error } = await client
     .from("people")
     .select("id, name, birthday, relationship, relation_label, relation_key, gender")
     .eq("user_id", userId)
@@ -58,10 +59,10 @@ async function loadPeople(userId: string): Promise<HomePerson[]> {
   }));
 }
 
-async function loadEvents(userId: string): Promise<HomeStoredEvent[]> {
-  const { data, error } = await supabase
+async function loadEvents(client: SupabaseClient, userId: string): Promise<HomeStoredEvent[]> {
+  const { data, error } = await client
     .from("events")
-    .select("id, title, date, category, notes, person_id")
+    .select("id, title, date, time_of_day, duration_minutes, location, travel_buffer_minutes, category, notes, person_id")
     .eq("user_id", userId)
     .order("date", { ascending: true });
   if (error) throw new HomeRepositoryError("events", error.message);
@@ -69,14 +70,18 @@ async function loadEvents(userId: string): Promise<HomeStoredEvent[]> {
     id: event.id,
     title: event.title,
     date: event.date,
+    timeOfDay: typeof event.time_of_day === "string" ? event.time_of_day.slice(0, 5) : null,
+    durationMinutes: Number.isInteger(event.duration_minutes) ? event.duration_minutes : null,
+    location: typeof event.location === "string" ? event.location : null,
+    travelBufferMinutes: Number.isInteger(event.travel_buffer_minutes) ? event.travel_buffer_minutes : null,
     category: event.category ?? null,
     notes: event.notes ?? null,
     personId: event.person_id ?? null,
   }));
 }
 
-async function loadPendingGiftOutcomes(userId: string): Promise<HomePendingGiftOutcome[]> {
-  const { data, error } = await supabase
+async function loadPendingGiftOutcomes(client: SupabaseClient, userId: string): Promise<HomePendingGiftOutcome[]> {
+  const { data, error } = await client
     .from("gifts")
     .select("id, person_id, title, occurred_on")
     .eq("user_id", userId)
@@ -97,25 +102,26 @@ async function loadPendingGiftOutcomes(userId: string): Promise<HomePendingGiftO
   }] : []);
 }
 
-async function loadKnowledgeReviewPreferences(userId: string): Promise<HomeKnowledgeReviewPreferences> {
-  const { data, error } = await supabase
+async function loadKnowledgeReviewPreferences(client: SupabaseClient, userId: string): Promise<HomeKnowledgeReviewPreferences> {
+  const { data, error } = await client
     .from("reminder_preferences")
-    .select("knowledge_review_home_enabled, knowledge_review_voice_enabled")
+    .select("knowledge_review_home_enabled, knowledge_review_voice_enabled, timezone")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw new HomeRepositoryError("settings", error.message);
   return {
     homeEnabled: data?.knowledge_review_home_enabled !== false,
     voiceEnabled: data?.knowledge_review_voice_enabled !== false,
+    timezone: typeof data?.timezone === "string" && data.timezone.trim() ? data.timezone.trim() : "UTC",
   };
 }
 
-async function loadKnowledge(userId: string): Promise<{
+async function loadKnowledge(client: SupabaseClient, userId: string): Promise<{
   knowledge: KnowledgeItem[];
   memories: HomeMemory[];
 }> {
   try {
-    const knowledge = await listKnowledge({ userId });
+    const knowledge = await listKnowledgeWithClient(client, { userId });
     return { knowledge, memories: projectKnowledgeForHome(knowledge) };
   } catch (error) {
     throw new HomeRepositoryError(
@@ -135,8 +141,12 @@ function errorFrom(reason: unknown, fallbackSection: HomeDataSection): HomeDataE
   };
 }
 
-export async function getHomeRepositoryData(): Promise<HomeRepositoryResult> {
-  const { data: authData, error: authError } = await supabase.auth.getUser();
+export async function getHomeRepositoryData(
+  client: SupabaseClient = supabase,
+  expectedUserId?: string,
+  accessToken?: string,
+): Promise<HomeRepositoryResult> {
+  const { data: authData, error: authError } = await client.auth.getUser(accessToken);
   const user = authData.user;
   if (!user) {
     const missingSession = authError?.message.toLowerCase().includes("session missing");
@@ -153,19 +163,22 @@ export async function getHomeRepositoryData(): Promise<HomeRepositoryResult> {
       events: [],
       memories: [],
       pendingGiftOutcomes: [],
-      knowledgeReviewPreferences: { homeEnabled: false, voiceEnabled: false },
+      knowledgeReviewPreferences: { homeEnabled: false, voiceEnabled: false, timezone: "UTC" },
       knowledge: [],
       errors: [],
     };
   }
+  if (expectedUserId && user.id !== expectedUserId) {
+    throw new Error("[home.repository] Authenticated owner mismatch");
+  }
 
   const [profileResult, peopleResult, eventsResult, knowledgeResult, giftsResult, reviewPreferencesResult] = await Promise.all([
-    loadProfile(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
-    loadPeople(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
-    loadEvents(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
-    loadKnowledge(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
-    loadPendingGiftOutcomes(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
-    loadKnowledgeReviewPreferences(user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
+    loadProfile(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
+    loadPeople(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
+    loadEvents(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
+    loadKnowledge(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
+    loadPendingGiftOutcomes(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
+    loadKnowledgeReviewPreferences(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
   ]);
 
   const errors: HomeDataError[] = [];
@@ -191,7 +204,7 @@ export async function getHomeRepositoryData(): Promise<HomeRepositoryResult> {
     pendingGiftOutcomes: giftsResult.ok ? giftsResult.value : [],
     knowledgeReviewPreferences: reviewPreferencesResult.ok
       ? reviewPreferencesResult.value
-      : { homeEnabled: false, voiceEnabled: false },
+      : { homeEnabled: false, voiceEnabled: false, timezone: "UTC" },
     knowledge: knowledgeResult.ok ? knowledgeResult.value.knowledge : [],
     errors,
   };

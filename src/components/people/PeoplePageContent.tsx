@@ -5,6 +5,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Pencil, Trash2, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { logOperationalError } from "@/lib/observability/safeLogger";
 
 import PersonCard from "@/components/people/PersonCard";
 import { ActivePeopleFilters } from "@/components/people/ActivePeopleFilters";
@@ -519,6 +520,8 @@ function PersonActionsSheet({
 
     const relationLabel = getPersonRelationLabel(person);
 
+    // Reset the controlled editor whenever the selected person changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMode("actions");
     setName(person.name);
     setRelationship(relationLabel);
@@ -561,7 +564,7 @@ function PersonActionsSheet({
 
       onUpdated(updatedPerson);
     } catch (saveError) {
-      console.error("[PersonActionsSheet] updatePerson failed:", saveError);
+      logOperationalError("person-actions", "update-failed", saveError);
       setError(formT("states.saveError"));
     } finally {
       setSaving(false);
@@ -578,7 +581,7 @@ function PersonActionsSheet({
       await deletePerson(person.id);
       onDeleted(person.id);
     } catch (deleteError) {
-      console.error("[PersonActionsSheet] deletePerson failed:", deleteError);
+      logOperationalError("person-actions", "delete-failed", deleteError);
       setError(formT("states.deleteError"));
     } finally {
       setSaving(false);
@@ -763,14 +766,6 @@ function Field({
       <label htmlFor={htmlFor} className="text-xs font-black text-slate-600">
         {label}
       </label>
-      {children}
-    </div>
-  );
-}
-
-function PeopleMessage({ children }: { children: ReactNode }) {
-  return (
-    <div className={`${MobileUI.card} p-5 text-sm font-semibold text-slate-500`}>
       {children}
     </div>
   );

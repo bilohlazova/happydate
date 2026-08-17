@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { logOperationalError } from "@/lib/observability/safeLogger";
 import { getPeople as getCanonicalPeople } from "@/lib/repositories/personRepository";
 import { projectPersonSummary } from "./projectPersonSummary";
 import type { PersonSummary } from "./people.types";
@@ -16,18 +17,18 @@ export async function getPeople(): Promise<PersonSummary[]> {
     } = await supabase.auth.getUser();
 
     if (userError) {
-      console.error("[people.repository] getUser failed:", userError);
+      logOperationalError("people-repository", "get-user-failed", userError);
       return [];
     }
 
     if (!user) {
-      console.error("[people.repository] getPeople called without a session");
+      logOperationalError("people-repository", "missing-session");
       return [];
     }
 
     return (await getCanonicalPeople(user.id)).map(projectPersonSummary);
   } catch (error) {
-    console.error("[people.repository] getPeople unexpected failure:", error);
+    logOperationalError("people-repository", "unexpected-failure", error);
     return [];
   }
 }

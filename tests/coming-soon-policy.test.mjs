@@ -7,8 +7,7 @@ test("future gift concierge is explicitly marked as coming soon and cannot be us
   const notice = await readFile(new URL("../src/components/ui/ComingSoonNotice.tsx", import.meta.url), "utf8");
 
   assert.match(page, /<ComingSoonNotice/);
-  assert.match(page, /<fieldset disabled aria-describedby="gift-future-description"/);
-  assert.match(page, /aria-disabled="true"/);
+  assert.doesNotMatch(page, /gift-request-form|submitLegacyGiftRequest|splitPayment/);
   assert.match(notice, /coming-soon-notice__badge/);
 });
 

@@ -46,6 +46,7 @@ interface MemoryEditorSheetProps {
   events: NotesMemoryEvent[];
   imageDisplayUrls: Record<string, string>;
   audioDisplayUrl: string | null;
+  initialPersonId: string;
   onCancel: () => void;
   onSubmit: (
     input: MemoryEditorSubmitInput
@@ -60,13 +61,17 @@ export default function MemoryEditorSheet({
   events,
   imageDisplayUrls,
   audioDisplayUrl,
+  initialPersonId,
   onCancel,
   onSubmit,
 }: MemoryEditorSheetProps) {
   const t = useTranslations("notes");
-  const [state, setState] = useState(() =>
-    createMemoryEditorInitialState({ mode, type, memory })
-  );
+  const [state, setState] = useState(() => {
+    const initialState = createMemoryEditorInitialState({ mode, type, memory });
+    return mode === "create" && initialState.editorType !== "journal"
+      ? { ...initialState, personId: initialPersonId }
+      : initialState;
+  });
   const [errors, setErrors] = useState<
     Partial<Record<MemoryEditorField, string>>
   >({});
@@ -102,7 +107,7 @@ export default function MemoryEditorSheet({
       pendingImagesRef.current.forEach((image) =>
         URL.revokeObjectURL(image.previewUrl)
       );
-      recorderRef.current?.state === "recording" && recorderRef.current.stop();
+      if (recorderRef.current?.state === "recording") recorderRef.current.stop();
       streamRef.current?.getTracks().forEach((track) => track.stop());
       if (timerRef.current) clearInterval(timerRef.current);
     };

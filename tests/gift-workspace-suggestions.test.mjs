@@ -97,14 +97,11 @@ test("empty successful response keeps retry path and follow-up questions", () =>
   assert.deepEqual(result.followUpQuestions, ["question:missing_budget"]);
 });
 
-test("current gift actions still exist around structured cards", async () => {
+test("current gift actions preserve saving and retry without future commerce", async () => {
   const content = await source("src/app/gift/start/StartPageContent.tsx");
-  assert.match(content, /useInRequest/);
-  assert.match(content, /backToForm/);
-  assert.match(content, /id="gift-request-form"/);
-  assert.match(content, /form\.submit/);
-  assert.match(content, /form\.share/);
+  assert.match(content, /recommendations\.saveForPerson/);
   assert.match(content, /recommendations\.retry/);
+  assert.doesNotMatch(content, /useInRequest|backToForm|gift-request-form|form\.submit|form\.share/);
 });
 
 test("locale labels are used and raw canonical signal or caution keys are not displayed", async () => {

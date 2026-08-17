@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { MobileUI } from "@/lib/theme/mobile";
 import { useTranslations } from "next-intl";
 import { mapAuthError } from "@/lib/auth/mapAuthError";
+import { safePostAuthPath } from "@/lib/navigation/safeDeepLink";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,9 +35,9 @@ export default function LoginPage() {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    const redirectTo = params.get("redirectTo");
+    const redirectTo = safePostAuthPath(params.get("redirectTo"), "/profile");
     if (survey?.is_completed) {
-      router.replace(redirectTo || "/profile");
+      router.replace(redirectTo);
     } else {
       router.replace("/survey");
     }
@@ -60,10 +61,6 @@ export default function LoginPage() {
     setErrorMsg(null);
     if (!email.match(/^\S+@\S+\.\S+$/)) {
       setErrorMsg(translate("validation.emailInvalid"));
-      return false;
-    }
-    if (password.length < 6) {
-      setErrorMsg(translate("validation.passwordTooShort"));
       return false;
     }
     return true;
@@ -143,7 +140,6 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className={`${MobileUI.input} pr-11`}
                 required
-                minLength={6}
               />
               <button
                 type="button"

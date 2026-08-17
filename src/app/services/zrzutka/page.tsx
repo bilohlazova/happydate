@@ -1,241 +1,35 @@
-"use client";
-
 import Link from "next/link";
-import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { getLocale, getTranslations } from "next-intl/server";
+import { ComingSoonNotice } from "@/components/ui/ComingSoonNotice";
 
-/* ══ Анімована банка ══ */
-function MoneyJar({ percent }: { percent: number }) {
-  const t = useTranslations("static.services.phase3b.fund.states");
-  const p = Math.min(100, Math.max(0, percent));
-  const color = p < 30 ? "#86efac" : p < 70 ? "#34d399" : "#10b981";
-  const lightColor = p < 30 ? "#bbf7d0" : "#6ee7b7";
+type Locale = "uk" | "pl" | "en" | "de" | "ru";
+const COPY = {
+  uk: { badge:"Скоро", eyebrow:"Майбутня спільна турбота", title:"Разом — для важливої людини", intro:"HappyDate допоможе близьким об’єднатися навколо одного подарунка без незручних нагадувань, таблиць і загублених переказів.", soonTitle:"Спільні збори ще не запущені", soonText:"HappyDate зараз не приймає внески, не зберігає платіжні дані й не виводить кошти. Комісії також не визначені. Функція з’явиться лише після юридичної та платіжної перевірки.", demo:"Майбутній вигляд спільної цілі", collected:"Зібрано разом", people:"5 близьких долучилися", flowTitle:"Як це працюватиме", steps:[["Створіть приватну ціль","Оберіть людину, привід і суму — без публічного збору."],["Запросіть своїх людей","Кожен бачитиме умови та сам вирішуватиме, чи долучатися."],["Контролюйте кошти","Статуси внесків, повернення та виплата будуть прозорими."],["Збережіть спогад","Після подарунка історію можна буде пов’язати з профілем людини."]], trustTitle:"До запуску ми зобов’язані забезпечити", trust:["Ліцензованого платіжного партнера","Підтвердження особи організатора","Прозорі комісії до внеску","Повернення й вирішення спорів","Захист від шахрайства та приватність"], note:"Спільна турбота має зближувати людей, а не створювати фінансову невизначеність." },
+  pl: { badge:"Wkrótce", eyebrow:"Przyszła wspólna troska", title:"Razem — dla ważnej osoby", intro:"HappyDate pomoże bliskim połączyć siły wokół jednego prezentu bez niezręcznych przypomnień, arkuszy i zagubionych przelewów.", soonTitle:"Wspólne zbiórki nie są jeszcze dostępne", soonText:"HappyDate nie przyjmuje wpłat, nie przechowuje danych płatniczych ani nie wypłaca środków. Prowizje nie są jeszcze ustalone. Funkcja ruszy dopiero po weryfikacji prawnej i płatniczej.", demo:"Przyszły widok wspólnego celu", collected:"Zebrane razem", people:"5 bliskich dołączyło", flowTitle:"Jak to będzie działać", steps:[["Utwórz prywatny cel","Wybierz osobę, okazję i kwotę — bez publicznej zbiórki."],["Zaproś swoich ludzi","Każdy zobaczy zasady i sam zdecyduje, czy dołączyć."],["Kontroluj środki","Statusy wpłat, zwrotów i wypłaty będą przejrzyste."],["Zachowaj wspomnienie","Po wręczeniu prezentu historię będzie można powiązać z profilem osoby."]], trustTitle:"Przed startem musimy zapewnić", trust:["Licencjonowanego operatora płatności","Weryfikację organizatora","Jasne prowizje przed wpłatą","Zwroty i obsługę sporów","Ochronę przed oszustwami i prywatność"], note:"Wspólna troska ma zbliżać ludzi, a nie tworzyć finansową niepewność." },
+  en: { badge:"Coming soon", eyebrow:"Future shared care", title:"Together — for someone important", intro:"HappyDate will help loved ones join around one gift without awkward reminders, spreadsheets or lost transfers.", soonTitle:"Group collections are not available yet", soonText:"HappyDate does not accept contributions, store payment details or pay out funds. Fees have not been set. This feature will launch only after legal and payment validation.", demo:"A future shared-goal view", collected:"Collected together", people:"5 loved ones joined", flowTitle:"How it will work", steps:[["Create a private goal","Choose the person, occasion and amount — without a public fundraiser."],["Invite your people","Everyone sees the terms and chooses whether to join."],["Stay in control","Contribution, refund and payout statuses will be transparent."],["Keep the memory","After the gift, connect its story to the person’s profile."]], trustTitle:"Before launch, we must provide", trust:["A licensed payment partner","Organizer identity verification","Fees disclosed before payment","Refunds and dispute handling","Fraud prevention and privacy"], note:"Shared care should bring people closer, not create financial uncertainty." },
+  de: { badge:"Demnächst", eyebrow:"Künftige gemeinsame Fürsorge", title:"Gemeinsam — für einen wichtigen Menschen", intro:"HappyDate wird Nahestehenden helfen, sich für ein Geschenk zusammenzutun — ohne unangenehme Erinnerungen, Tabellen oder verlorene Überweisungen.", soonTitle:"Gemeinsame Sammlungen sind noch nicht verfügbar", soonText:"HappyDate nimmt derzeit keine Beiträge an, speichert keine Zahlungsdaten und zahlt kein Geld aus. Gebühren stehen noch nicht fest. Der Start erfolgt erst nach rechtlicher und technischer Prüfung.", demo:"Künftige Ansicht des gemeinsamen Ziels", collected:"Gemeinsam gesammelt", people:"5 Nahestehende machen mit", flowTitle:"So wird es funktionieren", steps:[["Privates Ziel erstellen","Person, Anlass und Betrag wählen — ohne öffentliche Sammlung."],["Menschen einladen","Alle sehen die Bedingungen und entscheiden selbst."],["Gelder im Blick behalten","Beiträge, Erstattungen und Auszahlung werden transparent."],["Erinnerung bewahren","Die Geschichte des Geschenks mit dem Personenprofil verbinden."]], trustTitle:"Vor dem Start müssen wir gewährleisten", trust:["Lizenzierten Zahlungsanbieter","Identitätsprüfung des Organisators","Gebühren vor der Zahlung","Erstattungen und Streitklärung","Betrugsschutz und Privatsphäre"], note:"Gemeinsame Fürsorge soll verbinden, nicht finanzielle Unsicherheit schaffen." },
+  ru: { badge:"Скоро", eyebrow:"Будущая совместная забота", title:"Вместе — для важного человека", intro:"HappyDate поможет близким объединиться ради одного подарка без неловких напоминаний, таблиц и потерянных переводов.", soonTitle:"Совместные сборы ещё не запущены", soonText:"HappyDate пока не принимает взносы, не хранит платёжные данные и не выводит средства. Комиссии тоже не определены. Функция появится только после юридической и платёжной проверки.", demo:"Будущий вид общей цели", collected:"Собрано вместе", people:"5 близких присоединились", flowTitle:"Как это будет работать", steps:[["Создайте приватную цель","Выберите человека, повод и сумму — без публичного сбора."],["Пригласите своих людей","Каждый увидит условия и сам решит, участвовать ли."],["Контролируйте средства","Статусы взносов, возврата и выплаты будут прозрачными."],["Сохраните воспоминание","После подарка историю можно будет связать с профилем человека."]], trustTitle:"До запуска мы обязаны обеспечить", trust:["Лицензированного платёжного партнёра","Проверку личности организатора","Комиссии до момента взноса","Возвраты и разрешение споров","Защиту от мошенничества и приватность"], note:"Совместная забота должна сближать людей, а не создавать финансовую неопределённость." },
+} satisfies Record<Locale, {badge:string;eyebrow:string;title:string;intro:string;soonTitle:string;soonText:string;demo:string;collected:string;people:string;flowTitle:string;steps:string[][];trustTitle:string;trust:string[];note:string}>;
 
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-      <svg width="110" height="140" viewBox="0 0 120 150">
-        {/* Кришка */}
-        <rect x="35" y="8" width="50" height="14" rx="6" fill="#fde68a" stroke="#f59e0b" strokeWidth="1.5"/>
-        <rect x="30" y="18" width="60" height="8" rx="4" fill="#fbbf24" stroke="#f59e0b" strokeWidth="1"/>
-
-        {/* Тіло */}
-        <path d="M25 30 Q20 35 18 50 L18 128 Q18 140 30 142 L90 142 Q102 140 102 128 L102 50 Q100 35 95 30 Z"
-          fill="white" stroke="#e5e7eb" strokeWidth="1.5"/>
-
-        <defs>
-          <clipPath id="jar-clip">
-            <path d="M25 30 Q20 35 18 50 L18 128 Q18 140 30 142 L90 142 Q102 140 102 128 L102 50 Q100 35 95 30 Z"/>
-          </clipPath>
-        </defs>
-
-        <g clipPath="url(#jar-clip)">
-          <rect x="18" y="30" width="84" height="112" fill="#f0fdf4"/>
-          <rect x="18" y={142 - (112 * p / 100)} width="84" height={112 * p / 100}
-            fill={color} style={{ transition: "all 0.8s cubic-bezier(.4,0,.2,1)" }}/>
-          {p > 0 && (
-            <ellipse cx="60" cy={142 - (112 * p / 100)} rx="42" ry="5"
-              fill={lightColor} style={{ transition: "all 0.8s cubic-bezier(.4,0,.2,1)" }}/>
-          )}
-          {p > 10 && <ellipse cx="50" cy="135" rx="10" ry="4" fill="#fbbf24" opacity="0.8"/>}
-          {p > 30 && <ellipse cx="70" cy="128" rx="8" ry="3" fill="#fbbf24" opacity="0.7"/>}
-          {p > 50 && <ellipse cx="46" cy="122" rx="9" ry="3.5" fill="#fbbf24" opacity="0.7"/>}
-          {p > 70 && <ellipse cx="68" cy="116" rx="10" ry="4" fill="#fbbf24" opacity="0.8"/>}
-          {p > 15 && (
-            <text x="60" y={Math.max(55, 142 - (112 * p / 100) + 20)}
-              textAnchor="middle" fontSize="13" fontWeight="800"
-              fill="white" style={{ transition: "all 0.8s" }}>
-              {Math.round(p)}%
-            </text>
-          )}
-        </g>
-
-        {/* Блиск */}
-        <path d="M30 40 Q28 70 30 100" stroke="white" strokeWidth="3" strokeLinecap="round" opacity="0.6" fill="none"/>
-        <path d="M25 30 Q20 35 18 50 L18 128 Q18 140 30 142 L90 142 Q102 140 102 128 L102 50 Q100 35 95 30 Z"
-          fill="none" stroke="#d1d5db" strokeWidth="1.5"/>
-      </svg>
-
-      <div style={{ fontSize: 12, fontWeight: 700, color: "#059669", textAlign: "center" }}>
-        {p === 0 ? t("empty") :
-         p < 50 ? t("growing") :
-         p < 100 ? t("almost") :
-         t("done")}
-      </div>
-    </div>
-  );
+function JarPreview() {
+  return <div className="fund-preview__jar" aria-hidden="true"><div className="fund-preview__lid"/><div className="fund-preview__glass"><div className="fund-preview__fill"><span>72%</span></div><i>♥</i></div></div>;
 }
 
-const STEPS = [
-  { n: "01", emoji: "✨", key: "s1" },
-  { n: "02", emoji: "🔗", key: "s2" },
-  { n: "03", emoji: "💳", key: "s3" },
-] as const;
-
-/* ══ Головна сторінка ══ */
-export default function ZrzutkaPage() {
-  const t = useTranslations("static.services.phase3b.fund");
-  const commonT = useTranslations("static.services.phase3b");
-  const [collected, setCollected] = useState(180);
-  const goal = 500;
-  const percent = Math.round((collected / goal) * 100);
-
-  const PARTICIPANTS = [
-    { name: "Kasia", amount: 80, avatar: "🙋‍♀️" },
-    { name: "Marek", amount: 50, avatar: "🙋‍♂️" },
-    { name: "Ola",   amount: 50, avatar: "🙋‍♀️" },
-  ];
-
-  return (
-    <main style={{ background: "#f8f7ff", minHeight: "100svh", paddingBottom: 100, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-
-      {/* ══ HERO ══ */}
-      <section style={{
-        background: "linear-gradient(160deg,#fef3c7 0%,#fce7f3 60%,#ede9fe 100%)",
-        padding: "28px 20px 24px", textAlign: "center",
-      }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#d97706", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10, background: "rgba(251,191,36,.15)", display: "inline-block", padding: "4px 12px", borderRadius: 20 }}>
-          {t("title")}
-        </div>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: "#1a1040", margin: "0 0 8px", lineHeight: 1.2 }}>
-          {t("heroTitle")}
-        </h1>
-        <p style={{ fontSize: 13, color: "#6b5e8a", margin: "0 0 6px", lineHeight: 1.5 }}>
-          {t("subtitle")}
-        </p>
-        <p style={{ fontSize: 12, color: "#10b981", fontWeight: 700, marginBottom: 20 }}>
-          {t("fee")}
-        </p>
-        <Link href="#start" style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", color: "#fff", borderRadius: 20, padding: "12px 28px", fontSize: 15, fontWeight: 800, textDecoration: "none", boxShadow: "0 4px 14px rgba(124,58,237,.3)" }}>
-          {t("create")}
-        </Link>
-        <div style={{ marginTop: 12 }}>
-          <Link href="/services" style={{ fontSize: 12, color: "#b0a8cc", textDecoration: "none" }}>
-            {commonT("backToServices")}
-          </Link>
-        </div>
-      </section>
-
-      {/* ══ DEMO BANKI ══ */}
-      <section style={{ margin: "12px 16px 0", background: "#fff", borderRadius: 24, border: "1.5px solid #ede9f8", padding: "20px 16px", boxShadow: "0 2px 8px rgba(0,0,0,.04)" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#b0a8cc", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "center", marginBottom: 16 }}>
-          {t("demoTitle")}
-        </div>
-
-        <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-          {/* Банка */}
-          <div style={{ flex: "0 0 auto" }}>
-            <MoneyJar percent={percent} />
-          </div>
-
-          {/* Деталі */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#1a1040", marginBottom: 4 }}>
-              {t("demoName")}
-            </div>
-
-            {/* Прогрес */}
-            <div style={{ background: "#f8f7ff", borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, color: "#1a1040", marginBottom: 6 }}>
-                <span>{t("collected")}</span>
-                <span style={{ color: "#059669" }}>{collected} zł</span>
-              </div>
-              <div style={{ height: 8, background: "#ede9f8", borderRadius: 20, overflow: "hidden", marginBottom: 4 }}>
-                <div style={{ height: "100%", borderRadius: 20, background: "linear-gradient(90deg,#34d399,#10b981)", width: `${percent}%`, transition: "width 0.8s cubic-bezier(.4,0,.2,1)" }}/>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#b0a8cc" }}>
-                <span>{t("goal", { amount: goal })}</span>
-                <span>{t("missing", { amount: goal - collected })}</span>
-              </div>
-            </div>
-
-            {/* Учасники */}
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#b0a8cc", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
-              {t("participants")}
-            </div>
-            {PARTICIPANTS.map(p => (
-              <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                <span style={{ fontSize: 14 }}>{p.avatar}</span>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#1a1040", flex: 1 }}>{p.name}</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#059669" }}>+{p.amount} zł</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Кнопки симуляції */}
-        <div style={{ borderTop: "1px solid #f5f3ff", marginTop: 14, paddingTop: 12 }}>
-          <div style={{ fontSize: 11, color: "#b0a8cc", textAlign: "center", marginBottom: 8 }}>
-            {t("clickHint")}
-          </div>
-          <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-            {[20, 50, 100].map(amount => (
-              <button key={amount} onClick={() => setCollected(prev => Math.min(goal, prev + amount))}
-                style={{ background: "linear-gradient(135deg,#ede9fe,#fce7f3)", border: "1.5px solid #c4b5f8", borderRadius: 12, padding: "8px 16px", fontSize: 13, fontWeight: 700, color: "#7c3aed", cursor: "pointer" }}>
-                +{amount} zł
-              </button>
-            ))}
-            <button onClick={() => setCollected(0)}
-              style={{ background: "#fff5f5", border: "1.5px solid #fecaca", borderRadius: 12, padding: "8px 12px", fontSize: 12, fontWeight: 600, color: "#dc2626", cursor: "pointer" }}>
-              ↺
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ══ JAK TO DZIAŁA ══ */}
-      <section style={{ padding: "16px 16px 8px" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#b0a8cc", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "center", marginBottom: 12 }}>
-          {commonT("howItWorks")}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {STEPS.map(s => (
-            <div key={s.n} style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #ede9f8", padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 14, background: "linear-gradient(135deg,#ede9fe,#fce7f3)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <span style={{ fontSize: 9, fontWeight: 800, color: "#c4b5f8" }}>{s.n}</span>
-                <span style={{ fontSize: 18 }}>{s.emoji}</span>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1040", marginBottom: 2 }}>{t(`steps.${s.key}.title`)}</div>
-                <div style={{ fontSize: 12, color: "#7c6f9f" }}>{t(`steps.${s.key}.desc`)}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ══ OPŁATY ══ */}
-      <section style={{ margin: "8px 16px", background: "linear-gradient(135deg,#f0fdf4,#dcfce7)", borderRadius: 20, border: "1.5px solid #86efac", padding: "16px" }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: "#065f46", marginBottom: 6 }}>{t("feesTitle")}</div>
-        <div style={{ fontSize: 13, color: "#166534", lineHeight: 1.5, marginBottom: 10 }}>
-          {t("feesText")}
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          {[
-            { label: t("feeItems.create"), value: "0 zł" },
-            { label: t("feeItems.commission"), value: "2–4%" },
-            { label: t("feeItems.payout"), value: "0 zł" },
-          ].map(f => (
-            <div key={f.label} style={{ flex: 1, background: "#fff", borderRadius: 12, padding: "10px", textAlign: "center" }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: "#065f46" }}>{f.value}</div>
-              <div style={{ fontSize: 11, color: "#6b7280" }}>{f.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ══ CTA ══ */}
-      <section style={{ padding: "16px", textAlign: "center" }} id="start">
-        <div style={{ background: "linear-gradient(135deg,#7c3aed,#ec4899)", borderRadius: 20, padding: "20px 16px", color: "#fff" }}>
-          <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 6 }}>{t("ready")}</div>
-          <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 16, lineHeight: 1.5 }}>
-            {t("readyText")}
-          </div>
-          <Link href="/survey?flow=zrzutka" style={{ display: "inline-block", background: "#fff", color: "#7c3aed", borderRadius: 14, padding: "12px 28px", fontSize: 15, fontWeight: 800, textDecoration: "none" }}>
-            {t("create")}
-          </Link>
-        </div>
-      </section>
-
-    </main>
-  );
+export default async function FundPage() {
+  const locale = (await getLocale()) as Locale;
+  const c = COPY[locale] ?? COPY.uk;
+  const common = await getTranslations("static.services.phase3b");
+  return <main className="fund-preview">
+    <section className="fund-preview__hero">
+      <Link href="/services">← {common("backToServices")}</Link>
+      <p>{c.eyebrow}</p><h1>{c.title}</h1><div>{c.intro}</div>
+    </section>
+    <div className="fund-preview__body">
+      <ComingSoonNotice badge={c.badge} title={c.soonTitle} description={c.soonText}/>
+      <section className="fund-preview__demo"><JarPreview/><div><small>{c.demo}</small><h2>{c.collected}</h2><div className="fund-preview__avatars"><span>👩🏻</span><span>👨🏽</span><span>👩🏼</span><span>👨🏻</span><span>👵🏻</span></div><p>{c.people}</p></div></section>
+      <section className="fund-preview__flow"><h2>{c.flowTitle}</h2><div>{c.steps.map(([title,text],i)=><article key={title}><b>{i+1}</b><h3>{title}</h3><p>{text}</p></article>)}</div></section>
+      <section className="fund-preview__trust"><h2>🛡️ {c.trustTitle}</h2><ul>{c.trust.map(x=><li key={x}>✓ {x}</li>)}</ul></section>
+      <blockquote>“{c.note}”</blockquote>
+    </div>
+  </main>;
 }

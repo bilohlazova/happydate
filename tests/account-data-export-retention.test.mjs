@@ -28,7 +28,7 @@ test("account export is paginated, content-complete and keeps Memory ownership c
   assert.match(repository, /range\(from, from \+ PAGE_SIZE - 1\)/);
   assert.match(repository, /exportOwnedKnowledgeRows\(user\.id\)/);
   assert.doesNotMatch(repository, /from\("memories"\)/);
-  for (const section of ["profiles", "people", "events", "memories", "gifts", "giftLinks", "reminders", "reminderPreferences", "reminderDeliveries", "pushDevices", "knowledgeChanges", "knowledgeReviewInteractions"]) {
+  for (const section of ["profiles", "people", "events", "memories", "gifts", "giftLinks", "reminders", "reminderPreferences", "plannerPreferences", "reminderDeliveries", "pushDevices", "knowledgeChanges", "knowledgeReviewInteractions"]) {
     assert.match(repository, new RegExp(`\\b${section}\\b`), section);
   }
   assert.doesNotMatch(repository, /\btoken\b/);

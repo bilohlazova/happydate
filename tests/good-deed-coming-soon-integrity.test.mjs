@@ -1,0 +1,3 @@
+import test from "node:test";import assert from "node:assert/strict";import{readFile}from"node:fs/promises";const page=new URL("../src/app/services/podaruj-dobro/page.tsx",import.meta.url);
+test("good deed page does not collect applications or imply a live charity programme",async()=>{const s=await readFile(page,"utf8");assert.match(s,/ComingSoonNotice/);assert.doesNotMatch(s,/GoodDeedForm|YouTubeShowcase|href="#form"/)});
+test("good deed preview requires verification, consent and reporting",async()=>{const s=await readFile(page,"utf8");assert.match(s,/не приймаємо пожертви або заявки/);assert.match(s,/Згода на історії та зображення/);assert.match(s,/Звіт про передачу допомоги/)});

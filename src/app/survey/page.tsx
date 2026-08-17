@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { MobileUI } from "@/lib/theme/mobile";
 import { useTranslations } from "next-intl";
+import { logOperationalError } from "@/lib/observability/safeLogger";
 
 type SpecialDate = {
   id?: string;
@@ -68,7 +69,7 @@ export default function SurveyPage() {
       // Wczytaj ankietę
       const { data: s } = await supabase
         .from("user_survey")
-        .select("likes, dislikes, dream, notes, is_completed")
+        .select("likes, dislikes, dream, notes, is_completed, special_date_event_ids")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -79,21 +80,25 @@ export default function SurveyPage() {
         setNotes((s.notes as string) ?? "");
       }
 
-      // Wczytaj szczególne daty
-      const { data: ds } = await supabase
-        .from("user_special_dates")
-        .select("id, date, label, kind")
-        .eq("user_id", user.id)
-        .order("date", { ascending: true });
+      // Special dates are canonical Events; the survey stores only their IDs.
+      const specialDateIds = Array.isArray(s?.special_date_event_ids)
+        ? (s.special_date_event_ids as string[])
+        : [];
+      const { data: ds } = specialDateIds.length
+        ? await supabase
+            .from("events")
+            .select("id, date, title, category")
+            .eq("user_id", user.id)
+            .in("id", specialDateIds)
+            .order("date", { ascending: true })
+        : { data: [] };
 
       setDates(
-        ((ds ?? []) as SpecialDate[]).map((row) => ({
-          ...row,
-          label: ["support", "celebration", "Trudny dzień", "Święto"].includes(
-            row.label
-          )
-            ? ""
-            : row.label,
+        ((ds ?? []) as Array<{ id: string; date: string; title: string; category: string | null }>).map((row) => ({
+          id: row.id,
+          date: row.date,
+          label: row.title,
+          kind: row.category === "personal_support" ? "support" : "celebration",
         }))
       );
       setLoading(false);
@@ -147,41 +152,22 @@ export default function SurveyPage() {
           } => d !== null
         );
 
-      // 1) Upsert ankiety
-      const { error: sErr } = await supabase.from("user_survey").upsert(
-        {
-          user_id: uid,
-          likes,
-          dislikes,
-          dream,
-          notes,
-          is_completed: true,
-        },
-        { onConflict: "user_id" }
-      );
-      if (sErr) throw new Error(`user_survey: ${sErr.message}`);
-
-      // 2) Nadpisanie listy dat
-      const { error: delErr } = await supabase
-        .from("user_special_dates")
-        .delete()
-        .eq("user_id", uid);
-      if (delErr)
-        throw new Error(`user_special_dates(delete): ${delErr.message}`);
-
-      if (normalizedDates.length) {
-        const { error: insErr } = await supabase
-          .from("user_special_dates")
-          .insert(normalizedDates);
-        if (insErr)
-          throw new Error(`user_special_dates(insert): ${insErr.message}`);
-      }
+      // One server transaction saves the survey, replaces only its own Events,
+      // and grants the completion reward at most once.
+      const { error: sErr } = await supabase.rpc("save_my_onboarding_survey", {
+        p_likes: likes,
+        p_dislikes: dislikes,
+        p_dream: dream,
+        p_notes: notes,
+        p_special_dates: normalizedDates.map(({ date, label, kind }) => ({ date, label, kind })),
+      });
+      if (sErr) throw new Error(`save_my_onboarding_survey: ${sErr.message}`);
 
       setMsg(t("success"));
       setTimeout(() => router.replace("/profile"), 800);
     } catch (e: unknown) {
       setErr(t("error"));
-      console.error("[survey] submit error:", e);
+      logOperationalError("survey", "submit-failed", e);
     } finally {
       setSaving(false);
     }

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { logOperationalError } from "@/lib/observability/safeLogger";
 import type {
   CalendarEventRecord,
   CreateCalendarEventInput,
@@ -12,11 +13,15 @@ type EventsTableRow = {
   user_id: string;
   title: string;
   date: string;
+  time_of_day: string | null;
+  duration_minutes: number | null;
+  location: string | null;
+  travel_buffer_minutes: number | null;
   notes: string | null;
   category: string | null;
 };
 
-const CALENDAR_EVENT_COLUMNS = "id,title,date,notes,category,person_id,person_name,is_important,recurrence_rule";
+const CALENDAR_EVENT_COLUMNS = "id,title,date,time_of_day,duration_minutes,location,travel_buffer_minutes,notes,category,person_id,person_name,is_important,recurrence_rule";
 
 export class CalendarEventRepositoryError extends Error {
   readonly operation: "list" | "create" | "update" | "delete" | "import";
@@ -42,6 +47,16 @@ function normalizeCalendarEvent(row: unknown): CalendarEventRecord {
     id: value.id,
     title: value.title,
     date: value.date,
+    timeOfDay: typeof (value as { time_of_day?: unknown }).time_of_day === "string"
+      ? (value as { time_of_day: string }).time_of_day.slice(0, 5)
+      : typeof value.timeOfDay === "string" ? value.timeOfDay.slice(0, 5) : null,
+    durationMinutes: Number.isInteger((value as { duration_minutes?: unknown }).duration_minutes)
+      ? (value as { duration_minutes: number }).duration_minutes
+      : Number.isInteger(value.durationMinutes) ? value.durationMinutes ?? null : null,
+    location: typeof value.location === "string" ? value.location : null,
+    travelBufferMinutes: Number.isInteger((value as { travel_buffer_minutes?: unknown }).travel_buffer_minutes)
+      ? (value as { travel_buffer_minutes: number }).travel_buffer_minutes
+      : Number.isInteger(value.travelBufferMinutes) ? value.travelBufferMinutes ?? null : null,
     notes: typeof value.notes === "string" ? value.notes : null,
     category: typeof value.category === "string" ? value.category : null,
     personId: typeof (value as { person_id?: unknown }).person_id === "string"
@@ -68,7 +83,7 @@ export async function listCalendarEvents(userId: string): Promise<CalendarEventR
 export async function createCalendarEvent(input: CreateCalendarEventInput): Promise<CalendarEventRecord> {
   const { data, error } = await supabase
     .from("events")
-    .insert({ user_id: input.userId, title: input.title, date: input.date, notes: input.notes ?? null, category: input.category ?? null, person_id: input.personId ?? null, person_name: input.personName ?? null, is_important: input.isImportant ?? false, recurrence_rule: input.recurrenceRule ?? "none" })
+    .insert({ user_id: input.userId, title: input.title, date: input.date, time_of_day: input.timeOfDay ?? null, duration_minutes: input.durationMinutes ?? null, location: input.location ?? null, travel_buffer_minutes: input.travelBufferMinutes ?? null, notes: input.notes ?? null, category: input.category ?? null, person_id: input.personId ?? null, person_name: input.personName ?? null, is_important: input.isImportant ?? false, recurrence_rule: input.recurrenceRule ?? "none" })
     .select(CALENDAR_EVENT_COLUMNS)
     .single();
   if (error) throw new CalendarEventRepositoryError("create", error);
@@ -78,7 +93,7 @@ export async function createCalendarEvent(input: CreateCalendarEventInput): Prom
 export async function updateCalendarEvent(input: UpdateCalendarEventInput): Promise<CalendarEventRecord> {
   const { data, error } = await supabase
     .from("events")
-    .update({ title: input.title, date: input.date, notes: input.notes ?? null, category: input.category ?? null, person_id: input.personId ?? null, person_name: input.personName ?? null, is_important: input.isImportant ?? false, recurrence_rule: input.recurrenceRule ?? "none" })
+    .update({ title: input.title, date: input.date, time_of_day: input.timeOfDay ?? null, duration_minutes: input.durationMinutes ?? null, location: input.location ?? null, travel_buffer_minutes: input.travelBufferMinutes ?? null, notes: input.notes ?? null, category: input.category ?? null, person_id: input.personId ?? null, person_name: input.personName ?? null, is_important: input.isImportant ?? false, recurrence_rule: input.recurrenceRule ?? "none" })
     .eq("id", input.eventId)
     .eq("user_id", input.userId)
     .select(CALENDAR_EVENT_COLUMNS)
@@ -102,6 +117,10 @@ export async function importCalendarEvents(
       user_id: userId,
       title: event.title,
       date: event.date,
+      time_of_day: event.timeOfDay ?? null,
+      duration_minutes: event.durationMinutes ?? null,
+      location: event.location ?? null,
+      travel_buffer_minutes: event.travelBufferMinutes ?? null,
       notes: event.notes ?? null,
       category: event.category ?? null,
       person_id: event.personId ?? null,
@@ -122,23 +141,23 @@ export async function getEvents(): Promise<EventSummary[]> {
     } = await supabase.auth.getUser();
 
     if (userError) {
-      console.error("[events.repository] getUser failed:", userError);
+      logOperationalError("events-repository", "get-user-failed", userError);
       return [];
     }
 
     if (!user) {
-      console.error("[events.repository] getEvents called without a session");
+      logOperationalError("events-repository", "missing-session");
       return [];
     }
 
     const { data, error } = await supabase
       .from("events")
-      .select("id, user_id, title, date, notes, category")
+      .select("id, user_id, title, date, time_of_day, duration_minutes, location, travel_buffer_minutes, notes, category")
       .eq("user_id", user.id)
       .order("date", { ascending: true });
 
     if (error) {
-      console.error("[events.repository] getEvents failed:", error);
+      logOperationalError("events-repository", "get-events-failed", error);
       return [];
     }
 
@@ -146,11 +165,15 @@ export async function getEvents(): Promise<EventSummary[]> {
       id: row.id,
       title: row.title,
       date: new Date(`${row.date}T00:00:00`),
+      timeOfDay: row.time_of_day?.slice(0, 5) ?? undefined,
+      durationMinutes: row.duration_minutes ?? undefined,
+      location: row.location ?? undefined,
+      travelBufferMinutes: row.travel_buffer_minutes ?? undefined,
       category: row.category ?? undefined,
       notes: row.notes ?? undefined,
     }));
   } catch (error) {
-    console.error("[events.repository] getEvents unexpected failure:", error);
+    logOperationalError("events-repository", "unexpected-failure", error);
     return [];
   }
 }

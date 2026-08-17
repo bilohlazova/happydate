@@ -2,6 +2,7 @@ import "server-only";
 
 import type { AbstractIntlMessages } from "next-intl";
 import { DEFAULT_LOCALE, type AppLocale } from "./config";
+import { logOperationalError } from "@/lib/observability/safeLogger";
 
 type CommonMessages = typeof import("../../messages/pl/common.json");
 type NavigationMessages = typeof import("../../messages/pl/navigation.json");
@@ -286,9 +287,7 @@ async function loadCommonMessages(locale: AppLocale): Promise<CommonMessages> {
       );
     }
 
-    console.error(
-      `[i18n] Messages unavailable for locale "${locale}"; using Polish.`
-    );
+    logOperationalError("i18n", "messages-fallback");
     return COMMON_MESSAGE_LOADERS[DEFAULT_LOCALE]();
   }
 }
@@ -306,9 +305,7 @@ async function loadNavigationMessages(
       );
     }
 
-    console.error(
-      `[i18n] Navigation messages unavailable for locale "${locale}"; using Polish.`
-    );
+    logOperationalError("i18n", "navigation-fallback");
     return NAVIGATION_MESSAGE_LOADERS[DEFAULT_LOCALE]();
   }
 }
@@ -325,9 +322,7 @@ async function loadProfileMessages(
         { cause: error }
       );
     }
-    console.error(
-      `[i18n] Profile messages unavailable for locale "${locale}"; using Polish.`
-    );
+    logOperationalError("i18n", "profile-fallback");
     return PROFILE_MESSAGE_LOADERS[DEFAULT_LOCALE]();
   }
 }
@@ -342,9 +337,7 @@ async function loadAuthMessages(locale: AppLocale): Promise<AuthMessages> {
         { cause: error }
       );
     }
-    console.error(
-      `[i18n] Auth messages unavailable for locale "${locale}"; using Polish.`
-    );
+    logOperationalError("i18n", "auth-fallback");
     return AUTH_MESSAGE_LOADERS[DEFAULT_LOCALE]();
   }
 }

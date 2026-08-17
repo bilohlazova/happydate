@@ -6,6 +6,8 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useTranslations } from "next-intl";
 import { mapAuthError } from "@/lib/auth/mapAuthError";
+import { Capacitor } from "@capacitor/core";
+import { nativeAuthRedirect } from "@/lib/navigation/safeDeepLink";
 
 export default function ResetPasswordPage() {
   const translate = useTranslations("auth");
@@ -22,7 +24,9 @@ export default function ResetPasswordPage() {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     // Po kliknięciu w mailu użytkownik trafi na formularz ustawienia nowego hasła
-    const redirectTo = `${appUrl}/auth/update-password`;
+    const redirectTo = Capacitor.isNativePlatform()
+      ? nativeAuthRedirect("/auth/update-password")
+      : `${appUrl}/auth/update-password`;
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 

@@ -26,6 +26,10 @@ export interface HomeStoredEvent {
   id: string;
   title: string;
   date: string;
+  timeOfDay?: string | null;
+  durationMinutes?: number | null;
+  location?: string | null;
+  travelBufferMinutes?: number | null;
   category: string | null;
   notes: string | null;
   personId: string | null;
@@ -50,6 +54,7 @@ export interface HomeKnowledgeReview {
 export interface HomeKnowledgeReviewPreferences {
   homeEnabled: boolean;
   voiceEnabled: boolean;
+  timezone?: string;
 }
 
 export type HomeMemory = HomeKnowledgeProjection;
@@ -87,6 +92,10 @@ export interface HomeEvent {
   source: HomeEventSource;
   title: string;
   date: string;
+  timeOfDay: string | null;
+  durationMinutes: number | null;
+  location: string | null;
+  travelBufferMinutes: number | null;
   category: string | null;
   personId: string | null;
   personName: string | null;

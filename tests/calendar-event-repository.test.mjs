@@ -24,7 +24,11 @@ test("Calendar Event mutations are explicitly owner-scoped and return persisted 
     new URL("../src/lib/repositories/events/events.repository.ts", import.meta.url),
     "utf8",
   );
-  assert.match(repository, /const CALENDAR_EVENT_COLUMNS = "id,title,date,notes,category,person_id,person_name,is_important,recurrence_rule"/);
+  assert.match(repository, /const CALENDAR_EVENT_COLUMNS = "id,title,date,time_of_day,duration_minutes,location,travel_buffer_minutes,notes,category,person_id,person_name,is_important,recurrence_rule"/);
+  assert.match(repository, /time_of_day: input\.timeOfDay \?\? null/);
+  assert.match(repository, /duration_minutes: input\.durationMinutes \?\? null/);
+  assert.match(repository, /location: input\.location \?\? null/);
+  assert.match(repository, /travel_buffer_minutes: input\.travelBufferMinutes \?\? null/);
   assert.match(repository, /listCalendarEvents[\s\S]*\.eq\("user_id", userId\)/);
   assert.match(repository, /updateCalendarEvent[\s\S]*\.eq\("id", input\.eventId\)[\s\S]*\.eq\("user_id", input\.userId\)/);
   assert.match(repository, /deleteCalendarEvent[\s\S]*\.eq\("id", eventId\)\.eq\("user_id", userId\)/);

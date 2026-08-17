@@ -131,7 +131,7 @@ function knowledgeConflicts(items: readonly KnowledgeItem[]): PersonKnowledgeCon
     groups.set(key, group);
   }
   const conflicts: PersonKnowledgeConflictViewModel[] = [];
-  for (const [key, group] of groups) {
+  for (const group of groups.values()) {
     const hasPositive = group.some((item) => item.polarity === "likes" || item.polarity === "prefers");
     const hasNegative = group.some((item) => item.polarity === "dislikes" || item.polarity === "avoids");
     if (!hasPositive || !hasNegative) continue;

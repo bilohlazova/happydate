@@ -47,10 +47,16 @@ function toAssistantEvents(
       id: event.id,
       title: event.title,
       date: event.date.slice(0, 10),
+      timeOfDay: event.timeOfDay ?? null,
+      durationMinutes: event.durationMinutes ?? null,
+      location: event.location?.trim().slice(0, 300) || null,
+      travelBufferMinutes: event.travelBufferMinutes ?? null,
       category: event.category?.trim() || null,
     }))
     .filter((event) => /^\d{4}-\d{2}-\d{2}$/.test(event.date) && event.date >= today)
-    .sort((first, second) => first.date.localeCompare(second.date) || first.title.localeCompare(second.title))
+    .sort((first, second) => first.date.localeCompare(second.date)
+      || (first.timeOfDay ?? "99:99").localeCompare(second.timeOfDay ?? "99:99")
+      || first.title.localeCompare(second.title))
     .slice(0, 10);
 }
 
@@ -78,6 +84,8 @@ export function useAssistantHomeContext(open: boolean): AssistantHomeContext {
   useEffect(() => {
     if (!open) return;
     const requestId = ++requestIdRef.current;
+    // Opening or refreshing starts a new asynchronous context snapshot.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setContext((current) => ({
       ...current,
       greetingPeriod: getGreetingPeriod(),

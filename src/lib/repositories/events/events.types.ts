@@ -2,6 +2,10 @@ export interface EventSummary {
   id: string;
   title: string;
   date: Date;
+  timeOfDay?: string;
+  durationMinutes?: number;
+  location?: string;
+  travelBufferMinutes?: number;
   category?: string;
   notes?: string;
 }
@@ -12,6 +16,10 @@ export interface CalendarEventRecord {
   id: string;
   title: string;
   date: string;
+  timeOfDay: string | null;
+  durationMinutes: number | null;
+  location: string | null;
+  travelBufferMinutes: number | null;
   notes: string | null;
   category: string | null;
   personId: string | null;
@@ -24,6 +32,10 @@ export interface CreateCalendarEventInput {
   userId: string;
   title: string;
   date: string;
+  timeOfDay?: string | null;
+  durationMinutes?: number | null;
+  location?: string | null;
+  travelBufferMinutes?: number | null;
   notes?: string | null;
   category?: string | null;
   personId?: string | null;
@@ -37,6 +49,10 @@ export interface UpdateCalendarEventInput {
   eventId: string;
   title: string;
   date: string;
+  timeOfDay?: string | null;
+  durationMinutes?: number | null;
+  location?: string | null;
+  travelBufferMinutes?: number | null;
   notes?: string | null;
   category?: string | null;
   personId?: string | null;

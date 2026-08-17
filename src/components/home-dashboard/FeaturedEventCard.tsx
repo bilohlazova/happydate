@@ -35,7 +35,7 @@ export default function FeaturedEventCard({
         <div className="min-w-0">
           <p className={`text-[11px] font-black uppercase tracking-[0.12em] ${event.isImportant ? "text-pink-600" : "text-sky-600"}`}>{event.label}</p>
           <h2 className="mt-2 text-xl font-black leading-tight tracking-[-0.02em] text-slate-950 sm:text-2xl">{event.title}</h2>
-          <p className="mt-2 text-sm font-semibold capitalize text-slate-500">{event.dateLabel} · {event.countdownLabel}</p>
+          <p className="mt-2 text-sm font-semibold capitalize text-slate-500">{event.dateLabel}{event.timeOfDay ? ` · ${event.timeOfDay}` : ""}{event.durationMinutes ? ` · ${event.durationMinutes} min` : ""} · {event.countdownLabel}</p>
         </div>
         <span className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${event.daysUntil <= 7 ? "bg-pink-50 text-pink-700" : "bg-sky-50 text-sky-700"}`}>{event.countdownLabel}</span>
       </div>

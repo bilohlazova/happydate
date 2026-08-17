@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useCallback, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import type { CalendarEventRecord as EventRow } from "@/lib/repositories/events";
 import type { EventRecurrenceRule } from "@/lib/repositories/events";
@@ -21,6 +21,8 @@ import {
   updateCalendarEvent,
 } from "@/lib/repositories/events";
 import { reconcileCalendarEventReminder } from "@/lib/reminders/calendarEventReminder";
+import { buildDayPlanDraft, findDayPlanConflicts, isValidDayPlanItemWithinWindow, isValidEventDuration, isValidTravelBuffer, reflowDayPlanDraft, reorderDayPlanDraft, resizeDayPlanDraft, selectDayPlanCandidates, summarizeDayPlanDraft, type DayPlanDraftItem, type DayPlanFixedEvent, type DayPlanMoveDirection } from "@/lib/events/dayPlanDraft";
+import { DEFAULT_PLANNER_PREFERENCES, loadPlannerPreferences, savePlannerPreferences, type PlannerPreferences } from "@/lib/repositories/plannerPreferences.repository";
 
 /* ═══════════════════════════════════════════════════
    TYPES
@@ -38,6 +40,10 @@ type RealtimeEventRow = Omit<EventRow, "personId" | "personName" | "isImportant"
   person_name?: string | null;
   is_important?: boolean | null;
   recurrence_rule?: EventRecurrenceRule | null;
+  time_of_day?: string | null;
+  duration_minutes?: number | null;
+  location?: string | null;
+  travel_buffer_minutes?: number | null;
 };
 
 function mapRealtimeEvent(row: RealtimeEventRow): EventRow {
@@ -45,6 +51,10 @@ function mapRealtimeEvent(row: RealtimeEventRow): EventRow {
     id: row.id,
     title: row.title,
     date: row.date,
+    timeOfDay: typeof row.time_of_day === "string" ? row.time_of_day.slice(0, 5) : row.timeOfDay ?? null,
+    durationMinutes: Number.isInteger(row.duration_minutes) ? row.duration_minutes ?? null : row.durationMinutes ?? null,
+    location: row.location ?? null,
+    travelBufferMinutes: Number.isInteger(row.travel_buffer_minutes) ? row.travel_buffer_minutes ?? null : row.travelBufferMinutes ?? null,
     notes: row.notes ?? null,
     category: row.category ?? null,
     personId: row.person_id ?? null,
@@ -444,6 +454,10 @@ const CATEGORIES_ADD = [
 function AddEditSheet({
   mode,
   date,
+  timeOfDay,
+  durationMinutes,
+  location,
+  travelBufferMinutes,
   title,
   notes,
   category,
@@ -452,6 +466,10 @@ function AddEditSheet({
   recurrenceRule,
   people,
   setDate,
+  setTimeOfDay,
+  setDurationMinutes,
+  setLocation,
+  setTravelBufferMinutes,
   setTitle,
   setNotes,
   setCategory,
@@ -464,6 +482,10 @@ function AddEditSheet({
 }: {
   mode: "add" | "edit";
   date: string;
+  timeOfDay: string;
+  durationMinutes: string;
+  location: string;
+  travelBufferMinutes: string;
   title: string;
   notes: string;
   category: string;
@@ -472,6 +494,10 @@ function AddEditSheet({
   recurrenceRule: EventRecurrenceRule;
   people: PersonRow[];
   setDate: (v: string) => void;
+  setTimeOfDay: (v: string) => void;
+  setDurationMinutes: (v: string) => void;
+  setLocation: (v: string) => void;
+  setTravelBufferMinutes: (v: string) => void;
   setTitle: (v: string) => void;
   setNotes: (v: string) => void;
   setCategory: (v: string) => void;
@@ -600,6 +626,75 @@ function AddEditSheet({
             />
           </div>
 
+          <div className="calendar-event-field flex items-center gap-3 py-2 border-b border-slate-100">
+            <span className="text-slate-300 text-lg select-none">🕐</span>
+            <label htmlFor={`${mode}-event-time`} className="sr-only">{t("form.time")}</label>
+            <input
+              id={`${mode}-event-time`}
+              type="time"
+              value={timeOfDay}
+              onChange={(event) => setTimeOfDay(event.target.value)}
+              className="flex-1 text-slate-700 outline-none bg-transparent"
+              style={{ fontSize: "16px" }}
+            />
+            {timeOfDay && (
+              <button type="button" onClick={() => setTimeOfDay("")} className="min-h-11 px-2 text-xs font-semibold text-slate-400">
+                {t("form.clearTime")}
+              </button>
+            )}
+          </div>
+
+          <div className="calendar-event-field flex items-center gap-3 py-2 border-b border-slate-100">
+            <span className="text-slate-300 text-lg select-none">⏳</span>
+            <label htmlFor={`${mode}-event-duration`} className="sr-only">{t("form.duration")}</label>
+            <input
+              id={`${mode}-event-duration`}
+              type="number"
+              min="5"
+              max="1440"
+              step="5"
+              placeholder={t("form.durationPlaceholder")}
+              value={durationMinutes}
+              onChange={(event) => setDurationMinutes(event.target.value)}
+              className="min-w-0 flex-1 text-slate-700 outline-none bg-transparent"
+              style={{ fontSize: "16px" }}
+            />
+            <span className="text-xs font-semibold text-slate-400">{t("form.minutes")}</span>
+          </div>
+
+          <div className="calendar-event-field flex items-center gap-3 py-2 border-b border-slate-100">
+            <span className="text-slate-300 text-lg select-none">📍</span>
+            <label htmlFor={`${mode}-event-location`} className="sr-only">{t("form.location")}</label>
+            <input
+              id={`${mode}-event-location`}
+              type="text"
+              maxLength={300}
+              placeholder={t("form.locationPlaceholder")}
+              value={location}
+              onChange={(event) => setLocation(event.target.value)}
+              className="min-w-0 flex-1 text-slate-700 placeholder-slate-300 outline-none bg-transparent"
+              style={{ fontSize: "16px" }}
+            />
+          </div>
+
+          <div className="calendar-event-field flex items-center gap-3 py-2 border-b border-slate-100">
+            <span className="text-slate-300 text-lg select-none">🚗</span>
+            <label htmlFor={`${mode}-event-travel-buffer`} className="sr-only">{t("form.travelBuffer")}</label>
+            <input
+              id={`${mode}-event-travel-buffer`}
+              type="number"
+              min="5"
+              max="240"
+              step="5"
+              placeholder={t("form.travelBufferPlaceholder")}
+              value={travelBufferMinutes}
+              onChange={(event) => setTravelBufferMinutes(event.target.value)}
+              className="min-w-0 flex-1 text-slate-700 placeholder-slate-300 outline-none bg-transparent"
+              style={{ fontSize: "16px" }}
+            />
+            <span className="text-xs font-semibold text-slate-400">{t("form.minutes")}</span>
+          </div>
+
           {/* Category */}
           <div className="calendar-event-field calendar-event-categories flex items-center gap-3 py-2 border-b border-slate-100">
             <span className="text-slate-300 text-lg select-none">🏷️</span>
@@ -714,6 +809,273 @@ function AddEditSheet({
   );
 }
 
+function DayPlanSheet({
+  dateLabel,
+  events,
+  fixedEvents,
+  uncertainFixedCount,
+  deferredCount,
+  initialPreferences,
+  onCancel,
+  onSave,
+  onSavePreferences,
+}: {
+  dateLabel: string;
+  events: EventRow[];
+  fixedEvents: DayPlanFixedEvent[];
+  uncertainFixedCount: number;
+  deferredCount: number;
+  initialPreferences: PlannerPreferences;
+  onCancel: () => void;
+  onSave: (items: DayPlanDraftItem[], window: { startTime: string; endTime: string }) => Promise<void>;
+  onSavePreferences: (preferences: PlannerPreferences) => Promise<void>;
+}) {
+  const t = useTranslations("dashboard");
+  const ref = useFocusTrap(true);
+  const [startTime, setStartTime] = useState(initialPreferences.dayStart);
+  const [endTime, setEndTime] = useState(initialPreferences.dayEnd);
+  const [gapMinutes, setGapMinutes] = useState(initialPreferences.defaultGapMinutes);
+  const [defaultDurationMinutes, setDefaultDurationMinutes] = useState(initialPreferences.defaultDurationMinutes);
+  const [draft, setDraft] = useState<DayPlanDraftItem[]>(() =>
+    buildDayPlanDraft(events, initialPreferences.dayStart, initialPreferences.defaultGapMinutes, initialPreferences.defaultDurationMinutes, fixedEvents, initialPreferences.dayEnd) ?? [],
+  );
+  const [excluded, setExcluded] = useState<DayPlanDraftItem[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [savingPreferences, setSavingPreferences] = useState(false);
+  const [preferencesSaved, setPreferencesSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const importantEventIds = useMemo(() => new Set(events.filter((event) => event.isImportant).map((event) => event.id)), [events]);
+  const summary = useMemo(() => summarizeDayPlanDraft(draft), [draft]);
+
+  useBodyScrollLock(true);
+
+  const regenerate = () => {
+    const excludedIds = new Set(excluded.map((item) => item.eventId));
+    const next = buildDayPlanDraft(events.filter((event) => !excludedIds.has(event.id)), startTime, gapMinutes, defaultDurationMinutes, fixedEvents, endTime);
+    if (!next) {
+      setError(t("dayPlan.rangeError"));
+      return;
+    }
+    setError(null);
+    setDraft(next);
+  };
+
+  const save = async () => {
+    if (draft.length === 0 || new Set(draft.map((item) => item.eventId)).size !== draft.length || draft.some((item) => !isValidDayPlanItemWithinWindow(item, startTime, endTime))) {
+      setError(t("dayPlan.validationError"));
+      return;
+    }
+    if (findDayPlanConflicts(draft, fixedEvents).length > 0) {
+      setError(t("dayPlan.conflictError"));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await onSave(draft, { startTime, endTime });
+    } catch {
+      setError(t("dayPlan.saveError"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveDefaults = async () => {
+    if (!buildDayPlanDraft([], startTime, gapMinutes, defaultDurationMinutes, [], endTime)) {
+      setError(t("dayPlan.validationError"));
+      return;
+    }
+    setSavingPreferences(true);
+    setPreferencesSaved(false);
+    setError(null);
+    try {
+      await onSavePreferences({
+        dayStart: startTime,
+        dayEnd: endTime,
+        defaultDurationMinutes,
+        defaultGapMinutes: gapMinutes,
+      });
+      setPreferencesSaved(true);
+    } catch {
+      setError(t("dayPlan.preferencesSaveError"));
+    } finally {
+      setSavingPreferences(false);
+    }
+  };
+
+  const moveDraft = (eventId: string, direction: DayPlanMoveDirection) => {
+    const next = reorderDayPlanDraft(draft, eventId, direction, startTime, gapMinutes, fixedEvents, endTime);
+    if (!next) {
+      setError(t("dayPlan.rangeError"));
+      return;
+    }
+    setError(null);
+    setDraft(next);
+  };
+
+  const excludeFromDraft = (eventId: string) => {
+    const removed = draft.find((item) => item.eventId === eventId);
+    if (!removed) return;
+    const next = reflowDayPlanDraft(draft.filter((item) => item.eventId !== eventId), startTime, gapMinutes, fixedEvents, endTime);
+    if (!next) {
+      setError(t("dayPlan.rangeError"));
+      return;
+    }
+    setError(null);
+    setDraft(next);
+    setExcluded((current) => [...current, removed]);
+  };
+
+  const restoreToDraft = (eventId: string) => {
+    const restored = excluded.find((item) => item.eventId === eventId);
+    if (!restored) return;
+    const next = reflowDayPlanDraft([...draft, restored], startTime, gapMinutes, fixedEvents, endTime);
+    if (!next) {
+      setError(t("dayPlan.rangeError"));
+      return;
+    }
+    setError(null);
+    setDraft(next);
+    setExcluded((current) => current.filter((item) => item.eventId !== eventId));
+  };
+
+  const changeDraftDuration = (eventId: string, durationMinutes: number) => {
+    const next = resizeDayPlanDraft(draft, eventId, durationMinutes, startTime, gapMinutes, fixedEvents, endTime);
+    if (!next) {
+      setError(isValidEventDuration(durationMinutes) ? t("dayPlan.rangeError") : t("validation.duration"));
+      return;
+    }
+    setError(null);
+    setDraft(next);
+  };
+
+  return (
+    <div role="dialog" aria-modal="true" aria-labelledby="day-plan-title" className="fixed inset-0 z-[360] flex items-end justify-center sm:items-center">
+      <div className="absolute inset-0 bg-black/35 backdrop-blur-[3px]" onClick={busy ? undefined : onCancel} />
+      <div ref={ref} className="relative max-h-[92dvh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-[2rem] border border-white/40 bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl sm:rounded-[2rem]">
+        <div className="flex justify-center pb-1 pt-3 sm:hidden"><div className="h-[3px] w-9 rounded-full bg-slate-200" /></div>
+        <header className="border-b border-slate-100 px-5 pb-4 pt-2">
+          <div className="flex items-center justify-between gap-3">
+            <button type="button" onClick={onCancel} disabled={busy} className="min-h-11 text-sm font-semibold text-slate-500 disabled:opacity-50">{t("common.cancel")}</button>
+            <span className="rounded-full bg-sky-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-sky-700">{t("dayPlan.draftBadge")}</span>
+          </div>
+          <h2 id="day-plan-title" className="mt-2 text-xl font-black tracking-tight text-slate-950">{t("dayPlan.title")}</h2>
+          <p className="mt-1 text-xs font-extrabold uppercase tracking-[0.08em] text-sky-600">{dateLabel}</p>
+          <p className="mt-1 text-sm leading-relaxed text-slate-500">{t("dayPlan.description")}</p>
+        </header>
+
+        {events.length === 0 ? (
+          <div className="px-5 py-10 text-center">
+            <div className="text-3xl" aria-hidden="true">✨</div>
+            <p className="mt-3 font-bold text-slate-800">{t("dayPlan.emptyTitle")}</p>
+            <p className="mt-1 text-sm text-slate-500">{t("dayPlan.emptyDescription")}</p>
+            <button type="button" onClick={onCancel} className="hd-button mt-5 min-h-11 w-full bg-sky-500 text-white">{t("dayPlan.close")}</button>
+          </div>
+        ) : (
+          <div className="px-5 py-5">
+            <div className="grid grid-cols-2 gap-3 rounded-2xl bg-sky-50 p-3 sm:grid-cols-4">
+              <label className="text-xs font-bold text-slate-600">
+                {t("dayPlan.startTime")}
+                <input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-sky-100 bg-white px-3 text-base text-slate-800 outline-none focus:border-sky-400" />
+              </label>
+              <label className="text-xs font-bold text-slate-600">
+                {t("dayPlan.endTime")}
+                <input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-sky-100 bg-white px-3 text-base text-slate-800 outline-none focus:border-sky-400" />
+              </label>
+              <label className="text-xs font-bold text-slate-600">
+                {t("dayPlan.defaultDuration")}
+                <input type="number" min="5" max="1440" step="5" value={defaultDurationMinutes} onChange={(event) => setDefaultDurationMinutes(Number(event.target.value))} className="mt-1 min-h-11 w-full rounded-xl border border-sky-100 bg-white px-3 text-base text-slate-800 outline-none focus:border-sky-400" />
+              </label>
+              <label className="text-xs font-bold text-slate-600">
+                {t("dayPlan.gap")}
+                <input type="number" min="0" max="240" step="5" value={gapMinutes} onChange={(event) => setGapMinutes(Number(event.target.value))} className="mt-1 min-h-11 w-full rounded-xl border border-sky-100 bg-white px-3 text-base text-slate-800 outline-none focus:border-sky-400" />
+              </label>
+            </div>
+            <button type="button" onClick={regenerate} className="mt-3 min-h-11 w-full rounded-xl border border-sky-200 text-sm font-extrabold text-sky-700 hover:bg-sky-50">{t("dayPlan.rebuild")}</button>
+            <button type="button" onClick={saveDefaults} disabled={busy || savingPreferences} className="mt-2 min-h-11 w-full rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-50 disabled:opacity-50">
+              {savingPreferences ? t("dayPlan.savingPreferences") : preferencesSaved ? t("dayPlan.preferencesSaved") : t("dayPlan.savePreferences")}
+            </button>
+
+            {fixedEvents.length > 0 && (
+              <p className="mt-3 rounded-2xl bg-emerald-50 px-3.5 py-3 text-xs leading-relaxed text-emerald-900">
+                {t("dayPlan.fixedProtected", { count: fixedEvents.length })}
+              </p>
+            )}
+            {uncertainFixedCount > 0 && (
+              <p className="mt-3 rounded-2xl bg-amber-50 px-3.5 py-3 text-xs leading-relaxed text-amber-900">
+                {t("dayPlan.missingFixedDuration", { count: uncertainFixedCount })}
+              </p>
+            )}
+            {deferredCount > 0 && (
+              <p className="mt-3 rounded-2xl bg-violet-50 px-3.5 py-3 text-xs leading-relaxed text-violet-900">
+                {t("dayPlan.deferred", { count: deferredCount })}
+              </p>
+            )}
+
+            <p className="mt-4 text-xs leading-relaxed text-slate-500">{t("dayPlan.priorityHint")} {t("dayPlan.reorderHint")}</p>
+
+            <ul className="mt-2 space-y-2">
+              {draft.map((item, index) => (
+                <li key={item.eventId} className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-sm sm:grid-cols-[auto_1fr_auto_auto_auto_auto]">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-xs font-black text-sky-700">{index + 1}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-bold text-slate-800">
+                    {importantEventIds.has(item.eventId) && <span className="mr-1 text-rose-500" aria-label={t("dayPlan.important")}>♥</span>}
+                    {item.title}
+                    {item.travelBufferMinutes && <span className="ml-2 text-[10px] font-bold text-slate-400">🚗 {item.travelBufferMinutes} {t("form.minutes")}</span>}
+                  </span>
+                  <div className="col-start-2 flex gap-1 sm:col-start-auto">
+                    <button type="button" onClick={() => moveDraft(item.eventId, "up")} disabled={index === 0 || busy} aria-label={t("dayPlan.moveUp", { title: item.title })} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-500 disabled:opacity-30">↑</button>
+                    <button type="button" onClick={() => moveDraft(item.eventId, "down")} disabled={index === draft.length - 1 || busy} aria-label={t("dayPlan.moveDown", { title: item.title })} className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-500 disabled:opacity-30">↓</button>
+                  </div>
+                  <button type="button" onClick={() => excludeFromDraft(item.eventId)} disabled={busy} className="col-start-2 min-h-11 rounded-xl px-2 text-left text-xs font-semibold text-slate-400 hover:bg-slate-50 sm:col-start-auto" aria-label={t("dayPlan.exclude", { title: item.title })}>{t("dayPlan.excludeShort")}</button>
+                  <label className="sr-only" htmlFor={`day-plan-${item.eventId}`}>{t("dayPlan.eventTime", { title: item.title })}</label>
+                  <input id={`day-plan-${item.eventId}`} type="time" value={item.timeOfDay} onChange={(event) => setDraft((current) => current.map((entry) => entry.eventId === item.eventId ? { ...entry, timeOfDay: event.target.value } : entry))} className="col-start-2 min-h-11 w-[7.5rem] rounded-xl border border-slate-200 px-2 text-base font-bold text-slate-700 outline-none focus:border-sky-400 sm:col-start-auto" />
+                  <label className="sr-only" htmlFor={`day-plan-duration-${item.eventId}`}>{t("dayPlan.eventDuration", { title: item.title })}</label>
+                  <div className="col-start-2 flex items-center gap-2 sm:col-start-auto">
+                    <input id={`day-plan-duration-${item.eventId}`} type="number" min="5" max="1440" step="5" value={item.durationMinutes} onChange={(event) => changeDraftDuration(item.eventId, Number(event.target.value))} className="min-h-11 w-20 rounded-xl border border-slate-200 px-2 text-base font-bold text-slate-700 outline-none focus:border-sky-400" />
+                    <span className="text-xs font-semibold text-slate-400">{t("form.minutes")}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {summary && (
+              <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3" aria-live="polite">
+                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-700">{t("dayPlan.summaryTitle")}</p>
+                <p className="mt-1 text-sm font-bold leading-relaxed text-emerald-950">
+                  {t("dayPlan.summary", { count: summary.taskCount, minutes: summary.focusMinutes, time: summary.finishTime })}
+                </p>
+                {summary.travelMinutes > 0 && <p className="mt-1 text-xs font-semibold text-emerald-800">{t("dayPlan.travelSummary", { minutes: summary.travelMinutes })}</p>}
+              </div>
+            )}
+
+            {excluded.length > 0 && (
+              <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">{t("dayPlan.excludedTitle")}</p>
+                <ul className="mt-2 space-y-2">
+                  {excluded.map((item) => (
+                    <li key={item.eventId} className="flex items-center gap-2 rounded-xl bg-white px-3 py-2">
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-600">{item.title}</span>
+                      <button type="button" onClick={() => restoreToDraft(item.eventId)} disabled={busy} className="min-h-11 rounded-xl px-3 text-xs font-bold text-sky-700 hover:bg-sky-50" aria-label={t("dayPlan.restore", { title: item.title })}>{t("dayPlan.restoreShort")}</button>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs leading-relaxed text-slate-500">{t("dayPlan.excludedHint")}</p>
+              </div>
+            )}
+
+            <div className="mt-4 rounded-2xl bg-amber-50 px-3.5 py-3 text-xs leading-relaxed text-amber-900">{t("dayPlan.confirmationNote")}</div>
+            {error && <p className="mt-3 text-sm font-semibold text-rose-600" role="alert">{error}</p>}
+            <button type="button" onClick={save} disabled={busy || draft.length === 0} className="hd-button mt-4 min-h-12 w-full bg-sky-500 text-white disabled:cursor-not-allowed disabled:opacity-50">
+              {busy ? t("dayPlan.saving") : t("dayPlan.save")}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════
    DAY DETAIL SHEET
    Same iOS fixes: scroll lock, max-h-[92dvh], safe-area, 16px inputs
@@ -724,6 +1086,7 @@ function DayDetailSheet({
   insights,
   onClose,
   onAdd,
+  onPlan,
   onEdit,
 }: {
   dateYMD: string;
@@ -731,6 +1094,7 @@ function DayDetailSheet({
   insights: Map<string, string>;
   onClose: () => void;
   onAdd: (ymd: string) => void;
+  onPlan: (ymd: string) => void;
   onEdit: (id: string) => void;
 }) {
   const locale = useLocale();
@@ -809,6 +1173,15 @@ function DayDetailSheet({
 
         {/* Events — scrollable, overscroll-contain stops bounce-through */}
         <div className="px-4 pb-6 overflow-y-auto overscroll-contain flex-1">
+          {dateYMD >= today && (
+            <button
+              type="button"
+              onClick={() => onPlan(dateYMD)}
+              className="mb-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-sky-100 bg-sky-50 text-sm font-extrabold text-sky-700 transition-colors hover:bg-sky-100"
+            >
+              <span aria-hidden="true">✨</span> {t("dayPlan.planAction")}
+            </button>
+          )}
           {events.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-3xl mb-2">🌙</p>
@@ -869,6 +1242,15 @@ function DayDetailSheet({
                         )}
                         {ev.personName && !isBirthday && (
                           <p className="text-[11px] text-slate-500 mt-1">👤 {ev.personName}</p>
+                        )}
+                        {ev.timeOfDay && !isBirthday && (
+                          <p className="text-[11px] font-semibold text-slate-500 mt-1">🕐 {ev.timeOfDay}{ev.durationMinutes ? ` · ${ev.durationMinutes} ${t("form.minutes")}` : ""}</p>
+                        )}
+                        {ev.location && !isBirthday && (
+                          <p className="mt-1 truncate text-[11px] font-semibold text-slate-500">📍 {ev.location}</p>
+                        )}
+                        {ev.travelBufferMinutes && !isBirthday && (
+                          <p className="mt-1 text-[11px] font-semibold text-slate-500">🚗 {t("day.travelBuffer", { minutes: ev.travelBufferMinutes })}</p>
                         )}
                         {insight && (
                           <p className="text-[11px] text-violet-500 mt-1.5 font-medium flex items-center gap-1">
@@ -955,7 +1337,7 @@ function UpcomingStrip({
                     isToday ? "text-white/80" : "text-slate-400"
                   }`}
                 >
-                  {daysLabel(ev.date, t)}
+                  {ev.timeOfDay && isToday ? `${ev.timeOfDay}${ev.durationMinutes ? ` · ${ev.durationMinutes} ${t("form.minutes")}` : ""}` : daysLabel(ev.date, t)}
                 </p>
                 {insight && !isToday && (
                   <p className="text-[9px] text-violet-400 mt-0.5 font-medium">
@@ -1268,6 +1650,7 @@ function SearchOverlay({
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[11px] text-slate-400">
                         {formatDateShort(ev.date, locale)}
+                        {ev.timeOfDay ? ` · ${ev.timeOfDay}` : ""}{ev.durationMinutes ? ` · ${ev.durationMinutes} ${t("form.minutes")}` : ""}
                       </span>
                       <span
                         className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${urgencyBadge(
@@ -1303,14 +1686,16 @@ function SearchOverlay({
 ═══════════════════════════════════════════════════ */
 export default function CalendarPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const locale = useLocale();
   const t = useTranslations("dashboard");
 
   const [events, setEvents] = useState<EventRow[]>([]);
   const [people, setPeople] = useState<PersonRow[]>([]);
+  const [plannerPreferences, setPlannerPreferences] = useState<PlannerPreferences>(DEFAULT_PLANNER_PREFERENCES);
   const [loading, setLoading] = useState(true);
 
-  const currentYear = useRef(new Date().getFullYear()).current;
+  const [currentYear] = useState(() => new Date().getFullYear());
   const [viewYear, setViewYear] = useState(currentYear);
   const [viewMonth, setViewMonth] = useState(new Date().getMonth());
 
@@ -1319,6 +1704,10 @@ export default function CalendarPage() {
 
   const [addOpen, setAddOpen] = useState(false);
   const [mDate, setMDate] = useState("");
+  const [mTimeOfDay, setMTimeOfDay] = useState("");
+  const [mDurationMinutes, setMDurationMinutes] = useState("");
+  const [mLocation, setMLocation] = useState("");
+  const [mTravelBufferMinutes, setMTravelBufferMinutes] = useState("");
   const [mTitle, setMTitle] = useState("");
   const [mNotes, setMNotes] = useState("");
   const [mCat, setMCat] = useState("personal");
@@ -1327,9 +1716,14 @@ export default function CalendarPage() {
   const [mRecurrenceRule, setMRecurrenceRule] = useState<EventRecurrenceRule>("none");
 
   const [editOpen, setEditOpen] = useState(false);
+  const [dayPlanDate, setDayPlanDate] = useState<string | null>(null);
   const [eId, setEId] = useState("");
   const [eTitle, setETitle] = useState("");
   const [eDate, setEDate] = useState("");
+  const [eTimeOfDay, setETimeOfDay] = useState("");
+  const [eDurationMinutes, setEDurationMinutes] = useState("");
+  const [eLocation, setELocation] = useState("");
+  const [eTravelBufferMinutes, setETravelBufferMinutes] = useState("");
   const [eNotes, setENotes] = useState("");
   const [eCat, setECat] = useState("personal");
   const [ePersonId, setEPersonId] = useState("");
@@ -1339,6 +1733,8 @@ export default function CalendarPage() {
   const [confirm, setConfirm] = useState<ConfirmState>({ open: false });
   const { toasts, push } = useToasts();
   const fileRef = useRef<HTMLInputElement>(null);
+  const assistantActionConsumedRef = useRef(false);
+  const assistantDraftRef = useRef<{ action: "add-event" | "plan-day"; personId: string | null } | null>(null);
 
   /* ── Init + realtime ── */
   useEffect(() => {
@@ -1354,7 +1750,7 @@ export default function CalendarPage() {
         return;
       }
 
-      const [eventResult, { data: peopleData }] = await Promise.all([
+      const [eventResult, { data: peopleData }, preferencesResult] = await Promise.all([
           listCalendarEvents(user.id).then(
             (data) => ({ data, error: null }),
             (error) => ({ data: null, error }),
@@ -1364,6 +1760,10 @@ export default function CalendarPage() {
             .select("id,name,birthday,notes")
             .eq("user_id", user.id)
             .order("name", { ascending: true }),
+          loadPlannerPreferences(user.id).then(
+            (data) => ({ data, error: null }),
+            (error) => ({ data: null, error }),
+          ),
         ]);
 
       if (cancelled) return;
@@ -1371,6 +1771,8 @@ export default function CalendarPage() {
       if (eventResult.error) push({ type: "error", msg: t("toast.loadError") });
       if (eventResult.data) setEvents(eventResult.data);
       if (peopleData) setPeople(peopleData as PersonRow[]);
+      if (preferencesResult.data) setPlannerPreferences(preferencesResult.data);
+      if (preferencesResult.error) push({ type: "error", msg: t("dayPlan.preferencesLoadError") });
       setLoading(false);
 
       ch = supabase
@@ -1433,6 +1835,10 @@ export default function CalendarPage() {
           id: `birthday-${p.id}`,
           title: `🎂 ${p.name}`,
           date: `${viewYear}-${mon}-${day}`,
+          timeOfDay: null,
+          durationMinutes: null,
+          location: null,
+          travelBufferMinutes: null,
           notes: null,
           category: "birthday",
           personId: p.id,
@@ -1505,6 +1911,24 @@ export default function CalendarPage() {
     return allEvents.filter((e) => e.date === selectedDate);
   }, [allEvents, selectedDate]);
 
+  const dayPlanCandidates = useMemo(() => selectDayPlanCandidates(events
+    .filter((event) => event.date === dayPlanDate && !event.timeOfDay && event.category !== "birthday" && event.recurrenceRule === "none")), [dayPlanDate, events]);
+  const dayPlanEvents = dayPlanCandidates.selected;
+
+  const dayPlanFixedEvents = useMemo<DayPlanFixedEvent[]>(() => allEvents
+    .filter((event) => event.date === dayPlanDate && event.timeOfDay && isValidEventDuration(event.durationMinutes ?? 0))
+    .map((event) => ({
+      id: event.id,
+      title: event.title,
+      timeOfDay: event.timeOfDay!,
+      durationMinutes: event.durationMinutes!,
+      travelBufferMinutes: event.travelBufferMinutes ?? undefined,
+    })), [allEvents, dayPlanDate]);
+
+  const dayPlanUncertainFixedCount = useMemo(() => allEvents.filter((event) =>
+    event.date === dayPlanDate && event.timeOfDay && !isValidEventDuration(event.durationMinutes ?? 0)
+  ).length, [allEvents, dayPlanDate]);
+
   /* ── Navigation ── */
   const prevMonth = useCallback(() => {
     setViewMonth((m) => {
@@ -1532,17 +1956,45 @@ export default function CalendarPage() {
   }, []);
 
   /* ── Handlers ── */
-  const openAdd = useCallback((ymd_?: string) => {
+  const openAdd = useCallback((ymd_?: string, initialPersonId = "") => {
     const d = ymd_ ?? todayYMD();
     setMDate(d);
+    setMTimeOfDay("");
+    setMDurationMinutes("");
+    setMLocation("");
+    setMTravelBufferMinutes("");
     setMTitle("");
     setMNotes("");
     setMCat("personal");
-    setMPersonId("");
+    setMPersonId(initialPersonId);
     setMIsImportant(false);
     setMRecurrenceRule("none");
     setAddOpen(true);
   }, []);
+
+  useEffect(() => {
+    const action = searchParams.get("action");
+    if (assistantActionConsumedRef.current || (action !== "add-event" && action !== "plan-day")) return;
+    assistantActionConsumedRef.current = true;
+    assistantDraftRef.current = { action, personId: searchParams.get("personId") };
+    router.replace("/dashboard", { scroll: false });
+  }, [router, searchParams]);
+
+  useEffect(() => {
+    const requestedDraft = assistantDraftRef.current;
+    if (loading || !requestedDraft) return;
+    assistantDraftRef.current = null;
+    const safePersonId = requestedDraft.personId
+      && people.some((person) => person.id === requestedDraft.personId)
+      ? requestedDraft.personId
+      : "";
+    // The Assistant opens only a Calendar-owned draft. A suggested person is
+    // accepted after the owner-scoped People load; saving remains explicit.
+    queueMicrotask(() => {
+      if (requestedDraft.action === "add-event") openAdd(undefined, safePersonId);
+      if (requestedDraft.action === "plan-day") setDayPlanDate(todayYMD());
+    });
+  }, [loading, openAdd, people]);
 
   const mergeEvents = useCallback((incoming: EventRow[]) => {
     setEvents((current) => {
@@ -1552,9 +2004,100 @@ export default function CalendarPage() {
     });
   }, []);
 
+  const saveDayPlan = async (items: DayPlanDraftItem[], window: { startTime: string; endTime: string }) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      router.replace("/auth/login");
+      throw new Error("authentication_required");
+    }
+    const draftsById = new Map(items.map((item) => [item.eventId, item]));
+    const candidates = dayPlanEvents.filter((event) => draftsById.has(event.id));
+    if (items.length === 0 || draftsById.size !== items.length || candidates.length !== items.length || candidates.some((event) => {
+      const item = draftsById.get(event.id);
+      return !item || !isValidDayPlanItemWithinWindow(item, window.startTime, window.endTime);
+    })) {
+      throw new Error("invalid_day_plan");
+    }
+    if (findDayPlanConflicts(items, dayPlanFixedEvents).length > 0) {
+      throw new Error("conflicting_day_plan");
+    }
+
+    const updated: EventRow[] = [];
+    try {
+      for (const event of candidates) {
+        updated.push(await updateCalendarEvent({
+          userId: user.id,
+          eventId: event.id,
+          title: event.title,
+          date: event.date,
+          timeOfDay: draftsById.get(event.id)!.timeOfDay,
+          durationMinutes: draftsById.get(event.id)!.durationMinutes,
+          location: event.location,
+          travelBufferMinutes: event.travelBufferMinutes,
+          notes: event.notes,
+          category: event.category,
+          personId: event.personId,
+          personName: event.personName,
+          isImportant: event.isImportant,
+          recurrenceRule: event.recurrenceRule,
+        }));
+      }
+      mergeEvents(updated);
+      setDayPlanDate(null);
+      push({ type: "success", msg: t("dayPlan.saved") });
+    } catch (error) {
+      // Best-effort compensation keeps this multi-row confirmation from
+      // leaving a half-applied draft if a later owner-scoped update fails.
+      await Promise.allSettled(updated.map((event) => {
+        const original = candidates.find((candidate) => candidate.id === event.id)!;
+        return updateCalendarEvent({
+        userId: user.id,
+        eventId: event.id,
+        title: event.title,
+        date: event.date,
+        timeOfDay: null,
+        durationMinutes: original.durationMinutes,
+        location: original.location,
+        travelBufferMinutes: original.travelBufferMinutes,
+        notes: event.notes,
+        category: event.category,
+        personId: event.personId,
+        personName: event.personName,
+        isImportant: event.isImportant,
+        recurrenceRule: event.recurrenceRule,
+        });
+      }));
+      const refreshed = await listCalendarEvents(user.id).catch(() => null);
+      if (refreshed) setEvents(refreshed);
+      throw error;
+    }
+  };
+
+  const persistPlannerPreferences = async (preferences: PlannerPreferences) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      router.replace("/auth/login");
+      throw new Error("authentication_required");
+    }
+    const saved = await savePlannerPreferences(user.id, preferences);
+    setPlannerPreferences(saved);
+  };
+
   const createEvent = async () => {
     if (!mTitle.trim() || !mDate) {
       push({ type: "error", msg: t("validation.required") });
+      return;
+    }
+    if (mDurationMinutes && !isValidEventDuration(Number(mDurationMinutes))) {
+      push({ type: "error", msg: t("validation.duration") });
+      return;
+    }
+    if (mLocation.trim().length > 300) {
+      push({ type: "error", msg: t("validation.location") });
+      return;
+    }
+    if (mTravelBufferMinutes && !isValidTravelBuffer(Number(mTravelBufferMinutes))) {
+      push({ type: "error", msg: t("validation.travelBuffer") });
       return;
     }
     const {
@@ -1569,6 +2112,10 @@ export default function CalendarPage() {
         userId: user.id,
         title: mTitle.trim(),
         date: mDate,
+        timeOfDay: mTimeOfDay || null,
+        durationMinutes: mDurationMinutes ? Number(mDurationMinutes) : null,
+        location: mLocation.trim() || null,
+        travelBufferMinutes: mTravelBufferMinutes ? Number(mTravelBufferMinutes) : null,
         notes: mNotes.trim() || null,
         category: mCat,
         personId: mPersonId || null,
@@ -1603,6 +2150,10 @@ export default function CalendarPage() {
       setEId(ev.id);
       setETitle(ev.title);
       setEDate(ev.date);
+      setETimeOfDay(ev.timeOfDay ?? "");
+      setEDurationMinutes(ev.durationMinutes ? String(ev.durationMinutes) : "");
+      setELocation(ev.location ?? "");
+      setETravelBufferMinutes(ev.travelBufferMinutes ? String(ev.travelBufferMinutes) : "");
       setENotes(ev.notes ?? "");
       setECat(ev.category ?? "personal");
       setEPersonId(ev.personId ?? "");
@@ -1618,6 +2169,10 @@ export default function CalendarPage() {
       id: eId,
       title: eTitle.trim(),
       date: eDate,
+      timeOfDay: eTimeOfDay || null,
+      durationMinutes: eDurationMinutes ? Number(eDurationMinutes) : null,
+      location: eLocation.trim() || null,
+      travelBufferMinutes: eTravelBufferMinutes ? Number(eTravelBufferMinutes) : null,
       notes: eNotes.trim() || null,
       category: eCat || null,
       personId: ePersonId || null,
@@ -1627,6 +2182,18 @@ export default function CalendarPage() {
     };
     if (!snap.title || !snap.date) {
       push({ type: "error", msg: t("validation.required") });
+      return;
+    }
+    if (snap.durationMinutes !== null && !isValidEventDuration(snap.durationMinutes)) {
+      push({ type: "error", msg: t("validation.duration") });
+      return;
+    }
+    if (snap.location !== null && snap.location.length > 300) {
+      push({ type: "error", msg: t("validation.location") });
+      return;
+    }
+    if (snap.travelBufferMinutes !== null && !isValidTravelBuffer(snap.travelBufferMinutes)) {
+      push({ type: "error", msg: t("validation.travelBuffer") });
       return;
     }
     setConfirm({
@@ -1644,6 +2211,10 @@ export default function CalendarPage() {
             eventId: snap.id,
             title: snap.title,
             date: snap.date,
+            timeOfDay: snap.timeOfDay,
+            durationMinutes: snap.durationMinutes,
+            location: snap.location,
+            travelBufferMinutes: snap.travelBufferMinutes,
             notes: snap.notes,
             category: snap.category,
             personId: snap.personId,
@@ -1714,8 +2285,13 @@ export default function CalendarPage() {
         "BEGIN:VEVENT",
         `UID:${e.id}@happydate`,
         `DTSTAMP:${toUTCStamp(new Date())}`,
-        `DTSTART;VALUE=DATE:${dt}`,
-        `DTEND;VALUE=DATE:${addOneDayICS(dt)}`,
+        e.timeOfDay
+          ? `DTSTART:${dt}T${e.timeOfDay.replace(":", "")}00`
+          : `DTSTART;VALUE=DATE:${dt}`,
+        e.timeOfDay ? "" : `DTEND;VALUE=DATE:${addOneDayICS(dt)}`,
+        e.timeOfDay && e.durationMinutes ? `DURATION:PT${e.durationMinutes}M` : "",
+        e.location ? `LOCATION:${escICS(e.location)}` : "",
+        e.travelBufferMinutes ? `X-HAPPYDATE-TRAVEL-BUFFER:${e.travelBufferMinutes}` : "",
         `SUMMARY:${escICS(e.title)}`,
         e.notes ? `DESCRIPTION:${escICS(e.notes)}` : "",
         "END:VEVENT"
@@ -1740,12 +2316,19 @@ export default function CalendarPage() {
       const items = blocks.flatMap((raw) => {
         const get = (re: RegExp) => raw.match(re)?.[1]?.trim();
         const dt = get(/DTSTART(?:;[^:]+)?:([0-9]{8})/);
+        const time = get(/DTSTART(?:;[^:]+)?:[0-9]{8}T([0-9]{4})/);
+        const duration = get(/DURATION:PT([0-9]+)M/i);
+        const travelBuffer = get(/X-HAPPYDATE-TRAVEL-BUFFER:([0-9]+)/i);
         const t = get(/SUMMARY:(.+)/);
         if (!dt || !t) return [];
         return [
           {
             title: t,
-            date: `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6, 8)}`,
+          date: `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6, 8)}`,
+          timeOfDay: time ? `${time.slice(0, 2)}:${time.slice(2, 4)}` : null,
+          durationMinutes: duration && Number(duration) >= 5 && Number(duration) <= 1440 ? Number(duration) : null,
+            location: get(/LOCATION:(.+)/)?.slice(0, 300) ?? null,
+            travelBufferMinutes: travelBuffer && isValidTravelBuffer(Number(travelBuffer)) ? Number(travelBuffer) : null,
             notes: get(/DESCRIPTION:(.+)/) ?? null,
           },
         ];
@@ -2051,6 +2634,10 @@ export default function CalendarPage() {
             setSelectedDate(null);
             openAdd(ymd_);
           }}
+          onPlan={(ymd_) => {
+            setSelectedDate(null);
+            setDayPlanDate(ymd_);
+          }}
           onEdit={(id) => {
             setSelectedDate(null);
             openEdit(id);
@@ -2063,6 +2650,10 @@ export default function CalendarPage() {
         <AddEditSheet
           mode="add"
           date={mDate}
+          timeOfDay={mTimeOfDay}
+          durationMinutes={mDurationMinutes}
+          location={mLocation}
+          travelBufferMinutes={mTravelBufferMinutes}
           title={mTitle}
           notes={mNotes}
               category={mCat}
@@ -2071,6 +2662,10 @@ export default function CalendarPage() {
               recurrenceRule={mRecurrenceRule}
               people={people}
           setDate={setMDate}
+          setTimeOfDay={setMTimeOfDay}
+          setDurationMinutes={setMDurationMinutes}
+          setLocation={setMLocation}
+          setTravelBufferMinutes={setMTravelBufferMinutes}
           setTitle={setMTitle}
           setNotes={setMNotes}
               setCategory={setMCat}
@@ -2087,6 +2682,10 @@ export default function CalendarPage() {
         <AddEditSheet
           mode="edit"
           date={eDate}
+          timeOfDay={eTimeOfDay}
+          durationMinutes={eDurationMinutes}
+          location={eLocation}
+          travelBufferMinutes={eTravelBufferMinutes}
           title={eTitle}
           notes={eNotes}
               category={eCat}
@@ -2095,6 +2694,10 @@ export default function CalendarPage() {
               recurrenceRule={eRecurrenceRule}
               people={people}
           setDate={setEDate}
+          setTimeOfDay={setETimeOfDay}
+          setDurationMinutes={setEDurationMinutes}
+          setLocation={setELocation}
+          setTravelBufferMinutes={setETravelBufferMinutes}
           setTitle={setETitle}
           setNotes={setENotes}
               setCategory={setECat}
@@ -2108,6 +2711,10 @@ export default function CalendarPage() {
               id: eId,
               title: eTitle,
               date: eDate,
+              timeOfDay: eTimeOfDay || null,
+              durationMinutes: eDurationMinutes ? Number(eDurationMinutes) : null,
+              location: eLocation.trim() || null,
+              travelBufferMinutes: eTravelBufferMinutes ? Number(eTravelBufferMinutes) : null,
               notes: eNotes,
                   category: eCat,
                   personId: ePersonId || null,
@@ -2117,6 +2724,21 @@ export default function CalendarPage() {
             });
             setEditOpen(false);
           }}
+        />
+      )}
+
+      {dayPlanDate && (
+        <DayPlanSheet
+          key={`${dayPlanDate}:${dayPlanEvents.map((event) => event.id).join(":") || "empty"}`}
+          dateLabel={new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }).format(parseLocalDateOnly(dayPlanDate) ?? new Date(Number.NaN))}
+          events={dayPlanEvents}
+          fixedEvents={dayPlanFixedEvents}
+          uncertainFixedCount={dayPlanUncertainFixedCount}
+          deferredCount={dayPlanCandidates.deferred.length}
+          initialPreferences={plannerPreferences}
+          onCancel={() => setDayPlanDate(null)}
+          onSave={saveDayPlan}
+          onSavePreferences={persistPlannerPreferences}
         />
       )}
 

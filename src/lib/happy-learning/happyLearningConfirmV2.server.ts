@@ -10,6 +10,7 @@ import { HAPPY_LEARNING_LIMITS } from "./happyLearningSchema.ts";
 import { SEMANTIC_MEMORY_TAGS, type SemanticMemoryTag } from "../semantic-memory/semanticMemory.types.ts";
 import { mapHappyLearningCandidateToKnowledgeInput } from "./mapHappyLearningCandidateToKnowledgeInput.ts";
 import { verifyHappyLearningDetectionToken, type HappyLearningConfirmationCandidate } from "./happyLearningDetectionToken.server.ts";
+import { readBoundedJson } from "../server/readBoundedJson.ts";
 
 const BODY_KEYS = new Set(["detectionToken", "candidate"]);
 const CANDIDATE_KEYS = new Set(["id", "personId", "captureType", "value", "polarity", "semanticTags", "evidenceText", "source", "schemaVersion"]);
@@ -54,8 +55,9 @@ function response(body: object, status = 200): Response {
 }
 
 export async function createHappyLearningConfirmV2Response(request: Request, deps: HappyLearningConfirmDependencies): Promise<Response> {
-  let raw: unknown;
-  try { raw = await request.json(); } catch { return response({ ok: false, error: "stale_candidate" }, 400); }
+  const parsedBody = await readBoundedJson(request, 16 * 1024);
+  if (!parsedBody.ok) return response({ ok: false, error: "stale_candidate" }, 400);
+  const raw = parsedBody.value;
   if (!raw || typeof raw !== "object" || Array.isArray(raw) || Object.keys(raw).some((key) => !BODY_KEYS.has(key))) return response({ ok: false, error: "stale_candidate" }, 400);
   const body = raw as Record<string, unknown>;
   const candidate = parseCandidate(body.candidate);

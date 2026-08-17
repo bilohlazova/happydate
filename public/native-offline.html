@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="color-scheme" content="light" />
+    <title>HappyDate — немає з’єднання</title>
+    <style>
+      :root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172033; background: #f7fbff; }
+      * { box-sizing: border-box; }
+      body { min-height: 100vh; min-height: 100dvh; margin: 0; display: grid; place-items: center; padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom)); background: radial-gradient(circle at 15% 5%, #dff4ff 0, transparent 42%), radial-gradient(circle at 90% 90%, #ffe8f1 0, transparent 40%), #fffdfb; }
+      main { width: min(100%, 420px); padding: 30px 24px; text-align: center; border: 1px solid rgba(255,255,255,.95); border-radius: 28px; background: rgba(255,255,255,.92); box-shadow: 0 22px 65px rgba(15,23,42,.1); }
+      .heart { display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto 18px; border-radius: 22px; color: #e94f8a; background: #fff0f6; font-size: 30px; }
+      h1 { margin: 0; font-size: 28px; letter-spacing: -.035em; }
+      p { margin: 12px auto 0; color: #64748b; font-size: 15px; line-height: 1.55; }
+      button { width: 100%; min-height: 50px; margin-top: 24px; border: 0; border-radius: 16px; color: white; background: linear-gradient(135deg,#0284c7,#38bdf8); font: inherit; font-weight: 750; cursor: pointer; }
+      small { display: block; margin-top: 16px; color: #94a3b8; line-height: 1.45; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="heart" aria-hidden="true">♥</div>
+      <h1>HappyDate поруч</h1>
+      <p>Зараз не вдалося під’єднатися. Перевірте інтернет — ваші люди й важливі моменти нікуди не зникли.</p>
+      <button type="button" onclick="location.reload()">Спробувати ще раз</button>
+      <small>Для завантаження актуальної інформації потрібне захищене з’єднання.</small>
+    </main>
+  </body>
+</html>

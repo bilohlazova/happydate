@@ -6,6 +6,7 @@ import { getPeople } from "@/lib/repositories/personRepository";
 import type { PersonRow } from "@/lib/repositories/person.types";
 import { MobileUI } from "@/lib/theme/mobile";
 import { useTranslations } from "next-intl";
+import { logOperationalError } from "@/lib/observability/safeLogger";
 
 export interface PeopleSelectProps {
   userId: string;
@@ -29,6 +30,8 @@ export default function PeopleSelect({
 
   useEffect(() => {
     if (!userId) {
+      // Clear stale options when authentication ownership disappears.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPeople([]);
       setLoading(false);
       return;
@@ -47,7 +50,7 @@ export default function PeopleSelect({
           setPeople(rows);
         }
       } catch (error) {
-        console.error("[PeopleSelect] getPeople failed:", error);
+        logOperationalError("people-select", "load-failed", error);
         if (isMounted) setHasError(true);
       } finally {
         if (isMounted) {

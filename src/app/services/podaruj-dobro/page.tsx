@@ -1,182 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
-import YouTubeShowcase from "@/components/services/YouTubeShowcase";
-import GoodDeedForm from "@/components/services/GoodDeedForm";
+import { getLocale, getTranslations } from "next-intl/server";
+import { ComingSoonNotice } from "@/components/ui/ComingSoonNotice";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("static.services.phase3b.goodDeed");
-  return {
-    title: t("metaTitle"),
-    description: t("metaDescription"),
-    alternates: { canonical: "/services/podaruj-dobro" },
-    robots: { index: true, follow: true },
-  };
-}
+type Locale="uk"|"pl"|"en"|"de"|"ru";
+const COPY={
+uk:{badge:"Скоро",eyebrow:"Майбутній ритуал добра",title:"Нехай важлива дата залишить після себе добро",intro:"У майбутньому HappyDate допоможе присвятити день народження чи іншу подію перевіреній добрій справі — тихо, прозоро й з повагою до всіх людей.",soonTitle:"«Подаруй добро» ще готується",soonText:"Ми поки не приймаємо пожертви або заявки й не співпрацюємо від імені фондів. Перед запуском маємо перевірити організації, платежі, звітність і правила використання історій та зображень.",directionsTitle:"Напрями, які ми досліджуємо",directions:[["🐾","Допомога тваринам","Підтримка перевірених притулків і конкретних потреб."],["🤍","Турбота про людей","Допомога через організації, які працюють відповідально й професійно."],["🌿","Турбота про планету","Невеликі зрозумілі дії з підтвердженим результатом."]],flowTitle:"Яким має бути шлях доброї справи",steps:[["Оберіть сенс","Подія стає приводом підтримати близьку вам тему."],["Побачте перевірені потреби","HappyDate показує лише підтверджені організації та призначення допомоги."],["Дійте прозоро","До платежу видно отримувача, комісію та спосіб використання коштів."],["Отримайте підтвердження","Результат зберігається як теплий спогад, без перебільшених обіцянок."]],trustTitle:"Наші незмінні правила",trust:["Жодних неперевірених зборів","Жодних прихованих комісій","Згода на історії та зображення","Звіт про передачу допомоги","Можливість звернення і повернення за правилами"],close:"Добро не повинно бути декорацією. Воно має бути справжнім, перевіреним і людяним."},
+pl:{badge:"Wkrótce",eyebrow:"Przyszły rytuał dobra",title:"Niech ważna data pozostawi po sobie dobro",intro:"W przyszłości HappyDate pomoże poświęcić urodziny lub inną okazję sprawdzonej dobrej sprawie — spokojnie, przejrzyście i z szacunkiem.",soonTitle:"„Podaruj dobro” jest jeszcze przygotowywane",soonText:"Nie przyjmujemy obecnie darowizn ani zgłoszeń i nie działamy w imieniu fundacji. Przed startem zweryfikujemy organizacje, płatności, raportowanie oraz prawa do historii i wizerunku.",directionsTitle:"Kierunki, które badamy",directions:[["🐾","Pomoc zwierzętom","Wsparcie zweryfikowanych schronisk i konkretnych potrzeb."],["🤍","Troska o ludzi","Pomoc przez organizacje działające odpowiedzialnie i profesjonalnie."],["🌿","Troska o planetę","Małe, zrozumiałe działania z potwierdzonym rezultatem."]],flowTitle:"Jak powinna wyglądać droga dobra",steps:[["Wybierz znaczenie","Okazja staje się powodem, by wesprzeć bliski temat."],["Zobacz sprawdzone potrzeby","HappyDate pokazuje tylko potwierdzone organizacje i cele."],["Działaj przejrzyście","Przed płatnością znasz odbiorcę, opłatę i sposób użycia środków."],["Otrzymaj potwierdzenie","Rezultat zostaje ciepłym wspomnieniem, bez przesadnych obietnic."]],trustTitle:"Nasze niezmienne zasady",trust:["Żadnych niezweryfikowanych zbiórek","Żadnych ukrytych opłat","Zgoda na historie i wizerunek","Potwierdzenie przekazania pomocy","Jasna ścieżka zgłoszeń i zwrotów"],close:"Dobro nie może być dekoracją. Musi być prawdziwe, sprawdzone i ludzkie."},
+en:{badge:"Coming soon",eyebrow:"A future ritual of good",title:"Let an important date leave something good behind",intro:"In the future, HappyDate will help dedicate a birthday or another occasion to a verified cause — quietly, transparently and respectfully.",soonTitle:"Give Good is still in preparation",soonText:"We do not currently accept donations or applications, and we do not act on behalf of charities. Before launch, we must verify organizations, payments, reporting and rights to stories and images.",directionsTitle:"Directions we are exploring",directions:[["🐾","Helping animals","Supporting verified shelters and specific needs."],["🤍","Caring for people","Help through responsible, professional organizations."],["🌿","Caring for the planet","Small, clear actions with a verified result."]],flowTitle:"How a good deed should travel",steps:[["Choose meaning","Turn an occasion into support for a cause close to you."],["See verified needs","HappyDate shows only confirmed organizations and purposes."],["Act transparently","Know the recipient, fees and use of funds before payment."],["Receive confirmation","Keep the result as a warm memory without inflated promises."]],trustTitle:"Our non-negotiable rules",trust:["No unverified campaigns","No hidden fees","Consent for stories and images","Proof that help was transferred","A clear complaint and refund path"],close:"Good should not be decoration. It must be real, verified and humane."},
+de:{badge:"Demnächst",eyebrow:"Ein künftiges Ritual des Guten",title:"Lass ein wichtiges Datum etwas Gutes hinterlassen",intro:"Künftig hilft HappyDate, einen Geburtstag oder Anlass einer geprüften guten Sache zu widmen — ruhig, transparent und respektvoll.",soonTitle:"„Gutes schenken“ wird noch vorbereitet",soonText:"Wir nehmen derzeit keine Spenden oder Anträge an und handeln nicht im Namen von Organisationen. Vor dem Start prüfen wir Organisationen, Zahlungen, Berichte sowie Rechte an Geschichten und Bildern.",directionsTitle:"Bereiche, die wir untersuchen",directions:[["🐾","Tieren helfen","Geprüfte Tierheime und konkrete Bedürfnisse unterstützen."],["🤍","Menschen unterstützen","Hilfe über verantwortungsvoll arbeitende Organisationen."],["🌿","Den Planeten schützen","Kleine klare Handlungen mit bestätigtem Ergebnis."]],flowTitle:"So soll eine gute Tat wirken",steps:[["Bedeutung wählen","Einen Anlass nutzen, um ein nahes Thema zu unterstützen."],["Geprüfte Bedarfe sehen","Nur bestätigte Organisationen und Zwecke anzeigen."],["Transparent handeln","Empfänger, Gebühren und Mittelverwendung vor Zahlung kennen."],["Bestätigung erhalten","Das Ergebnis ohne übertriebene Versprechen als Erinnerung bewahren."]],trustTitle:"Unsere unverhandelbaren Regeln",trust:["Keine ungeprüften Sammlungen","Keine versteckten Gebühren","Einwilligung für Geschichten und Bilder","Nachweis der Hilfeleistung","Klare Beschwerden und Erstattungen"],close:"Gutes darf keine Dekoration sein. Es muss echt, geprüft und menschlich sein."},
+ru:{badge:"Скоро",eyebrow:"Будущий ритуал добра",title:"Пусть важная дата оставит после себя добро",intro:"В будущем HappyDate поможет посвятить день рождения или другое событие проверенному доброму делу — спокойно, прозрачно и уважительно.",soonTitle:"«Подари добро» ещё готовится",soonText:"Мы пока не принимаем пожертвования или заявки и не действуем от имени фондов. До запуска проверим организации, платежи, отчётность и права на истории и изображения.",directionsTitle:"Направления, которые мы изучаем",directions:[["🐾","Помощь животным","Поддержка проверенных приютов и конкретных потребностей."],["🤍","Забота о людях","Помощь через ответственные профессиональные организации."],["🌿","Забота о планете","Небольшие понятные действия с подтверждённым результатом."]],flowTitle:"Каким должен быть путь доброго дела",steps:[["Выберите смысл","Событие становится поводом поддержать близкую тему."],["Увидьте проверенные потребности","HappyDate показывает только подтверждённые организации и цели."],["Действуйте прозрачно","До оплаты видны получатель, комиссия и использование средств."],["Получите подтверждение","Результат сохраняется как воспоминание без громких обещаний."]],trustTitle:"Наши неизменные правила",trust:["Никаких непроверенных сборов","Никаких скрытых комиссий","Согласие на истории и изображения","Отчёт о передаче помощи","Понятный порядок обращений и возвратов"],close:"Добро не должно быть декорацией. Оно должно быть настоящим, проверенным и человечным."}
+} satisfies Record<Locale,{badge:string;eyebrow:string;title:string;intro:string;soonTitle:string;soonText:string;directionsTitle:string;directions:string[][];flowTitle:string;steps:string[][];trustTitle:string;trust:string[];close:string}>;
 
-const DIRECTIONS = [
-  {
-    emoji: "🐾",
-    key: "animals",
-    bg: "linear-gradient(135deg,#d1fae5,#a7f3d0)",
-    border: "#6ee7b7",
-    color: "#065f46",
-  },
-  {
-    emoji: "👧",
-    key: "children",
-    bg: "linear-gradient(135deg,#fce7f3,#fbcfe8)",
-    border: "#f9a8d4",
-    color: "#9d174d",
-  },
-  {
-    emoji: "🌿",
-    key: "planet",
-    bg: "linear-gradient(135deg,#dbeafe,#bfdbfe)",
-    border: "#93c5fd",
-    color: "#1e40af",
-  },
-] as const;
+export async function generateMetadata():Promise<Metadata>{const t=await getTranslations("static.services.phase3b.goodDeed");return{title:t("metaTitle"),description:t("metaDescription"),alternates:{canonical:"/services/podaruj-dobro"},robots:{index:true,follow:true}}}
 
-const STEPS = [
-  { emoji: "🎯", n: "01", key: "s1" },
-  { emoji: "📅", n: "02", key: "s2" },
-  { emoji: "🎁", n: "03", key: "s3" },
-  { emoji: "✨", n: "04", key: "s4" },
-] as const;
-
-export default async function PodarujDobroPage() {
-  const t = await getTranslations("static.services.phase3b.goodDeed");
-  const commonT = await getTranslations("static.services.phase3b");
-
-  return (
-    <main style={{ background: "#f8f7ff", minHeight: "100svh", paddingBottom: 100, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-
-      {/* ══ HERO ══════════════════════════════════════════ */}
-      <section style={{
-        background: "linear-gradient(160deg,#fff0f6 0%,#fce7f3 40%,#fff9c4 100%)",
-        padding: "36px 20px 32px",
-        textAlign: "center",
-        position: "relative",
-        overflow: "hidden",
-      }}>
-        <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: "50%", background: "rgba(236,72,153,.12)" }} />
-        <div style={{ position: "absolute", bottom: -30, left: -30, width: 120, height: 120, borderRadius: "50%", background: "rgba(251,191,36,.15)" }} />
-
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, color: "#be185d", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12, background: "rgba(236,72,153,.1)", padding: "4px 12px", borderRadius: 20 }}>
-            {t("badge")}
-          </div>
-
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: "#1a1040", margin: "0 0 8px", lineHeight: 1.2, letterSpacing: "-0.5px" }}>
-            {t("title")}
-          </h1>
-          <p style={{ fontSize: 22, fontWeight: 800, color: "#e11d48", margin: "0 0 20px", lineHeight: 1.2 }}>
-            {t("titleAccent")}
-          </p>
-
-          <p style={{ fontSize: 14, color: "#6b5e8a", lineHeight: 1.6, maxWidth: 300, margin: "0 auto 24px" }}>
-            {t("subtitle")}
-            <br /><strong style={{ color: "#1a1040" }}>{t("subtitleStrong")}</strong>
-          </p>
-
-          <a
-            href="#form"
-            style={{
-              display: "inline-block",
-              background: "linear-gradient(135deg,#ec4899,#f97316)",
-              color: "#fff", borderRadius: 20,
-              padding: "12px 28px",
-              fontSize: 15, fontWeight: 800,
-              textDecoration: "none",
-              boxShadow: "0 4px 20px rgba(236,72,153,.4)",
-            }}
-          >
-            {t("cta")}
-          </a>
-
-          <div style={{ marginTop: 14 }}>
-            <Link href="/services" style={{ fontSize: 12, color: "rgba(255,255,255,.5)", textDecoration: "none" }}>
-              {commonT("backToServices")}
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ══ TRZY KIERUNKI ════════════════════════════════ */}
-      <section style={{ padding: "24px 16px 8px" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#b0a8cc", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "center", marginBottom: 14 }}>
-          {t("directionsTitle")}
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {DIRECTIONS.map(d => (
-            <div key={d.key} style={{
-              background: "#fff",
-              borderRadius: 20,
-              border: `1.5px solid ${d.border}`,
-              padding: "16px",
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-              boxShadow: "0 2px 8px rgba(0,0,0,.04)",
-            }}>
-              {/* Emoji blob */}
-              <div style={{
-                width: 56, height: 56, borderRadius: 18,
-                background: d.bg,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 28, flexShrink: 0,
-              }}>
-                {d.emoji}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: "#1a1040" }}>{t(`directions.${d.key}.title`)}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: d.color, background: d.bg, padding: "2px 8px", borderRadius: 20 }}>{t(`directions.${d.key}.subtitle`)}</span>
-                </div>
-                <p style={{ fontSize: 12, color: "#7c6f9f", lineHeight: 1.5, margin: 0 }}>{t(`directions.${d.key}.desc`)}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ══ KROKI ════════════════════════════════════════ */}
-      <section style={{ padding: "20px 16px 8px" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#b0a8cc", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "center", marginBottom: 14 }}>
-          {t("stepsTitle")}
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          {STEPS.map(s => (
-            <div key={s.n} style={{
-              background: "#fff", borderRadius: 16,
-              border: "1.5px solid #ede9f8",
-              padding: "14px 12px",
-              boxShadow: "0 1px 4px rgba(0,0,0,.03)",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                <span style={{ fontSize: 10, fontWeight: 800, color: "#c4b5f8", letterSpacing: "0.05em" }}>{s.n}</span>
-                <span style={{ fontSize: 18 }}>{s.emoji}</span>
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1040", marginBottom: 2 }}>{t(`steps.${s.key}.title`)}</div>
-              <div style={{ fontSize: 11, color: "#7c6f9f" }}>{t(`steps.${s.key}.desc`)}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ══ WIDEO ════════════════════════════════════════ */}
-      <div style={{ marginTop: 16 }}>
-        <YouTubeShowcase />
-      </div>
-
-      {/* ══ FORMULARZ ════════════════════════════════════ */}
-      <section id="form" style={{ padding: "24px 16px 0" }}>
-        <GoodDeedForm />
-      </section>
-
-    </main>
-  );
-}
+export default async function GoodDeedPage(){const locale=(await getLocale()) as Locale;const c=COPY[locale]??COPY.uk;const common=await getTranslations("static.services.phase3b");return <main className="good-preview">
+<section className="good-preview__hero"><Link href="/services">← {common("backToServices")}</Link><div className="good-preview__heart" aria-hidden="true">♥</div><p>{c.eyebrow}</p><h1>{c.title}</h1><div>{c.intro}</div></section>
+<div className="good-preview__body"><ComingSoonNotice badge={c.badge} title={c.soonTitle} description={c.soonText}/>
+<section className="good-preview__directions"><h2>{c.directionsTitle}</h2><div>{c.directions.map(([icon,title,text])=><article key={title}><span>{icon}</span><h3>{title}</h3><p>{text}</p></article>)}</div></section>
+<section className="good-preview__flow"><h2>{c.flowTitle}</h2>{c.steps.map(([title,text],i)=><article key={title}><b>{String(i+1).padStart(2,"0")}</b><div><h3>{title}</h3><p>{text}</p></div></article>)}</section>
+<section className="good-preview__trust"><h2>🛡️ {c.trustTitle}</h2><ul>{c.trust.map(x=><li key={x}>✓ {x}</li>)}</ul></section><blockquote>“{c.close}”</blockquote></div></main>}

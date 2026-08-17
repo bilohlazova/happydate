@@ -1,4 +1,5 @@
 import { loadBrain } from "./loadBrain";
+import { logOperationalWarning } from "@/lib/observability/safeLogger";
 import { buildInsights } from "@/lib/brain/buildInsights";
 import {
   createBirthdayCard,
@@ -136,7 +137,7 @@ export async function generateMorningCards(
     },
     () => {
       if (process.env.NODE_ENV === "development") {
-        console.warn("[happy.brain] Memory recommendation unavailable.");
+        logOperationalWarning("happy-brain", "memory-recommendation-unavailable");
       }
     },
   );

@@ -321,6 +321,7 @@ test("streaming response reuses history and emits provider chunks", async () => 
     },
   );
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get("X-HappyDate-Assistant-Version"), "assistant-2026-08-16.4");
   assert.equal(await response.text(), "Hello world");
   assert.equal(capturedMessages.at(-2).content, "Earlier");
   assert.equal(capturedMessages.at(-1).content, "Pomóż mi zaplanować dzień");
@@ -364,7 +365,8 @@ test("gift outcome loader is server-only, consent-aware and owner-scoped", async
   assert.match(loader, /ASSISTANT_GIFT_OUTCOME_LIMIT/);
   assert.match(route, /identity\.userId/);
   assert.match(route, /personResolutionStatus === "resolved"/);
-  assert.match(route, /serverGiftOutcomes: giftOutcomes/);
+  assert.match(route, /return \{ request: verifiedRequest, serverGiftOutcomes \}/);
+  assert.match(route, /prepareRequest: async/);
 });
 
 test("provider startup failure returns a safe 503", async () => {
@@ -454,6 +456,46 @@ test("invalid body is rejected before consuming rate limit", async () => {
   assert.equal(checks, 0);
 });
 
+test("verified context loads only after rate limit and before the provider", async () => {
+  const order = [];
+  const limiter = {
+    async check() {
+      order.push("limit");
+      return { allowed: true, remaining: 1, resetAt: Date.now() + 1_000 };
+    },
+  };
+  const response = await createAssistantChatResponse(validRequest(), async (messages) => {
+    order.push("provider");
+    assert.match(messages.map(({ content }) => content).join("\n"), /Name: Verified/);
+    return (async function* () { yield "ok"; })();
+  }, {
+    identity: { kind: "authenticated", key: "verified-order" },
+    rateLimiter: limiter,
+    prepareRequest: async (request) => {
+      order.push("context");
+      return {
+        request: { ...request, context: { ...request.context, userName: "Verified" } },
+      };
+    },
+  });
+  assert.equal(await response.text(), "ok");
+  assert.deepEqual(order, ["limit", "context", "provider"]);
+});
+
+test("blocked requests never load verified private context", async () => {
+  let prepared = false;
+  const response = await createAssistantChatResponse(validRequest(), async () => (async function* () {})(), {
+    identity: { kind: "authenticated", key: "blocked-context" },
+    rateLimiter: { async check() { return { allowed: false, remaining: 0, resetAt: Date.now() + 1_000 }; } },
+    prepareRequest: async (request) => {
+      prepared = true;
+      return { request };
+    },
+  });
+  assert.equal(response.status, 429);
+  assert.equal(prepared, false);
+});
+
 test("a partial stream is preserved before a provider stream error", async () => {
   const response = await createAssistantChatResponse(validRequest(), async () => (async function* () {
     yield "partial";
@@ -474,19 +516,20 @@ test("chat cost and validation limits remain centralized", () => {
   assert.equal(ASSISTANT_CHAT_LIMITS.events, ASSISTANT_CHAT_CONFIG.maxEvents);
 });
 
-test("production environment status requires OpenAI and both Upstash REST values", () => {
+test("production environment status requires OpenAI, Upstash and an explicit daily budget", () => {
   assert.deepEqual(getAssistantEnvironmentStatus({}), {
-    openAiConfigured: false, upstashConfigured: false, productionReady: false,
+    openAiConfigured: false, upstashConfigured: false, dailyBudgetConfigured: false, productionReady: false,
   });
   assert.deepEqual(getMissingAssistantConfiguration({ OPENAI_API_KEY: "key", UPSTASH_REDIS_REST_URL: "url" }), [
-    "upstash_token_missing",
+    "upstash_token_missing", "daily_budget_missing",
   ]);
   assert.deepEqual(getMissingAssistantConfiguration({ OPENAI_API_KEY: "key", UPSTASH_REDIS_REST_TOKEN: "token" }), [
-    "upstash_url_missing",
+    "upstash_url_missing", "daily_budget_missing",
   ]);
   assert.deepEqual(getAssistantEnvironmentStatus({
-    OPENAI_API_KEY: "key", UPSTASH_REDIS_REST_URL: "url", UPSTASH_REDIS_REST_TOKEN: "token",
-  }), { openAiConfigured: true, upstashConfigured: true, productionReady: true });
+    OPENAI_API_KEY: "key", UPSTASH_REDIS_REST_URL: "url", UPSTASH_REDIS_REST_TOKEN: "token", OPENAI_DAILY_BUDGET_USD: "2",
+  }), { openAiConfigured: true, upstashConfigured: true, dailyBudgetConfigured: true, productionReady: true });
+  assert.equal(getAssistantEnvironmentStatus({ OPENAI_DAILY_BUDGET_USD: "not-money" }).dailyBudgetConfigured, false);
 });
 
 test("production limiter fails closed while development can use memory", () => {

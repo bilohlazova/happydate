@@ -11,6 +11,7 @@ import type { HomeViewModel } from "@/lib/home/home.types";
 import { changeGiftOutcomeFollowUp, confirmPersonGiftOutcome, savePersonGiftOutcomeNote, undoPersonGiftOutcome } from "@/lib/gifts/gift.loaders";
 import type { GiftOutcomeValue } from "@/lib/gifts/gift.types";
 import { isSupportedLocale } from "@/i18n/config";
+import { logOperationalError } from "@/lib/observability/safeLogger";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -127,6 +128,8 @@ export default function HomePageClient() {
 
   useEffect(() => {
     let cancelled = false;
+    // Reset the route snapshot before loading the newly requested locale/version.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFatalError(false);
     setViewModel(null);
     setReminder(null);
@@ -154,12 +157,12 @@ export default function HomePageClient() {
             setInAppDeliveryCount(deliveries.length);
           }
         } catch (error) {
-          console.error("[HomePageClient] Reminder initialization failed:", error);
+          logOperationalError("home", "reminder-initialization-failed", error);
           if (!cancelled) setReminderError("initialization_failed");
         }
       })
       .catch((error) => {
-        console.error("[HomePageClient] Home data failed:", error);
+        logOperationalError("home", "data-load-failed", error);
         if (!cancelled) setFatalError(true);
       });
 
@@ -175,7 +178,7 @@ export default function HomePageClient() {
     try {
       setReminder(await action(reminder.id));
     } catch (error) {
-      console.error("[HomePageClient] Reminder action failed:", error);
+      logOperationalError("home", "reminder-action-failed", error);
       setReminderError("action_failed");
     } finally {
       setReminderBusy(false);
@@ -223,7 +226,7 @@ export default function HomePageClient() {
       await undoPersonGiftOutcome(giftOutcomeConfirmation.giftId);
       finishGiftOutcomeConfirmation();
     } catch (error) {
-      console.error("[HomePageClient] Gift outcome undo failed:", error);
+      logOperationalError("home", "gift-outcome-undo-failed", error);
       setGiftOutcomeUndoError(true);
       if (giftOutcomeTimerRef.current) clearTimeout(giftOutcomeTimerRef.current);
       giftOutcomeTimerRef.current = null;

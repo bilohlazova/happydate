@@ -20,9 +20,27 @@ function normalizedGuestAddress(request: Request): string {
   return address || "unknown-address";
 }
 
-export async function getAssistantRequestIdentity(request: Request): Promise<AssistantRequestIdentity> {
+function assistantAccessToken(request: Request): string | null {
   const authorization = request.headers.get("authorization");
-  const accessToken = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+  return authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim() || null;
+}
+
+/** RLS client scoped to the bearer token already verified for this request. */
+export function createAssistantRlsClient(request: Request) {
+  const accessToken = assistantAccessToken(request);
+  const config = readSupabasePublicConfig();
+  if (!accessToken || !config) return null;
+  return {
+    accessToken,
+    client: createClient(config.url, config.key, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    }),
+  };
+}
+
+export async function getAssistantRequestIdentity(request: Request): Promise<AssistantRequestIdentity> {
+  const accessToken = assistantAccessToken(request);
   const publicSupabaseConfig = readSupabasePublicConfig();
 
   if (accessToken && publicSupabaseConfig) {

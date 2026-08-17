@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { PeoplePageContent } from "@/components/people/PeoplePageContent";
 import { loadPeoplePage } from "@/lib/people/people.loaders";
 import type { PeoplePageViewModel } from "@/lib/people/peopleData.types";
+import { logOperationalError } from "@/lib/observability/safeLogger";
 
 export default function PeoplePage() {
   const [viewModel, setViewModel] = useState<PeoplePageViewModel | null>(null);
@@ -22,7 +23,7 @@ export default function PeoplePage() {
         const nextViewModel = await loadPeoplePage();
         if (isMounted) setViewModel(nextViewModel);
       } catch (error) {
-        console.error("[PeoplePage] loadPeoplePage failed:", error);
+        logOperationalError("people-page", "initial-load-failed", error);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -40,7 +41,7 @@ export default function PeoplePage() {
       const nextViewModel = await loadPeoplePage();
       setViewModel(nextViewModel);
     } catch (error) {
-      console.error("[PeoplePage] reload failed:", error);
+      logOperationalError("people-page", "reload-failed", error);
     }
   }
 

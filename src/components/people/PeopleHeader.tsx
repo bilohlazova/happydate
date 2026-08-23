@@ -8,7 +8,7 @@ import { AddPersonMenu } from "@/components/people/AddPersonMenu";
 export function PeopleHeader() {
   const t = useTranslations("people");
   return (
-    <header className="people-page-header relative flex items-end justify-between gap-4 overflow-hidden">
+    <header className="people-page-header relative flex items-end justify-between gap-4">
       <div className="people-page-header__copy relative z-10 min-w-0">
         <p className="people-page-header__eyebrow">{t("page.eyebrow")}</p>
         <div className="flex items-center gap-3">

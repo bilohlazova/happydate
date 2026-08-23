@@ -46,9 +46,19 @@ export function AddPersonMenu() {
       }
     }
 
-    document.addEventListener("mousedown", handleClick);
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
 
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   return (
@@ -67,7 +77,7 @@ export function AddPersonMenu() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-12 z-30 w-[min(18.5rem,calc(100vw-2rem))] overflow-hidden rounded-[1.15rem] border border-sky-100 bg-white p-1.5 shadow-[0_18px_48px_rgba(15,23,42,0.16)]"
+          className="people-add-menu absolute right-0 top-[calc(100%+0.65rem)] z-50 w-[min(19rem,calc(100vw-2rem))] overflow-hidden rounded-[1.15rem] border border-sky-100 bg-white p-1.5 shadow-[0_24px_60px_rgba(15,23,42,0.2)]"
         >
           <AddPersonMenuItems />
         </div>

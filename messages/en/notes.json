@@ -1,1 +1,198 @@
-{"page":{"eyebrow":"Happy Memory","title":"What is worth remembering","subtitle":"Save words, moments, and small clues about the people who matter.","trustTitle":"This is your private space.","trustBody":"Happy only uses what you consciously save and allow it to consider.","resultCount":"{count, plural, one {# entry} other {# entries}}"},"search":{"placeholder":"Search notes, people, events…","clear":"Clear search","noResults":"No results for “{query}”","results":"{count, plural, one {# result} other {# results}} for “{query}”"},"filters":{"all":"All","people":"About people","memory":"Memories","gift":"Ideas","journal":"Journal","note":"Notes","person":"Person","allPeople":"All people","noPerson":"No assigned person","journalHint":"The person filter is unavailable for the journal."},"types":{"note":"Note","memory":"Memory","gift":"Gift idea","journal":"Journal","other":"Other entry"},"typeSelector":{"title":"What would you like to save?","noteTitle":"Note","noteDescription":"Save something you want to return to.","memoryTitle":"Memory","memoryDescription":"Keep an important moment, person, or event.","giftTitle":"Gift idea","giftDescription":"Save an idea for a selected person.","journalTitle":"Journal entry","journalDescription":"A private space just for you."},"card":{"giftFallback":"Gift idea","journalFallback":"My day","noNoteContent":"No note content","noMemoryContent":"No memory description","noGiftContent":"No idea description","noJournalContent":"No entry content","noContent":"No content","imageCount":"{count, plural, one {# image} other {# images}}","options":"Entry options","personMeta":"About: {name}","eventMeta":"Event: {title}"},"editor":{"addNote":"Add note","editNote":"Edit note","addMemory":"Add memory","editMemory":"Edit memory","addGift":"Add gift idea","editGift":"Edit idea","addJournal":"Add journal entry","editJournal":"Edit entry","editOther":"Edit entry","close":"Close editor"},"fields":{"title":"Title (optional)","memoryDate":"When was this?","journalDate":"Entry date","person":"Person (optional)","giftPerson":"For whom?","giftIdea":"Gift idea","noteContent":"Content","memoryContent":"Description","giftNote":"Additional note (optional)","journalContent":"Entry content","images":"Images","choosePerson":"Choose a person","noAssignedPerson":"No assigned person","event":"Event (optional)","noAssignedEvent":"No assigned event"},"placeholders":{"noteTitle":"Note title","noteContent":"What would you like to save?","memoryTitle":"Name this memory","memoryContent":"What happened?","giftIdea":"E.g. a photography book","giftNote":"Why might this be a good idea?","journalTitle":"Entry title","journalContent":"What is on your mind today?","otherTitle":"Entry title","otherContent":"What would you like to save?"},"actions":{"add":"Add","save":"Save","saving":"Saving...","saved":"Saved","cancel":"Cancel","close":"Close","edit":"Edit","delete":"Delete","deleteConfirm":"Delete this entry permanently?","addImage":"Add image","retry":"Try again","dismiss":"Dismiss"},"validation":{"noteTitleOrContent":"Add a title or entry content.","memoryContentRequired":"A memory description is required.","giftPersonRequired":"Choose a person.","giftIdeaRequired":"Enter a gift idea.","journalContentRequired":"Entry content is required."},"upload":{"partialFailure":"Saved without some images:","failed":"The image could not be uploaded.","saveFailed":"Could not save. Try again.","signIn":"Sign in again before saving."},"audio":{"transcript":"Transcript","label":"Voice note","record":"Record voice","stop":"Stop recording · {seconds}s","remove":"Remove voice recording","hint":"Maximum length is 5 minutes. The recording is stored privately.","unsupported":"This device does not support audio recording or playback.","permissionError":"Microphone access failed. Check the permission in Settings.","uploadFailed":"The voice recording could not be uploaded. The note was not saved."},"camera":{"takePhoto":"Take photo","chooseGallery":"Choose from gallery","opening":"Opening camera…","permissionError":"Camera access is unavailable. Check the permission in Settings.","captureFailed":"The photo could not be captured. Try again.","invalidImage":"Choose a JPEG, PNG, WebP, HEIC or HEIF image up to 10 MB."},"states":{"loading":"Loading memories...","emptyAll":"You have no entries yet.","emptyPeople":"You have no information linked to people yet.","emptyMemory":"You have no memories yet.","emptyGift":"You have no saved gift ideas yet.","emptyJournal":"You have no journal entries yet.","emptyNote":"You have no notes yet.","noMatches":"No matching entries found.","tryAgain":"Nothing matches “{query}”. Try another search.","chooseOther":"Choose another person or add a new entry.","addOrFilter":"Add a new entry or choose another filter.","offline":"You are offline. Notes remain available to view, but changes cannot be saved yet.","offlineAction":"There is no internet connection. Your draft remains in the editor—try again when the connection returns.","loadFailed":"Notes could not be loaded","loadFailedHint":"Check your connection and try again.","deleteFailed":"The entry could not be deleted. It remains in the list."},"dates":{"today":"Today","yesterday":"Yesterday","daysAgo":"{count, plural, one {# day ago} other {# days ago}}","unknown":"Unknown date"},"insights":{"title":"Happy remembers with you","topPerson":"appears most often — {count, plural, one {# memory} other {# memories}}","topics":"Recurring topics:","gifts":"You have <strong>{count, plural, one {# gift idea} other {# gift ideas}}</strong> saved in notes"},"accessibility":{"add":"Add note","openImage":"Open image {index} of {count}","imageAlt":"Image for entry “{title}”","existingImage":"Existing image {index}","newImage":"New image {index}","imageUnavailable":"Image preview unavailable","removeExistingImage":"Remove existing image {index}","removeNewImage":"Remove new image {index}","closeLightbox":"Close preview","previousImage":"Previous image","nextImage":"Next image","imageViewer":"Image viewer"}}
+{
+  "page": {
+    "eyebrow": "My memory",
+    "title": "Memories and meaningful moments",
+    "subtitle": "Save notes, memories, ideas, and small clues about the people who matter.",
+    "trustTitle": "This is your private space.",
+    "trustBody": "Happy only uses what you consciously save and allow it to consider.",
+    "resultCount": "{count, plural, one {# entry} other {# entries}}"
+  },
+  "search": {
+    "placeholder": "Search notes, people, events…",
+    "clear": "Clear search",
+    "noResults": "No results for “{query}”",
+    "results": "{count, plural, one {# result} other {# results}} for “{query}”"
+  },
+  "filters": {
+    "all": "All",
+    "people": "About people",
+    "memory": "Memories",
+    "gift": "Ideas",
+    "journal": "Journal",
+    "note": "Notes",
+    "person": "Person",
+    "allPeople": "All people",
+    "noPerson": "No assigned person",
+    "journalHint": "The person filter is unavailable for the journal."
+  },
+  "sort": {
+    "label": "Show first",
+    "newest": "Newest",
+    "oldest": "Oldest",
+    "person": "By person"
+  },
+  "types": {
+    "note": "Note",
+    "memory": "Memory",
+    "gift": "Gift idea",
+    "journal": "Journal",
+    "other": "Other entry"
+  },
+  "typeSelector": {
+    "title": "What would you like to save?",
+    "noteTitle": "Note",
+    "noteDescription": "Save something you want to return to.",
+    "memoryTitle": "Memory",
+    "memoryDescription": "Keep an important moment, person, or event.",
+    "giftTitle": "Gift idea",
+    "giftDescription": "Save an idea for a selected person.",
+    "journalTitle": "Journal entry",
+    "journalDescription": "A private space just for you."
+  },
+  "card": {
+    "giftFallback": "Gift idea",
+    "journalFallback": "My day",
+    "noNoteContent": "No note content",
+    "noMemoryContent": "No memory description",
+    "noGiftContent": "No idea description",
+    "noJournalContent": "No entry content",
+    "noContent": "No content",
+    "imageCount": "{count, plural, one {# image} other {# images}}",
+    "options": "Entry options",
+    "personMeta": "About: {name}",
+    "eventMeta": "Event: {title}"
+  },
+  "editor": {
+    "addNote": "Add note",
+    "editNote": "Edit note",
+    "addMemory": "Add memory",
+    "editMemory": "Edit memory",
+    "addGift": "Add gift idea",
+    "editGift": "Edit idea",
+    "addJournal": "Add journal entry",
+    "editJournal": "Edit entry",
+    "editOther": "Edit entry",
+    "close": "Close editor"
+  },
+  "fields": {
+    "title": "Title (optional)",
+    "memoryDate": "When was this?",
+    "journalDate": "Entry date",
+    "person": "Person (optional)",
+    "giftPerson": "For whom?",
+    "giftIdea": "Gift idea",
+    "noteContent": "Content",
+    "memoryContent": "Description",
+    "giftNote": "Additional note (optional)",
+    "journalContent": "Entry content",
+    "images": "Images",
+    "choosePerson": "Choose a person",
+    "noAssignedPerson": "No assigned person",
+    "event": "Event (optional)",
+    "noAssignedEvent": "No assigned event"
+  },
+  "placeholders": {
+    "noteTitle": "Note title",
+    "noteContent": "What would you like to save?",
+    "memoryTitle": "Name this memory",
+    "memoryContent": "What happened?",
+    "giftIdea": "E.g. a photography book",
+    "giftNote": "Why might this be a good idea?",
+    "journalTitle": "Entry title",
+    "journalContent": "What is on your mind today?",
+    "otherTitle": "Entry title",
+    "otherContent": "What would you like to save?"
+  },
+  "actions": {
+    "add": "Add",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "cancel": "Cancel",
+    "close": "Close",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this entry permanently?",
+    "addImage": "Add image",
+    "retry": "Try again",
+    "dismiss": "Dismiss"
+  },
+  "validation": {
+    "noteTitleOrContent": "Add a title or entry content.",
+    "memoryContentRequired": "A memory description is required.",
+    "giftPersonRequired": "Choose a person.",
+    "giftIdeaRequired": "Enter a gift idea.",
+    "journalContentRequired": "Entry content is required."
+  },
+  "upload": {
+    "partialFailure": "Saved without some images:",
+    "failed": "The image could not be uploaded.",
+    "saveFailed": "Could not save. Try again.",
+    "signIn": "Sign in again before saving."
+  },
+  "audio": {
+    "transcript": "Transcript",
+    "label": "Voice note",
+    "record": "Record voice",
+    "stop": "Stop recording · {seconds}s",
+    "remove": "Remove voice recording",
+    "hint": "Maximum length is 5 minutes. The recording is stored privately.",
+    "unsupported": "This device does not support audio recording or playback.",
+    "permissionError": "Microphone access failed. Check the permission in Settings.",
+    "uploadFailed": "The voice recording could not be uploaded. The note was not saved."
+  },
+  "camera": {
+    "takePhoto": "Take photo",
+    "chooseGallery": "Choose from gallery",
+    "opening": "Opening camera…",
+    "permissionError": "Camera access is unavailable. Check the permission in Settings.",
+    "captureFailed": "The photo could not be captured. Try again.",
+    "invalidImage": "Choose a JPEG, PNG, WebP, HEIC or HEIF image up to 10 MB."
+  },
+  "states": {
+    "loading": "Loading memories...",
+    "emptyAll": "You have no entries yet.",
+    "emptyPeople": "You have no information linked to people yet.",
+    "emptyMemory": "You have no memories yet.",
+    "emptyGift": "You have no saved gift ideas yet.",
+    "emptyJournal": "You have no journal entries yet.",
+    "emptyNote": "You have no notes yet.",
+    "noMatches": "No matching entries found.",
+    "tryAgain": "Nothing matches “{query}”. Try another search.",
+    "chooseOther": "Choose another person or add a new entry.",
+    "addOrFilter": "Add a new entry or choose another filter.",
+    "offline": "You are offline. Notes remain available to view, but changes cannot be saved yet.",
+    "offlineAction": "There is no internet connection. Your draft remains in the editor—try again when the connection returns.",
+    "loadFailed": "Notes could not be loaded",
+    "loadFailedHint": "Check your connection and try again.",
+    "deleteFailed": "The entry could not be deleted. It remains in the list."
+  },
+  "dates": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "daysAgo": "{count, plural, one {# day ago} other {# days ago}}",
+    "unknown": "Unknown date"
+  },
+  "insights": {
+    "title": "Happy remembers with you",
+    "topPerson": "appears most often — {count, plural, one {# memory} other {# memories}}",
+    "topics": "Recurring topics:",
+    "gifts": "You have <strong>{count, plural, one {# gift idea} other {# gift ideas}}</strong> saved in notes",
+    "stalePerson": "There has not been a new entry about {name} for {days} days. Is there something warm or important you would like to keep?",
+    "addForPerson": "Add something about {name}"
+  },
+  "accessibility": {
+    "add": "Add note",
+    "openImage": "Open image {index} of {count}",
+    "imageAlt": "Image for entry “{title}”",
+    "existingImage": "Existing image {index}",
+    "newImage": "New image {index}",
+    "imageUnavailable": "Image preview unavailable",
+    "removeExistingImage": "Remove existing image {index}",
+    "removeNewImage": "Remove new image {index}",
+    "closeLightbox": "Close preview",
+    "previousImage": "Previous image",
+    "nextImage": "Next image",
+    "imageViewer": "Image viewer"
+  }
+}

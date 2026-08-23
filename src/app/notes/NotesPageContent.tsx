@@ -63,6 +63,7 @@ export default function NotesPageContent() {
   const [isOnline,       setIsOnline]       = useState(true);
   const [primaryFilter,  setPrimaryFilter]  = useState<NotesPrimaryFilter>("all");
   const [filterPersonId, setFilterPersonId] = useState<string>("all");
+  const [sortOrder,      setSortOrder]      = useState<"newest" | "oldest" | "person">("newest");
 
   // 3-dot context menu
   const [menuOpenId,     setMenuOpenId]     = useState<string | null>(null);
@@ -178,13 +179,28 @@ export default function NotesPageContent() {
   // ── Filter + Search ──
   // Search matches: note text, person name, ai_tags
   const q = search.trim().toLowerCase();
-  const filtered = filterMemories({
+  const filteredMemories = filterMemories({
     memories,
     people,
     events,
     primaryFilter,
     personId: filterPersonId,
     search,
+  });
+  const memoryTimestamp = (memory: NotesMemoryRow) => {
+    const value = memory.occurred_on ?? memory.created_at;
+    const timestamp = new Date(value).getTime();
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  };
+  const peopleById = new Map(people.map((person) => [person.id, person]));
+  const filtered = [...filteredMemories].sort((first, second) => {
+    if (sortOrder === "oldest") return memoryTimestamp(first) - memoryTimestamp(second);
+    if (sortOrder === "person") {
+      const firstName = first.person_id ? peopleById.get(first.person_id)?.name ?? "" : "";
+      const secondName = second.person_id ? peopleById.get(second.person_id)?.name ?? "" : "";
+      return firstName.localeCompare(secondName) || memoryTimestamp(second) - memoryTimestamp(first);
+    }
+    return memoryTimestamp(second) - memoryTimestamp(first);
   });
   const primaryFilterCounts = getNotesPrimaryFilterCounts(memories);
   const emptyStateKeys = {
@@ -207,6 +223,25 @@ export default function NotesPageContent() {
   }
   const topPersonId = Object.entries(personMemCounts).sort((a,b) => b[1]-a[1])[0]?.[0] ?? null;
   const topPerson   = people.find(p => p.id === topPersonId);
+
+  // A gentle invitation, never a relationship score: surface only an explicit time gap.
+  const latestPersonMemory = new Map<string, number>();
+  for (const memory of memories) {
+    if (!memory.person_id) continue;
+    latestPersonMemory.set(
+      memory.person_id,
+      Math.max(latestPersonMemory.get(memory.person_id) ?? 0, memoryTimestamp(memory)),
+    );
+  }
+  const todayTimestamp = Date.now();
+  const stalePerson = people
+    .flatMap((person) => {
+      const lastTimestamp = latestPersonMemory.get(person.id);
+      if (!lastTimestamp) return [];
+      const days = Math.floor((todayTimestamp - lastTimestamp) / 86_400_000);
+      return days >= 60 ? [{ person, days }] : [];
+    })
+    .sort((first, second) => second.days - first.days)[0] ?? null;
 
   // Most frequent tag across all memories
   const tagFreq: Record<string, number> = {};
@@ -990,6 +1025,252 @@ export default function NotesPageContent() {
           background: var(--hd-brand-strong); color: #fff; font: 800 14px inherit;
           box-shadow: 0 9px 20px rgba(2,132,199,.2); cursor: pointer;
         }
+
+        /* ── Professional responsive Notes workspace ── */
+        .hd-notes-shell {
+          width: min(1120px, calc(100% - 32px));
+          margin: 0 auto;
+          padding: 30px 0 48px;
+        }
+        .hd-notes-hero {
+          position: relative;
+          overflow: hidden;
+          margin-bottom: 18px;
+          border: 1px solid rgba(255,255,255,.92);
+          border-radius: 30px;
+          background:
+            radial-gradient(280px 200px at 88% 15%, rgba(56,189,248,.2), transparent 72%),
+            radial-gradient(260px 180px at 100% 100%, rgba(244,114,182,.09), transparent 72%),
+            linear-gradient(135deg,rgba(255,255,255,.98),rgba(240,249,255,.92));
+          box-shadow: 0 20px 50px rgba(15,23,42,.07);
+        }
+        .hd-notes-hero::after {
+          content: '✦';
+          position: absolute;
+          right: 42px;
+          top: 24px;
+          color: rgba(14,165,233,.16);
+          font-size: 72px;
+          line-height: 1;
+          pointer-events: none;
+        }
+        .hd-header {
+          max-width: none;
+          padding: 38px 40px 22px;
+          align-items: center;
+        }
+        .hd-header-left { position: relative; z-index: 1; }
+        .hd-header-left h1 {
+          max-width: 720px;
+          font-size: clamp(36px,5vw,58px);
+          line-height: .98;
+          letter-spacing: -.055em;
+        }
+        .hd-header-left .hd-header-subtitle {
+          max-width: 58ch;
+          font-size: 15px;
+          line-height: 1.55;
+        }
+        .hd-header-eyebrow { font-size: 11px; }
+        .hd-header-meta { margin-top: 13px; padding: 7px 11px; color: #64748b; }
+        .hd-add-btn {
+          position: relative;
+          z-index: 2;
+          width: auto;
+          min-width: 174px;
+          height: 52px;
+          margin: 0;
+          padding: 0 20px;
+          gap: 10px;
+          border-radius: 17px;
+          color: #fff;
+          font: 800 14px 'Plus Jakarta Sans',sans-serif;
+          white-space: nowrap;
+        }
+        .hd-add-btn svg { width: 18px; height: 18px; }
+        .hd-add-btn span { display: inline; }
+        .hd-memory-trust {
+          width: auto;
+          max-width: none;
+          margin: 0 40px 34px;
+          padding: 13px 15px;
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          border-radius: 16px;
+          background: rgba(255,255,255,.68);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+        }
+        .hd-memory-trust-icon {
+          display: grid;
+          width: 25px;
+          height: 25px;
+          flex: 0 0 25px;
+          place-items: center;
+          border-radius: 9px;
+          background: #e0f2fe;
+          color: #0284c7;
+          font-size: 17px;
+          font-weight: 900;
+        }
+        .hd-notes-controls {
+          margin-bottom: 20px;
+          padding: 18px;
+          border: 1px solid rgba(226,232,240,.92);
+          border-radius: 24px;
+          background: rgba(255,255,255,.78);
+          box-shadow: 0 12px 30px rgba(15,23,42,.045);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+        }
+        .hd-notes-controls .hd-search {
+          width: 100%;
+          max-width: none;
+          min-height: 54px;
+          margin: 0 0 13px;
+          padding: 0 17px;
+          border-radius: 17px;
+          box-shadow: none;
+        }
+        .hd-notes-controls .hd-search svg { width: 18px; height: 18px; }
+        .hd-notes-controls .hd-search input { font-size: 16px; }
+        .hd-notes-controls .hd-tabs {
+          width: auto;
+          max-width: none;
+          margin: 0;
+          padding: 0;
+          display: flex;
+          flex-wrap: wrap;
+          overflow: visible;
+        }
+        .hd-notes-controls .hd-tab {
+          min-height: 42px;
+          padding: 8px 14px;
+          border-radius: 13px;
+        }
+        .hd-notes-controls .hd-person-filter {
+          width: auto;
+          max-width: none;
+          margin: 13px 0 0;
+          padding: 13px 0 0;
+          border-top: 1px solid #edf2f7;
+          display: grid;
+          grid-template-columns: auto minmax(180px,1fr) auto minmax(180px,1fr);
+        }
+        .hd-notes-controls .hd-person-filter select { width: 100%; }
+        .hd-notes-content {
+          display: grid;
+          grid-template-columns: minmax(0,1fr);
+          gap: 20px;
+          align-items: start;
+        }
+        .hd-notes-content:has(.hd-ai-section) {
+          grid-template-columns: 280px minmax(0,1fr);
+        }
+        .hd-ai-section {
+          position: sticky;
+          top: 116px;
+          grid-column: 1;
+          grid-row: 1 / span 2;
+          width: 100%;
+          max-width: none;
+          margin: 0;
+          padding: 20px;
+          border: 1px solid rgba(186,230,253,.72);
+          border-radius: 24px;
+          background:
+            radial-gradient(160px 120px at 100% 0,rgba(56,189,248,.16),transparent 76%),
+            linear-gradient(145deg,rgba(240,249,255,.98),rgba(255,255,255,.96));
+          box-shadow: 0 13px 34px rgba(14,116,144,.07);
+        }
+        .hd-ai-section-label { margin-bottom: 13px; font-size: 11px; line-height: 1.4; }
+        .hd-ai-rows { gap: 10px; }
+        .hd-ai-row { font-size: 14px; line-height: 1.55; }
+        .hd-ai-care-prompt {
+          margin-top: 5px;
+          padding: 13px;
+          border-radius: 16px;
+          background: rgba(255,255,255,.82);
+          box-shadow: inset 0 0 0 1px rgba(186,230,253,.58);
+        }
+        .hd-ai-care-prompt p { margin: 0; color: #475569; font-size: 13px; line-height: 1.5; }
+        .hd-ai-care-prompt button {
+          margin-top: 10px;
+          padding: 8px 10px;
+          border: 0;
+          border-radius: 10px;
+          background: #e0f2fe;
+          color: #0369a1;
+          font: 800 12px 'Plus Jakarta Sans',sans-serif;
+          cursor: pointer;
+        }
+        .hd-ai-care-prompt button:hover { background: #bae6fd; }
+        .hd-search-hint {
+          grid-column: 2;
+          width: 100%;
+          max-width: none;
+          padding: 0 3px;
+        }
+        .hd-notes-content:not(:has(.hd-ai-section)) .hd-search-hint { grid-column: 1; }
+        .hd-feed {
+          grid-column: 2;
+          width: 100%;
+          max-width: none;
+          margin: 0;
+          padding: 0;
+          display: grid;
+          grid-template-columns: repeat(2,minmax(0,1fr));
+          gap: 14px;
+        }
+        .hd-notes-content:not(:has(.hd-ai-section)) .hd-feed { grid-column: 1; }
+        .hd-card {
+          min-width: 0;
+          height: fit-content;
+          border: 1px solid rgba(226,232,240,.88);
+          border-left-width: 4px;
+          border-radius: 22px;
+          box-shadow: 0 12px 30px rgba(15,23,42,.055);
+          transition: transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+        }
+        .hd-card:hover {
+          transform: translateY(-2px);
+          border-color: rgba(186,230,253,.95);
+          box-shadow: 0 18px 38px rgba(15,23,42,.085);
+        }
+        .hd-card-body { padding: 18px 19px 17px; }
+        .hd-card-header { margin-bottom: 12px; }
+        .hd-card-title { font-size: 18px; font-weight: 800; color: #0f172a; }
+        .hd-card-meta { color: #64748b; font-weight: 550; }
+        .hd-card-text { color: #334155; line-height: 1.6; }
+        .hd-card-menu-btn { color: #64748b; font-weight: 800; }
+        .hd-empty,.hd-loading { grid-column: 1 / -1; }
+
+        @media (max-width: 900px) {
+          .hd-notes-shell { width: min(720px,calc(100% - 28px)); padding-top: 22px; }
+          .hd-notes-content:has(.hd-ai-section) { grid-template-columns: 1fr; }
+          .hd-ai-section { position: static; grid-column: 1; grid-row: auto; }
+          .hd-search-hint,.hd-feed { grid-column: 1; }
+        }
+        @media (max-width: 620px) {
+          .hd-notes-shell { width: 100%; padding: 0 0 28px; }
+          .hd-notes-hero { margin: 0; border: 0; border-radius: 0 0 28px 28px; box-shadow: 0 12px 28px rgba(15,23,42,.055); }
+          .hd-notes-hero::after { right: 12px; top: 18px; font-size: 50px; }
+          .hd-header { padding: 24px 18px 15px; align-items: flex-end; }
+          .hd-header-left h1 { max-width: 300px; font-size: clamp(31px,10vw,40px); }
+          .hd-header-left .hd-header-subtitle { font-size: 13px; }
+          .hd-add-btn { width: 50px; min-width: 50px; height: 50px; padding: 0; border-radius: 17px; }
+          .hd-add-btn span { display: none; }
+          .hd-memory-trust { margin: 0 18px 22px; }
+          .hd-notes-controls { margin: 14px 14px 16px; padding: 13px; border-radius: 21px; }
+          .hd-notes-controls .hd-tabs { flex-wrap: nowrap; overflow-x: auto; margin-right: -13px; padding-right: 13px; }
+          .hd-notes-controls .hd-person-filter { grid-template-columns: 1fr; align-items: stretch; gap: 7px; }
+          .hd-notes-controls .hd-person-filter label:not(:first-of-type) { margin-top: 5px; }
+          .hd-notes-content { gap: 14px; padding: 0 14px; }
+          .hd-ai-section { border-radius: 20px; padding: 16px; }
+          .hd-feed { grid-template-columns: 1fr; gap: 11px; }
+          .hd-card:hover { transform: none; }
+        }
         @media (prefers-reduced-motion: reduce) {
           .hd-page *, .hd-page *::before, .hd-page *::after,
           .hd-modal-overlay *, .hd-lightbox * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -1018,24 +1299,31 @@ export default function NotesPageContent() {
           </div>
         )}
 
-        {/* ── HEADER ── */}
-        <div className="hd-header">
-          <div className="hd-header-left">
-            <p className="hd-header-eyebrow">{t("page.eyebrow")}</p>
-            <h1>{t("page.title")}</h1>
-            <p className="hd-header-subtitle">{t("page.subtitle")}</p>
-            <span className="hd-header-meta">{t("page.resultCount", { count: filtered.length })}</span>
-          </div>
-          <button ref={addButtonRef} className="hd-add-btn" onClick={() => setShowTypeSheet(true)} aria-label={t("accessibility.add")}>
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-              <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
-            </svg>
-          </button>
-        </div>
+        <div className="hd-notes-shell">
+          {/* ── HEADER ── */}
+          <section className="hd-notes-hero">
+            <div className="hd-header">
+              <div className="hd-header-left">
+                <p className="hd-header-eyebrow">{t("page.eyebrow")}</p>
+                <h1>{t("page.title")}</h1>
+                <p className="hd-header-subtitle">{t("page.subtitle")}</p>
+                <span className="hd-header-meta">{t("page.resultCount", { count: filtered.length })}</span>
+              </div>
+              <button ref={addButtonRef} className="hd-add-btn" onClick={() => setShowTypeSheet(true)} aria-label={t("accessibility.add")}>
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                  <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
+                </svg>
+                <span>{t("editor.addNote")}</span>
+              </button>
+            </div>
 
-        <div className="hd-memory-trust">
-          <strong>{t("page.trustTitle")}</strong> {t("page.trustBody")}
-        </div>
+            <div className="hd-memory-trust">
+              <span className="hd-memory-trust-icon" aria-hidden="true">⌁</span>
+              <span><strong>{t("page.trustTitle")}</strong> {t("page.trustBody")}</span>
+            </div>
+          </section>
+
+          <section className="hd-notes-controls" aria-label={t("search.placeholder")}>
 
         {/* ── SEARCH ── */}
         <div className="hd-search">
@@ -1090,11 +1378,24 @@ export default function NotesPageContent() {
               {t("filters.journalHint")}
             </span>
           )}
+          <label htmlFor="notes-sort-order">{t("sort.label")}</label>
+          <select
+            id="notes-sort-order"
+            value={sortOrder}
+            onChange={event => setSortOrder(event.target.value as "newest" | "oldest" | "person")}
+          >
+            <option value="newest">{t("sort.newest")}</option>
+            <option value="oldest">{t("sort.oldest")}</option>
+            <option value="person">{t("sort.person")}</option>
+          </select>
         </div>
+          </section>
+
+          <div className="hd-notes-content">
 
         {/* ── AI INSIGHTS — only when not searching, based on real data ── */}
         {showAiSection && (topPerson || topTags.length > 0 || giftCount > 0) && (
-          <div className="hd-ai-section">
+          <aside className="hd-ai-section">
             <div className="hd-ai-section-label">
               <span>✦</span> {t("insights.title")}
             </div>
@@ -1116,8 +1417,16 @@ export default function NotesPageContent() {
                   {t.rich("insights.gifts", { count: giftCount, strong: (chunks) => <strong>{chunks}</strong> })}
                 </div>
               )}
+              {stalePerson && (
+                <div className="hd-ai-care-prompt">
+                  <p>{t("insights.stalePerson", { name: stalePerson.person.name, days: stalePerson.days })}</p>
+                  <button type="button" onClick={() => openNew("note", stalePerson.person.id)}>
+                    {t("insights.addForPerson", { name: stalePerson.person.name })}
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
+          </aside>
         )}
 
         {/* ── SEARCH HINT ── */}
@@ -1134,7 +1443,7 @@ export default function NotesPageContent() {
         )}
 
         {/* ── NOTES FEED — clean, no AI chips inside ── */}
-        <div className="hd-feed">
+        <main className="hd-feed">
           {loading && <div className="hd-loading" role="status" aria-live="polite">{t("states.loading")}</div>}
 
           {!loading && loadError && (
@@ -1195,6 +1504,8 @@ export default function NotesPageContent() {
               />
             );
           })}
+        </main>
+          </div>
         </div>
       </div>
 

@@ -185,7 +185,7 @@ test("prompt contract forbids fabricated facts and preserves locale and canonica
   assert.match(instructions, /structured AI payload: context and discovery/);
   assert.match(instructions, /Do not invent missing facts/);
   assert.match(instructions, /Treat missingSignals as unknown information, not negative information/);
-  assert.match(instructions, /Respect context\.locale/);
+  assert.match(instructions, /strictly in context\.locale/);
   assert.match(instructions, /canonical/);
   assert.match(instructions, /missing_budget/);
 });
@@ -279,13 +279,14 @@ test("discovery follow-up validation excludes answered and known context questio
 });
 
 test("repair behavior is bounded to one server-side attempt", async () => {
-  const repair = buildGiftRepairInstructions();
+  const repair = buildGiftRepairInstructions(context());
   const route = await readFile(
     new URL("../src/app/api/ai/gift-suggestions/route.ts", import.meta.url),
     "utf8",
   );
   assert.match(repair, /only repair attempt/);
-  assert.match(route, /buildGiftRepairInstructions\(\)/);
+  assert.match(route, /buildGiftRepairInstructions\(giftRecommendationContext\)/);
+  assert.match(repair, /strictly in uk/);
   assert.doesNotMatch(route, /while\s*\(/);
   assert.doesNotMatch(route, /for\s*\(\s*;\s*;\s*\)/);
   const result = validateGiftRecommendations(response([suggestion()]), context(), {

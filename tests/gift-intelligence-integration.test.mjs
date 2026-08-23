@@ -150,8 +150,8 @@ test("GiftDiscoverySession projection preserves locale, completion and priority 
   assert.deepEqual(discovery.answeredQuestions, []);
 });
 
-test("Gift AI instructions preserve duplicate avoidance and missing-data behavior", async () => {
-  const instructions = buildGiftRecommendationInstructions({
+test("Gift AI instructions preserve locale, duplicate avoidance and missing-data behavior", async () => {
+  const promptContext = {
     locale: "pl",
     generatedAt: "2026-07-23T00:00:00.000Z",
     person: { id: "person-1", relationKey: null, gender: null, age: null },
@@ -168,8 +168,9 @@ test("Gift AI instructions preserve duplicate avoidance and missing-data behavio
     },
     duplicateAvoidance: { previousGiftValues: [] },
     missingSignals: ["missing_budget", "missing_preferences"],
-  });
-  const repairInstructions = buildGiftRepairInstructions();
+  };
+  const instructions = buildGiftRecommendationInstructions(promptContext);
+  const repairInstructions = buildGiftRepairInstructions(promptContext);
 
   assert.match(instructions, /structured AI payload: context and discovery/);
   assert.match(instructions, /Do not invent missing facts/);
@@ -181,5 +182,24 @@ test("Gift AI instructions preserve duplicate avoidance and missing-data behavio
   assert.match(instructions, /context\.knowledge as confirmed long-term memory/);
   assert.match(instructions, /Use stored knowledge before asking follow-up questions/);
   assert.match(instructions, /current-session discoveryAnswers first, then confirmed context\.knowledge/);
+  assert.match(instructions, /suggestion title and why/);
+  assert.match(instructions, /Never mix languages/);
   assert.match(repairInstructions, /only repair attempt/);
+  assert.match(repairInstructions, /strictly in pl/);
+});
+
+test("Gift recommendation cache is partitioned by active application locale", async () => {
+  const repository = await readFile(
+    new URL("../src/lib/repositories/giftIntelligenceRepository.server.ts", import.meta.url),
+    "utf8",
+  );
+  const route = await readFile(
+    new URL("../src/app/api/ai/gift-suggestions/route.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(repository, /\.eq\("locale", locale\)/);
+  assert.match(repository, /onConflict: "person_id,occasion,locale"/);
+  assert.match(route, /getCachedGiftIdeas\(ownedPerson, occasion, locale\)/);
+  assert.match(route, /saveGiftIdeas\(ownedPerson, occasion, locale, legacyIdeas\)/);
 });

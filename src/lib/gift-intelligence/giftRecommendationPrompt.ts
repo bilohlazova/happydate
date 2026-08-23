@@ -98,7 +98,7 @@ export function buildGiftRecommendationInstructions(
     "Use only the structured AI payload: context and discovery. Do not use outside knowledge about the person.",
     "context is GiftRecommendationContext. discovery is GiftDiscoverySession projection.",
     "Do not invent missing facts. Treat missingSignals as unknown information, not negative information.",
-    "Respect context.locale for visible explanatory text in why.",
+    "Write every user-visible natural-language field strictly in context.locale: suggestion title and why. Never mix languages or copy the language of stored memories when it differs from context.locale.",
     "Keep category, confidence, personalizationSignals and cautions canonical exactly as the schema enums.",
     "Respect budget.amount and budget.currency when available. If price is uncertain, set estimatedPrice to null and add price_uncertain.",
     "Use preferences, memories, importantFacts, event, relation, age, gender and season only when present in the context.",
@@ -135,12 +135,13 @@ export function buildGiftRecommendationInstructions(
   ].join("\n");
 }
 
-export function buildGiftRepairInstructions(): string {
+export function buildGiftRepairInstructions(context: GiftRecommendationContext): string {
   return [
     `Prompt contract: ${GIFT_RECOMMENDATION_PROMPT_VERSION}-repair.`,
     "Repair only the rejected gift recommendations.",
     "Use the same GiftRecommendationContext.",
     "Use validationErrors to avoid duplicates and budget violations.",
+    `Write every user-visible natural-language field strictly in ${context.locale}: suggestion title and why. Never mix languages.`,
     "Return ONLY valid JSON matching the same schema.",
     "Do not create an unbounded retry loop; this is the only repair attempt.",
   ].join("\n");

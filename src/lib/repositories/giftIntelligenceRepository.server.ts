@@ -69,12 +69,17 @@ export async function findOwnedGiftPerson(
   return data ? mapOwnedGiftPersonRow(data as OwnedGiftPersonRow) : null;
 }
 
-export async function getCachedGiftIdeas(person: OwnedGiftPerson, occasion: string) {
+export async function getCachedGiftIdeas(
+  person: OwnedGiftPerson,
+  occasion: string,
+  locale: string,
+) {
   const { data, error } = await adminClient()
     .from("ai_gift_cache")
     .select("ideas")
     .eq("person_id", person.id)
     .eq("occasion", occasion)
+    .eq("locale", locale)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
   return !error && data?.ideas ? data.ideas : null;
@@ -126,16 +131,18 @@ export async function loadGiftIntelligenceSource(
 export async function saveGiftIdeas(
   person: OwnedGiftPerson,
   occasion: string,
+  locale: string,
   ideas: unknown,
 ): Promise<void> {
   await adminClient().from("ai_gift_cache").upsert(
     {
       person_id: person.id,
       occasion,
+      locale,
       ideas,
       created_at: new Date().toISOString(),
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     },
-    { onConflict: "person_id,occasion" },
+    { onConflict: "person_id,occasion,locale" },
   );
 }

@@ -199,7 +199,7 @@ export async function POST(req: Request) {
     const usesOutcomeLearning = outcomeLearningEnabled && confirmedGiftOutcomes.length > 0;
     const cached = hasDiscoverySessionInput || usesOutcomeLearning
       ? null
-      : await getCachedGiftIdeas(ownedPerson, occasion);
+      : await getCachedGiftIdeas(ownedPerson, occasion, locale);
 
     if (cached) {
       return json({
@@ -296,7 +296,7 @@ export async function POST(req: Request) {
       };
       const repaired = await generateGiftRecommendations(
         repairInput,
-        buildGiftRepairInstructions(),
+        buildGiftRepairInstructions(giftRecommendationContext),
         providerSignal,
         aiBudget,
       );
@@ -340,7 +340,7 @@ export async function POST(req: Request) {
     /* ================= SAVE CACHE ================= */
 
     if (!hasDiscoverySessionInput) {
-      await saveGiftIdeas(ownedPerson, occasion, legacyIdeas);
+      await saveGiftIdeas(ownedPerson, occasion, locale, legacyIdeas);
     }
 
     /* ================= RETURN ================= */

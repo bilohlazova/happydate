@@ -246,6 +246,6 @@ test("cache accepts only an ownership-verified person capability", async () => {
     new URL("../src/lib/repositories/giftIntelligenceRepository.server.ts", import.meta.url),
     "utf8",
   );
-  assert.match(repository, /getCachedGiftIdeas\(person: OwnedGiftPerson/);
+  assert.match(repository, /getCachedGiftIdeas\([\s\S]*?person: OwnedGiftPerson/);
   assert.match(repository, /saveGiftIdeas\([\s\S]*?person: OwnedGiftPerson/);
 });

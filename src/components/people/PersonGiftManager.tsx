@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/set-state-in-effect -- Repository refreshes intentionally reconcile these controlled gift editors. */
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Check, ExternalLink, Gift, Link2, LoaderCircle, Pencil, Plus, Star, Trash2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -47,6 +47,7 @@ export function PersonGiftManager({ personId, personName, onChanged }: { personI
   const [linkGiftId, setLinkGiftId] = useState("");
   const [editingGiftId, setEditingGiftId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const ideaInputRef = useRef<HTMLInputElement>(null);
 
   const reload = useCallback(async () => {
     setFailed(false);
@@ -61,6 +62,47 @@ export function PersonGiftManager({ personId, personName, onChanged }: { personI
     // Initial person-owned gift workspace load.
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("action") !== "add-gift-idea") return;
+    url.searchParams.delete("action");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    requestAnimationFrame(() => {
+      document.getElementById("gift-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      ideaInputRef.current?.focus({ preventScroll: true });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!model || !window.location.hash.startsWith("#gift-link-")) return;
+    let linkId: string;
+    try {
+      linkId = decodeURIComponent(window.location.hash.slice("#gift-link-".length));
+    } catch {
+      return;
+    }
+    const savedLink = model.savedLinks.find((link) => link.id === linkId);
+    const workspace = document.getElementById("gift-workspace");
+    if (!savedLink || !workspace) return;
+    const linkAnchor = Array.from(workspace.querySelectorAll<HTMLAnchorElement>("a[href]"))
+      .find((anchor) => anchor.href === savedLink.url);
+    const row = linkAnchor?.closest<HTMLElement>("div.rounded-xl");
+    if (!row) return;
+    const targetId = `gift-link-${savedLink.id}`;
+    row.id = targetId;
+    row.tabIndex = -1;
+    row.classList.add("ring-2", "ring-violet-400", "bg-violet-50");
+    requestAnimationFrame(() => {
+      row.scrollIntoView({ behavior: "smooth", block: "center" });
+      row.focus({ preventScroll: true });
+    });
+    return () => {
+      row.removeAttribute("id");
+      row.removeAttribute("tabindex");
+      row.classList.remove("ring-2", "ring-violet-400", "bg-violet-50");
+    };
+  }, [model]);
 
   async function run(key: string, operation: () => Promise<void>) {
     setBusy(key);
@@ -148,7 +190,7 @@ export function PersonGiftManager({ personId, personName, onChanged }: { personI
       {failed && <p role="alert" className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">{t("error")}</p>}
 
       <form onSubmit={addIdea} className="mt-4 flex gap-2">
-        <input value={ideaTitle} onChange={(event) => setIdeaTitle(event.target.value)} maxLength={280} placeholder={t("ideaPlaceholder")} aria-label={t("ideaPlaceholder")} className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100" />
+        <input ref={ideaInputRef} value={ideaTitle} onChange={(event) => setIdeaTitle(event.target.value)} maxLength={280} placeholder={t("ideaPlaceholder")} aria-label={t("ideaPlaceholder")} className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100" />
         <button disabled={busy !== null || !ideaTitle.trim()} className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-violet-600 px-3 text-sm font-extrabold text-white disabled:opacity-45"><Plus className="h-4 w-4" /> <span className="hidden sm:inline">{t("addIdea")}</span></button>
       </form>
 

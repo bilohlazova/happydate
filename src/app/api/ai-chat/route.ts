@@ -6,6 +6,7 @@ import { createAssistantRlsClient, getAssistantRequestIdentity } from "@/lib/ass
 import { createConfiguredAssistantRateLimiter } from "@/lib/assistant/rateLimiter";
 import { createAssistantChatResponse, type AssistantProviderMessage } from "@/lib/assistant/chatServer";
 import { loadAssistantGiftOutcomeContext } from "@/lib/assistant/giftOutcomeContext.server";
+import { loadAssistantSavedGiftLinkContext } from "@/lib/assistant/savedGiftLinkContext.server";
 import { readBoundedJson } from "@/lib/server/readBoundedJson";
 import { logOperationalError } from "@/lib/observability/safeLogger";
 import { getHomeRepositoryData } from "@/lib/repositories/home/home.repository";
@@ -100,14 +101,20 @@ export async function POST(request: Request) {
           rlsSession.accessToken,
         );
         const verifiedRequest = buildVerifiedAssistantRequest(clientRequest, homeData);
-        const serverGiftOutcomes = verifiedRequest.context.activePerson
+        const [serverGiftOutcomes, serverSavedGiftLinks] = verifiedRequest.context.activePerson
           && verifiedRequest.context.personResolutionStatus === "resolved"
-            ? await loadAssistantGiftOutcomeContext({
-                userId: identity.userId,
-                personId: verifiedRequest.context.activePerson.id,
-              })
-            : [];
-        return { request: verifiedRequest, serverGiftOutcomes };
+            ? await Promise.all([
+                loadAssistantGiftOutcomeContext({
+                  userId: identity.userId,
+                  personId: verifiedRequest.context.activePerson.id,
+                }),
+                loadAssistantSavedGiftLinkContext({
+                  userId: identity.userId,
+                  personId: verifiedRequest.context.activePerson.id,
+                }),
+              ])
+            : [[], []];
+        return { request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks };
       },
     },
   );

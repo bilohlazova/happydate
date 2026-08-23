@@ -2031,7 +2031,13 @@ label[for], summary {
   font-size: 11px; font-weight: 800;
 }
 .happy-chat-context__dot { width: 7px; height: 7px; border-radius: 999px; background: #38bdf8; box-shadow: 0 0 0 4px rgba(56,189,248,.13); }
-.happy-chat-context > span[role="status"] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.happy-chat-context__person {
+  display: inline-flex; min-width: 0; min-height: 28px; align-items: center; gap: 7px; border-radius: 9px;
+  color: inherit; text-decoration: none;
+}
+.happy-chat-context__person > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.happy-chat-context__person:hover > span:last-child { text-decoration: underline; text-underline-offset: 2px; }
+.happy-chat-context__person:focus-visible { outline: 2px solid #7dd3fc; outline-offset: 2px; }
 .happy-chat-context__actions { display: inline-flex; flex: 0 0 auto; gap: 5px; margin-left: auto; }
 .happy-chat-context__actions > button {
   display: inline-flex; min-height: 28px; flex: 0 0 auto; align-items: center; gap: 5px;

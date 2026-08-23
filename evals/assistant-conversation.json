@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "targetBehaviorVersion": "assistant-2026-08-16.4",
+  "targetBehaviorVersion": "assistant-2026-08-23.1",
   "scenarios": [
     {
       "id": "known-memory-before-question",
@@ -263,6 +263,26 @@
         }
       },
       "criteria": { "maxQuestions": 1, "maxCharacters": 1000, "mustContainAny": [["100", "budget"], ["ceramic", "pottery"]], "mustNotContain": ["What is your budget", "What budget", "How much would you like to spend"] }
+    },
+    {
+      "id": "saved-link-remains-candidate",
+      "description": "Uses an explicitly saved gift link while never claiming that the option was purchased or given.",
+      "request": {
+        "message": "What gift option have I saved for Marta?",
+        "locale": "en",
+        "conversation": [],
+        "context": {
+          "userName": null,
+          "insight": null,
+          "events": [],
+          "people": [{ "id": "person-15", "name": "Marta", "relation": "friend", "birthday": null, "gender": "female" }],
+          "memories": [],
+          "activePersonId": "person-15",
+          "personResolutionStatus": "resolved"
+        }
+      },
+      "serverSavedGiftLinks": [{ "url": "https://shop.example/blue-scarf", "title": "Blue scarf", "merchant": "Example Shop", "isPreferred": true, "decisionNote": "Check the material" }],
+      "criteria": { "maxQuestions": 1, "maxCharacters": 1000, "mustContainAny": [["Blue scarf"], ["saved", "preferred", "candidate", "option"]], "mustNotContain": ["purchased", "ordered", "delivered", "given to Marta", "Marta liked"] }
     },
     {
       "id": "day-plan-uses-only-todays-events",

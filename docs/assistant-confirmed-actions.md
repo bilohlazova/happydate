@@ -23,12 +23,37 @@ user's calendar or relationship memory.
   the conversation has one unambiguous active person, their identifier is
   carried as a suggestion and accepted only after Notes finds it in the
   current user's owner-scoped People result.
-- **Open People:** this is navigation only and has no mutation authority.
-- **Gift and inspiration:** these remain conversational prompts unless a
-  separate typed, confirmation-aware action is introduced. When one active
-  person is resolved, the Gift prompt uses their displayed name but still
-  performs no write; saving an idea requires the existing confirmation-aware
-  Gift or Happy Learning boundary.
+- **Open People or the active Person profile:** these are navigation only and
+  have no mutation authority. The profile link is rendered only for a person
+  resolved from the current user's owner-scoped Assistant context.
+- **Gift and inspiration:** these remain conversational prompts. When one
+  active person is resolved, the Gift prompt uses their displayed name. If a
+  user selects the Gift action with that unambiguous person context, Happy
+  navigates to the person's owner-scoped Gift workspace, consumes the
+  `add-gift-idea` intent and focuses an empty idea editor. No generated chat
+  text is copied into the draft and only the explicit Add button may persist
+  the idea. Without a resolved person the action remains a conversational
+  prompt. If a
+  completed Assistant response contains a valid HTTPS link, Happy shows an
+  explicit **Save for {person}** control. Only pressing that control calls the
+  canonical Gift repository; user-message links, malformed URLs, streaming
+  text and links without an unambiguous active person cannot be saved from
+  chat. The saved link then appears in that person's Gift workspace.
+  In later person-scoped conversations, Happy receives at most eight of that
+  person's most recent saved HTTPS candidates through a server-verified,
+  owner-filtered boundary. Preferred remains a shortlist decision: the prompt
+  explicitly forbids treating any saved link as ordered, purchased, delivered,
+  given or liked.
+  Chat uses an idempotent save adapter: before creating an unassigned link it
+  compares the canonical HTTPS URL with that person's existing saved links.
+  Repeated responses and later confirmation clicks therefore reuse the saved
+  state instead of intentionally creating another row.
+  After a successful or already-saved result, the confirmation exposes a
+  direct person-profile link carrying the owner-verified saved-link ID;
+  navigation closes the Assistant, resolves that ID inside the loaded
+  person-owned Gift workspace, scrolls to the matching card, highlights it and
+  moves keyboard focus there. If no exact target is available, navigation
+  safely falls back to `#gift-workspace`.
 
 ## Invariants
 

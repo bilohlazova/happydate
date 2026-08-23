@@ -7,6 +7,7 @@ import type {
   SaveGiftLinkInput,
   SavedGiftLink,
 } from "./gift.types.ts";
+import { normalizeGiftHttpsUrl } from "./giftLinkUrl.ts";
 
 interface GiftRow {
   id: string;
@@ -104,16 +105,9 @@ function mapLink(row: GiftLinkRow): SavedGiftLink {
 }
 
 function normalizedHttpsUrl(value: string): string {
-  let parsed: URL;
-  try {
-    parsed = new URL(value.trim());
-  } catch {
-    throw failure("saveGiftLink", "A valid HTTPS URL is required");
-  }
-  if (parsed.protocol !== "https:") {
-    throw failure("saveGiftLink", "Only HTTPS URLs can be saved");
-  }
-  return parsed.toString();
+  const normalized = normalizeGiftHttpsUrl(value);
+  if (!normalized) throw failure("saveGiftLink", "A valid HTTPS URL is required");
+  return normalized;
 }
 
 function normalizedGiftTitle(value: string): string {

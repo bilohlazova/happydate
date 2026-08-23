@@ -20,6 +20,13 @@ export type AssistantEvaluationScenario = {
     category: string;
     categorySignal: "stable_like" | "stable_avoid" | "insufficient" | "conflicted";
   }>;
+  serverSavedGiftLinks?: Array<{
+    url: string;
+    title: string | null;
+    merchant: string | null;
+    isPreferred: boolean;
+    decisionNote: string | null;
+  }>;
   criteria: AssistantEvaluationCriteria;
 };
 
@@ -35,6 +42,7 @@ export const REQUIRED_ASSISTANT_EVALUATION_SCENARIO_IDS = Object.freeze([
   "unknown-preference-is-unknown",
   "ambiguous-person-no-guess",
   "saved-idea-not-purchased",
+  "saved-link-remains-candidate",
   "context-prompt-injection-ignored",
   "liked-outcome-is-positive-evidence",
   "stable-avoid-outcome-prevents-repeat",
@@ -67,6 +75,8 @@ export function parseAssistantEvaluationScenario(value: unknown): AssistantEvalu
   if (criteria.mustNotContain !== undefined && !mustNotContain) return null;
   const outcomes = parseOutcomes(record.serverGiftOutcomes);
   if (record.serverGiftOutcomes !== undefined && !outcomes) return null;
+  const savedGiftLinks = parseSavedGiftLinks(record.serverSavedGiftLinks);
+  if (record.serverSavedGiftLinks !== undefined && !savedGiftLinks) return null;
   const serverCurrentDate = record.serverCurrentDate;
   if (serverCurrentDate !== undefined && (typeof serverCurrentDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(serverCurrentDate))) return null;
   return {
@@ -75,6 +85,7 @@ export function parseAssistantEvaluationScenario(value: unknown): AssistantEvalu
     request: parsedRequest.data,
     ...(typeof serverCurrentDate === "string" ? { serverCurrentDate } : {}),
     ...(outcomes?.length ? { serverGiftOutcomes: outcomes } : {}),
+    ...(savedGiftLinks?.length ? { serverSavedGiftLinks: savedGiftLinks } : {}),
     criteria: {
       maxQuestions: criteria.maxQuestions as number,
       maxCharacters: criteria.maxCharacters as number,
@@ -82,6 +93,27 @@ export function parseAssistantEvaluationScenario(value: unknown): AssistantEvalu
       ...(mustNotContain?.length ? { mustNotContain } : {}),
     },
   };
+}
+
+function parseSavedGiftLinks(value: unknown): AssistantEvaluationScenario["serverSavedGiftLinks"] | null {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 8) return null;
+  for (const item of value) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+    const row = item as Record<string, unknown>;
+    if (typeof row.url !== "string" || row.url.length > 2_048) return null;
+    try {
+      const url = new URL(row.url);
+      if (url.protocol !== "https:" || !url.hostname) return null;
+    } catch {
+      return null;
+    }
+    if (row.title !== null && (typeof row.title !== "string" || row.title.length > 240)) return null;
+    if (row.merchant !== null && (typeof row.merchant !== "string" || row.merchant.length > 160)) return null;
+    if (typeof row.isPreferred !== "boolean") return null;
+    if (row.decisionNote !== null && (typeof row.decisionNote !== "string" || row.decisionNote.length > 500)) return null;
+  }
+  return value as AssistantEvaluationScenario["serverSavedGiftLinks"];
 }
 
 function parseStrings(value: unknown): string[] | null {

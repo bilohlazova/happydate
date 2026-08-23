@@ -21,6 +21,17 @@ test("Person profile includes one canonical gift management workspace", async ()
   assert.match(manager, /choosePersonGiftLink/);
 });
 
+test("a chat gift-link target resolves only through the loaded person-owned workspace", async () => {
+  const manager = await source("src/components/people/PersonGiftManager.tsx");
+  assert.match(manager, /window\.location\.hash\.startsWith\("#gift-link-"\)/);
+  assert.match(manager, /try \{\s+linkId = decodeURIComponent/);
+  assert.match(manager, /catch \{\s+return;/);
+  assert.match(manager, /model\.savedLinks\.find\(\(link\) => link\.id === linkId\)/);
+  assert.match(manager, /document\.getElementById\("gift-workspace"\)/);
+  assert.match(manager, /row\.scrollIntoView\(\{ behavior: "smooth", block: "center" \}\)/);
+  assert.match(manager, /row\.focus\(\{ preventScroll: true \}\)/);
+});
+
 test("given history and external link actions require explicit safe interaction", async () => {
   const manager = await source("src/components/people/PersonGiftManager.tsx");
   assert.match(manager, /next === "given" && !window\.confirm/);

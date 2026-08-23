@@ -28,12 +28,14 @@ test("new gift tables are explicitly protected and exposed only to authenticated
 });
 
 test("saved external references accept only HTTPS and remain user-owned", async () => {
-  const [migration, persistence] = await Promise.all([
+  const [migration, persistence, urlPolicy] = await Promise.all([
     source("supabase/migrations/20260808094421_create_gift_lifecycle_and_saved_links.sql"),
     source("src/lib/gifts/gift.persistence.ts"),
+    source("src/lib/gifts/giftLinkUrl.ts"),
   ]);
   assert.match(migration, /lower\(url\) ~ '\^https:\/\//);
-  assert.match(persistence, /parsed\.protocol !== "https:"/);
+  assert.match(persistence, /normalizeGiftHttpsUrl/);
+  assert.match(urlPolicy, /parsed\.protocol === "https:"/);
   assert.match(persistence, /\.eq\("user_id", userId\)/);
   assert.match(persistence, /metadata is untrusted|untrusted user data/i);
 });

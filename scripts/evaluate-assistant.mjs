@@ -6,6 +6,7 @@ import {
   buildAssistantSystemPrompt,
   formatAssistantContext,
   formatAssistantGiftOutcomeContext,
+  formatAssistantSavedGiftLinkContext,
 } from "../src/lib/assistant/chatContract.ts";
 import {
   evaluateAssistantResponse,
@@ -43,6 +44,7 @@ for (const scenario of scenarios) {
     currentDate: scenario.serverCurrentDate ?? null,
   });
   const outcomes = formatAssistantGiftOutcomeContext(scenario.serverGiftOutcomes ?? []);
+  const savedGiftLinks = formatAssistantSavedGiftLinkContext(scenario.serverSavedGiftLinks ?? []);
   const completion = await openai.chat.completions.create({
     model: ASSISTANT_CHAT_CONFIG.model,
     temperature: ASSISTANT_CHAT_CONFIG.temperature,
@@ -51,6 +53,7 @@ for (const scenario of scenarios) {
       { role: "system", content: buildAssistantSystemPrompt(scenario.request.locale) },
       ...(context ? [{ role: "system", content: context }] : []),
       ...(outcomes ? [{ role: "system", content: outcomes }] : []),
+      ...(savedGiftLinks ? [{ role: "system", content: savedGiftLinks }] : []),
       ...scenario.request.conversation,
       { role: "user", content: scenario.request.message },
     ],

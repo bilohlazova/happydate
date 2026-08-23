@@ -34,5 +34,5 @@ The offline dataset also has a required-scenario contract. A release cannot
 silently remove coverage for grounded memory, honest unknowns, person
 disambiguation, gift lifecycle, prompt-injection resistance, verified positive
 and negative gift outcomes, conflicted outcome handling, or conversation
-continuity and grounded day planning. The active dataset contains 14 scenarios across all five product
+continuity, saved gift-link status and grounded day planning. The active dataset contains 15 scenarios across all five product
 languages; live runs evaluate the same fixtures without printing response text.

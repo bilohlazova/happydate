@@ -31,3 +31,17 @@ future response is safe. Live results should be reviewed when the model, system
 prompt, context projection, limits or gift-learning policy changes. A failing
 scenario must block that AI change until the prompt, context or criterion is
 deliberately reconciled.
+
+## Scheduled live baseline
+
+`.github/workflows/assistant-live-evaluation.yml` validates the versioned
+dataset and, when the dedicated GitHub Actions secret
+`HAPPYDATE_ASSISTANT_EVAL_OPENAI_API_KEY` exists, runs the paid synthetic live
+evaluation every Monday at 05:17 UTC. It can also be started manually.
+
+The workflow has read-only repository permissions, a 15-minute timeout and no
+Supabase or production-user credentials. Its 30-day artifact contains only the
+behavior/model header, scenario IDs, PASS/FAIL state and failure codes. Model
+response text is never printed or uploaded. Until the dedicated secret is
+configured, the offline contract still runs and the workflow explicitly
+records that the paid live baseline was skipped.

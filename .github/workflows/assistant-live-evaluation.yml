@@ -1,0 +1,54 @@
+name: HappyDate Assistant live evaluation
+
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: assistant-live-evaluation
+  cancel-in-progress: false
+
+jobs:
+  evaluate-conversation-brain:
+    name: Synthetic Conversation Brain baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: "true"
+      OPENAI_API_KEY: ${{ secrets.HAPPYDATE_ASSISTANT_EVAL_OPENAI_API_KEY }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Validate versioned synthetic scenarios
+        run: npm run eval:assistant
+
+      - name: Explain dormant live baseline
+        if: env.OPENAI_API_KEY == ''
+        run: echo "Live Assistant evaluation skipped because HAPPYDATE_ASSISTANT_EVAL_OPENAI_API_KEY is not configured." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run paid live Assistant evaluation
+        if: env.OPENAI_API_KEY != ''
+        run: npm run eval:assistant:live | tee assistant-live-evaluation.txt
+
+      - name: Upload content-free evaluation result
+        if: always() && env.OPENAI_API_KEY != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: assistant-live-evaluation-${{ github.run_id }}
+          path: assistant-live-evaluation.txt
+          if-no-files-found: error
+          retention-days: 30

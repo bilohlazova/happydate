@@ -2,6 +2,7 @@
 
 import { CalendarCheck2, CalendarDays, Gift, NotebookPen, Sparkles, Users } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import AssistantHome from "@/components/chat-assistant/AssistantHome";
@@ -15,6 +16,7 @@ import { classifyAiAvailabilityError } from "@/lib/assistant/aiAvailability";
 import { resolveChatPerson } from "@/lib/chat-person/resolveChatPerson";
 import { confirmHappyLearningCandidate, requestHappyLearningDetection } from "@/lib/happy-learning/happyLearningClient";
 import type { HappyLearningDetectionCandidate } from "@/lib/happy-learning/happyLearningDetectV2.types";
+import { savePersonGiftLinkOnce } from "@/lib/gifts/gift.loaders";
 import { supabase } from "@/lib/supabaseClient";
 
 interface ChatAssistantModalProps {
@@ -67,6 +69,8 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
   const [rateLimitNow, setRateLimitNow] = useState(0);
   const [personContext, setPersonContext] = useState<ChatPersonContext>(INITIAL_PERSON_CONTEXT);
   const [happyLearning, setHappyLearning] = useState<ChatHappyLearningState>(INITIAL_HAPPY_LEARNING_STATE);
+  const [giftLinkStates, setGiftLinkStates] = useState<Record<string, "saving" | "saved" | "error">>({});
+  const [giftLinkTargets, setGiftLinkTargets] = useState<Record<string, string>>({});
   const dialogRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -170,6 +174,8 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
     setValue("");
     setPersonContext(INITIAL_PERSON_CONTEXT);
     setHappyLearning(INITIAL_HAPPY_LEARNING_STATE);
+    setGiftLinkStates({});
+    setGiftLinkTargets({});
   }, [cancelActiveResponse, locale]);
 
   useEffect(() => {
@@ -201,10 +207,17 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
     setValue("");
     setPersonContext(INITIAL_PERSON_CONTEXT);
     setHappyLearning(INITIAL_HAPPY_LEARNING_STATE);
+    setGiftLinkStates({});
+    setGiftLinkTargets({});
     homeContext.refresh();
   }
 
   function selectAction(action: AssistantAction) {
+    if (action.id === "gift" && personContext.resolutionStatus === "resolved" && personContext.activePersonId) {
+      closeAssistant();
+      router.push(`/people/${encodeURIComponent(personContext.activePersonId)}?action=add-gift-idea#gift-workspace`);
+      return;
+    }
     if (action.destination) {
       closeAssistant();
       const destination = (action.id === "note" || action.id === "event")
@@ -308,9 +321,9 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
 
   function commitFirstMessage(content: string) {
     const userMessage: ChatMessage = { id: nextMessageId(), role: "user", content, status: "complete" };
-    const assistantMessage: ChatMessage = { id: nextMessageId(), role: "assistant", content: "", status: "streaming" };
-    setMessages([userMessage, assistantMessage]);
     const nextPersonContext = handlePotentialHappyLearning(content, userMessage.id);
+    const assistantMessage: ChatMessage = { id: nextMessageId(), role: "assistant", content: "", status: "streaming", personId: nextPersonContext.activePersonId };
+    setMessages([userMessage, assistantMessage]);
     setIsHomeExiting(false);
     homeTimerRef.current = null;
     void streamAssistantResponse(content, [], assistantMessage.id, nextPersonContext);
@@ -433,9 +446,9 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
 
     const conversation = buildConversationHistory(messages);
     const userMessage: ChatMessage = { id: nextMessageId(), role: "user", content, status: "complete" };
-    const assistantMessage: ChatMessage = { id: nextMessageId(), role: "assistant", content: "", status: "streaming" };
-    setMessages((current) => [...current, userMessage, assistantMessage]);
     const nextPersonContext = handlePotentialHappyLearning(content, userMessage.id);
+    const assistantMessage: ChatMessage = { id: nextMessageId(), role: "assistant", content: "", status: "streaming", personId: nextPersonContext.activePersonId };
+    setMessages((current) => [...current, userMessage, assistantMessage]);
     void streamAssistantResponse(content, conversation, assistantMessage.id, nextPersonContext);
   }
 
@@ -457,6 +470,22 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
     homeContext.refresh();
     router.refresh();
     return result.status;
+  }
+
+  async function saveAssistantGiftLink(messageId: string, personId: string, url: string) {
+    const ownedPerson = homeContext.people.find((person) => person.id === personId);
+    if (!ownedPerson) return;
+    const stateKey = `${messageId}:${url}`;
+    setGiftLinkStates((current) => ({ ...current, [stateKey]: "saving" }));
+    try {
+      const result = await savePersonGiftLinkOnce({ personId: ownedPerson.id, giftId: null, url, title: null });
+      setGiftLinkTargets((current) => ({ ...current, [stateKey]: result.linkId }));
+      setGiftLinkStates((current) => ({ ...current, [stateKey]: "saved" }));
+      homeContext.refresh();
+      router.refresh();
+    } catch {
+      setGiftLinkStates((current) => ({ ...current, [stateKey]: "error" }));
+    }
   }
 
   function retryMessage(assistantMessageId: string) {
@@ -545,8 +574,15 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
 
         {activePerson && (
           <div className="happy-chat-context">
-            <span className="happy-chat-context__dot" aria-hidden="true" />
-            <span role="status">{t("context.person", { name: activePerson.name })}</span>
+            <Link
+              href={`/people/${encodeURIComponent(activePerson.id)}`}
+              onNavigate={closeAssistant}
+              className="happy-chat-context__person"
+              aria-label={t("context.openProfile", { name: activePerson.name })}
+            >
+              <span className="happy-chat-context__dot" aria-hidden="true" />
+              <span>{t("context.person", { name: activePerson.name })}</span>
+            </Link>
             <span className="happy-chat-context__actions">
               <button
                 type="button"
@@ -624,6 +660,17 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
             onRetry={retryMessage}
             onDismissHappyLearningCandidate={dismissHappyLearningCandidate}
             onSaveHappyLearningCandidate={saveHappyLearningCandidate}
+            giftLinkPeople={Object.fromEntries(homeContext.people.map((person) => [person.id, person.name]))}
+            giftLinkStates={giftLinkStates}
+            giftLinkTargets={giftLinkTargets}
+            giftLinkOpenLabel={t("giftLinks.open")}
+            giftLinkSaveLabel={(name) => t("giftLinks.save", { name })}
+            giftLinkSavingLabel={t("giftLinks.saving")}
+            giftLinkSavedLabel={t("giftLinks.saved")}
+            giftLinkViewSavedLabel={(name) => t("giftLinks.viewSaved", { name })}
+            giftLinkErrorLabel={t("giftLinks.error")}
+            onSaveGiftLink={saveAssistantGiftLink}
+            onNavigateAway={closeAssistant}
             onScroll={handleConversationScroll}
           />
         )}

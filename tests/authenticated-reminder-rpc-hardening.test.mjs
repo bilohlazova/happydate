@@ -5,7 +5,7 @@ import test from "node:test";
 
 const migrationPath = path.join(
   process.cwd(),
-  "supabase/migrations/20260816113801_harden_authenticated_reminder_rpcs.sql",
+  "supabase/migrations/20260816113917_harden_authenticated_reminder_rpcs.sql",
 );
 
 test("authenticated reminder RPCs reject nulls and keep a narrow privilege boundary", async () => {

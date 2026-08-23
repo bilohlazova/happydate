@@ -5,6 +5,8 @@ import type { AssistantRateLimiter } from "./rateLimiter.ts";
 import { logAiUsageEvent, logOperationalError, logOperationalWarning } from "../observability/safeLogger.ts";
 import type { AssistantGiftOutcomeContext } from "./giftOutcomeContext.server.ts";
 import { formatAssistantGiftOutcomeContext } from "./chatContract.ts";
+import type { AssistantSavedGiftLinkContext } from "./savedGiftLinkContext.server.ts";
+import { formatAssistantSavedGiftLinkContext } from "./chatContract.ts";
 import { ASSISTANT_BEHAVIOR_MANIFEST } from "./assistantBehaviorManifest.ts";
 import { AI_COST_POLICY, estimateInputTokens, estimatedUsd, type AiBudget, type AiBudgetReservation, type AiTokenUsage } from "./aiBudget.ts";
 
@@ -49,9 +51,11 @@ type ChatResponseOptions = {
   logger?: (message: string, diagnostic?: unknown) => void;
   timeoutMs?: number;
   serverGiftOutcomes?: readonly AssistantGiftOutcomeContext[];
+  serverSavedGiftLinks?: readonly AssistantSavedGiftLinkContext[];
   prepareRequest?: (request: AssistantChatRequest) => Promise<{
     request: AssistantChatRequest;
     serverGiftOutcomes?: readonly AssistantGiftOutcomeContext[];
+    serverSavedGiftLinks?: readonly AssistantSavedGiftLinkContext[];
   }>;
   budget?: AiBudget | null;
 };
@@ -154,11 +158,13 @@ export async function createAssistantChatResponse(
 
   let request: AssistantChatRequest = parsed.data;
   let serverGiftOutcomes = options.serverGiftOutcomes ?? [];
+  let serverSavedGiftLinks = options.serverSavedGiftLinks ?? [];
   if (options.prepareRequest) {
     try {
       const prepared = await options.prepareRequest(request);
       request = prepared.request;
       serverGiftOutcomes = prepared.serverGiftOutcomes ?? [];
+      serverSavedGiftLinks = prepared.serverSavedGiftLinks ?? [];
     } catch {
       await release?.();
       logger("verified context unavailable", { category: "verified_context_unavailable" });
@@ -170,10 +176,12 @@ export async function createAssistantChatResponse(
   }
   const context = formatAssistantContext(request.context);
   const giftOutcomeContext = formatAssistantGiftOutcomeContext(serverGiftOutcomes);
+  const savedGiftLinkContext = formatAssistantSavedGiftLinkContext(serverSavedGiftLinks);
   const messages: AssistantProviderMessage[] = [
     { role: "system", content: buildAssistantSystemPrompt(request.locale) },
     ...(context ? [{ role: "system" as const, content: context }] : []),
     ...(giftOutcomeContext ? [{ role: "system" as const, content: giftOutcomeContext }] : []),
+    ...(savedGiftLinkContext ? [{ role: "system" as const, content: savedGiftLinkContext }] : []),
     ...request.conversation,
     { role: "user", content: request.message },
   ];

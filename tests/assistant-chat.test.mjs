@@ -4,6 +4,7 @@ import {
   ASSISTANT_CHAT_LIMITS,
   buildAssistantSystemPrompt,
   formatAssistantContext,
+  formatAssistantSavedGiftLinkContext,
   parseAssistantChatRequest,
 } from "../src/lib/assistant/chatContract.ts";
 import { createAssistantChatResponse } from "../src/lib/assistant/chatServer.ts";
@@ -321,7 +322,7 @@ test("streaming response reuses history and emits provider chunks", async () => 
     },
   );
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get("X-HappyDate-Assistant-Version"), "assistant-2026-08-16.4");
+  assert.equal(response.headers.get("X-HappyDate-Assistant-Version"), "assistant-2026-08-23.1");
   assert.equal(await response.text(), "Hello world");
   assert.equal(capturedMessages.at(-2).content, "Earlier");
   assert.equal(capturedMessages.at(-1).content, "Pomóż mi zaplanować dzień");
@@ -354,6 +355,48 @@ test("server-verified gift outcomes are appended as a separate system boundary",
   assert.doesNotMatch(outcomeMessage.content, /confirmedAt|2026-08-08/);
 });
 
+test("server-verified saved gift links remain candidates, never purchases", async () => {
+  let capturedMessages;
+  const response = await createAssistantChatResponse(
+    validRequest(),
+    async (messages) => {
+      capturedMessages = messages;
+      return (async function* () { yield "ok"; })();
+    },
+    {
+      serverSavedGiftLinks: [{
+        url: "https://shop.example/dress",
+        title: "Blue dress",
+        merchant: "Example shop",
+        isPreferred: true,
+        decisionNote: "Compare the size guide",
+      }],
+    },
+  );
+  assert.equal(await response.text(), "ok");
+  const linkMessage = capturedMessages.find((item) =>
+    item.role === "system" && item.content.includes("SAVED GIFT LINKS FOR ACTIVE PERSON"),
+  );
+  assert.match(linkMessage.content, /Blue dress/);
+  assert.match(linkMessage.content, /https:\/\/shop\.example\/dress/);
+  assert.match(linkMessage.content, /NOT PURCHASED OR GIVEN/);
+  assert.match(formatAssistantSavedGiftLinkContext([]) ?? "", /^$/);
+});
+
+test("saved gift link loader is server-only, bounded and owner-person scoped", async () => {
+  const [loader, route] = await Promise.all([
+    readFile(new URL("../src/lib/assistant/savedGiftLinkContext.server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/app/api/ai-chat/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(loader, /\.from\("gift_links"\)/);
+  assert.match(loader, /\.eq\("user_id", userId\)/);
+  assert.match(loader, /\.eq\("person_id", personId\)/);
+  assert.match(loader, /ASSISTANT_SAVED_GIFT_LINK_LIMIT = 8/);
+  assert.match(loader, /parsed\.protocol === "https:"/);
+  assert.match(route, /personResolutionStatus === "resolved"/);
+  assert.match(route, /return \{ request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks \}/);
+});
+
 test("gift outcome loader is server-only, consent-aware and owner-scoped", async () => {
   const loader = await readFile(new URL("../src/lib/assistant/giftOutcomeContext.server.ts", import.meta.url), "utf8");
   const route = await readFile(new URL("../src/app/api/ai-chat/route.ts", import.meta.url), "utf8");
@@ -365,7 +408,7 @@ test("gift outcome loader is server-only, consent-aware and owner-scoped", async
   assert.match(loader, /ASSISTANT_GIFT_OUTCOME_LIMIT/);
   assert.match(route, /identity\.userId/);
   assert.match(route, /personResolutionStatus === "resolved"/);
-  assert.match(route, /return \{ request: verifiedRequest, serverGiftOutcomes \}/);
+  assert.match(route, /return \{ request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks \}/);
   assert.match(route, /prepareRequest: async/);
 });
 

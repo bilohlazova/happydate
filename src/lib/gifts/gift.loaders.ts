@@ -31,6 +31,7 @@ import type {
   PersonGiftsViewModel,
   SaveGiftLinkInput,
 } from "./gift.types.ts";
+import { normalizeGiftHttpsUrl } from "./giftLinkUrl.ts";
 
 async function authenticatedUserId(): Promise<string | null> {
   const { data, error } = await supabase.auth.getUser();
@@ -134,6 +135,19 @@ export async function savePersonGiftLink(
   input: Pick<SaveGiftLinkInput, "personId" | "giftId" | "url" | "title">,
 ): Promise<void> {
   await saveGiftLink(await requiredUserId(), input);
+}
+
+export async function savePersonGiftLinkOnce(
+  input: Pick<SaveGiftLinkInput, "personId" | "giftId" | "url" | "title">,
+): Promise<{ status: "created" | "already_saved"; linkId: string }> {
+  const userId = await requiredUserId();
+  const normalizedUrl = normalizeGiftHttpsUrl(input.url);
+  if (!normalizedUrl) throw new Error("[gift.loaders] A valid HTTPS URL is required");
+  const existing = await listSavedGiftLinks(userId, input.personId);
+  const duplicate = existing.find((link) => normalizeGiftHttpsUrl(link.url) === normalizedUrl);
+  if (duplicate) return { status: "already_saved", linkId: duplicate.id };
+  const created = await saveGiftLink(userId, { ...input, url: normalizedUrl });
+  return { status: "created", linkId: created.id };
 }
 
 export async function removePersonGiftLink(linkId: string): Promise<void> {

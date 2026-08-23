@@ -7,7 +7,7 @@ import Panel from "@/components/ui/Panel";
 
 import type { PersonRow } from "@/lib/repositories/person.types";
 import { getRelationshipInfo } from "@/lib/people/relationship";
-import { ChevronRight } from "lucide-react";
+import { BookHeart, Cake, ChevronRight } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { getDateFnsLocale } from "@/i18n/dateLocales";
@@ -70,7 +70,7 @@ export default function PersonCard({
     return (
       <article className={`people-person-card people-person-card--${accent.tone} group relative overflow-hidden rounded-[0.9rem] bg-white ring-1 ring-slate-100`}>
         <span className="people-person-card__accent" aria-hidden="true" />
-        <div className="people-person-card__content relative grid min-h-[4.25rem] grid-cols-[2.5rem_minmax(0,1fr)_3.75rem_1rem] items-center gap-2.5 bg-white px-3 py-2">
+        <div className="people-person-card__content relative grid min-h-[5.5rem] grid-cols-[3rem_minmax(0,1fr)_auto_1.15rem] items-center gap-3 bg-white px-3.5 py-3">
           {isFavorite && (
             <span
               className="absolute right-1.5 top-1 text-[0.55rem] leading-none"
@@ -84,29 +84,30 @@ export default function PersonCard({
             <Avatar
               name={person.name}
               colorToken={personData.color_token}
-              className="!h-9 !w-9 !text-[0.7rem] !shadow-none !ring-0"
+              className="!h-11 !w-11 !rounded-[0.9rem] !text-[0.72rem] !shadow-[0_8px_18px_rgba(14,165,233,0.16)] !ring-2 !ring-white"
             />
           </div>
 
           <div className="min-w-0">
-            <h2 className="truncate text-[0.95rem] font-bold leading-5 text-slate-950">
+            <h2 className="truncate text-base font-black leading-5 text-slate-950">
               {person.name}
             </h2>
 
-            <p className="truncate text-[0.72rem] font-semibold leading-4 text-slate-500">
+            <p className="mt-0.5 truncate text-[0.72rem] font-bold leading-4 text-slate-500">
             {buildRelationLine(displayedRelationship, localizedRelation || t("relationships.closePerson"), displayTags)}
             </p>
 
-            <p className="truncate text-[0.68rem] font-semibold leading-3 text-slate-500">
-              {memoryText}
+            <p className="mt-1 flex items-center gap-1 truncate text-[0.66rem] font-semibold leading-3 text-slate-400">
+              <BookHeart className="h-3 w-3 shrink-0" />{memoryText.replace(/^📖\s*/, "")}
             </p>
           </div>
 
-          <div className="flex min-w-0 items-center justify-end border-l border-slate-100 pl-1.5">
-            <div className="text-right">
+          <div className="flex min-w-0 items-center justify-end">
+            <div className={`people-person-card__date text-right ${hasBirthday ? `people-person-card__date--${accent.tone}` : ""}`}>
               {hasBirthday ? (
                 <>
-                  <p className={`text-[0.65rem] font-black leading-3.5 ${accent.text}`}>
+                  <p className={`flex items-center justify-end gap-1 text-[0.65rem] font-black leading-3.5 ${accent.text}`}>
+                    <Cake className="h-3 w-3" />
                     {hasCountdown ? t("birthday.countdown", { days: daysUntilNextDate }) : "🎂"}
                   </p>
                   <p className="truncate text-[0.6rem] font-semibold leading-3.5 text-slate-500">

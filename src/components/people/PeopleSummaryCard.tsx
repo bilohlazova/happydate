@@ -15,15 +15,18 @@ export function PeopleSummaryCard({
 }: PeopleSummaryCardProps) {
   const t = useTranslations("people");
   return (
-    <section className="people-summary-card rounded-[0.95rem] bg-white px-4 py-3 ring-1 ring-slate-100">
+    <section className="people-summary-card rounded-[1.4rem] bg-white p-4 ring-1 ring-slate-100 sm:p-5">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-base font-black leading-5 text-slate-950">
+        <div>
+          <p className="people-summary-card__eyebrow">{t("summary.overview")}</p>
+          <p className="mt-1 text-lg font-black leading-6 text-slate-950">
           {t("summary.importantPeople", { count: peopleCount })}
-        </p>
-        <Heart className="h-[18px] w-[18px] shrink-0 fill-blue-600 text-blue-600" />
+          </p>
+        </div>
+        <span className="people-summary-card__heart"><Heart className="h-5 w-5 fill-current" /></span>
       </div>
 
-      <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+      <div className="mt-4 grid grid-cols-2 gap-2">
         <StatPill
           tone="pink"
           icon={<Cake className="h-3.5 w-3.5" />}
@@ -58,14 +61,11 @@ function StatPill({
       : "text-blue-600";
 
   return (
-    <div className={`flex min-w-0 items-center gap-1.5 ${palette}`}>
-      <span className="shrink-0">
+    <div className={`people-summary-stat flex min-w-0 items-center gap-2.5 ${palette}`}>
+      <span className="people-summary-stat__icon shrink-0">
         {icon}
       </span>
-      <span className="text-sm font-black leading-5 text-slate-950">{value}</span>
-      <span className="truncate text-xs font-bold leading-5 text-slate-600">
-        {label}
-      </span>
+      <span className="min-w-0"><strong className="block text-base font-black leading-5 text-slate-950">{value}</strong><span className="block truncate text-[0.68rem] font-bold leading-4 text-slate-500">{label}</span></span>
     </div>
   );
 }

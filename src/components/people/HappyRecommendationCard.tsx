@@ -38,18 +38,18 @@ export function HappyRecommendationCard({
   const actionLabel = known ? t("recommendation.giftIdeas") : recommendation.actionLabel;
 
   return (
-    <section className="people-recommendation flex min-h-16 items-center justify-between gap-3 rounded-[0.95rem] bg-blue-50 px-4 py-3">
-      <div className="min-w-0">
-        <p className="truncate text-xs font-black text-slate-950">
+    <section className="people-recommendation relative flex min-h-32 items-center justify-between gap-4 overflow-hidden rounded-[1.4rem] bg-blue-50 p-4 sm:p-5">
+      <div className="relative z-10 min-w-0">
+        <p className="people-recommendation__eyebrow text-xs font-black">
           {title}
         </p>
-        <p className="truncate text-sm font-bold leading-5 text-slate-950">
+        <p className="mt-1 max-w-[36rem] text-base font-black leading-6 text-slate-950 sm:text-lg">
           {message}
         </p>
         {recommendation.href ? (
           <Link
             href={recommendation.href}
-            className="text-left text-xs font-extrabold leading-4 text-blue-600 transition hover:text-blue-500"
+            className="people-recommendation__action mt-3 inline-flex min-h-9 items-center rounded-full bg-white px-3.5 text-left text-xs font-extrabold leading-4 text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:text-blue-500"
           >
             {actionLabel}
           </Link>
@@ -60,9 +60,10 @@ export function HappyRecommendationCard({
         )}
       </div>
 
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-xl shadow-[0_6px_14px_rgba(37,99,235,0.07)]">
+      <div className="people-recommendation__gift relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-2xl shadow-[0_12px_28px_rgba(37,99,235,0.12)] sm:h-16 sm:w-16 sm:text-3xl">
         {recommendation.icon}
       </div>
+      <span className="people-recommendation__glow" aria-hidden="true" />
     </section>
   );
 }

@@ -1778,41 +1778,73 @@ label[for], summary {
 
 /* People hub: the person is the primary object, dates and memory are supporting context. */
 .people-page {
-  padding-top: 18px;
-  background: radial-gradient(500px 280px at 5% -40px,rgba(14,165,233,.13),transparent 72%), radial-gradient(400px 260px at 105% 230px,rgba(236,72,153,.055),transparent 74%), var(--hd-canvas);
+  padding-top: 24px;
+  background:
+    radial-gradient(760px 380px at 2% -80px,rgba(14,165,233,.15),transparent 70%),
+    radial-gradient(620px 420px at 102% 220px,rgba(168,85,247,.07),transparent 72%),
+    linear-gradient(180deg,#f8fbff 0%,var(--hd-canvas) 32rem);
 }
-.people-page__container { max-width: var(--hd-screen-wide); }
-.people-page-header { min-height: 66px; padding-inline: 3px; }
-.people-page-header__eyebrow { margin-bottom: 5px; color: #0284c7; font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
-.people-page-header__title { color: var(--hd-text); font-size: clamp(29px,8vw,36px); letter-spacing: -.045em; }
-.people-page-header__subtitle { max-width: 29ch; color: var(--hd-text-muted); }
-.people-overview { border-radius: 22px; }
+.people-page__container { max-width: 1120px; }
+.people-page-header {
+  min-height: 190px; padding: 28px 30px; border: 1px solid rgba(255,255,255,.92);
+  border-radius: 30px; background: linear-gradient(135deg,rgba(255,255,255,.97),rgba(240,249,255,.9));
+  box-shadow: 0 24px 70px rgba(15,23,42,.075);
+}
+.people-page-header__copy { max-width: 680px; }
+.people-page-header__eyebrow { margin-bottom: 7px; color: #0284c7; font-size: 11px; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; }
+.people-page-header__title { color: var(--hd-text); font-size: clamp(34px,5vw,54px); letter-spacing: -.055em; }
+.people-page-header__subtitle { max-width: 48ch; color: var(--hd-text-muted); font-size: 14px; line-height: 1.55; }
+.people-page-header__heart { filter: drop-shadow(0 7px 14px rgba(37,99,235,.2)); }
+.people-page-header__trust span {
+  display: inline-flex; min-height: 30px; align-items: center; gap: 6px; padding: 6px 10px;
+  border: 1px solid rgba(186,230,253,.8); border-radius: 999px; background: rgba(255,255,255,.82);
+  color: #55708a; font-size: 10px; font-weight: 800;
+}
+.people-page-header__trust svg { width: 13px; height: 13px; color: #0284c7; }
+.people-page-header__action > div > button { min-height: 50px; padding-inline: 18px; border-radius: 17px; box-shadow: 0 14px 30px rgba(14,165,233,.23); }
+.people-page-header__glow {
+  position: absolute; right: -86px; bottom: -120px; width: 330px; height: 330px; border-radius: 999px;
+  background: radial-gradient(circle,rgba(56,189,248,.2),rgba(14,165,233,.04) 56%,transparent 70%);
+}
+.people-overview { border-radius: 24px; }
 .people-summary-card, .people-recommendation {
-  border: 1px solid rgba(255,255,255,.92); border-radius: 19px;
-  box-shadow: 0 12px 30px rgba(15,23,42,.055);
+  border: 1px solid rgba(255,255,255,.94); border-radius: 24px;
+  box-shadow: 0 16px 40px rgba(15,23,42,.06);
 }
 .people-summary-card { background: rgba(255,255,255,.94); }
-.people-recommendation { background: linear-gradient(145deg,rgba(239,246,255,.97),rgba(240,249,255,.9)); }
+.people-summary-card__eyebrow, .people-recommendation__eyebrow { color: #0284c7; font-size: 9px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+.people-summary-card__heart { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 14px; background: #eff6ff; color: #2563eb; }
+.people-summary-stat { min-height: 54px; padding: 9px 10px; border-radius: 15px; background: #f8fafc; }
+.people-summary-stat__icon { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 10px; background: #fff; box-shadow: 0 5px 14px rgba(15,23,42,.05); }
+.people-recommendation { background: linear-gradient(145deg,rgba(239,246,255,.98),rgba(236,254,255,.92)); }
+.people-recommendation__glow { position: absolute; right: -35px; bottom: -75px; width: 220px; height: 220px; border-radius: 999px; background: rgba(56,189,248,.11); }
+.people-recommendation__gift { transform: rotate(2deg); }
 .people-search-dock {
-  background: linear-gradient(180deg,rgba(247,249,252,.97) 75%,rgba(247,249,252,.82));
+  background: linear-gradient(180deg,rgba(248,251,255,.98) 74%,rgba(248,251,255,.84));
 }
 .people-search__input {
-  border-color: rgba(226,232,240,.9); border-radius: 16px;
-  background: rgba(255,255,255,.96); box-shadow: 0 10px 26px rgba(15,23,42,.065);
+  height: 54px; border-color: rgba(203,213,225,.72); border-radius: 18px;
+  background: rgba(255,255,255,.97); box-shadow: 0 14px 36px rgba(15,23,42,.075);
 }
-.people-section { margin-top: 2px; }
-.people-section__title { color: #475569; letter-spacing: .07em; }
+.people-section { margin-top: 5px; }
+.people-section__title { color: #475569; letter-spacing: .09em; }
+.people-section__grid { grid-template-columns: minmax(0,1fr); }
 .people-person-card {
-  border-radius: 18px; box-shadow: 0 8px 24px rgba(15,23,42,.05);
-  transition: transform .16s ease, box-shadow .16s ease;
+  height: 100%; border: 1px solid rgba(226,232,240,.72); border-radius: 20px;
+  box-shadow: 0 10px 28px rgba(15,23,42,.052);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
 }
-.people-person-card__accent { position: absolute; inset: 10px auto 10px 0; z-index: 2; width: 3px; border-radius: 0 999px 999px 0; background: #cbd5e1; }
+.people-person-card__accent { position: absolute; inset: 12px auto 12px 0; z-index: 2; width: 4px; border-radius: 0 999px 999px 0; background: #cbd5e1; }
 .people-person-card--today .people-person-card__accent { background: #ec4899; }
 .people-person-card--soon .people-person-card__accent { background: #f59e0b; }
 .people-person-card--later .people-person-card__accent { background: #38bdf8; }
 .people-person-card--none .people-person-card__accent { background: #cbd5e1; }
-.people-person-card:hover { transform: translateY(-1px); box-shadow: 0 13px 30px rgba(15,23,42,.075); }
+.people-person-card:hover { transform: translateY(-2px); border-color: #bae6fd; box-shadow: 0 18px 38px rgba(14,116,144,.105); }
 .people-person-card__content { background: rgba(255,255,255,.97); }
+.people-person-card__date { min-width: 74px; padding: 8px 9px; border-radius: 13px; background: #f8fafc; }
+.people-person-card__date--today { background: #fdf2f8; }
+.people-person-card__date--soon { background: #fffbeb; }
+.people-person-card__date--later { background: #f0fdfa; }
 .people-loading { display: grid; gap: 8px; }
 .people-loading__row {
   display: flex; min-height: 68px; align-items: center; gap: 12px; padding: 10px 12px;
@@ -1823,8 +1855,21 @@ label[for], summary {
 .people-loading__copy i { height: 9px; border-radius: 999px; background: #e2e8f0; animation: peoplePulse 1.4s ease-in-out infinite; }
 .people-loading__copy i:last-child { width: 66%; }
 @keyframes peoplePulse { 50% { opacity: .5; } }
+@media (min-width: 760px) {
+  .people-section__grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 639px) {
+  .people-page { padding-top: 14px; }
+  .people-page-header { min-height: 0; flex-direction: column; align-items: stretch; padding: 20px 18px 18px; border-radius: 24px; }
+  .people-page-header__copy { padding-right: 0; }
+  .people-page-header__title { max-width: 7ch; font-size: 34px; }
+  .people-page-header__subtitle { max-width: 24ch; font-size: 12px; }
+  .people-page-header__action { align-self: stretch; margin-top: 16px; }
+  .people-page-header__action > div > button { width: 100%; min-height: 46px; justify-content: center; padding-inline: 13px; }
+  .people-person-card__date { min-width: 66px; padding-inline: 6px; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .people-person-card, .people-loading__avatar, .people-loading__copy i { animation: none !important; transition: none !important; }
+  .people-person-card, .people-recommendation__action, .people-loading__avatar, .people-loading__copy i { animation: none !important; transition: none !important; }
 }
 
 /* Person profile: a living relationship timeline, not a stack of disconnected records. */

@@ -137,14 +137,14 @@ export function PeoplePageContent({
 
   return (
     <main className={`people-page ${MobileUI.screen} ${MobileUI.contentBottom}`}>
-      <div className={`people-page__container ${MobileUI.container} flex flex-col gap-3`}>
+      <div className="people-page__container mx-auto flex w-full flex-col gap-5 px-4 sm:px-6 lg:px-8">
         <PeopleHeader />
 
         <div
-          className={`people-overview grid gap-2 overflow-hidden transition-all duration-300 ${
+          className={`people-overview grid gap-3 overflow-hidden transition-all duration-300 lg:grid-cols-[0.9fr_1.1fr] ${
             compactChrome
               ? "max-h-0 -translate-y-1 opacity-0"
-              : "max-h-36 translate-y-0 opacity-100"
+              : "max-h-[28rem] translate-y-0 opacity-100 lg:max-h-52"
           }`}
           aria-hidden={compactChrome}
         >
@@ -157,7 +157,7 @@ export function PeoplePageContent({
           <HappyRecommendationCard recommendation={recommendation} />
         </div>
 
-        <div className="people-search-dock sticky top-[calc(env(safe-area-inset-top)+0.5rem)] z-20 -mx-4 px-4 py-2 backdrop-blur sm:-mx-5 sm:px-5">
+        <div className="people-search-dock sticky top-[calc(env(safe-area-inset-top)+4.4rem)] z-20 -mx-4 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <PeopleSearch
             value={query}
             onChange={setQuery}
@@ -429,7 +429,7 @@ function PeopleSection({
         )}
       </div>
 
-      <ul className="flex flex-col gap-1">
+      <ul className="people-section__grid grid gap-2.5">
         {items.map((item) => (
           <li key={item.person.id} id={`person-${item.person.id}`}>
             <Link

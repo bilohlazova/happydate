@@ -31,6 +31,17 @@
     "oldest": "Najstarsze",
     "person": "Według osób"
   },
+  "threads": {
+    "eyebrow": "Połączenia w Twojej pamięci",
+    "title": "Żywe nici wspomnień",
+    "subtitle": "Happy łączy powiązane zapisy, aby łatwo było wracać do tego, co ważne.",
+    "explainable": "Tylko z Twoich zapisów",
+    "personTitle": "Ciepłe chwile z {name}",
+    "topicTitle": "Temat: {topic}",
+    "giftTitle": "Pomysły na przyszłe prezenty",
+    "sources": "{count, plural, one {# zapis} few {# zapisy} many {# zapisów} other {# zapisu}}",
+    "open": "Otwórz nić „{title}”: {count} zapisów"
+  },
   "types": {
     "note": "Notatka",
     "memory": "Wspomnienie",

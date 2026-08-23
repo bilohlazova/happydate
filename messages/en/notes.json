@@ -31,6 +31,17 @@
     "oldest": "Oldest",
     "person": "By person"
   },
+  "threads": {
+    "eyebrow": "Connections in your memory",
+    "title": "Living memory threads",
+    "subtitle": "Happy connects related entries so it is easy to return to what matters.",
+    "explainable": "Only from your entries",
+    "personTitle": "Warm moments with {name}",
+    "topicTitle": "Theme: {topic}",
+    "giftTitle": "Ideas for future gifts",
+    "sources": "{count, plural, one {# saved entry} other {# saved entries}}",
+    "open": "Open thread “{title}”: {count} entries"
+  },
   "types": {
     "note": "Note",
     "memory": "Memory",

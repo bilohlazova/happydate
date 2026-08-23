@@ -38,6 +38,7 @@ import {
   buildMemoryEditorUpdatePatch,
 } from "@/lib/memories/notesMemoryTypes";
 import type { NotesRawType } from "@/lib/memories/notesMemoryTypes";
+import { buildMemoryThreads, type MemoryThread } from "@/lib/memories/memoryThreads";
 
 // ─────────────────────────────────────────────
 // TYPES — match real Supabase memories schema
@@ -258,6 +259,30 @@ export default function NotesPageContent() {
     (m.ai_tags ?? []).some(t => giftKeywords.includes(t.toLowerCase())) ||
     giftKeywords.some(k => m.content_text?.toLowerCase().includes(k))
   ).length;
+  const memoryThreads = buildMemoryThreads(memories, people);
+
+  function openMemoryThread(thread: MemoryThread) {
+    setSearch("");
+    setSortOrder("newest");
+    if (thread.kind === "person") {
+      setPrimaryFilter("people");
+      setFilterPersonId(thread.personId);
+      return;
+    }
+    setFilterPersonId("all");
+    if (thread.kind === "gift") {
+      setPrimaryFilter("gift");
+      return;
+    }
+    setPrimaryFilter("all");
+    setSearch(thread.topic);
+  }
+
+  function memoryThreadTitle(thread: MemoryThread): string {
+    if (thread.kind === "person") return t("threads.personTitle", { name: thread.personName });
+    if (thread.kind === "gift") return t("threads.giftTitle");
+    return t("threads.topicTitle", { topic: thread.topic });
+  }
 
   // ── Modal ──
   function openNew(type: NotesRawType, initialPersonId = "") {
@@ -1159,6 +1184,109 @@ export default function NotesPageContent() {
           grid-template-columns: auto minmax(180px,1fr) auto minmax(180px,1fr);
         }
         .hd-notes-controls .hd-person-filter select { width: 100%; }
+        .hd-memory-threads {
+          margin-bottom: 20px;
+          padding: 24px;
+          overflow: hidden;
+          border: 1px solid rgba(216,180,254,.36);
+          border-radius: 26px;
+          background:
+            radial-gradient(300px 170px at 100% 0,rgba(196,181,253,.2),transparent 75%),
+            linear-gradient(135deg,rgba(255,255,255,.97),rgba(250,245,255,.92));
+          box-shadow: 0 14px 34px rgba(88,28,135,.055);
+        }
+        .hd-memory-threads-heading {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 18px;
+          margin-bottom: 17px;
+        }
+        .hd-memory-threads-heading p {
+          margin: 0 0 5px;
+          color: #7c3aed;
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: .13em;
+          text-transform: uppercase;
+        }
+        .hd-memory-threads-heading h2 {
+          margin: 0;
+          color: #0f172a;
+          font-size: 21px;
+          font-weight: 900;
+          letter-spacing: -.035em;
+        }
+        .hd-memory-threads-heading div > span {
+          display: block;
+          margin-top: 5px;
+          color: #64748b;
+          font-size: 13px;
+          line-height: 1.5;
+        }
+        .hd-memory-threads-trust {
+          flex: 0 0 auto;
+          border: 1px solid rgba(221,214,254,.85);
+          border-radius: 999px;
+          background: rgba(255,255,255,.72);
+          padding: 7px 10px;
+          color: #6d28d9;
+          font-size: 10px;
+          font-weight: 800;
+        }
+        .hd-memory-thread-list {
+          display: grid;
+          grid-template-columns: repeat(3,minmax(0,1fr));
+          gap: 11px;
+        }
+        .hd-memory-thread {
+          min-width: 0;
+          min-height: 82px;
+          padding: 13px;
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          border: 1px solid rgba(226,232,240,.88);
+          border-radius: 18px;
+          background: rgba(255,255,255,.86);
+          color: #0f172a;
+          text-align: left;
+          cursor: pointer;
+          box-shadow: 0 8px 20px rgba(15,23,42,.04);
+          transition: transform .16s ease,border-color .16s ease,box-shadow .16s ease;
+        }
+        .hd-memory-thread:hover {
+          transform: translateY(-2px);
+          border-color: #c4b5fd;
+          box-shadow: 0 13px 26px rgba(88,28,135,.09);
+        }
+        .hd-memory-thread-icon {
+          display: grid;
+          width: 39px;
+          height: 39px;
+          flex: 0 0 39px;
+          place-items: center;
+          border-radius: 13px;
+          background: #f3e8ff;
+          color: #7c3aed;
+          font-size: 18px;
+          font-weight: 900;
+        }
+        .hd-memory-thread.is-person .hd-memory-thread-icon { background: #fce7f3; color: #db2777; }
+        .hd-memory-thread.is-gift .hd-memory-thread-icon { background: #fef3c7; }
+        .hd-memory-thread-copy { min-width: 0; flex: 1; }
+        .hd-memory-thread-copy strong {
+          display: block;
+          overflow: hidden;
+          color: #1e293b;
+          font-size: 13px;
+          font-weight: 850;
+          line-height: 1.35;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .hd-memory-thread-copy small { display: block; margin-top: 4px; color: #64748b; font-size: 11px; }
+        .hd-memory-thread-arrow { flex: 0 0 auto; color: #a78bfa; font-size: 16px; }
         .hd-notes-content {
           display: grid;
           grid-template-columns: minmax(0,1fr);
@@ -1251,6 +1379,7 @@ export default function NotesPageContent() {
           .hd-notes-content:has(.hd-ai-section) { grid-template-columns: 1fr; }
           .hd-ai-section { position: static; grid-column: 1; grid-row: auto; }
           .hd-search-hint,.hd-feed { grid-column: 1; }
+          .hd-memory-thread-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
         }
         @media (max-width: 620px) {
           .hd-notes-shell { width: 100%; padding: 0 0 28px; }
@@ -1267,6 +1396,11 @@ export default function NotesPageContent() {
           .hd-notes-controls .hd-person-filter { grid-template-columns: 1fr; align-items: stretch; gap: 7px; }
           .hd-notes-controls .hd-person-filter label:not(:first-of-type) { margin-top: 5px; }
           .hd-notes-content { gap: 14px; padding: 0 14px; }
+          .hd-memory-threads { margin: 0 14px 16px; padding: 17px; border-radius: 21px; }
+          .hd-memory-threads-heading { display: block; margin-bottom: 13px; }
+          .hd-memory-threads-trust { display: inline-flex; margin-top: 10px; }
+          .hd-memory-thread-list { grid-template-columns: 1fr; gap: 9px; }
+          .hd-memory-thread { min-height: 70px; }
           .hd-ai-section { border-radius: 20px; padding: 16px; }
           .hd-feed { grid-template-columns: 1fr; gap: 11px; }
           .hd-card:hover { transform: none; }
@@ -1390,6 +1524,39 @@ export default function NotesPageContent() {
           </select>
         </div>
           </section>
+
+          {memoryThreads.length > 0 && (
+            <section className="hd-memory-threads" aria-labelledby="memory-threads-title">
+              <div className="hd-memory-threads-heading">
+                <div>
+                  <p>{t("threads.eyebrow")}</p>
+                  <h2 id="memory-threads-title">{t("threads.title")}</h2>
+                  <span>{t("threads.subtitle")}</span>
+                </div>
+                <span className="hd-memory-threads-trust">{t("threads.explainable")}</span>
+              </div>
+              <div className="hd-memory-thread-list">
+                {memoryThreads.map((thread) => (
+                  <button
+                    key={thread.id}
+                    type="button"
+                    className={`hd-memory-thread is-${thread.kind}`}
+                    onClick={() => openMemoryThread(thread)}
+                    aria-label={t("threads.open", { title: memoryThreadTitle(thread), count: thread.sourceIds.length })}
+                  >
+                    <span className="hd-memory-thread-icon" aria-hidden="true">
+                      {thread.kind === "person" ? "♡" : thread.kind === "gift" ? "🎁" : "✦"}
+                    </span>
+                    <span className="hd-memory-thread-copy">
+                      <strong>{memoryThreadTitle(thread)}</strong>
+                      <small>{t("threads.sources", { count: thread.sourceIds.length })}</small>
+                    </span>
+                    <span className="hd-memory-thread-arrow" aria-hidden="true">→</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
 
           <div className="hd-notes-content">
 

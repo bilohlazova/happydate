@@ -31,6 +31,17 @@
     "oldest": "Älteste",
     "person": "Nach Person"
   },
+  "threads": {
+    "eyebrow": "Verbindungen in deinen Erinnerungen",
+    "title": "Lebendige Erinnerungsfäden",
+    "subtitle": "Happy verbindet zusammengehörige Einträge, damit du Wichtiges leicht wiederfindest.",
+    "explainable": "Nur aus deinen Einträgen",
+    "personTitle": "Schöne Momente mit {name}",
+    "topicTitle": "Thema: {topic}",
+    "giftTitle": "Ideen für zukünftige Geschenke",
+    "sources": "{count, plural, one {# gespeicherter Eintrag} other {# gespeicherte Einträge}}",
+    "open": "Faden „{title}“ öffnen: {count} Einträge"
+  },
   "types": {
     "note": "Notiz",
     "memory": "Erinnerung",

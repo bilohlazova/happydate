@@ -16,11 +16,15 @@ async function translator(locale) {
 test("Notes title, search, filters, types, selector, editor, validation and a11y exist in five locales", async () => {
   for (const locale of locales) {
     const t = await translator(locale);
-    for (const key of ["page.title", "search.placeholder", "filters.all", "filters.people", "sort.label", "sort.newest", "sort.oldest", "sort.person", "types.other", "typeSelector.noteDescription", "editor.addMemory", "fields.event", "fields.noAssignedEvent", "card.eventMeta", "audio.record", "audio.stop", "audio.transcript", "camera.takePhoto", "camera.chooseGallery", "camera.permissionError", "states.offline", "states.offlineAction", "states.loadFailed", "states.deleteFailed", "actions.retry", "validation.giftIdeaRequired", "upload.failed", "accessibility.closeLightbox", "accessibility.imageViewer"]) {
+    for (const key of ["page.title", "search.placeholder", "filters.all", "filters.people", "sort.label", "sort.newest", "sort.oldest", "sort.person", "threads.eyebrow", "threads.title", "threads.subtitle", "threads.explainable", "threads.giftTitle", "types.other", "typeSelector.noteDescription", "editor.addMemory", "fields.event", "fields.noAssignedEvent", "card.eventMeta", "audio.record", "audio.stop", "audio.transcript", "camera.takePhoto", "camera.chooseGallery", "camera.permissionError", "states.offline", "states.offlineAction", "states.loadFailed", "states.deleteFailed", "actions.retry", "validation.giftIdeaRequired", "upload.failed", "accessibility.closeLightbox", "accessibility.imageViewer"]) {
       assert.ok(t(key).trim(), `${locale}:${key}`);
     }
     assert.ok(t("insights.stalePerson", { name: "Anna", days: 90 }).trim(), `${locale}:insights.stalePerson`);
     assert.ok(t("insights.addForPerson", { name: "Anna" }).trim(), `${locale}:insights.addForPerson`);
+    assert.ok(t("threads.personTitle", { name: "Anna" }).trim(), `${locale}:threads.personTitle`);
+    assert.ok(t("threads.topicTitle", { topic: "Travel" }).trim(), `${locale}:threads.topicTitle`);
+    assert.ok(t("threads.sources", { count: 3 }).trim(), `${locale}:threads.sources`);
+    assert.ok(t("threads.open", { title: "Travel", count: 3 }).trim(), `${locale}:threads.open`);
   }
 });
 

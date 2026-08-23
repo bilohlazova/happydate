@@ -12,4 +12,7 @@ test("Notes uses the shared HappyDate visual language and accessible capture act
   assert.match(source, /days >= 60/);
   assert.match(source, /insights\.stalePerson/);
   assert.match(source, /openNew\("note", stalePerson\.person\.id\)/);
+  assert.match(source, /buildMemoryThreads\(memories, people\)/);
+  assert.match(source, /className="hd-memory-threads"/);
+  assert.match(source, /openMemoryThread\(thread\)/);
 });

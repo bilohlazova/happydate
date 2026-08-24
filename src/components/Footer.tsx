@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { FOOTER_LINKS } from "@/i18n/shellNavigation";
+import { FOOTER_LINKS, isAppShellPath } from "@/i18n/shellNavigation";
 
 const linkCls =
   "underline underline-offset-2 decoration-white/70 hover:text-white hover:decoration-white transition-colors duration-200";
 
 export default function Footer() {
   const translate = useTranslations("navigation");
+  const pathname = usePathname();
+  if (isAppShellPath(pathname)) return null;
 
   return (
     <footer

@@ -23,6 +23,7 @@ import {
 import { reconcileCalendarEventReminder } from "@/lib/reminders/calendarEventReminder";
 import { buildDayPlanDraft, findDayPlanConflicts, isValidDayPlanItemWithinWindow, isValidEventDuration, isValidTravelBuffer, reflowDayPlanDraft, reorderDayPlanDraft, resizeDayPlanDraft, selectDayPlanCandidates, summarizeDayPlanDraft, type DayPlanDraftItem, type DayPlanFixedEvent, type DayPlanMoveDirection } from "@/lib/events/dayPlanDraft";
 import { DEFAULT_PLANNER_PREFERENCES, loadPlannerPreferences, savePlannerPreferences, type PlannerPreferences } from "@/lib/repositories/plannerPreferences.repository";
+import { CalendarDays, ChevronLeft, ChevronRight, Filter, Plus, Search } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════
    TYPES
@@ -97,6 +98,9 @@ const CAT_EMOJI: Record<string, string> = {
   personal: "⭐",
   default: "📌",
 };
+
+type CalendarFilter = "all" | "birthday" | "work" | "personal" | "important";
+type CalendarView = "month" | "agenda";
 
 type InsightTopic =
   | "coffee"
@@ -229,6 +233,14 @@ function escICS(s: string): string {
     .replace(/\r?\n/g, "\\n");
 }
 
+function unescICS(s: string): string {
+  return s.replace(/\\n/gi, "\n").replace(/\\([\\;,])/g, "$1");
+}
+
+function unfoldICS(s: string): string {
+  return s.replace(/\r?\n[ \t]/g, "");
+}
+
 /* ═══════════════════════════════════════════════════
    BODY SCROLL LOCK
    Prevents background scroll while a modal is open.
@@ -286,7 +298,7 @@ function useToasts() {
 function ToastStack({ items }: { items: Toast[] }) {
   if (!items.length) return null;
   return (
-    <div className="fixed top-safe-top top-4 right-4 z-[500] flex flex-col gap-2 pointer-events-none">
+    <div className="fixed top-safe-top top-4 right-4 z-[500] flex flex-col gap-2 pointer-events-none" role="status" aria-live="polite" aria-atomic="false">
       {items.map((t) => (
         <div
           key={t.id}
@@ -387,6 +399,7 @@ function ConfirmDialog({
       className="fixed inset-0 z-[400] flex items-end sm:items-center justify-center p-4"
       role="alertdialog"
       aria-modal="true"
+      aria-label={title}
       onKeyDown={(e) => e.key === "Escape" && onClose()}
     >
       <div
@@ -1107,7 +1120,7 @@ function DayDetailSheet({
 
   return (
     <div
-      className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center"
+      className="hd-calendar-mobile-sheet fixed inset-0 z-[300] flex items-end sm:items-center justify-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="calendar-day-title"
@@ -1363,6 +1376,7 @@ function CalendarGrid({
   selectedDate,
   onSelectDate,
   onNavigateDate,
+  onQuickAdd,
   onPreviousMonth,
   onNextMonth,
 }: {
@@ -1372,6 +1386,7 @@ function CalendarGrid({
   selectedDate: string | null;
   onSelectDate: (ymd: string) => void;
   onNavigateDate: (ymd: string) => void;
+  onQuickAdd: (ymd: string) => void;
   onPreviousMonth: () => void;
   onNextMonth: () => void;
 }) {
@@ -1400,6 +1415,10 @@ function CalendarGrid({
     ...Array(startDow).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks = Array.from({ length: cells.length / 7 }, (_, index) =>
+    cells.slice(index * 7, index * 7 + 7)
+  );
 
   return (
     <div
@@ -1439,9 +1458,11 @@ function CalendarGrid({
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-y-0.5" role="rowgroup">
-        {cells.map((day, idx) => {
-          if (!day) return <div key={`e-${idx}`} />;
+      <div className="hd-calendar-weeks" role="rowgroup">
+        {weeks.map((week, weekIndex) => (
+          <div className="hd-calendar-week" role="row" key={`week-${weekIndex}`}>
+          {week.map((day, dayIndex) => {
+          if (!day) return <div role="presentation" key={`e-${weekIndex}-${dayIndex}`} />;
 
           const dateStr = `${year}-${String(month + 1).padStart(
             2,
@@ -1461,6 +1482,10 @@ function CalendarGrid({
               role="gridcell"
               data-calendar-date={dateStr}
               onClick={() => onSelectDate(dateStr)}
+              onDoubleClick={(event) => {
+                event.preventDefault();
+                onQuickAdd(dateStr);
+              }}
               onKeyDown={(event) => {
                 const offsets: Partial<Record<typeof event.key, number>> = {
                   ArrowLeft: -1,
@@ -1514,14 +1539,184 @@ function CalendarGrid({
                   ))}
                 </div>
               )}
+              {dayEvents.length > 0 && (
+                <span className="hd-calendar-day-count" aria-hidden="true">{dayEvents.length}</span>
+              )}
+              <span className="hd-calendar-day-events" aria-hidden="true">
+                {dayEvents.slice(0, 2).map((event) => (
+                  <span className={`hd-calendar-day-event ${CAT_COLOR[event.category ?? "default"]?.pill ?? CAT_COLOR.default.pill}`} key={event.id}>
+                    {event.timeOfDay ? `${event.timeOfDay} ` : ""}{event.title.replace(/^🎂\s*/, "")}
+                  </span>
+                ))}
+                {dayEvents.length > 2 && <span className="hd-calendar-day-more">+{dayEvents.length - 2}</span>}
+              </span>
               {hasImportantEvent && !isSelected && (
                 <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-400 ring-2 ring-amber-100" aria-hidden="true" />
               )}
             </button>
           );
         })}
+          </div>
+        ))}
       </div>
     </div>
+  );
+}
+
+function CalendarAgendaView({
+  events,
+  onSelectDate,
+  onEdit,
+  onAdd,
+}: {
+  events: EventRow[];
+  onSelectDate: (date: string) => void;
+  onEdit: (id: string) => void;
+  onAdd: (date?: string) => void;
+}) {
+  const locale = useLocale();
+  const t = useTranslations("dashboard");
+  const today = todayYMD();
+  const groups = useMemo(() => {
+    const future = events.filter((event) => event.date >= today).slice(0, 100);
+    return [...future.reduce((map, event) => {
+      const group = map.get(event.date) ?? [];
+      group.push(event);
+      map.set(event.date, group);
+      return map;
+    }, new Map<string, EventRow[]>())];
+  }, [events, today]);
+
+  if (groups.length === 0) {
+    return (
+      <div className="hd-calendar-agenda-view hd-calendar-agenda-view--empty">
+        <CalendarDays aria-hidden="true" />
+        <h2>{t("empty.title")}</h2>
+        <p>{t("empty.description")}</p>
+        <button type="button" onClick={() => onAdd()}><Plus aria-hidden="true" />{t("empty.action")}</button>
+      </div>
+    );
+  }
+
+  return (
+    <section className="hd-calendar-agenda-view" aria-label={t("navigation.agenda")}>
+      {groups.map(([dateYMD, dayEvents]) => {
+        const date = parseLocalDateOnly(dateYMD) ?? new Date(Number.NaN);
+        const isToday = dateYMD === today;
+        return (
+          <article className="hd-calendar-agenda-day" key={dateYMD}>
+            <button type="button" className="hd-calendar-agenda-day__date" onClick={() => onSelectDate(dateYMD)}>
+              <span>{new Intl.DateTimeFormat(locale, { day: "2-digit" }).format(date)}</span>
+              <span><strong>{isToday ? t("day.today") : new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date)}</strong><small>{new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(date)}</small></span>
+            </button>
+            <ul>
+              {dayEvents.map((event) => {
+                const birthday = event.id.startsWith("birthday-");
+                const category = event.category ?? "default";
+                return (
+                  <li key={`agenda-${event.id}`}>
+                    <button type="button" className="hd-calendar-agenda-day__event" onClick={() => birthday ? onSelectDate(dateYMD) : onEdit(event.id)}>
+                      <i className={CAT_COLOR[category]?.dot ?? CAT_COLOR.default.dot} />
+                      <span className="hd-calendar-agenda-day__time">{event.timeOfDay ?? CAT_EMOJI[category] ?? "📌"}</span>
+                      <span className="hd-calendar-agenda-day__copy"><strong>{event.title.replace(/^🎂\s*/, "")}</strong><small>{event.personName ?? event.location ?? (event.notes ? event.notes.slice(0, 80) : daysLabel(event.date, t))}</small></span>
+                      {event.isImportant && <span className="hd-calendar-agenda-day__important" aria-label={t("form.important")}>★</span>}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </article>
+        );
+      })}
+    </section>
+  );
+}
+
+function CalendarDayPanel({
+  dateYMD,
+  events,
+  upcoming,
+  onAdd,
+  onEdit,
+  onSelectDate,
+}: {
+  dateYMD: string;
+  events: EventRow[];
+  upcoming: EventRow[];
+  onAdd: (date: string) => void;
+  onEdit: (id: string) => void;
+  onSelectDate: (date: string) => void;
+}) {
+  const locale = useLocale();
+  const t = useTranslations("dashboard");
+  const date = parseLocalDateOnly(dateYMD) ?? new Date(Number.NaN);
+  const title = new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }).format(date);
+
+  return (
+    <aside className="hd-calendar-side" aria-labelledby="calendar-side-title">
+      <div className="hd-calendar-side__header">
+        <div>
+          <p className="hd-calendar-side__eyebrow">{dateYMD === todayYMD() ? t("day.today") : formatDateShort(dateYMD, locale)}</p>
+          <h2 id="calendar-side-title">{title}</h2>
+        </div>
+        <button type="button" onClick={() => onAdd(dateYMD)} className="hd-calendar-side__add" aria-label={t("navigation.addEvent")}>
+          <Plus aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className="hd-calendar-side__section">
+        {events.length === 0 ? (
+          <button type="button" className="hd-calendar-side__empty" onClick={() => onAdd(dateYMD)}>
+            <CalendarDays aria-hidden="true" />
+            <strong>{t("day.empty")}</strong>
+            <span>+ {t("day.addFirst")}</span>
+          </button>
+        ) : (
+          <ul className="hd-calendar-agenda">
+            {events.map((event) => {
+              const birthday = event.id.startsWith("birthday-");
+              const category = event.category ?? "default";
+              const categoryLabel = category === "birthday"
+                ? t("categories.birthday")
+                : category === "work"
+                  ? t("categories.work")
+                  : category === "personal"
+                    ? t("categories.personal")
+                    : t("categories.other");
+              return (
+                <li key={event.id}>
+                  <button type="button" onClick={() => !birthday && onEdit(event.id)} disabled={birthday} className="hd-calendar-agenda__item">
+                    <i className={CAT_COLOR[category]?.dot ?? CAT_COLOR.default.dot} />
+                    <span className="hd-calendar-agenda__time">{event.timeOfDay ?? "—"}</span>
+                    <span className="hd-calendar-agenda__content">
+                      <strong>{event.title.replace(/^🎂\s*/, "")}</strong>
+                      <small>{event.personName ?? event.location ?? categoryLabel}</small>
+                    </span>
+                    {event.isImportant && <span aria-label={t("form.important")}>★</span>}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      {upcoming.length > 0 && (
+        <div className="hd-calendar-side__section hd-calendar-side__upcoming">
+          <h3>{t("navigation.upcoming")}</h3>
+          <ul>
+            {upcoming.slice(0, 5).map((event) => (
+              <li key={`side-${event.id}`}>
+                <button type="button" onClick={() => onSelectDate(event.date)}>
+                  <span>{CAT_EMOJI[event.category ?? "default"] ?? "📌"}</span>
+                  <span><strong>{event.title.replace(/^🎂\s*/, "")}</strong><small>{formatDateShort(event.date, locale)} · {daysLabel(event.date, t)}</small></span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </aside>
   );
 }
 
@@ -1557,10 +1752,10 @@ function SearchOverlay({
     if (!lower) return [];
     return events
       .filter((ev) =>
-        `${ev.title} ${ev.notes ?? ""}`.toLowerCase().includes(lower)
+        `${ev.title} ${ev.notes ?? ""} ${ev.personName ?? ""} ${ev.location ?? ""} ${ev.category ?? ""}`.toLocaleLowerCase(locale).includes(lower)
       )
       .slice(0, 20);
-  }, [events, q]);
+  }, [events, locale, q]);
 
   return (
     <div
@@ -1701,6 +1896,8 @@ export default function CalendarPage() {
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
+  const [calendarFilter, setCalendarFilter] = useState<CalendarFilter>("all");
+  const [calendarView, setCalendarView] = useState<CalendarView>("month");
 
   const [addOpen, setAddOpen] = useState(false);
   const [mDate, setMDate] = useState("");
@@ -1865,6 +2062,37 @@ export default function CalendarPage() {
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [events, birthdayEvents, viewYear]);
 
+  const searchableEvents = useMemo<EventRow[]>(() => {
+    const searchYear = new Date().getFullYear();
+    const recurring = expandCalendarEventOccurrences(
+      events.filter((event) => event.recurrenceRule !== "none"),
+      `${searchYear}-01-01`,
+      `${searchYear + 5}-12-31`,
+    );
+    const standalone = events.filter((event) => event.recurrenceRule === "none");
+    const birthdays = people.flatMap((person): EventRow[] => {
+      if (!person.birthday) return [];
+      const birthday = parseLocalDateOnly(person.birthday);
+      if (!birthday) return [];
+      return Array.from({ length: 6 }, (_, offset) => ({
+        id: `birthday-${person.id}-${searchYear + offset}`,
+        title: `🎂 ${person.name}`,
+        date: `${searchYear + offset}-${String(birthday.getMonth() + 1).padStart(2, "0")}-${String(birthday.getDate()).padStart(2, "0")}`,
+        timeOfDay: null,
+        durationMinutes: null,
+        location: null,
+        travelBufferMinutes: null,
+        notes: null,
+        category: "birthday",
+        personId: person.id,
+        personName: person.name,
+        isImportant: true,
+        recurrenceRule: "none",
+      }));
+    });
+    return [...standalone, ...recurring, ...birthdays].sort((a, b) => a.date.localeCompare(b.date));
+  }, [events, people]);
+
   const aiInsights = useMemo<Map<string, string>>(() => {
     const map = new Map<string, string>();
     people.forEach((p) => {
@@ -1889,8 +2117,13 @@ export default function CalendarPage() {
           );
       }
     });
+    allEvents.forEach((event) => {
+      const sourceId = event.sourceEventId;
+      const sourceInsight = map.get(sourceId);
+      if (sourceInsight && !map.has(event.id)) map.set(event.id, sourceInsight);
+    });
     return map;
-  }, [people, events, t]);
+  }, [people, events, allEvents, t]);
 
   const upcoming = useMemo(() => {
     const today = new Date();
@@ -1906,10 +2139,33 @@ export default function CalendarPage() {
       .slice(0, 12);
   }, [allEvents]);
 
+  const visibleEvents = useMemo(() => {
+    if (calendarFilter === "all") return allEvents;
+    if (calendarFilter === "important") return allEvents.filter((event) => event.isImportant);
+    return allEvents.filter((event) => (event.category ?? "default") === calendarFilter);
+  }, [allEvents, calendarFilter]);
+
+  const visibleUpcoming = useMemo(() => {
+    const visibleIds = new Set(visibleEvents.map((event) => event.id));
+    return upcoming.filter((event) => visibleIds.has(event.id));
+  }, [upcoming, visibleEvents]);
+
+  const agendaEvents = useMemo(() => {
+    if (calendarFilter === "all") return searchableEvents;
+    if (calendarFilter === "important") return searchableEvents.filter((event) => event.isImportant);
+    return searchableEvents.filter((event) => (event.category ?? "default") === calendarFilter);
+  }, [calendarFilter, searchableEvents]);
+
   const selectedDateEvents = useMemo(() => {
     if (!selectedDate) return [];
-    return allEvents.filter((e) => e.date === selectedDate);
-  }, [allEvents, selectedDate]);
+    return visibleEvents.filter((e) => e.date === selectedDate);
+  }, [visibleEvents, selectedDate]);
+
+  const sidePanelDate = selectedDate ?? todayYMD();
+  const sidePanelEvents = useMemo(
+    () => visibleEvents.filter((event) => event.date === sidePanelDate),
+    [sidePanelDate, visibleEvents],
+  );
 
   const dayPlanCandidates = useMemo(() => selectDayPlanCandidates(events
     .filter((event) => event.date === dayPlanDate && !event.timeOfDay && event.category !== "birthday" && event.recurrenceRule === "none")), [dayPlanDate, events]);
@@ -2144,8 +2400,9 @@ export default function CalendarPage() {
   const openEdit = useCallback(
     (id: string) => {
       if (id.startsWith("birthday-")) return;
-      const occurrence = allEvents.find((event) => event.id === id);
-      const ev = events.find((event) => event.id === (occurrence?.sourceEventId ?? id));
+      const occurrence = allEvents.find((event) => event.id === id) ?? searchableEvents.find((event) => event.id === id);
+      const sourceEventId = occurrence && "sourceEventId" in occurrence && typeof occurrence.sourceEventId === "string" ? occurrence.sourceEventId : id;
+      const ev = events.find((event) => event.id === sourceEventId);
       if (!ev) return;
       setEId(ev.id);
       setETitle(ev.title);
@@ -2161,7 +2418,7 @@ export default function CalendarPage() {
       setERecurrenceRule(ev.recurrenceRule);
       setEditOpen(true);
     },
-    [allEvents, events]
+    [allEvents, events, searchableEvents]
   );
 
   const saveEdit = async () => {
@@ -2279,7 +2536,12 @@ export default function CalendarPage() {
       "PRODID:-//HappyDate//PL",
       "CALSCALE:GREGORIAN",
     ];
-    allEvents.forEach((e) => {
+    const exportBirthdays = birthdayEvents.map((event) => ({
+      ...event,
+      id: `birthday-${event.personId ?? event.id}`,
+      recurrenceRule: "yearly" as const,
+    }));
+    [...events.filter((event) => event.category !== "birthday" || !event.personId), ...exportBirthdays].forEach((e) => {
       const dt = e.date.replaceAll("-", "");
       lines.push(
         "BEGIN:VEVENT",
@@ -2292,6 +2554,7 @@ export default function CalendarPage() {
         e.timeOfDay && e.durationMinutes ? `DURATION:PT${e.durationMinutes}M` : "",
         e.location ? `LOCATION:${escICS(e.location)}` : "",
         e.travelBufferMinutes ? `X-HAPPYDATE-TRAVEL-BUFFER:${e.travelBufferMinutes}` : "",
+        e.recurrenceRule !== "none" ? `RRULE:FREQ=${e.recurrenceRule.toUpperCase()}` : "",
         `SUMMARY:${escICS(e.title)}`,
         e.notes ? `DESCRIPTION:${escICS(e.notes)}` : "",
         "END:VEVENT"
@@ -2311,7 +2574,7 @@ export default function CalendarPage() {
 
   const importICS = async (file: File) => {
     try {
-      const text = await file.text();
+      const text = unfoldICS(await file.text());
       const blocks = text.split("BEGIN:VEVENT").slice(1);
       const items = blocks.flatMap((raw) => {
         const get = (re: RegExp) => raw.match(re)?.[1]?.trim();
@@ -2319,17 +2582,21 @@ export default function CalendarPage() {
         const time = get(/DTSTART(?:;[^:]+)?:[0-9]{8}T([0-9]{4})/);
         const duration = get(/DURATION:PT([0-9]+)M/i);
         const travelBuffer = get(/X-HAPPYDATE-TRAVEL-BUFFER:([0-9]+)/i);
-        const t = get(/SUMMARY:(.+)/);
-        if (!dt || !t) return [];
+        const simpleLocation = get(/LOCATION:(.+)/)?.slice(0, 300);
+        const title = get(/SUMMARY(?:;[^:]*)?:(.+)/);
+        const recurrenceValue = get(/RRULE:[^\r\n]*FREQ=(WEEKLY|MONTHLY|YEARLY)/i)?.toLowerCase();
+        const recurrenceRule: EventRecurrenceRule = recurrenceValue === "weekly" || recurrenceValue === "monthly" || recurrenceValue === "yearly" ? recurrenceValue : "none";
+        if (!dt || !title) return [];
         return [
           {
-            title: t,
+            title: unescICS(title),
           date: `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6, 8)}`,
           timeOfDay: time ? `${time.slice(0, 2)}:${time.slice(2, 4)}` : null,
           durationMinutes: duration && Number(duration) >= 5 && Number(duration) <= 1440 ? Number(duration) : null,
-            location: get(/LOCATION:(.+)/)?.slice(0, 300) ?? null,
+            location: simpleLocation ? unescICS(simpleLocation) : get(/LOCATION(?:;[^:]*)?:(.+)/) ? unescICS(get(/LOCATION(?:;[^:]*)?:(.+)/)!).slice(0, 300) : null,
             travelBufferMinutes: travelBuffer && isValidTravelBuffer(Number(travelBuffer)) ? Number(travelBuffer) : null,
-            notes: get(/DESCRIPTION:(.+)/) ?? null,
+            notes: get(/DESCRIPTION(?:;[^:]*)?:(.+)/) ? unescICS(get(/DESCRIPTION(?:;[^:]*)?:(.+)/)!) : null,
+            recurrenceRule,
           },
         ];
       });
@@ -2345,14 +2612,21 @@ export default function CalendarPage() {
         return;
       }
       try {
+        const importCandidates = items
+          .filter((item, index, list) => list.findIndex((candidate) => candidate.title === item.title && candidate.date === item.date && candidate.timeOfDay === item.timeOfDay) === index)
+          .filter((item) => !events.some((event) => event.title === item.title && event.date === item.date && event.timeOfDay === item.timeOfDay));
+        if (importCandidates.length === 0) {
+          push({ type: "error", msg: t("toast.noImportEvents") });
+          return;
+        }
         const imported = await importCalendarEvents(
           user.id,
-          items.map((item) => ({ ...item, category: "personal" })),
+          importCandidates.map((item) => ({ ...item, category: "personal" })),
         );
         mergeEvents(imported);
         push({
           type: "success",
-          msg: t("toast.imported", { count: items.length }),
+          msg: t("toast.imported", { count: imported.length }),
         });
       } catch {
         push({ type: "error", msg: t("toast.importError") });
@@ -2375,7 +2649,7 @@ export default function CalendarPage() {
         .scrollbar-hide::-webkit-scrollbar { display:none; }
         .scrollbar-hide { -ms-overflow-style:none; scrollbar-width:none; }
         .hd-calendar-page {
-          position: relative; overflow: hidden;
+          position: relative;
           background:
             radial-gradient(430px 260px at 5% -50px, rgba(14,165,233,.14), transparent 72%),
             radial-gradient(360px 230px at 105% 210px, rgba(236,72,153,.055), transparent 74%),
@@ -2391,6 +2665,9 @@ export default function CalendarPage() {
         .hd-calendar-purpose__heart { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 12px; background: #fff; color: #ec4899; font-size: 16px; box-shadow: 0 7px 18px rgba(236,72,153,.1); }
         .hd-calendar-purpose__eyebrow { color: #0284c7; font-size: 9px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
         .hd-calendar-purpose__text { margin-top: 2px; color: #475569; font-size: 12px; font-weight: 650; line-height: 1.45; }
+        .hd-calendar-view-switch { display: flex; width: max-content; gap: 3px; margin: 0 12px 12px; padding: 4px; border: 1px solid rgba(226,232,240,.88); border-radius: 14px; background: rgba(255,255,255,.82); }
+        .hd-calendar-view-switch button { min-height: 34px; padding: 6px 12px; border-radius: 10px; color: #64748b; font-size: 11px; font-weight: 800; }
+        .hd-calendar-view-switch button.is-active { background: #fff; color: #0284c7; box-shadow: 0 5px 14px rgba(15,23,42,.08); }
         .hd-calendar-icon-button {
           display: grid; width: 46px; height: 46px; place-items: center;
           border: 1px solid rgba(226,232,240,.9); border-radius: 15px;
@@ -2401,11 +2678,14 @@ export default function CalendarPage() {
           background: linear-gradient(145deg,var(--hd-brand),var(--hd-brand-strong));
           box-shadow: 0 10px 24px rgba(2,132,199,.24);
         }
+        .hd-calendar-add__label { display: none; }
         .hd-calendar-month { flex-direction: column; gap: 1px; min-height: 46px; justify-content: center; }
         .hd-calendar-month-main { display: flex; align-items: baseline; gap: 6px; }
         .hd-calendar-month-hint { color: var(--hd-brand-strong); font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+        .hd-calendar-workspace { display: grid; min-width: 0; gap: 16px; padding: 0 12px; }
+        .hd-calendar-main { min-width: 0; }
         .hd-calendar-surface {
-          margin: 0 12px; padding: 8px 8px 12px; border: 1px solid rgba(255,255,255,.9);
+          padding: 8px 8px 12px; border: 1px solid rgba(255,255,255,.9);
           border-radius: 24px; background: rgba(255,255,255,.94);
           box-shadow: 0 18px 48px rgba(15,23,42,.075);
         }
@@ -2415,17 +2695,91 @@ export default function CalendarPage() {
           border-radius: 14px; background: #f8fafc; color: #475569; font-size: 21px;
         }
         .hd-calendar-grid { padding: 0; }
+        .hd-calendar-weeks { display: grid; gap: 2px; }
+        .hd-calendar-week { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 2px; }
+        .hd-calendar-day-count { display: none; }
+        .hd-calendar-day-events { display: none; }
         .hd-calendar-legend {
           display: flex; gap: 11px; margin: 12px 4px 0; padding-top: 11px;
           overflow-x: auto; border-top: 1px solid #eef2f7; scrollbar-width: none;
         }
         .hd-calendar-legend::-webkit-scrollbar { display: none; }
-        .hd-calendar-legend span { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; color: #64748b; font-size: 10px; font-weight: 750; }
+        .hd-calendar-legend button { display: inline-flex; min-height: 34px; align-items: center; gap: 6px; flex: 0 0 auto; padding: 5px 9px; border: 1px solid transparent; border-radius: 999px; color: #64748b; font-size: 10px; font-weight: 750; }
+        .hd-calendar-legend button.is-active { border-color: #bae6fd; background: #f0f9ff; color: #0369a1; }
         .hd-calendar-legend i { width: 7px; height: 7px; border-radius: 999px; }
         .hd-calendar-upcoming { margin: 14px 12px 0; padding: 14px; border-radius: 20px; background: rgba(255,255,255,.82); }
         .hd-calendar-utils { margin-top: 14px; }
+        .hd-calendar-side { display: none; }
+        .hd-calendar-agenda-view { display: grid; gap: 10px; padding: 4px; }
+        .hd-calendar-agenda-day { display: grid; gap: 8px; padding: 12px; border: 1px solid rgba(226,232,240,.82); border-radius: 20px; background: rgba(255,255,255,.94); box-shadow: 0 10px 28px rgba(15,23,42,.045); }
+        .hd-calendar-agenda-day__date { display: grid; width: 100%; grid-template-columns: 38px minmax(0,1fr); align-items: center; gap: 9px; text-align: left; }
+        .hd-calendar-agenda-day__date > span:first-child { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 12px; background: #e0f2fe; color: #0369a1; font-size: 16px; font-weight: 900; }
+        .hd-calendar-agenda-day__date > span:last-child { display: grid; }
+        .hd-calendar-agenda-day__date strong { color: #334155; font-size: 12px; font-weight: 900; text-transform: capitalize; }
+        .hd-calendar-agenda-day__date small { color: #94a3b8; font-size: 9px; text-transform: capitalize; }
+        .hd-calendar-agenda-day ul { display: grid; gap: 5px; }
+        .hd-calendar-agenda-day__event { display: grid; width: 100%; grid-template-columns: 6px 42px minmax(0,1fr) auto; align-items: center; gap: 8px; padding: 10px; border-radius: 14px; background: #f8fafc; text-align: left; }
+        .hd-calendar-agenda-day__event > i { width: 6px; height: 30px; border-radius: 999px; }
+        .hd-calendar-agenda-day__time { color: #64748b; font-size: 10px; font-weight: 850; }
+        .hd-calendar-agenda-day__copy { display: grid; min-width: 0; }
+        .hd-calendar-agenda-day__copy strong { overflow: hidden; color: #334155; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+        .hd-calendar-agenda-day__copy small { overflow: hidden; color: #94a3b8; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+        .hd-calendar-agenda-day__important { color: #f59e0b; }
+        .hd-calendar-agenda-view--empty { place-items: center; padding: 60px 20px; text-align: center; }
+        .hd-calendar-agenda-view--empty > svg { width: 30px; color: #38bdf8; }
+        .hd-calendar-agenda-view--empty h2 { color: #334155; font-weight: 900; }
+        .hd-calendar-agenda-view--empty p { color: #94a3b8; font-size: 12px; }
+        .hd-calendar-agenda-view--empty button { display: inline-flex; min-height: 42px; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 14px; background: #0ea5e9; color: #fff; font-size: 12px; font-weight: 850; }
+        .hd-calendar-agenda-view--empty button svg { width: 16px; }
         @media (min-width: 640px) {
-          .hd-calendar-surface, .hd-calendar-upcoming { margin-inline: 0; }
+          .hd-calendar-upcoming { margin-inline: 0; }
+        }
+        @media (min-width: 1024px) {
+          .hd-calendar-mobile-sheet { display: none; }
+          .hd-calendar-page { max-width: 1180px; padding-inline: 24px; }
+          .hd-calendar-toolbar { padding: 28px 0 16px; }
+          .hd-calendar-add { display: inline-flex; width: auto; min-width: 46px; gap: 7px; padding-inline: 14px; }
+          .hd-calendar-add__label { display: inline; font-size: 12px; font-weight: 850; }
+          .hd-calendar-purpose { margin-inline: 0; }
+          .hd-calendar-view-switch { margin-inline: 0; }
+          .hd-calendar-workspace { grid-template-columns: minmax(0,1fr) 330px; align-items: start; padding: 0; }
+          .hd-calendar-surface { padding: 14px; border-radius: 28px; }
+          .hd-calendar-month-nav { padding-bottom: 8px; }
+          .hd-calendar-week { gap: 6px; }
+          .hd-calendar-week > button { min-height: 104px; align-items: stretch; padding: 9px; border: 1px solid #eef2f7; text-align: left; }
+          .hd-calendar-week > button > span:first-child { align-self: flex-start; font-size: 13px; }
+          .hd-calendar-week > button:focus-visible { outline: 3px solid rgba(56,189,248,.35); outline-offset: 1px; }
+          .hd-calendar-week > button > div { display: none; }
+          .hd-calendar-day-count { display: inline-grid; position: absolute; top: 8px; right: 8px; min-width: 18px; height: 18px; place-items: center; border-radius: 999px; background: #f1f5f9; color: #64748b; font-size: 9px; font-weight: 850; }
+          .hd-calendar-day-events { display: grid; min-width: 0; gap: 4px; margin-top: 8px; }
+          .hd-calendar-day-event { overflow: hidden; padding: 4px 6px; border-width: 1px; border-radius: 7px; color: #334155; font-size: 9px; font-weight: 750; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+          .hd-calendar-day-more { color: #64748b; font-size: 9px; font-weight: 800; }
+          .hd-calendar-side { display: grid; position: sticky; top: 84px; gap: 14px; padding: 18px; border: 1px solid rgba(255,255,255,.94); border-radius: 28px; background: rgba(255,255,255,.92); box-shadow: 0 18px 48px rgba(15,23,42,.075); }
+          .hd-calendar-side__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+          .hd-calendar-side__header h2 { margin-top: 2px; color: #0f172a; font-size: 20px; font-weight: 900; line-height: 1.15; text-transform: capitalize; }
+          .hd-calendar-side__eyebrow { color: #0284c7; font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+          .hd-calendar-side__add { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border-radius: 13px; background: #0ea5e9; color: white; }
+          .hd-calendar-side__add svg { width: 18px; }
+          .hd-calendar-side__section { padding-top: 13px; border-top: 1px solid #eef2f7; }
+          .hd-calendar-side__empty { display: grid; width: 100%; place-items: center; gap: 5px; padding: 24px 12px; border: 1px dashed #cbd5e1; border-radius: 18px; color: #64748b; }
+          .hd-calendar-side__empty svg { width: 22px; color: #38bdf8; }
+          .hd-calendar-side__empty strong { font-size: 13px; }
+          .hd-calendar-side__empty span { color: #0284c7; font-size: 11px; font-weight: 800; }
+          .hd-calendar-agenda { display: grid; gap: 7px; }
+          .hd-calendar-agenda__item { display: grid; width: 100%; grid-template-columns: 7px 38px minmax(0,1fr) auto; align-items: center; gap: 8px; padding: 10px; border-radius: 15px; background: #f8fafc; text-align: left; }
+          .hd-calendar-agenda__item > i { width: 7px; height: 28px; border-radius: 999px; }
+          .hd-calendar-agenda__time { color: #64748b; font-size: 10px; font-weight: 800; }
+          .hd-calendar-agenda__content { display: grid; min-width: 0; }
+          .hd-calendar-agenda__content strong { overflow: hidden; color: #334155; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+          .hd-calendar-agenda__content small { overflow: hidden; color: #94a3b8; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+          .hd-calendar-side__upcoming h3 { margin-bottom: 8px; color: #64748b; font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+          .hd-calendar-side__upcoming ul { display: grid; gap: 4px; }
+          .hd-calendar-side__upcoming button { display: grid; width: 100%; grid-template-columns: 28px minmax(0,1fr); align-items: center; gap: 8px; padding: 7px; border-radius: 12px; text-align: left; }
+          .hd-calendar-side__upcoming button:hover { background: #f8fafc; }
+          .hd-calendar-side__upcoming button > span:last-child { display: grid; min-width: 0; }
+          .hd-calendar-side__upcoming strong { overflow: hidden; color: #475569; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+          .hd-calendar-side__upcoming small { color: #94a3b8; font-size: 9px; }
+          .hd-calendar-upcoming { display: none; }
         }
         @media (prefers-reduced-motion: reduce) {
           .hd-calendar-page *, .hd-calendar-page *::before, .hd-calendar-page *::after { animation: none !important; transition: none !important; }
@@ -2447,7 +2801,7 @@ export default function CalendarPage() {
             className="hd-calendar-icon-button text-slate-500 transition-colors text-lg"
             aria-label={t("search.label")}
           >
-            🔍
+            <Search className="h-5 w-5" aria-hidden="true" />
           </button>
 
           <button onClick={goToday} className="hd-calendar-month flex items-center group" aria-label={t("navigation.today")}>
@@ -2481,7 +2835,8 @@ export default function CalendarPage() {
               className="hd-calendar-icon-button hd-calendar-add font-bold text-xl transition-all active:scale-[.93]"
               aria-label={t("navigation.addEvent")}
             >
-              ＋
+              <Plus className="h-5 w-5" aria-hidden="true" />
+              <span className="hd-calendar-add__label">{t("navigation.addEvent")}</span>
             </button>
           </div>
         </div>
@@ -2494,6 +2849,14 @@ export default function CalendarPage() {
           </div>
         </section>
 
+        <div className="hd-calendar-view-switch" role="group" aria-label={t("navigation.viewLabel")}>
+          <button type="button" className={calendarView === "month" ? "is-active" : ""} onClick={() => setCalendarView("month")} aria-pressed={calendarView === "month"}>{t("navigation.month")}</button>
+          <button type="button" className={calendarView === "agenda" ? "is-active" : ""} onClick={() => setCalendarView("agenda")} aria-pressed={calendarView === "agenda"}>{t("navigation.agenda")}</button>
+        </div>
+
+        <div className="hd-calendar-workspace">
+        <div className="hd-calendar-main">
+        {calendarView === "month" ? (
         <section className="hd-calendar-surface" aria-label={t("accessibility.calendarLabel", { month: new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(viewYear, viewMonth, 1)) })}>
         {/* ── MONTH NAVIGATION ── */}
         <div className="hd-calendar-month-nav flex items-center justify-between">
@@ -2502,7 +2865,7 @@ export default function CalendarPage() {
             className="flex items-center justify-center transition-colors font-bold"
             aria-label={t("navigation.previousMonth")}
           >
-            ‹
+            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
           </button>
           <div className="flex-1" />
           <button
@@ -2510,7 +2873,7 @@ export default function CalendarPage() {
             className="flex items-center justify-center transition-colors font-bold"
             aria-label={t("navigation.nextMonth")}
           >
-            ›
+            <ChevronRight className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
@@ -2526,7 +2889,7 @@ export default function CalendarPage() {
             <CalendarGrid
               year={viewYear}
               month={viewMonth}
-              events={allEvents}
+              events={visibleEvents}
               selectedDate={selectedDate}
               onSelectDate={handleSelectDate}
               onNavigateDate={(dateYMD) => {
@@ -2541,25 +2904,50 @@ export default function CalendarPage() {
               }}
               onPreviousMonth={prevMonth}
               onNextMonth={nextMonth}
+              onQuickAdd={openAdd}
             />
           )}
         </div>
         <div className="hd-calendar-legend" aria-label={t("form.importantHint")}>
-          <span><i className="bg-pink-400" />{t("categories.birthday")}</span>
-          <span><i className="bg-blue-400" />{t("categories.work")}</span>
-          <span><i className="bg-emerald-400" />{t("categories.personal")}</span>
-          <span><i className="bg-amber-400 ring-2 ring-amber-100" />{t("form.important")}</span>
+          <button type="button" className={calendarFilter === "all" ? "is-active" : ""} onClick={() => setCalendarFilter("all")} aria-pressed={calendarFilter === "all"}><Filter className="h-3 w-3" aria-hidden="true" />{t("filters.all")}</button>
+          <button type="button" className={calendarFilter === "birthday" ? "is-active" : ""} onClick={() => setCalendarFilter("birthday")} aria-pressed={calendarFilter === "birthday"}><i className="bg-pink-400" />{t("categories.birthday")}</button>
+          <button type="button" className={calendarFilter === "work" ? "is-active" : ""} onClick={() => setCalendarFilter("work")} aria-pressed={calendarFilter === "work"}><i className="bg-blue-400" />{t("categories.work")}</button>
+          <button type="button" className={calendarFilter === "personal" ? "is-active" : ""} onClick={() => setCalendarFilter("personal")} aria-pressed={calendarFilter === "personal"}><i className="bg-emerald-400" />{t("categories.personal")}</button>
+          <button type="button" className={calendarFilter === "important" ? "is-active" : ""} onClick={() => setCalendarFilter("important")} aria-pressed={calendarFilter === "important"}><i className="bg-amber-400 ring-2 ring-amber-100" />{t("form.important")}</button>
         </div>
         </section>
+        ) : (
+          <>
+          <div className="hd-calendar-legend hd-calendar-legend--agenda" aria-label={t("form.importantHint")}>
+            <button type="button" className={calendarFilter === "all" ? "is-active" : ""} onClick={() => setCalendarFilter("all")} aria-pressed={calendarFilter === "all"}><Filter className="h-3 w-3" aria-hidden="true" />{t("filters.all")}</button>
+            <button type="button" className={calendarFilter === "birthday" ? "is-active" : ""} onClick={() => setCalendarFilter("birthday")} aria-pressed={calendarFilter === "birthday"}><i className="bg-pink-400" />{t("categories.birthday")}</button>
+            <button type="button" className={calendarFilter === "work" ? "is-active" : ""} onClick={() => setCalendarFilter("work")} aria-pressed={calendarFilter === "work"}><i className="bg-blue-400" />{t("categories.work")}</button>
+            <button type="button" className={calendarFilter === "personal" ? "is-active" : ""} onClick={() => setCalendarFilter("personal")} aria-pressed={calendarFilter === "personal"}><i className="bg-emerald-400" />{t("categories.personal")}</button>
+            <button type="button" className={calendarFilter === "important" ? "is-active" : ""} onClick={() => setCalendarFilter("important")} aria-pressed={calendarFilter === "important"}><i className="bg-amber-400 ring-2 ring-amber-100" />{t("form.important")}</button>
+          </div>
+          <CalendarAgendaView
+            events={agendaEvents}
+            onSelectDate={(dateYMD) => {
+              const date = parseLocalDateOnly(dateYMD);
+              if (!date) return;
+              setViewYear(date.getFullYear());
+              setViewMonth(date.getMonth());
+              setSelectedDate(dateYMD);
+            }}
+            onEdit={openEdit}
+            onAdd={openAdd}
+          />
+          </>
+        )}
 
         {/* ── UPCOMING STRIP ── */}
-        {!loading && upcoming.length > 0 && (
+        {!loading && visibleUpcoming.length > 0 && (
           <div className="hd-calendar-upcoming mb-3">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
               {t("navigation.upcoming")}
             </p>
             <UpcomingStrip
-              events={upcoming}
+              events={visibleUpcoming}
               insights={aiInsights}
               onTap={(dateYMD) => {
                 const d = parseLocalDateOnly(dateYMD);
@@ -2571,6 +2959,25 @@ export default function CalendarPage() {
             />
           </div>
         )}
+        </div>
+
+        {!loading && (
+          <CalendarDayPanel
+            dateYMD={sidePanelDate}
+            events={sidePanelEvents}
+            upcoming={visibleUpcoming}
+            onAdd={openAdd}
+            onEdit={openEdit}
+            onSelectDate={(dateYMD) => {
+              const date = parseLocalDateOnly(dateYMD);
+              if (!date) return;
+              setViewYear(date.getFullYear());
+              setViewMonth(date.getMonth());
+              setSelectedDate(dateYMD);
+            }}
+          />
+        )}
+        </div>
 
         {/* ── EMPTY STATE ── */}
         {!loading && allEvents.length === 0 && (
@@ -2745,7 +3152,7 @@ export default function CalendarPage() {
       {/* ── SEARCH OVERLAY ── */}
       {showSearch && (
         <SearchOverlay
-          events={allEvents}
+          events={searchableEvents}
           insights={aiInsights}
           onClose={() => setShowSearch(false)}
           onEdit={(id) => {

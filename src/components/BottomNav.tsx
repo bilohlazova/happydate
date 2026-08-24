@@ -2,12 +2,13 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { BOTTOM_NAV_ITEMS } from "@/i18n/shellNavigation";
+import { BOTTOM_NAV_ITEMS, isAppShellPath } from "@/i18n/shellNavigation";
 
 export default function BottomNav() {
   const translate = useTranslations("navigation");
   const pathname = usePathname();
   const router = useRouter();
+  if (!isAppShellPath(pathname)) return null;
 
   return (
     <nav

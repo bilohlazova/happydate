@@ -11,7 +11,11 @@ export async function GET(request: Request) {
   const locale: SupportedLocale = rawLocale in COUNTRY_BY_LOCALE ? rawLocale as SupportedLocale : "en";
   const year = Number(searchParams.get("year"));
   const holidayCatalog = new Holidays();
-  const countries = holidayCatalog.getCountries(locale);
+  const sourceCountries = holidayCatalog.getCountries(locale);
+  const regionNames = new Intl.DisplayNames([locale, "en"], { type: "region" });
+  const countries = Object.fromEntries(
+    Object.entries(sourceCountries).map(([code, fallbackName]) => [code, regionNames.of(code) ?? fallbackName]),
+  );
   const requestedCountry = searchParams.get("country")?.toUpperCase();
 
   if (!Number.isInteger(year) || year < 1970 || year > 2100) {

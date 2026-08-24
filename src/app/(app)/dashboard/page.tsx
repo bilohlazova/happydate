@@ -24,7 +24,7 @@ import {
 import { reconcileCalendarEventReminder } from "@/lib/reminders/calendarEventReminder";
 import { buildDayPlanDraft, findDayPlanConflicts, isValidDayPlanItemWithinWindow, isValidEventDuration, isValidTravelBuffer, reflowDayPlanDraft, reorderDayPlanDraft, resizeDayPlanDraft, selectDayPlanCandidates, summarizeDayPlanDraft, type DayPlanDraftItem, type DayPlanFixedEvent, type DayPlanMoveDirection } from "@/lib/events/dayPlanDraft";
 import { DEFAULT_PLANNER_PREFERENCES, loadPlannerPreferences, savePlannerPreferences, type PlannerPreferences } from "@/lib/repositories/plannerPreferences.repository";
-import { CalendarDays, ChevronLeft, ChevronRight, Filter, Plus, Search } from "lucide-react";
+import { Bell, Briefcase, CalendarDays, Check, ChevronLeft, ChevronRight, Church, Clock3, Filter, Gift, Heart, Landmark, MapPin, Plus, Repeat2, Search, Settings2, Sparkles, Star, StickyNote, Tag, Timer, Trash2, UserRound, X } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════
    TYPES
@@ -94,14 +94,25 @@ const CAT_COLOR: Record<string, { dot: string; pill: string; text: string }> = {
 };
 
 const CAT_EMOJI: Record<string, string> = {
-  birthday: "🎂",
+  birthday: "🎁",
   work: "💼",
   personal: "⭐",
   default: "📌",
 };
 
+function ObservanceIcon({ observance, className }: { observance: LocalObservance; className?: string }) {
+  const title = observance.title.toLocaleLowerCase();
+  if (/valentine|walentyn|закохан|валентин/.test(title)) return <Heart className={className} aria-hidden="true" />;
+  if (observance.kind === "religious" || /christmas|easter|boże narodzenie|wielkanoc|різдв|великд|рождеств|пасх|pfingst|ostern|weihnacht/.test(title)) {
+    return <Church className={className} aria-hidden="true" />;
+  }
+  if (observance.kind === "public") return <Landmark className={className} aria-hidden="true" />;
+  return <Sparkles className={className} aria-hidden="true" />;
+}
+
 type CalendarFilter = "all" | "birthday" | "work" | "personal" | "important";
 type CalendarView = "month" | "agenda";
+type CalendarContentFilter = "all" | "events" | "holidays";
 
 const CALENDAR_UI_COPY: Record<string, {
   all: string;
@@ -114,12 +125,20 @@ const CALENDAR_UI_COPY: Record<string, {
   holidaySelected: string;
   noHoliday: string;
   countryLabel: string;
+  contentLabel: string;
+  myEvents: string;
+  holidays: string;
+  nextHoliday: string;
+  countrySearch: string;
+  when: string;
+  allDay: string;
+  advancedLabel: string;
 }> = {
-  uk: { all: "Усі", agenda: "Порядок денний", viewLabel: "Режим календаря", category: "Категорія", showAdvanced: "Додаткові параметри", hideAdvanced: "Сховати додаткові параметри", holidayToday: "Сьогодні · {country}", holidaySelected: "Обраний день · {country}", noHoliday: "На цей день немає загальнодержавного свята", countryLabel: "Країна свят" },
-  pl: { all: "Wszystkie", agenda: "Agenda", viewLabel: "Widok kalendarza", category: "Kategoria", showAdvanced: "Więcej opcji", hideAdvanced: "Ukryj dodatkowe opcje", holidayToday: "Dzisiaj · {country}", holidaySelected: "Wybrany dzień · {country}", noHoliday: "W tym dniu nie ma święta państwowego", countryLabel: "Kraj świąt" },
-  en: { all: "All", agenda: "Agenda", viewLabel: "Calendar view", category: "Category", showAdvanced: "More options", hideAdvanced: "Hide additional options", holidayToday: "Today · {country}", holidaySelected: "Selected day · {country}", noHoliday: "There is no nationwide public holiday on this day", countryLabel: "Holiday country" },
-  de: { all: "Alle", agenda: "Terminliste", viewLabel: "Kalenderansicht", category: "Kategorie", showAdvanced: "Weitere Optionen", hideAdvanced: "Zusätzliche Optionen ausblenden", holidayToday: "Heute · {country}", holidaySelected: "Ausgewählter Tag · {country}", noHoliday: "An diesem Tag gibt es keinen bundesweiten Feiertag", countryLabel: "Feiertagsland" },
-  ru: { all: "Все", agenda: "Повестка", viewLabel: "Вид календаря", category: "Категория", showAdvanced: "Дополнительные параметры", hideAdvanced: "Скрыть дополнительные параметры", holidayToday: "Сегодня · {country}", holidaySelected: "Выбранный день · {country}", noHoliday: "В этот день нет общегосударственного праздника", countryLabel: "Страна праздников" },
+  uk: { all: "Усі", agenda: "Порядок денний", viewLabel: "Режим календаря", category: "Категорія", showAdvanced: "Додаткові параметри", hideAdvanced: "Сховати додаткові параметри", holidayToday: "Сьогодні · {country}", holidaySelected: "Обраний день · {country}", noHoliday: "На цей день немає загальнодержавного свята", countryLabel: "Країна свят", contentLabel: "Що показувати", myEvents: "Мої події", holidays: "Свята", nextHoliday: "Наступне свято: {title} · {date}", countrySearch: "Почніть вводити назву країни", when: "Коли", allDay: "Увесь день", advancedLabel: "Місце, повторення та нотатка" },
+  pl: { all: "Wszystkie", agenda: "Agenda", viewLabel: "Widok kalendarza", category: "Kategoria", showAdvanced: "Więcej opcji", hideAdvanced: "Ukryj dodatkowe opcje", holidayToday: "Dzisiaj · {country}", holidaySelected: "Wybrany dzień · {country}", noHoliday: "W tym dniu nie ma święta państwowego", countryLabel: "Kraj świąt", contentLabel: "Pokaż", myEvents: "Moje wydarzenia", holidays: "Święta", nextHoliday: "Następne święto: {title} · {date}", countrySearch: "Zacznij wpisywać nazwę kraju", when: "Kiedy", allDay: "Cały dzień", advancedLabel: "Miejsce, powtarzanie i notatka" },
+  en: { all: "All", agenda: "Agenda", viewLabel: "Calendar view", category: "Category", showAdvanced: "More options", hideAdvanced: "Hide additional options", holidayToday: "Today · {country}", holidaySelected: "Selected day · {country}", noHoliday: "There is no nationwide public holiday on this day", countryLabel: "Holiday country", contentLabel: "Show", myEvents: "My events", holidays: "Holidays", nextHoliday: "Next holiday: {title} · {date}", countrySearch: "Start typing a country name", when: "When", allDay: "All day", advancedLabel: "Location, recurrence and note" },
+  de: { all: "Alle", agenda: "Terminliste", viewLabel: "Kalenderansicht", category: "Kategorie", showAdvanced: "Weitere Optionen", hideAdvanced: "Zusätzliche Optionen ausblenden", holidayToday: "Heute · {country}", holidaySelected: "Ausgewählter Tag · {country}", noHoliday: "An diesem Tag gibt es keinen bundesweiten Feiertag", countryLabel: "Feiertagsland", contentLabel: "Anzeigen", myEvents: "Meine Termine", holidays: "Feiertage", nextHoliday: "Nächster Feiertag: {title} · {date}", countrySearch: "Land eingeben", when: "Wann", allDay: "Ganztägig", advancedLabel: "Ort, Wiederholung und Notiz" },
+  ru: { all: "Все", agenda: "Повестка", viewLabel: "Вид календаря", category: "Категория", showAdvanced: "Дополнительные параметры", hideAdvanced: "Скрыть дополнительные параметры", holidayToday: "Сегодня · {country}", holidaySelected: "Выбранный день · {country}", noHoliday: "В этот день нет общегосударственного праздника", countryLabel: "Страна праздников", contentLabel: "Показывать", myEvents: "Мои события", holidays: "Праздники", nextHoliday: "Следующий праздник: {title} · {date}", countrySearch: "Начните вводить название страны", when: "Когда", allDay: "Весь день", advancedLabel: "Место, повторение и заметка" },
 };
 
 type InsightTopic =
@@ -392,45 +411,110 @@ function CalendarCountryPicker({
   options: Array<[string, string]>;
   onSelect: (country: string) => void;
 }) {
-  const [query, setQuery] = useState(selectedName);
-  const chooseMatchingCountry = (value: string, allowPrefix: boolean) => {
-    const normalized = value.trim().toLocaleLowerCase();
-    if (!normalized) return false;
-    const match = options.find(([, name]) => name.toLocaleLowerCase() === normalized)
-      ?? (allowPrefix ? options.find(([, name]) => name.toLocaleLowerCase().startsWith(normalized)) : undefined);
-    if (!match) return false;
-    setQuery(match[1]);
-    if (match[0] !== selectedCountry) onSelect(match[0]);
-    return true;
-  };
+  const uiCopy = CALENDAR_UI_COPY[useLocale()] ?? CALENDAR_UI_COPY.en;
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const filteredOptions = normalizedQuery
+    ? options.filter(([, name]) => name.toLocaleLowerCase().startsWith(normalizedQuery) || name.toLocaleLowerCase().includes(normalizedQuery)).slice(0, 60)
+    : options.slice(0, 60);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  const flag = selectedCountry.toUpperCase().replace(/./g, (character) => String.fromCodePoint(127397 + character.charCodeAt(0)));
 
   return (
-    <div className="hd-calendar-purpose__country-picker">
-      <label className="sr-only" htmlFor="calendar-holiday-country">{label}</label>
-      <input
-        id="calendar-holiday-country"
-        className="hd-calendar-purpose__country"
-        type="search"
-        list="calendar-holiday-country-options"
-        value={query}
-        placeholder={label}
-        autoComplete="off"
-        aria-label={label}
-        onChange={(event) => {
-          setQuery(event.target.value);
-          chooseMatchingCountry(event.target.value, false);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" && chooseMatchingCountry(query, true)) event.preventDefault();
-          if (event.key === "Escape") setQuery(selectedName);
-        }}
-        onBlur={() => {
-          if (!chooseMatchingCountry(query, false)) setQuery(selectedName);
-        }}
-      />
-      <datalist id="calendar-holiday-country-options">
-        {options.map(([code, name]) => <option key={code} value={name} />)}
-      </datalist>
+    <div className="hd-calendar-purpose__country-picker" ref={rootRef}>
+      <button type="button" className="hd-calendar-purpose__country" aria-label={`${label}: ${selectedName}`} aria-haspopup="listbox" aria-expanded={open} onClick={() => { setOpen((value) => !value); setQuery(""); }}>
+        <span aria-hidden="true">{flag}</span><span>{selectedName}</span><span aria-hidden="true">⌄</span>
+      </button>
+      {open && (
+        <div className="hd-calendar-country-menu">
+          <label className="sr-only" htmlFor="calendar-holiday-country-search">{uiCopy.countrySearch}</label>
+          <input id="calendar-holiday-country-search" type="search" value={query} autoFocus autoComplete="off" placeholder={uiCopy.countrySearch} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }} />
+          <div role="listbox" aria-label={label}>
+            {filteredOptions.map(([code, name]) => (
+              <button type="button" role="option" aria-selected={code === selectedCountry} key={code} onClick={() => { onSelect(code); setOpen(false); setQuery(""); }}>
+                <span aria-hidden="true">{code.toUpperCase().replace(/./g, (character) => String.fromCodePoint(127397 + character.charCodeAt(0)))}</span><span>{name}</span>{code === selectedCountry && <span aria-hidden="true">✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CalendarPersonPicker({
+  id,
+  label,
+  noPersonLabel,
+  people,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  noPersonLabel: string;
+  people: PersonRow[];
+  value: string;
+  onChange: (personId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selectedName = people.find((person) => person.id === value)?.name ?? noPersonLabel;
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const filteredPeople = people.filter((person) => {
+    const name = person.name.toLocaleLowerCase();
+    return !normalizedQuery || name.startsWith(normalizedQuery) || name.includes(normalizedQuery);
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  return (
+    <div className="calendar-person-picker" ref={rootRef}>
+      <button id={id} type="button" className="calendar-person-picker__trigger" aria-label={`${label}: ${selectedName}`} aria-haspopup="listbox" aria-expanded={open} onClick={() => { setOpen((current) => !current); setQuery(""); }}>
+        <span>{selectedName}</span><span aria-hidden="true">⌄</span>
+      </button>
+      {open && (
+        <div className="calendar-person-picker__menu">
+          <label className="sr-only" htmlFor={`${id}-search`}>{label}</label>
+          <div className="calendar-person-picker__search"><Search aria-hidden="true" /><input id={`${id}-search`} type="search" autoFocus autoComplete="off" value={query} placeholder={`${label}…`} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => {
+            event.stopPropagation();
+            if (event.key === "Escape") setOpen(false);
+            if (event.key === "Enter" && filteredPeople[0]) {
+              event.preventDefault();
+              onChange(filteredPeople[0].id);
+              setOpen(false);
+              setQuery("");
+            }
+          }} /></div>
+          <div role="listbox" aria-label={label}>
+            <button type="button" role="option" aria-selected={!value} onClick={() => { onChange(""); setOpen(false); }}><span className="calendar-person-picker__avatar" aria-hidden="true">—</span><span>{noPersonLabel}</span>{!value && <span aria-hidden="true">✓</span>}</button>
+            {filteredPeople.map((person) => (
+              <button type="button" role="option" aria-selected={person.id === value} key={person.id} onClick={() => { onChange(person.id); setOpen(false); setQuery(""); }}>
+                <span className="calendar-person-picker__avatar" aria-hidden="true">{person.name.trim().charAt(0).toLocaleUpperCase()}</span><span>{person.name}</span>{person.id === value && <span aria-hidden="true">✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -575,10 +659,16 @@ function ConfirmDialog({
    • items-end → bottom sheet on mobile, sm:items-center → centered on desktop
 ═══════════════════════════════════════════════════ */
 const CATEGORIES_ADD = [
-  { value: "birthday", emoji: "🎂" },
-  { value: "work", emoji: "💼" },
-  { value: "personal", emoji: "⭐" },
+  { value: "birthday" },
+  { value: "work" },
+  { value: "personal" },
 ] as const;
+
+function EventCategoryIcon({ category }: { category: typeof CATEGORIES_ADD[number]["value"] }) {
+  if (category === "birthday") return <Gift aria-hidden="true" />;
+  if (category === "work") return <Briefcase aria-hidden="true" />;
+  return <Star aria-hidden="true" />;
+}
 
 function AddEditSheet({
   mode,
@@ -664,7 +754,8 @@ function AddEditSheet({
         if (e.key === "Escape") onCancel();
         if (
           e.key === "Enter" &&
-          (e.target as HTMLElement).tagName !== "TEXTAREA"
+          (e.target as HTMLElement).tagName === "INPUT" &&
+          (e.target as HTMLInputElement).type !== "search"
         ) {
           e.preventDefault();
           onSubmit();
@@ -710,10 +801,12 @@ function AddEditSheet({
         {/* Header */}
         <div className="calendar-event-header flex items-center justify-between px-5 pt-2 pb-4 border-b border-slate-100">
           <button
+            type="button"
             onClick={onCancel}
-            className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors px-1 min-h-[44px] flex items-center"
+            className="calendar-event-close"
+            aria-label={t("common.cancel")}
           >
-            {t("common.cancel")}
+            <X aria-hidden="true" />
           </button>
           <h2 id={`${mode}-event-sheet-title`} className="calendar-event-title text-sm font-bold text-slate-800">
             {mode === "add" ? t("form.new") : t("form.edit")}
@@ -721,7 +814,7 @@ function AddEditSheet({
           <button
             onClick={onSubmit}
             disabled={!title || !date}
-            className="text-sm font-bold text-sky-500 hover:text-sky-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors px-1 min-h-[44px] flex items-center"
+            className="calendar-event-save"
           >
             {mode === "add" ? t("common.add") : t("common.save")}
           </button>
@@ -730,29 +823,40 @@ function AddEditSheet({
         {/* Short primary flow; advanced fields stay available without making every event feel like a form. */}
         <div className="calendar-event-fields px-5 py-4 space-y-3">
           <label className="calendar-event-field calendar-event-field--title" htmlFor={`${mode}-event-title`}>
-            <span aria-hidden="true">✏️</span>
+            <StickyNote aria-hidden="true" />
             <span className="calendar-event-field__body"><small>{t("form.title")}</small><input id={`${mode}-event-title`} ref={inputRef} type="text" placeholder={t("form.titlePlaceholder")} value={title} onChange={(event) => setTitle(event.target.value)} /></span>
           </label>
 
-          <div className="calendar-event-primary-grid">
-            <label className="calendar-event-field" htmlFor={`${mode}-event-date`}><span aria-hidden="true">📅</span><span className="calendar-event-field__body"><small>{t("form.date")}</small><input id={`${mode}-event-date`} type="date" value={date} onChange={(event) => setDate(event.target.value)} /></span></label>
-            <label className="calendar-event-field" htmlFor={`${mode}-event-time`}><span aria-hidden="true">🕐</span><span className="calendar-event-field__body"><small>{t("form.time")}</small><span className="flex items-center"><input id={`${mode}-event-time`} type="time" value={timeOfDay} onChange={(event) => setTimeOfDay(event.target.value)} />{timeOfDay && <button type="button" onClick={() => setTimeOfDay("")} aria-label={t("form.clearTime")}>×</button>}</span></span></label>
-          </div>
+          <section className="calendar-event-section" aria-labelledby={`${mode}-event-when`}>
+            <h3 id={`${mode}-event-when`}><Clock3 aria-hidden="true" />{uiCopy.when}</h3>
+            <div className="calendar-event-primary-grid">
+              <label className="calendar-event-field" htmlFor={`${mode}-event-date`}><CalendarDays aria-hidden="true" /><span className="calendar-event-field__body"><small>{t("form.date")}</small><input id={`${mode}-event-date`} type="date" value={date} onChange={(event) => setDate(event.target.value)} /></span></label>
+              <label className="calendar-event-field" htmlFor={`${mode}-event-time`}><Clock3 aria-hidden="true" /><span className="calendar-event-field__body"><small>{t("form.time")}</small><span className="flex items-center"><input id={`${mode}-event-time`} type="time" value={timeOfDay} onInput={(event) => setTimeOfDay(event.currentTarget.value)} onChange={(event) => setTimeOfDay(event.target.value)} /></span></span></label>
+            </div>
+            <button type="button" role="switch" aria-checked={!timeOfDay} className="calendar-event-all-day" onClick={() => setTimeOfDay(timeOfDay ? "" : "09:00")}><span>{uiCopy.allDay}</span><span className={`calendar-event-switch ${!timeOfDay ? "is-active" : ""}`} aria-hidden="true"><i /></span></button>
+          </section>
 
-          <fieldset className="calendar-event-field calendar-event-categories"><legend className="sr-only">{uiCopy.category}</legend><span aria-hidden="true">🏷️</span><div className="flex flex-1 flex-wrap gap-2">{CATEGORIES_ADD.map((c) => <button key={c.value} type="button" onClick={() => setCategory(c.value)} aria-pressed={category === c.value} className={`calendar-event-category ${category === c.value ? `${CAT_COLOR[c.value].pill} ${CAT_COLOR[c.value].text} is-active` : ""}`}><span>{c.emoji}</span>{t(`categories.${c.value}`)}</button>)}</div></fieldset>
+          <fieldset className="calendar-event-section calendar-event-categories"><legend><Tag aria-hidden="true" />{uiCopy.category}</legend><div className="calendar-event-category-grid">{CATEGORIES_ADD.map((c, index) => <button key={c.value} type="button" data-category={c.value} onClick={() => setCategory(c.value)} onKeyDown={(event) => {
+            if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+            event.preventDefault();
+            const nextIndex = (index + (event.key === "ArrowRight" ? 1 : -1) + CATEGORIES_ADD.length) % CATEGORIES_ADD.length;
+            const nextCategory = CATEGORIES_ADD[nextIndex];
+            setCategory(nextCategory.value);
+            event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("button")[nextIndex]?.focus();
+          }} aria-pressed={category === c.value} className={`calendar-event-category ${category === c.value ? "is-active" : ""}`}><EventCategoryIcon category={c.value} /><span>{t(`categories.${c.value}`)}</span>{category === c.value && <Check className="calendar-event-category__check" aria-hidden="true" />}</button>)}</div></fieldset>
 
-          <label className="calendar-event-field" htmlFor={`${mode}-event-person`}><span aria-hidden="true">👤</span><span className="calendar-event-field__body"><small>{t("form.person")}</small><select id={`${mode}-event-person`} value={personId} onChange={(event) => setPersonId(event.target.value)}><option value="">{t("form.noPerson")}</option>{people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></span></label>
+          <div className="calendar-event-field"><UserRound aria-hidden="true" /><span className="calendar-event-field__body"><small>{t("form.person")}</small><CalendarPersonPicker id={`${mode}-event-person`} label={t("form.person")} noPersonLabel={t("form.noPerson")} people={people} value={personId} onChange={setPersonId} /></span></div>
 
-          <button type="button" role="switch" aria-checked={isImportant} onClick={() => setIsImportant(!isImportant)} className={`calendar-event-reminder ${isImportant ? "calendar-event-reminder--active" : ""}`}><span aria-hidden="true">🔔</span><span className="min-w-0 flex-1"><strong>{t("form.important")}</strong><small>{t("form.importantHint")}</small></span><span className={`calendar-event-switch ${isImportant ? "is-active" : ""}`} aria-hidden="true"><i /></span></button>
+          <button type="button" role="switch" aria-checked={isImportant} onClick={() => setIsImportant(!isImportant)} className={`calendar-event-reminder ${isImportant ? "calendar-event-reminder--active" : ""}`}><Bell aria-hidden="true" /><span className="min-w-0 flex-1"><strong>{t("form.important")}</strong>{isImportant && <small>{t("form.importantHint")}</small>}</span><span className={`calendar-event-switch ${isImportant ? "is-active" : ""}`} aria-hidden="true"><i /></span></button>
 
-          <button type="button" className="calendar-event-advanced-toggle" onClick={() => setShowAdvanced((value) => !value)} aria-expanded={showAdvanced}><span>⚙️</span><span>{showAdvanced ? uiCopy.hideAdvanced : uiCopy.showAdvanced}</span><span aria-hidden="true">{showAdvanced ? "⌃" : "⌄"}</span></button>
+          <button type="button" className="calendar-event-advanced-toggle" onClick={() => setShowAdvanced((value) => !value)} aria-expanded={showAdvanced}><Settings2 aria-hidden="true" /><span>{showAdvanced ? uiCopy.hideAdvanced : uiCopy.advancedLabel}</span><span aria-hidden="true">{showAdvanced ? "⌃" : "⌄"}</span></button>
 
           {showAdvanced && <div className="calendar-event-advanced">
-            <label className="calendar-event-field" htmlFor={`${mode}-event-duration`}><span aria-hidden="true">⏳</span><span className="calendar-event-field__body"><small>{t("form.duration")}</small><span className="flex items-center"><input id={`${mode}-event-duration`} type="number" min="5" max="1440" step="5" placeholder={t("form.durationPlaceholder")} value={durationMinutes} onChange={(event) => setDurationMinutes(event.target.value)} /><b>{t("form.minutes")}</b></span></span></label>
-            <label className="calendar-event-field" htmlFor={`${mode}-event-location`}><span aria-hidden="true">📍</span><span className="calendar-event-field__body"><small>{t("form.location")}</small><input id={`${mode}-event-location`} type="text" maxLength={300} placeholder={t("form.locationPlaceholder")} value={location} onChange={(event) => setLocation(event.target.value)} /></span></label>
-            <label className="calendar-event-field" htmlFor={`${mode}-event-travel-buffer`}><span aria-hidden="true">🚗</span><span className="calendar-event-field__body"><small>{t("form.travelBuffer")}</small><span className="flex items-center"><input id={`${mode}-event-travel-buffer`} type="number" min="5" max="240" step="5" placeholder={t("form.travelBufferPlaceholder")} value={travelBufferMinutes} onChange={(event) => setTravelBufferMinutes(event.target.value)} /><b>{t("form.minutes")}</b></span></span></label>
-            <label className="calendar-event-field" htmlFor={`${mode}-event-recurrence`}><span aria-hidden="true">🔁</span><span className="calendar-event-field__body"><small>{t("form.recurrence")}</small><select id={`${mode}-event-recurrence`} value={recurrenceRule} onChange={(event) => setRecurrenceRule(event.target.value as EventRecurrenceRule)}>{(["none", "weekly", "monthly", "yearly"] as const).map((rule) => <option key={rule} value={rule}>{t(`recurrence.${rule}`)}</option>)}</select></span></label>
-            <label className="calendar-event-field calendar-event-advanced__notes" htmlFor={`${mode}-event-notes`}><span aria-hidden="true">📝</span><span className="calendar-event-field__body"><small>{t("form.notes")}</small><textarea id={`${mode}-event-notes`} rows={2} placeholder={t("form.notePlaceholder")} value={notes} onChange={(event) => setNotes(event.target.value)} /></span></label>
+            <label className="calendar-event-field" htmlFor={`${mode}-event-duration`}><Timer aria-hidden="true" /><span className="calendar-event-field__body"><small>{t("form.duration")}</small><span className="flex items-center"><input id={`${mode}-event-duration`} type="number" min="5" max="1440" step="5" placeholder={t("form.durationPlaceholder")} value={durationMinutes} onChange={(event) => setDurationMinutes(event.target.value)} /><b>{t("form.minutes")}</b></span></span></label>
+            <label className="calendar-event-field" htmlFor={`${mode}-event-location`}><MapPin aria-hidden="true" /><span className="calendar-event-field__body"><small>{t("form.location")}</small><input id={`${mode}-event-location`} type="text" maxLength={300} placeholder={t("form.locationPlaceholder")} value={location} onChange={(event) => setLocation(event.target.value)} /></span></label>
+            <label className="calendar-event-field" htmlFor={`${mode}-event-travel-buffer`}><Clock3 aria-hidden="true" /><span className="calendar-event-field__body"><small>{t("form.travelBuffer")}</small><span className="flex items-center"><input id={`${mode}-event-travel-buffer`} type="number" min="5" max="240" step="5" placeholder={t("form.travelBufferPlaceholder")} value={travelBufferMinutes} onChange={(event) => setTravelBufferMinutes(event.target.value)} /><b>{t("form.minutes")}</b></span></span></label>
+            <label className="calendar-event-field" htmlFor={`${mode}-event-recurrence`}><Repeat2 aria-hidden="true" /><span className="calendar-event-field__body"><small>{t("form.recurrence")}</small><select id={`${mode}-event-recurrence`} value={recurrenceRule} onChange={(event) => setRecurrenceRule(event.target.value as EventRecurrenceRule)}>{(["none", "weekly", "monthly", "yearly"] as const).map((rule) => <option key={rule} value={rule}>{t(`recurrence.${rule}`)}</option>)}</select></span></label>
+            <label className="calendar-event-field calendar-event-advanced__notes" htmlFor={`${mode}-event-notes`}><StickyNote aria-hidden="true" /><span className="calendar-event-field__body"><small>{t("form.notes")}</small><textarea id={`${mode}-event-notes`} rows={2} placeholder={t("form.notePlaceholder")} value={notes} onChange={(event) => setNotes(event.target.value)} /></span></label>
           </div>}
         </div>
 
@@ -763,13 +867,13 @@ function AddEditSheet({
               onClick={onDelete}
               className="w-full h-12 rounded-2xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
             >
-              🗑️ {t("form.delete")}
+              <Trash2 aria-hidden="true" /> {t("form.delete")}
             </button>
           </div>
         )}
 
         {/* Bottom breathing room for add mode (above safe-area pb) */}
-        {mode === "add" && <div className="h-6" />}
+        {mode === "add" && <div className="calendar-event-mobile-submit"><button type="button" onClick={onSubmit} disabled={!title || !date}><Plus aria-hidden="true" />{t("common.add")}</button></div>}
       </div>
     </div>
   );
@@ -1335,6 +1439,8 @@ function CalendarGrid({
   onQuickAdd,
   onPreviousMonth,
   onNextMonth,
+  observances,
+  contentFilter,
 }: {
   year: number;
   month: number;
@@ -1345,6 +1451,8 @@ function CalendarGrid({
   onQuickAdd: (ymd: string) => void;
   onPreviousMonth: () => void;
   onNextMonth: () => void;
+  observances: Record<string, LocalObservance>;
+  contentFilter: CalendarContentFilter;
 }) {
   const locale = useLocale();
   const t = useTranslations("dashboard");
@@ -1427,6 +1535,7 @@ function CalendarGrid({
           const isToday = dateStr === today;
           const isSelected = dateStr === selectedDate;
           const dayEvents = eventMap.get(dateStr) ?? [];
+          const holiday = observances[dateStr];
           const hasImportantEvent = dayEvents.some((event) => event.isImportant);
           const dots = [
             ...new Set(dayEvents.map((e) => e.category ?? "default")),
@@ -1455,11 +1564,11 @@ function CalendarGrid({
                 const target = addLocalDateOnlyDays(dateStr, offset);
                 if (target) onNavigateDate(target);
               }}
-              aria-label={t("accessibility.dayLabel", {
+              aria-label={`${t("accessibility.dayLabel", {
                 date: new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
                   .format(parseLocalDateOnly(dateStr) ?? new Date(Number.NaN)),
                 count: dayEvents.length,
-              })}
+              })}${holiday ? `. ${holiday.title}` : ""}`}
               aria-current={isToday ? "date" : undefined}
               aria-selected={isSelected}
               className={`relative flex flex-col items-center justify-start py-1.5 rounded-xl transition-all active:scale-[.92] min-h-[52px] ${
@@ -1495,12 +1604,15 @@ function CalendarGrid({
                   ))}
                 </div>
               )}
+              {holiday && contentFilter !== "events" && <span className="hd-calendar-day-holiday-dot" title={holiday.title} aria-hidden="true"><ObservanceIcon observance={holiday} /></span>}
               {dayEvents.length > 0 && (
                 <span className="hd-calendar-day-count" aria-hidden="true">{dayEvents.length}</span>
               )}
               <span className="hd-calendar-day-events" aria-hidden="true">
+                {holiday && contentFilter !== "events" && <span className={`hd-calendar-day-holiday hd-calendar-day-holiday--${holiday.kind}`}><ObservanceIcon observance={holiday} />{holiday.title}</span>}
                 {dayEvents.slice(0, 2).map((event) => (
                   <span className={`hd-calendar-day-event ${CAT_COLOR[event.category ?? "default"]?.pill ?? CAT_COLOR.default.pill}`} key={event.id}>
+                    {event.category === "birthday" && <Gift aria-hidden="true" />}
                     {event.timeOfDay ? `${event.timeOfDay} ` : ""}{event.title.replace(/^🎂\s*/, "")}
                   </span>
                 ))}
@@ -1521,11 +1633,15 @@ function CalendarGrid({
 
 function CalendarAgendaView({
   events,
+  observances,
+  contentFilter,
   onSelectDate,
   onEdit,
   onAdd,
 }: {
   events: EventRow[];
+  observances: Record<string, LocalObservance>;
+  contentFilter: CalendarContentFilter;
   onSelectDate: (date: string) => void;
   onEdit: (id: string) => void;
   onAdd: (date?: string) => void;
@@ -1535,14 +1651,20 @@ function CalendarAgendaView({
   const uiCopy = CALENDAR_UI_COPY[locale] ?? CALENDAR_UI_COPY.en;
   const today = todayYMD();
   const groups = useMemo(() => {
-    const future = events.filter((event) => event.date >= today).slice(0, 100);
-    return [...future.reduce((map, event) => {
+    type AgendaEntry = { kind: "event"; event: EventRow } | { kind: "holiday"; observance: LocalObservance };
+    const map = new Map<string, AgendaEntry[]>();
+    if (contentFilter !== "holidays") events.filter((event) => event.date >= today).slice(0, 100).forEach((event) => {
       const group = map.get(event.date) ?? [];
-      group.push(event);
+      group.push({ kind: "event", event });
       map.set(event.date, group);
-      return map;
-    }, new Map<string, EventRow[]>())];
-  }, [events, today]);
+    });
+    if (contentFilter !== "events") Object.entries(observances).filter(([date]) => date >= today).forEach(([date, observance]) => {
+      const group = map.get(date) ?? [];
+      group.push({ kind: "holiday", observance });
+      map.set(date, group);
+    });
+    return [...map].sort(([left], [right]) => left.localeCompare(right)).slice(0, 100);
+  }, [contentFilter, events, observances, today]);
 
   if (groups.length === 0) {
     return (
@@ -1567,7 +1689,16 @@ function CalendarAgendaView({
               <span><strong>{isToday ? t("day.today") : new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date)}</strong><small>{new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(date)}</small></span>
             </button>
             <ul>
-              {dayEvents.map((event) => {
+              {dayEvents.map((entry, index) => {
+                if (entry.kind === "holiday") return (
+                  <li key={`agenda-holiday-${dateYMD}-${index}`}>
+                    <button type="button" className="hd-calendar-agenda-day__event hd-calendar-agenda-day__event--holiday" onClick={() => onSelectDate(dateYMD)}>
+                      <i /><span className="hd-calendar-agenda-day__time"><ObservanceIcon observance={entry.observance} /></span>
+                      <span className="hd-calendar-agenda-day__copy"><strong>{entry.observance.title}</strong><small>{entry.observance.countryName}</small></span>
+                    </button>
+                  </li>
+                );
+                const event = entry.event;
                 const birthday = event.id.startsWith("birthday-");
                 const category = event.category ?? "default";
                 return (
@@ -1718,6 +1849,9 @@ function SearchOverlay({
     <div
       ref={ref}
       className="fixed inset-0 z-[400] flex flex-col bg-white"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("search.label")}
       style={{
         animation: "fadeInFull .2s ease both",
         // Push content up when keyboard appears on iOS
@@ -1857,6 +1991,7 @@ export default function CalendarPage() {
   const [showSearch, setShowSearch] = useState(false);
   const [calendarFilter, setCalendarFilter] = useState<CalendarFilter>("all");
   const [calendarView, setCalendarView] = useState<CalendarView>("month");
+  const [calendarContentFilter, setCalendarContentFilter] = useState<CalendarContentFilter>("all");
   const [yearObservances, setYearObservances] = useState<{ key: string; items: Record<string, LocalObservance> }>({ key: "", items: {} });
   const [calendarCountries, setCalendarCountries] = useState<Record<string, string>>({});
 
@@ -1897,7 +2032,7 @@ export default function CalendarPage() {
   /* ── Complete country calendar for the visible year ── */
   useEffect(() => {
     const controller = new AbortController();
-    void fetch(`/api/calendar/observances?year=${viewYear}&locale=${encodeURIComponent(locale)}&country=${encodeURIComponent(calendarCountry)}`, { signal: controller.signal })
+    void fetch(`/api/calendar/observances?v=2&year=${viewYear}&locale=${encodeURIComponent(locale)}&country=${encodeURIComponent(calendarCountry)}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error("Holiday calendar unavailable");
         return response.json() as Promise<{
@@ -2131,26 +2266,32 @@ export default function CalendarPage() {
     return allEvents.filter((event) => (event.category ?? "default") === calendarFilter);
   }, [allEvents, calendarFilter]);
 
+  const calendarDisplayEvents = useMemo(
+    () => calendarContentFilter === "holidays" ? [] : visibleEvents,
+    [calendarContentFilter, visibleEvents],
+  );
+
   const visibleUpcoming = useMemo(() => {
     const visibleIds = new Set(visibleEvents.map((event) => event.id));
     return upcoming.filter((event) => visibleIds.has(event.id));
   }, [upcoming, visibleEvents]);
 
   const agendaEvents = useMemo(() => {
+    if (calendarContentFilter === "holidays") return [];
     if (calendarFilter === "all") return searchableEvents;
     if (calendarFilter === "important") return searchableEvents.filter((event) => event.isImportant);
     return searchableEvents.filter((event) => (event.category ?? "default") === calendarFilter);
-  }, [calendarFilter, searchableEvents]);
+  }, [calendarContentFilter, calendarFilter, searchableEvents]);
 
   const selectedDateEvents = useMemo(() => {
     if (!selectedDate) return [];
-    return visibleEvents.filter((e) => e.date === selectedDate);
-  }, [visibleEvents, selectedDate]);
+    return calendarDisplayEvents.filter((e) => e.date === selectedDate);
+  }, [calendarDisplayEvents, selectedDate]);
 
   const sidePanelDate = selectedDate ?? todayYMD();
   const sidePanelEvents = useMemo(
-    () => visibleEvents.filter((event) => event.date === sidePanelDate),
-    [sidePanelDate, visibleEvents],
+    () => calendarDisplayEvents.filter((event) => event.date === sidePanelDate),
+    [sidePanelDate, calendarDisplayEvents],
   );
 
   const dayPlanCandidates = useMemo(() => selectDayPlanCandidates(events
@@ -2626,13 +2767,20 @@ export default function CalendarPage() {
      RENDER
   ═══════════════════════════════════════════ */
   const observanceDate = selectedDate ?? todayYMD();
-  const observance = (yearObservances.key === `${locale}:${calendarCountry}:${viewYear}` ? yearObservances.items[observanceDate] : null)
+  const activeObservances = yearObservances.key === `${locale}:${calendarCountry}:${viewYear}` ? yearObservances.items : {};
+  const observance = activeObservances[observanceDate]
     ?? (calendarCountry === getDefaultCalendarCountry(locale) ? getLocalObservance(observanceDate, locale) : null);
+  const nextObservanceEntry = Object.entries(activeObservances).sort(([left], [right]) => left.localeCompare(right)).find(([date]) => date > observanceDate);
   const observanceCountry = observance?.countryName ?? calendarCountries[calendarCountry] ?? getCalendarCountryName(locale);
   const observanceEyebrow = (selectedDate ? uiCopy.holidaySelected : uiCopy.holidayToday).replace("{country}", observanceCountry);
   const observanceDateLabel = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" }).format(
     parseLocalDateOnly(observanceDate) ?? new Date(),
   );
+  const observanceMessage = observance?.title ?? (nextObservanceEntry
+    ? uiCopy.nextHoliday
+      .replace("{title}", nextObservanceEntry[1].title)
+      .replace("{date}", new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" }).format(parseLocalDateOnly(nextObservanceEntry[0]) ?? new Date(Number.NaN)))
+    : uiCopy.noHoliday);
   const calendarCountryOptions = Object.entries(calendarCountries).sort(([, left], [, right]) => left.localeCompare(right, locale));
   return (
     <>
@@ -2657,17 +2805,29 @@ export default function CalendarPage() {
           background: linear-gradient(145deg,rgba(240,249,255,.96),rgba(255,251,252,.95));
           box-shadow: 0 10px 30px rgba(15,23,42,.045);
         }
-        .hd-calendar-purpose__heart { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 12px; background: #fff; color: #ec4899; font-size: 16px; box-shadow: 0 7px 18px rgba(236,72,153,.1); }
+        .hd-calendar-purpose__heart { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 12px; background: #fff; color: #0284c7; box-shadow: 0 7px 18px rgba(2,132,199,.1); }
+        .hd-calendar-purpose__heart svg { width: 17px; height: 17px; stroke-width: 2.2; }
+        .hd-calendar-purpose__heart--public { color: #2563eb; }
+        .hd-calendar-purpose__heart--religious { color: #7c3aed; }
         .hd-calendar-purpose__eyebrow { color: #0284c7; font-size: 9px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
         .hd-calendar-purpose__text { margin-top: 2px; color: #475569; font-size: 12px; font-weight: 650; line-height: 1.45; }
         .hd-calendar-purpose__date { margin-left: auto; align-self: center; color: #94a3b8; font-size: 10px; font-weight: 800; white-space: nowrap; }
         .hd-calendar-purpose__controls { display: flex; margin-left: auto; align-items: center; gap: 9px; }
-        .hd-calendar-purpose__country-picker { display: flex; min-width: 0; }
-        .hd-calendar-purpose__country { width: 190px; min-height: 34px; padding: 5px 10px; border: 1px solid #bae6fd; border-radius: 11px; background: #fff; color: #0369a1; font-size: 10px; font-weight: 850; outline: none; }
+        .hd-calendar-purpose__country-picker { display: flex; position: relative; min-width: 0; }
+        .hd-calendar-purpose__country { display: grid; width: 190px; min-height: 34px; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 7px; padding: 5px 10px; border: 1px solid #bae6fd; border-radius: 11px; background: #fff; color: #0369a1; font-size: 10px; font-weight: 850; outline: none; text-align: left; }
+        .hd-calendar-purpose__country span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .hd-calendar-purpose__country:focus-visible { border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56,189,248,.18); }
-        .hd-calendar-view-switch { display: flex; width: max-content; gap: 3px; margin: 0 12px 12px; padding: 4px; border: 1px solid rgba(226,232,240,.88); border-radius: 14px; background: rgba(255,255,255,.82); }
-        .hd-calendar-view-switch button { min-height: 34px; padding: 6px 12px; border-radius: 10px; color: #64748b; font-size: 11px; font-weight: 800; }
-        .hd-calendar-view-switch button.is-active { background: #fff; color: #0284c7; box-shadow: 0 5px 14px rgba(15,23,42,.08); }
+        .hd-calendar-country-menu { position: absolute; z-index: 80; top: calc(100% + 7px); right: 0; width: min(320px,calc(100vw - 32px)); padding: 8px; border: 1px solid #dbeafe; border-radius: 16px; background: #fff; box-shadow: 0 18px 46px rgba(15,23,42,.18); }
+        .hd-calendar-country-menu > input { width: 100%; min-height: 40px; padding: 8px 11px; border: 1px solid #bae6fd; border-radius: 11px; color: #0f172a; font-size: 12px; outline: none; }
+        .hd-calendar-country-menu > input:focus { border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56,189,248,.14); }
+        .hd-calendar-country-menu > div { display: grid; max-height: 260px; margin-top: 7px; overflow-y: auto; overscroll-behavior: contain; }
+        .hd-calendar-country-menu > div > button { display: grid; min-height: 38px; grid-template-columns: 24px minmax(0,1fr) auto; align-items: center; gap: 7px; padding: 7px 9px; border-radius: 10px; color: #334155; font-size: 11px; text-align: left; }
+        .hd-calendar-country-menu > div > button:hover, .hd-calendar-country-menu > div > button[aria-selected="true"] { background: #f0f9ff; color: #0369a1; }
+        .hd-calendar-switches { display: flex; gap: 8px; margin: 0 12px 12px; overflow-x: auto; scrollbar-width: none; }
+        .hd-calendar-switches::-webkit-scrollbar { display: none; }
+        .hd-calendar-view-switch, .hd-calendar-content-switch { display: flex; width: max-content; flex: 0 0 auto; gap: 3px; padding: 4px; border: 1px solid rgba(226,232,240,.88); border-radius: 14px; background: rgba(255,255,255,.82); }
+        .hd-calendar-view-switch button, .hd-calendar-content-switch button { min-height: 34px; padding: 6px 12px; border-radius: 10px; color: #64748b; font-size: 11px; font-weight: 800; white-space: nowrap; }
+        .hd-calendar-view-switch button.is-active, .hd-calendar-content-switch button.is-active { background: #fff; color: #0284c7; box-shadow: 0 5px 14px rgba(15,23,42,.08); }
         .hd-calendar-icon-button {
           display: grid; width: 46px; height: 46px; place-items: center;
           border: 1px solid rgba(226,232,240,.9); border-radius: 15px;
@@ -2699,6 +2859,11 @@ export default function CalendarPage() {
         .hd-calendar-week { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 2px; }
         .hd-calendar-day-count { display: none; }
         .hd-calendar-day-events { display: none; }
+        .hd-calendar-day-holiday-dot { display: inline-grid; margin-top: 3px; place-items: center; color: #2563eb; }
+        .hd-calendar-day-holiday-dot svg { width: 11px; height: 11px; stroke-width: 2.4; }
+        .hd-calendar-day-holiday { display: flex; min-width: 0; align-items: center; gap: 4px; overflow: hidden; padding: 4px 6px; border: 1px solid #bfdbfe; border-radius: 7px; background: #eff6ff; color: #1d4ed8; font-size: 9px; font-weight: 800; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+        .hd-calendar-day-holiday svg { width: 11px; height: 11px; flex: 0 0 11px; stroke-width: 2.3; }
+        .hd-calendar-day-holiday--religious { border-color: #ddd6fe; background: #f5f3ff; color: #6d28d9; }
         .hd-calendar-legend {
           display: flex; gap: 11px; margin: 12px 4px 0; padding-top: 11px;
           overflow-x: auto; border-top: 1px solid #eef2f7; scrollbar-width: none;
@@ -2725,6 +2890,9 @@ export default function CalendarPage() {
         .hd-calendar-agenda-day__copy strong { overflow: hidden; color: #334155; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
         .hd-calendar-agenda-day__copy small { overflow: hidden; color: #94a3b8; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
         .hd-calendar-agenda-day__important { color: #f59e0b; }
+        .hd-calendar-agenda-day__event--holiday { background: #eff6ff; }
+        .hd-calendar-agenda-day__event--holiday > i { background: #3b82f6; }
+        .hd-calendar-agenda-day__event--holiday .hd-calendar-agenda-day__time svg { width: 16px; height: 16px; color: #2563eb; }
         .hd-calendar-agenda-view--empty { place-items: center; padding: 60px 20px; text-align: center; }
         .hd-calendar-agenda-view--empty > svg { width: 30px; color: #38bdf8; }
         .hd-calendar-agenda-view--empty h2 { color: #334155; font-weight: 900; }
@@ -2736,6 +2904,7 @@ export default function CalendarPage() {
           .hd-calendar-purpose > div:not(.hd-calendar-purpose__controls) { min-width: 0; flex: 1; }
           .hd-calendar-purpose__controls { width: 100%; margin-left: 45px; }
           .hd-calendar-purpose__country-picker, .hd-calendar-purpose__country { min-width: 0; flex: 1; width: 100%; }
+          .hd-calendar-country-menu { right: 0; }
         }
         @media (min-width: 640px) {
           .hd-calendar-upcoming { margin-inline: 0; }
@@ -2747,7 +2916,7 @@ export default function CalendarPage() {
           .hd-calendar-add { display: inline-flex; width: auto; min-width: 46px; gap: 7px; padding-inline: 14px; }
           .hd-calendar-add__label { display: inline; font-size: 12px; font-weight: 850; }
           .hd-calendar-purpose { margin-inline: 0; }
-          .hd-calendar-view-switch { margin-inline: 0; }
+          .hd-calendar-switches { margin-inline: 0; }
           .hd-calendar-workspace { grid-template-columns: minmax(0,1fr) 330px; align-items: start; padding: 0; }
           .hd-calendar-surface { padding: 14px; border-radius: 28px; }
           .hd-calendar-month-nav { padding-bottom: 8px; }
@@ -2758,7 +2927,9 @@ export default function CalendarPage() {
           .hd-calendar-week > button > div { display: none; }
           .hd-calendar-day-count { display: inline-grid; position: absolute; top: 8px; right: 8px; min-width: 18px; height: 18px; place-items: center; border-radius: 999px; background: #f1f5f9; color: #64748b; font-size: 9px; font-weight: 850; }
           .hd-calendar-day-events { display: grid; min-width: 0; gap: 4px; margin-top: 8px; }
-          .hd-calendar-day-event { overflow: hidden; padding: 4px 6px; border-width: 1px; border-radius: 7px; color: #334155; font-size: 9px; font-weight: 750; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+          .hd-calendar-day-holiday-dot { display: none; }
+          .hd-calendar-day-event { display: flex; min-width: 0; align-items: center; gap: 4px; overflow: hidden; padding: 4px 6px; border-width: 1px; border-radius: 7px; color: #334155; font-size: 9px; font-weight: 750; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+          .hd-calendar-day-event svg { width: 11px; height: 11px; flex: 0 0 11px; color: #ec4899; stroke-width: 2.3; }
           .hd-calendar-day-more { color: #64748b; font-size: 9px; font-weight: 800; }
           .hd-calendar-side { display: grid; position: sticky; top: 84px; gap: 14px; padding: 18px; border: 1px solid rgba(255,255,255,.94); border-radius: 28px; background: rgba(255,255,255,.92); box-shadow: 0 18px 48px rgba(15,23,42,.075); }
           .hd-calendar-side__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -2848,10 +3019,12 @@ export default function CalendarPage() {
         </div>
 
         <section className="hd-calendar-purpose" aria-labelledby="calendar-purpose-title" aria-describedby="calendar-purpose-description" aria-label={`${t("purpose.title")}: ${observanceEyebrow}`} aria-live="polite">
-          <span className="hd-calendar-purpose__heart" aria-hidden="true">{observance?.kind === "religious" ? "⛪" : "🎉"}</span>
+          <span className={`hd-calendar-purpose__heart${observance ? ` hd-calendar-purpose__heart--${observance.kind}` : ""}`} aria-hidden="true">
+            {observance ? <ObservanceIcon observance={observance} /> : <CalendarDays />}
+          </span>
           <div>
             <h1 id="calendar-purpose-title" className="hd-calendar-purpose__eyebrow">{observanceEyebrow}</h1>
-            <p className="hd-calendar-purpose__text">{observance?.title ?? uiCopy.noHoliday}</p>
+            <p className="hd-calendar-purpose__text">{observanceMessage}</p>
           </div>
           <div className="hd-calendar-purpose__controls">
             <CalendarCountryPicker
@@ -2867,9 +3040,16 @@ export default function CalendarPage() {
           <span id="calendar-purpose-description" className="sr-only">{t("purpose.description")}</span>
         </section>
 
-        <div className="hd-calendar-view-switch" role="group" aria-label={uiCopy.viewLabel}>
-          <button type="button" className={calendarView === "month" ? "is-active" : ""} onClick={() => setCalendarView("month")} aria-pressed={calendarView === "month"}>{t("navigation.month")}</button>
-          <button type="button" className={calendarView === "agenda" ? "is-active" : ""} onClick={() => setCalendarView("agenda")} aria-pressed={calendarView === "agenda"}>{uiCopy.agenda}</button>
+        <div className="hd-calendar-switches">
+          <div className="hd-calendar-view-switch" role="group" aria-label={uiCopy.viewLabel}>
+            <button type="button" className={calendarView === "month" ? "is-active" : ""} onClick={() => setCalendarView("month")} aria-pressed={calendarView === "month"}>{t("navigation.month")}</button>
+            <button type="button" className={calendarView === "agenda" ? "is-active" : ""} onClick={() => setCalendarView("agenda")} aria-pressed={calendarView === "agenda"}>{uiCopy.agenda}</button>
+          </div>
+          <div className="hd-calendar-content-switch" role="group" aria-label={uiCopy.contentLabel}>
+            <button type="button" className={calendarContentFilter === "all" ? "is-active" : ""} onClick={() => setCalendarContentFilter("all")} aria-pressed={calendarContentFilter === "all"}>{uiCopy.all}</button>
+            <button type="button" className={calendarContentFilter === "events" ? "is-active" : ""} onClick={() => setCalendarContentFilter("events")} aria-pressed={calendarContentFilter === "events"}>{uiCopy.myEvents}</button>
+            <button type="button" className={calendarContentFilter === "holidays" ? "is-active" : ""} onClick={() => setCalendarContentFilter("holidays")} aria-pressed={calendarContentFilter === "holidays"}>{uiCopy.holidays}</button>
+          </div>
         </div>
 
         <div className="hd-calendar-workspace">
@@ -2907,7 +3087,9 @@ export default function CalendarPage() {
             <CalendarGrid
               year={viewYear}
               month={viewMonth}
-              events={visibleEvents}
+              events={calendarDisplayEvents}
+              observances={activeObservances}
+              contentFilter={calendarContentFilter}
               selectedDate={selectedDate}
               onSelectDate={handleSelectDate}
               onNavigateDate={(dateYMD) => {
@@ -2945,6 +3127,8 @@ export default function CalendarPage() {
           </div>
           <CalendarAgendaView
             events={agendaEvents}
+            observances={activeObservances}
+            contentFilter={calendarContentFilter}
             onSelectDate={(dateYMD) => {
               const date = parseLocalDateOnly(dateYMD);
               if (!date) return;
@@ -2959,7 +3143,7 @@ export default function CalendarPage() {
         )}
 
         {/* ── UPCOMING STRIP ── */}
-        {!loading && visibleUpcoming.length > 0 && (
+        {!loading && calendarContentFilter !== "holidays" && visibleUpcoming.length > 0 && (
           <div className="hd-calendar-upcoming mb-3">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
               {t("navigation.upcoming")}

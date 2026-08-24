@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useCallback, useRef, useState } from "react";
+import { useEffect, useMemo, useCallback, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import type { CalendarEventRecord as EventRow } from "@/lib/repositories/events";
 import type { EventRecurrenceRule } from "@/lib/repositories/events";
 import { expandCalendarEventOccurrences } from "@/lib/events/eventRecurrence";
 import { addLocalDateOnlyDays, formatLocalDateOnly, parseLocalDateOnly } from "@/lib/events/dateOnly";
+import { getCalendarCountryName, getDefaultCalendarCountry, getLocalObservance, type LocalObservance } from "@/lib/events/localObservances";
 import type {
   RealtimeChannel,
   RealtimePostgresChangesPayload,
@@ -101,6 +102,25 @@ const CAT_EMOJI: Record<string, string> = {
 
 type CalendarFilter = "all" | "birthday" | "work" | "personal" | "important";
 type CalendarView = "month" | "agenda";
+
+const CALENDAR_UI_COPY: Record<string, {
+  all: string;
+  agenda: string;
+  viewLabel: string;
+  category: string;
+  showAdvanced: string;
+  hideAdvanced: string;
+  holidayToday: string;
+  holidaySelected: string;
+  noHoliday: string;
+  countryLabel: string;
+}> = {
+  uk: { all: "Усі", agenda: "Порядок денний", viewLabel: "Режим календаря", category: "Категорія", showAdvanced: "Додаткові параметри", hideAdvanced: "Сховати додаткові параметри", holidayToday: "Сьогодні · {country}", holidaySelected: "Обраний день · {country}", noHoliday: "На цей день немає загальнодержавного свята", countryLabel: "Країна свят" },
+  pl: { all: "Wszystkie", agenda: "Agenda", viewLabel: "Widok kalendarza", category: "Kategoria", showAdvanced: "Więcej opcji", hideAdvanced: "Ukryj dodatkowe opcje", holidayToday: "Dzisiaj · {country}", holidaySelected: "Wybrany dzień · {country}", noHoliday: "W tym dniu nie ma święta państwowego", countryLabel: "Kraj świąt" },
+  en: { all: "All", agenda: "Agenda", viewLabel: "Calendar view", category: "Category", showAdvanced: "More options", hideAdvanced: "Hide additional options", holidayToday: "Today · {country}", holidaySelected: "Selected day · {country}", noHoliday: "There is no nationwide public holiday on this day", countryLabel: "Holiday country" },
+  de: { all: "Alle", agenda: "Terminliste", viewLabel: "Kalenderansicht", category: "Kategorie", showAdvanced: "Weitere Optionen", hideAdvanced: "Zusätzliche Optionen ausblenden", holidayToday: "Heute · {country}", holidaySelected: "Ausgewählter Tag · {country}", noHoliday: "An diesem Tag gibt es keinen bundesweiten Feiertag", countryLabel: "Feiertagsland" },
+  ru: { all: "Все", agenda: "Повестка", viewLabel: "Вид календаря", category: "Категория", showAdvanced: "Дополнительные параметры", hideAdvanced: "Скрыть дополнительные параметры", holidayToday: "Сегодня · {country}", holidaySelected: "Выбранный день · {country}", noHoliday: "В этот день нет общегосударственного праздника", countryLabel: "Страна праздников" },
+};
 
 type InsightTopic =
   | "coffee"
@@ -280,6 +300,46 @@ function useBodyScrollLock(active: boolean) {
   }, [active]);
 }
 
+function subscribeToCalendarMobileLayout(onChange: () => void) {
+  const query = window.matchMedia("(max-width: 1023px)");
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function getCalendarMobileLayoutSnapshot() {
+  return window.matchMedia("(max-width: 1023px)").matches;
+}
+
+function useCalendarMobileLayout() {
+  return useSyncExternalStore(subscribeToCalendarMobileLayout, getCalendarMobileLayoutSnapshot, () => false);
+}
+
+const CALENDAR_COUNTRY_STORAGE_KEY = "happydate_calendar_country";
+const CALENDAR_COUNTRY_CHANGE_EVENT = "happydate:calendar-country";
+
+function subscribeToCalendarCountry(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(CALENDAR_COUNTRY_CHANGE_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(CALENDAR_COUNTRY_CHANGE_EVENT, onChange);
+  };
+}
+
+function useCalendarCountry(locale: string): [string, (country: string) => void] {
+  const fallback = getDefaultCalendarCountry(locale);
+  const country = useSyncExternalStore(
+    subscribeToCalendarCountry,
+    () => window.localStorage.getItem(CALENDAR_COUNTRY_STORAGE_KEY) || fallback,
+    () => fallback,
+  );
+  const setCountry = useCallback((nextCountry: string) => {
+    window.localStorage.setItem(CALENDAR_COUNTRY_STORAGE_KEY, nextCountry);
+    window.dispatchEvent(new Event(CALENDAR_COUNTRY_CHANGE_EVENT));
+  }, []);
+  return [country, setCountry];
+}
+
 /* ═══════════════════════════════════════════════════
    TOAST
 ═══════════════════════════════════════════════════ */
@@ -315,6 +375,62 @@ function ToastStack({ items }: { items: Toast[] }) {
           {t.msg}
         </div>
       ))}
+    </div>
+  );
+}
+
+function CalendarCountryPicker({
+  label,
+  selectedCountry,
+  selectedName,
+  options,
+  onSelect,
+}: {
+  label: string;
+  selectedCountry: string;
+  selectedName: string;
+  options: Array<[string, string]>;
+  onSelect: (country: string) => void;
+}) {
+  const [query, setQuery] = useState(selectedName);
+  const chooseMatchingCountry = (value: string, allowPrefix: boolean) => {
+    const normalized = value.trim().toLocaleLowerCase();
+    if (!normalized) return false;
+    const match = options.find(([, name]) => name.toLocaleLowerCase() === normalized)
+      ?? (allowPrefix ? options.find(([, name]) => name.toLocaleLowerCase().startsWith(normalized)) : undefined);
+    if (!match) return false;
+    setQuery(match[1]);
+    if (match[0] !== selectedCountry) onSelect(match[0]);
+    return true;
+  };
+
+  return (
+    <div className="hd-calendar-purpose__country-picker">
+      <label className="sr-only" htmlFor="calendar-holiday-country">{label}</label>
+      <input
+        id="calendar-holiday-country"
+        className="hd-calendar-purpose__country"
+        type="search"
+        list="calendar-holiday-country-options"
+        value={query}
+        placeholder={label}
+        autoComplete="off"
+        aria-label={label}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          chooseMatchingCountry(event.target.value, false);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && chooseMatchingCountry(query, true)) event.preventDefault();
+          if (event.key === "Escape") setQuery(selectedName);
+        }}
+        onBlur={() => {
+          if (!chooseMatchingCountry(query, false)) setQuery(selectedName);
+        }}
+      />
+      <datalist id="calendar-holiday-country-options">
+        {options.map(([code, name]) => <option key={code} value={name} />)}
+      </datalist>
     </div>
   );
 }
@@ -521,9 +637,14 @@ function AddEditSheet({
   onSubmit: () => void;
   onDelete?: () => void;
 }) {
+  const locale = useLocale();
   const t = useTranslations("dashboard");
+  const uiCopy = CALENDAR_UI_COPY[locale] ?? CALENDAR_UI_COPY.en;
   const ref = useFocusTrap(true);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [showAdvanced, setShowAdvanced] = useState(
+    mode === "edit" || Boolean(durationMinutes || location || travelBufferMinutes || notes || recurrenceRule !== "none"),
+  );
 
   // Lock background scroll while sheet is open
   useBodyScrollLock(true);
@@ -606,201 +727,33 @@ function AddEditSheet({
           </button>
         </div>
 
-        {/* Fields */}
+        {/* Short primary flow; advanced fields stay available without making every event feel like a form. */}
         <div className="calendar-event-fields px-5 py-4 space-y-3">
-          {/* Title — FIX 5: text-[16px] prevents Safari auto-zoom */}
-          <div className="calendar-event-field calendar-event-field--title flex items-center gap-3 py-2 border-b border-slate-100">
-            <span className="text-slate-300 text-lg select-none">✏️</span>
-            <label htmlFor={`${mode}-event-title`} className="sr-only">{t("form.title")}</label>
-            <input
-              id={`${mode}-event-title`}
-              ref={inputRef}
-              type="text"
-              placeholder={t("form.titlePlaceholder")}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="flex-1 placeholder-slate-300 outline-none bg-transparent font-medium text-slate-900"
-              // FIX 5: minimum 16px to suppress Safari zoom
-              style={{ fontSize: "16px" }}
-            />
+          <label className="calendar-event-field calendar-event-field--title" htmlFor={`${mode}-event-title`}>
+            <span aria-hidden="true">✏️</span>
+            <span className="calendar-event-field__body"><small>{t("form.title")}</small><input id={`${mode}-event-title`} ref={inputRef} type="text" placeholder={t("form.titlePlaceholder")} value={title} onChange={(event) => setTitle(event.target.value)} /></span>
+          </label>
+
+          <div className="calendar-event-primary-grid">
+            <label className="calendar-event-field" htmlFor={`${mode}-event-date`}><span aria-hidden="true">📅</span><span className="calendar-event-field__body"><small>{t("form.date")}</small><input id={`${mode}-event-date`} type="date" value={date} onChange={(event) => setDate(event.target.value)} /></span></label>
+            <label className="calendar-event-field" htmlFor={`${mode}-event-time`}><span aria-hidden="true">🕐</span><span className="calendar-event-field__body"><small>{t("form.time")}</small><span className="flex items-center"><input id={`${mode}-event-time`} type="time" value={timeOfDay} onChange={(event) => setTimeOfDay(event.target.value)} />{timeOfDay && <button type="button" onClick={() => setTimeOfDay("")} aria-label={t("form.clearTime")}>×</button>}</span></span></label>
           </div>
 
-          {/* Date — FIX 5 */}
-          <div className="calendar-event-field flex items-center gap-3 py-2 border-b border-slate-100">
-            <span className="text-slate-300 text-lg select-none">📅</span>
-            <label htmlFor={`${mode}-event-date`} className="sr-only">{t("form.date")}</label>
-            <input
-              id={`${mode}-event-date`}
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="flex-1 text-slate-700 outline-none bg-transparent"
-              style={{ fontSize: "16px" }}
-            />
-          </div>
+          <fieldset className="calendar-event-field calendar-event-categories"><legend className="sr-only">{uiCopy.category}</legend><span aria-hidden="true">🏷️</span><div className="flex flex-1 flex-wrap gap-2">{CATEGORIES_ADD.map((c) => <button key={c.value} type="button" onClick={() => setCategory(c.value)} aria-pressed={category === c.value} className={`calendar-event-category ${category === c.value ? `${CAT_COLOR[c.value].pill} ${CAT_COLOR[c.value].text} is-active` : ""}`}><span>{c.emoji}</span>{t(`categories.${c.value}`)}</button>)}</div></fieldset>
 
-          <div className="calendar-event-field flex items-center gap-3 py-2 border-b border-slate-100">
-            <span className="text-slate-300 text-lg select-none">🕐</span>
-            <label htmlFor={`${mode}-event-time`} className="sr-only">{t("form.time")}</label>
-            <input
-              id={`${mode}-event-time`}
-              type="time"
-              value={timeOfDay}
-              onChange={(event) => setTimeOfDay(event.target.value)}
-              className="flex-1 text-slate-700 outline-none bg-transparent"
-              style={{ fontSize: "16px" }}
-            />
-            {timeOfDay && (
-              <button type="button" onClick={() => setTimeOfDay("")} className="min-h-11 px-2 text-xs font-semibold text-slate-400">
-                {t("form.clearTime")}
-              </button>
-            )}
-          </div>
+          <label className="calendar-event-field" htmlFor={`${mode}-event-person`}><span aria-hidden="true">👤</span><span className="calendar-event-field__body"><small>{t("form.person")}</small><select id={`${mode}-event-person`} value={personId} onChange={(event) => setPersonId(event.target.value)}><option value="">{t("form.noPerson")}</option>{people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></span></label>
 
-          <div className="calendar-event-field flex items-center gap-3 py-2 border-b border-slate-100">
-            <span className="text-slate-300 text-lg select-none">⏳</span>
-            <label htmlFor={`${mode}-event-duration`} className="sr-only">{t("form.duration")}</label>
-            <input
-              id={`${mode}-event-duration`}
-              type="number"
-              min="5"
-              max="1440"
-              step="5"
-              placeholder={t("form.durationPlaceholder")}
-              value={durationMinutes}
-              onChange={(event) => setDurationMinutes(event.target.value)}
-              className="min-w-0 flex-1 text-slate-700 outline-none bg-transparent"
-              style={{ fontSize: "16px" }}
-            />
-            <span className="text-xs font-semibold text-slate-400">{t("form.minutes")}</span>
-          </div>
+          <button type="button" role="switch" aria-checked={isImportant} onClick={() => setIsImportant(!isImportant)} className={`calendar-event-reminder ${isImportant ? "calendar-event-reminder--active" : ""}`}><span aria-hidden="true">🔔</span><span className="min-w-0 flex-1"><strong>{t("form.important")}</strong><small>{t("form.importantHint")}</small></span><span className={`calendar-event-switch ${isImportant ? "is-active" : ""}`} aria-hidden="true"><i /></span></button>
 
-          <div className="calendar-event-field flex items-center gap-3 py-2 border-b border-slate-100">
-            <span className="text-slate-300 text-lg select-none">📍</span>
-            <label htmlFor={`${mode}-event-location`} className="sr-only">{t("form.location")}</label>
-            <input
-              id={`${mode}-event-location`}
-              type="text"
-              maxLength={300}
-              placeholder={t("form.locationPlaceholder")}
-              value={location}
-              onChange={(event) => setLocation(event.target.value)}
-              className="min-w-0 flex-1 text-slate-700 placeholder-slate-300 outline-none bg-transparent"
-              style={{ fontSize: "16px" }}
-            />
-          </div>
+          <button type="button" className="calendar-event-advanced-toggle" onClick={() => setShowAdvanced((value) => !value)} aria-expanded={showAdvanced}><span>⚙️</span><span>{showAdvanced ? uiCopy.hideAdvanced : uiCopy.showAdvanced}</span><span aria-hidden="true">{showAdvanced ? "⌃" : "⌄"}</span></button>
 
-          <div className="calendar-event-field flex items-center gap-3 py-2 border-b border-slate-100">
-            <span className="text-slate-300 text-lg select-none">🚗</span>
-            <label htmlFor={`${mode}-event-travel-buffer`} className="sr-only">{t("form.travelBuffer")}</label>
-            <input
-              id={`${mode}-event-travel-buffer`}
-              type="number"
-              min="5"
-              max="240"
-              step="5"
-              placeholder={t("form.travelBufferPlaceholder")}
-              value={travelBufferMinutes}
-              onChange={(event) => setTravelBufferMinutes(event.target.value)}
-              className="min-w-0 flex-1 text-slate-700 placeholder-slate-300 outline-none bg-transparent"
-              style={{ fontSize: "16px" }}
-            />
-            <span className="text-xs font-semibold text-slate-400">{t("form.minutes")}</span>
-          </div>
-
-          {/* Category */}
-          <div className="calendar-event-field calendar-event-categories flex items-center gap-3 py-2 border-b border-slate-100">
-            <span className="text-slate-300 text-lg select-none">🏷️</span>
-            <div className="flex gap-2 flex-1 flex-wrap">
-              {CATEGORIES_ADD.map((c) => (
-                <button
-                  key={c.value}
-                  type="button"
-                  onClick={() => setCategory(c.value)}
-                  aria-pressed={category === c.value}
-                  className={`calendar-event-category h-10 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all active:scale-[.97] ${
-                    category === c.value
-                      ? CAT_COLOR[c.value].pill +
-                        " " +
-                        CAT_COLOR[c.value].text +
-                        " shadow-sm"
-                      : "border-slate-200 text-slate-400 bg-white"
-                  }`}
-                >
-                  <span>{c.emoji}</span> {t(`categories.${c.value}`)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="calendar-event-field flex items-center gap-3 py-2 border-b border-slate-100">
-            <span className="text-slate-300 text-lg select-none">🔁</span>
-            <label htmlFor={`${mode}-event-recurrence`} className="sr-only">
-              {t("form.recurrence")}
-            </label>
-            <select
-              id={`${mode}-event-recurrence`}
-              value={recurrenceRule}
-              onChange={(event) => setRecurrenceRule(event.target.value as EventRecurrenceRule)}
-              className="flex-1 min-h-11 bg-transparent text-slate-700 outline-none"
-              style={{ fontSize: "16px" }}
-            >
-              {(["none", "weekly", "monthly", "yearly"] as const).map((rule) => (
-                <option key={rule} value={rule}>{t(`recurrence.${rule}`)}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="calendar-event-field flex items-center gap-3 py-2 border-b border-slate-100">
-            <span className="text-slate-300 text-lg select-none">👤</span>
-            <label htmlFor={`${mode}-event-person`} className="sr-only">
-              {t("form.person")}
-            </label>
-            <select
-              id={`${mode}-event-person`}
-              value={personId}
-              onChange={(e) => setPersonId(e.target.value)}
-              className="flex-1 text-slate-700 outline-none bg-transparent"
-              style={{ fontSize: "16px" }}
-            >
-              <option value="">{t("form.noPerson")}</option>
-              {people.map((person) => (
-                <option key={person.id} value={person.id}>{person.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isImportant}
-            onClick={() => setIsImportant(!isImportant)}
-            className={`calendar-event-reminder flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left ${isImportant ? "calendar-event-reminder--active bg-amber-50" : "bg-slate-50"}`}
-          >
-            <span className="text-lg">🔔</span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold text-slate-800">{t("form.important")}</span>
-              <span className="block text-xs text-slate-500">{t("form.importantHint")}</span>
-            </span>
-            <span className={`relative h-7 w-12 rounded-full transition-colors ${isImportant ? "bg-amber-400" : "bg-slate-200"}`}>
-              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${isImportant ? "translate-x-6" : "translate-x-1"}`} />
-            </span>
-          </button>
-
-          {/* Notes — FIX 5 */}
-          <div className="calendar-event-field flex items-center gap-3 py-2">
-            <span className="text-slate-300 text-lg select-none">📝</span>
-            <label htmlFor={`${mode}-event-notes`} className="sr-only">{t("form.notes")}</label>
-            <input
-              id={`${mode}-event-notes`}
-              type="text"
-              placeholder={t("form.notePlaceholder")}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="flex-1 text-slate-700 placeholder-slate-300 outline-none bg-transparent"
-              style={{ fontSize: "16px" }}
-            />
-          </div>
+          {showAdvanced && <div className="calendar-event-advanced">
+            <label className="calendar-event-field" htmlFor={`${mode}-event-duration`}><span aria-hidden="true">⏳</span><span className="calendar-event-field__body"><small>{t("form.duration")}</small><span className="flex items-center"><input id={`${mode}-event-duration`} type="number" min="5" max="1440" step="5" placeholder={t("form.durationPlaceholder")} value={durationMinutes} onChange={(event) => setDurationMinutes(event.target.value)} /><b>{t("form.minutes")}</b></span></span></label>
+            <label className="calendar-event-field" htmlFor={`${mode}-event-location`}><span aria-hidden="true">📍</span><span className="calendar-event-field__body"><small>{t("form.location")}</small><input id={`${mode}-event-location`} type="text" maxLength={300} placeholder={t("form.locationPlaceholder")} value={location} onChange={(event) => setLocation(event.target.value)} /></span></label>
+            <label className="calendar-event-field" htmlFor={`${mode}-event-travel-buffer`}><span aria-hidden="true">🚗</span><span className="calendar-event-field__body"><small>{t("form.travelBuffer")}</small><span className="flex items-center"><input id={`${mode}-event-travel-buffer`} type="number" min="5" max="240" step="5" placeholder={t("form.travelBufferPlaceholder")} value={travelBufferMinutes} onChange={(event) => setTravelBufferMinutes(event.target.value)} /><b>{t("form.minutes")}</b></span></span></label>
+            <label className="calendar-event-field" htmlFor={`${mode}-event-recurrence`}><span aria-hidden="true">🔁</span><span className="calendar-event-field__body"><small>{t("form.recurrence")}</small><select id={`${mode}-event-recurrence`} value={recurrenceRule} onChange={(event) => setRecurrenceRule(event.target.value as EventRecurrenceRule)}>{(["none", "weekly", "monthly", "yearly"] as const).map((rule) => <option key={rule} value={rule}>{t(`recurrence.${rule}`)}</option>)}</select></span></label>
+            <label className="calendar-event-field calendar-event-advanced__notes" htmlFor={`${mode}-event-notes`}><span aria-hidden="true">📝</span><span className="calendar-event-field__body"><small>{t("form.notes")}</small><textarea id={`${mode}-event-notes`} rows={2} placeholder={t("form.notePlaceholder")} value={notes} onChange={(event) => setNotes(event.target.value)} /></span></label>
+          </div>}
         </div>
 
         {/* Delete */}
@@ -1112,11 +1065,14 @@ function DayDetailSheet({
 }) {
   const locale = useLocale();
   const t = useTranslations("dashboard");
-  const ref = useFocusTrap(true);
+  const isMobileLayout = useCalendarMobileLayout();
+  const ref = useFocusTrap(isMobileLayout);
   const today = todayYMD();
   const isToday = dateYMD === today;
 
-  useBodyScrollLock(true);
+  useBodyScrollLock(isMobileLayout);
+
+  if (!isMobileLayout) return null;
 
   return (
     <div
@@ -1576,6 +1532,7 @@ function CalendarAgendaView({
 }) {
   const locale = useLocale();
   const t = useTranslations("dashboard");
+  const uiCopy = CALENDAR_UI_COPY[locale] ?? CALENDAR_UI_COPY.en;
   const today = todayYMD();
   const groups = useMemo(() => {
     const future = events.filter((event) => event.date >= today).slice(0, 100);
@@ -1599,7 +1556,7 @@ function CalendarAgendaView({
   }
 
   return (
-    <section className="hd-calendar-agenda-view" aria-label={t("navigation.agenda")}>
+    <section className="hd-calendar-agenda-view" aria-label={uiCopy.agenda}>
       {groups.map(([dateYMD, dayEvents]) => {
         const date = parseLocalDateOnly(dateYMD) ?? new Date(Number.NaN);
         const isToday = dateYMD === today;
@@ -1884,6 +1841,8 @@ export default function CalendarPage() {
   const searchParams = useSearchParams();
   const locale = useLocale();
   const t = useTranslations("dashboard");
+  const uiCopy = CALENDAR_UI_COPY[locale] ?? CALENDAR_UI_COPY.en;
+  const [calendarCountry, setCalendarCountry] = useCalendarCountry(locale);
 
   const [events, setEvents] = useState<EventRow[]>([]);
   const [people, setPeople] = useState<PersonRow[]>([]);
@@ -1898,6 +1857,8 @@ export default function CalendarPage() {
   const [showSearch, setShowSearch] = useState(false);
   const [calendarFilter, setCalendarFilter] = useState<CalendarFilter>("all");
   const [calendarView, setCalendarView] = useState<CalendarView>("month");
+  const [yearObservances, setYearObservances] = useState<{ key: string; items: Record<string, LocalObservance> }>({ key: "", items: {} });
+  const [calendarCountries, setCalendarCountries] = useState<Record<string, string>>({});
 
   const [addOpen, setAddOpen] = useState(false);
   const [mDate, setMDate] = useState("");
@@ -1932,6 +1893,31 @@ export default function CalendarPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const assistantActionConsumedRef = useRef(false);
   const assistantDraftRef = useRef<{ action: "add-event" | "plan-day"; personId: string | null } | null>(null);
+
+  /* ── Complete country calendar for the visible year ── */
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch(`/api/calendar/observances?year=${viewYear}&locale=${encodeURIComponent(locale)}&country=${encodeURIComponent(calendarCountry)}`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Holiday calendar unavailable");
+        return response.json() as Promise<{
+          country: LocalObservance["country"];
+          countries: Record<string, string>;
+          observances: Array<{ date: string; title: string; kind: "public" | "observance" }>;
+        }>;
+      })
+      .then(({ country, countries, observances }) => {
+        const countryName = countries[country] ?? country;
+        setCalendarCountries(countries);
+        if (country !== calendarCountry) setCalendarCountry(country);
+        setYearObservances({
+          key: `${locale}:${calendarCountry}:${viewYear}`,
+          items: Object.fromEntries(observances.map((item) => [item.date, { ...item, country, countryName }])),
+        });
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [calendarCountry, locale, setCalendarCountry, viewYear]);
 
   /* ── Init + realtime ── */
   useEffect(() => {
@@ -2639,6 +2625,15 @@ export default function CalendarPage() {
   /* ═══════════════════════════════════════════
      RENDER
   ═══════════════════════════════════════════ */
+  const observanceDate = selectedDate ?? todayYMD();
+  const observance = (yearObservances.key === `${locale}:${calendarCountry}:${viewYear}` ? yearObservances.items[observanceDate] : null)
+    ?? (calendarCountry === getDefaultCalendarCountry(locale) ? getLocalObservance(observanceDate, locale) : null);
+  const observanceCountry = observance?.countryName ?? calendarCountries[calendarCountry] ?? getCalendarCountryName(locale);
+  const observanceEyebrow = (selectedDate ? uiCopy.holidaySelected : uiCopy.holidayToday).replace("{country}", observanceCountry);
+  const observanceDateLabel = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" }).format(
+    parseLocalDateOnly(observanceDate) ?? new Date(),
+  );
+  const calendarCountryOptions = Object.entries(calendarCountries).sort(([, left], [, right]) => left.localeCompare(right, locale));
   return (
     <>
       <style>{`
@@ -2665,6 +2660,11 @@ export default function CalendarPage() {
         .hd-calendar-purpose__heart { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 12px; background: #fff; color: #ec4899; font-size: 16px; box-shadow: 0 7px 18px rgba(236,72,153,.1); }
         .hd-calendar-purpose__eyebrow { color: #0284c7; font-size: 9px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
         .hd-calendar-purpose__text { margin-top: 2px; color: #475569; font-size: 12px; font-weight: 650; line-height: 1.45; }
+        .hd-calendar-purpose__date { margin-left: auto; align-self: center; color: #94a3b8; font-size: 10px; font-weight: 800; white-space: nowrap; }
+        .hd-calendar-purpose__controls { display: flex; margin-left: auto; align-items: center; gap: 9px; }
+        .hd-calendar-purpose__country-picker { display: flex; min-width: 0; }
+        .hd-calendar-purpose__country { width: 190px; min-height: 34px; padding: 5px 10px; border: 1px solid #bae6fd; border-radius: 11px; background: #fff; color: #0369a1; font-size: 10px; font-weight: 850; outline: none; }
+        .hd-calendar-purpose__country:focus-visible { border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56,189,248,.18); }
         .hd-calendar-view-switch { display: flex; width: max-content; gap: 3px; margin: 0 12px 12px; padding: 4px; border: 1px solid rgba(226,232,240,.88); border-radius: 14px; background: rgba(255,255,255,.82); }
         .hd-calendar-view-switch button { min-height: 34px; padding: 6px 12px; border-radius: 10px; color: #64748b; font-size: 11px; font-weight: 800; }
         .hd-calendar-view-switch button.is-active { background: #fff; color: #0284c7; box-shadow: 0 5px 14px rgba(15,23,42,.08); }
@@ -2731,6 +2731,12 @@ export default function CalendarPage() {
         .hd-calendar-agenda-view--empty p { color: #94a3b8; font-size: 12px; }
         .hd-calendar-agenda-view--empty button { display: inline-flex; min-height: 42px; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 14px; background: #0ea5e9; color: #fff; font-size: 12px; font-weight: 850; }
         .hd-calendar-agenda-view--empty button svg { width: 16px; }
+        @media (max-width: 639px) {
+          .hd-calendar-purpose { flex-wrap: wrap; }
+          .hd-calendar-purpose > div:not(.hd-calendar-purpose__controls) { min-width: 0; flex: 1; }
+          .hd-calendar-purpose__controls { width: 100%; margin-left: 45px; }
+          .hd-calendar-purpose__country-picker, .hd-calendar-purpose__country { min-width: 0; flex: 1; width: 100%; }
+        }
         @media (min-width: 640px) {
           .hd-calendar-upcoming { margin-inline: 0; }
         }
@@ -2841,17 +2847,29 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        <section className="hd-calendar-purpose" aria-labelledby="calendar-purpose-title">
-          <span className="hd-calendar-purpose__heart" aria-hidden="true">♥</span>
+        <section className="hd-calendar-purpose" aria-labelledby="calendar-purpose-title" aria-describedby="calendar-purpose-description" aria-label={`${t("purpose.title")}: ${observanceEyebrow}`} aria-live="polite">
+          <span className="hd-calendar-purpose__heart" aria-hidden="true">{observance?.kind === "religious" ? "⛪" : "🎉"}</span>
           <div>
-            <h1 id="calendar-purpose-title" className="hd-calendar-purpose__eyebrow">{t("purpose.title")}</h1>
-            <p className="hd-calendar-purpose__text">{t("purpose.description")}</p>
+            <h1 id="calendar-purpose-title" className="hd-calendar-purpose__eyebrow">{observanceEyebrow}</h1>
+            <p className="hd-calendar-purpose__text">{observance?.title ?? uiCopy.noHoliday}</p>
           </div>
+          <div className="hd-calendar-purpose__controls">
+            <CalendarCountryPicker
+              key={`${calendarCountry}:${calendarCountries[calendarCountry] ?? observanceCountry}`}
+              label={uiCopy.countryLabel}
+              selectedCountry={calendarCountry}
+              selectedName={calendarCountries[calendarCountry] ?? observanceCountry}
+              options={calendarCountryOptions}
+              onSelect={setCalendarCountry}
+            />
+            <time className="hd-calendar-purpose__date" dateTime={observanceDate}>{observanceDateLabel}</time>
+          </div>
+          <span id="calendar-purpose-description" className="sr-only">{t("purpose.description")}</span>
         </section>
 
-        <div className="hd-calendar-view-switch" role="group" aria-label={t("navigation.viewLabel")}>
+        <div className="hd-calendar-view-switch" role="group" aria-label={uiCopy.viewLabel}>
           <button type="button" className={calendarView === "month" ? "is-active" : ""} onClick={() => setCalendarView("month")} aria-pressed={calendarView === "month"}>{t("navigation.month")}</button>
-          <button type="button" className={calendarView === "agenda" ? "is-active" : ""} onClick={() => setCalendarView("agenda")} aria-pressed={calendarView === "agenda"}>{t("navigation.agenda")}</button>
+          <button type="button" className={calendarView === "agenda" ? "is-active" : ""} onClick={() => setCalendarView("agenda")} aria-pressed={calendarView === "agenda"}>{uiCopy.agenda}</button>
         </div>
 
         <div className="hd-calendar-workspace">
@@ -2909,7 +2927,7 @@ export default function CalendarPage() {
           )}
         </div>
         <div className="hd-calendar-legend" aria-label={t("form.importantHint")}>
-          <button type="button" className={calendarFilter === "all" ? "is-active" : ""} onClick={() => setCalendarFilter("all")} aria-pressed={calendarFilter === "all"}><Filter className="h-3 w-3" aria-hidden="true" />{t("filters.all")}</button>
+          <button type="button" className={calendarFilter === "all" ? "is-active" : ""} onClick={() => setCalendarFilter("all")} aria-pressed={calendarFilter === "all"}><Filter className="h-3 w-3" aria-hidden="true" />{uiCopy.all}</button>
           <button type="button" className={calendarFilter === "birthday" ? "is-active" : ""} onClick={() => setCalendarFilter("birthday")} aria-pressed={calendarFilter === "birthday"}><i className="bg-pink-400" />{t("categories.birthday")}</button>
           <button type="button" className={calendarFilter === "work" ? "is-active" : ""} onClick={() => setCalendarFilter("work")} aria-pressed={calendarFilter === "work"}><i className="bg-blue-400" />{t("categories.work")}</button>
           <button type="button" className={calendarFilter === "personal" ? "is-active" : ""} onClick={() => setCalendarFilter("personal")} aria-pressed={calendarFilter === "personal"}><i className="bg-emerald-400" />{t("categories.personal")}</button>
@@ -2919,7 +2937,7 @@ export default function CalendarPage() {
         ) : (
           <>
           <div className="hd-calendar-legend hd-calendar-legend--agenda" aria-label={t("form.importantHint")}>
-            <button type="button" className={calendarFilter === "all" ? "is-active" : ""} onClick={() => setCalendarFilter("all")} aria-pressed={calendarFilter === "all"}><Filter className="h-3 w-3" aria-hidden="true" />{t("filters.all")}</button>
+            <button type="button" className={calendarFilter === "all" ? "is-active" : ""} onClick={() => setCalendarFilter("all")} aria-pressed={calendarFilter === "all"}><Filter className="h-3 w-3" aria-hidden="true" />{uiCopy.all}</button>
             <button type="button" className={calendarFilter === "birthday" ? "is-active" : ""} onClick={() => setCalendarFilter("birthday")} aria-pressed={calendarFilter === "birthday"}><i className="bg-pink-400" />{t("categories.birthday")}</button>
             <button type="button" className={calendarFilter === "work" ? "is-active" : ""} onClick={() => setCalendarFilter("work")} aria-pressed={calendarFilter === "work"}><i className="bg-blue-400" />{t("categories.work")}</button>
             <button type="button" className={calendarFilter === "personal" ? "is-active" : ""} onClick={() => setCalendarFilter("personal")} aria-pressed={calendarFilter === "personal"}><i className="bg-emerald-400" />{t("categories.personal")}</button>

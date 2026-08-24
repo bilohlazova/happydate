@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabaseClient";
-import { HEADER_NAV_ITEMS, isAppShellPath } from "@/i18n/shellNavigation";
+import { HEADER_NAV_ITEMS } from "@/i18n/shellNavigation";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import { getLocaleCookie, setLocaleCookie } from "@/i18n/localeCookie";
 import { shouldSynchronizeProfileLocale } from "@/i18n/profileLocaleSync";
@@ -18,7 +18,6 @@ function cx(...cls: Array<string | false | null | undefined>) {
 export default function Header() {
   const translate = useTranslations("navigation");
   const pathname = usePathname();
-  const isAppRoute = isAppShellPath(pathname);
   const router = useRouter();
   const [isLoggedIn,    setIsLoggedIn]    = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -82,12 +81,12 @@ export default function Header() {
             🎁 HappyDate
           </Link>
 
-          {/* DESKTOP NAV — тільки публічні сторінки */}
+          {/* DESKTOP NAV */}
           <nav
-            className={`gap-6 text-sm text-white ${isAppRoute ? "hidden" : "hidden sm:flex"}`}
+            className="hidden gap-6 text-sm text-white sm:flex"
             aria-label={translate("header.navigationLabel")}
           >
-            {!isAppRoute && HEADER_NAV_ITEMS.map((item) => (
+            {HEADER_NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -116,8 +115,8 @@ export default function Header() {
               </Link>
             )}
 
-            {/* HAMBURGER — тільки мобільний */}
-            {!isAppRoute && <button
+            {/* HAMBURGER — мобільний доступ до тих самих посилань */}
+            <button
               onClick={() => setMobileMenuOpen((v) => !v)}
               className="hd-icon-button hd-mobile-menu-button text-xl text-white"
               aria-label={translate(
@@ -127,12 +126,12 @@ export default function Header() {
               aria-controls="happydate-mobile-menu"
             >
               ☰
-            </button>}
+            </button>
           </div>
         </div>
 
-        {/* MOBILE MENU — тільки публічні сторінки */}
-        {!isAppRoute && mobileMenuOpen && (
+        {/* MOBILE MENU */}
+        {mobileMenuOpen && (
           <div
             id="happydate-mobile-menu"
             className="bg-white/96 shadow-lg backdrop-blur-xl sm:hidden"

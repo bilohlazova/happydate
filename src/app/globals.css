@@ -2042,19 +2042,41 @@ label[for], summary {
 .calendar-event-title { color: var(--hd-text); font-weight: 900; letter-spacing: -.02em; }
 .calendar-event-fields { background: radial-gradient(340px 160px at 100% 0,rgba(14,165,233,.05),transparent 75%); }
 .calendar-event-field {
-  min-height: 54px; padding: 8px 11px !important; border: 1px solid #eef2f7 !important;
+  display: flex; min-width: 0; min-height: 58px; align-items: center; gap: 11px; padding: 8px 11px !important; border: 1px solid #eef2f7 !important;
   border-radius: 16px; background: rgba(255,255,255,.96); box-shadow: 0 5px 18px rgba(15,23,42,.025);
 }
-.calendar-event-field--title { min-height: 60px; border-color: #dbeafe !important; background: #f8fcff; }
+.calendar-event-field > span:first-child { flex: 0 0 auto; }
+.calendar-event-field--title { min-height: 68px; border-color: #bae6fd !important; background: #f8fcff; }
+.calendar-event-field__body { display: grid; min-width: 0; flex: 1; gap: 2px; }
+.calendar-event-field__body small { overflow: hidden; color: #94a3b8; font-size: 9px; font-weight: 800; letter-spacing: .04em; line-height: 1.2; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.calendar-event-field__body input, .calendar-event-field__body select, .calendar-event-field__body textarea { width: 100%; min-width: 0; resize: none; background: transparent; color: #334155; font-size: 16px; outline: none; }
+.calendar-event-field__body input::placeholder, .calendar-event-field__body textarea::placeholder { color: #cbd5e1; }
+.calendar-event-field__body b { color: #94a3b8; font-size: 10px; }
+.calendar-event-field__body button { min-width: 32px; color: #94a3b8; }
+.calendar-event-primary-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
 .calendar-event-categories { align-items: flex-start; }
-.calendar-event-category { min-width: 0; justify-content: center; }
+.calendar-event-categories > span { margin-top: 9px; }
+.calendar-event-category { display: inline-flex; min-height: 40px; min-width: 0; align-items: center; justify-content: center; gap: 6px; padding: 7px 11px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; color: #94a3b8; font-size: 11px; font-weight: 800; }
+.calendar-event-category.is-active { box-shadow: 0 6px 16px rgba(15,23,42,.06); }
 .calendar-event-reminder {
-  min-height: 68px; border: 1px solid #e2e8f0; transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
+  display: flex; min-height: 68px; width: 100%; align-items: center; gap: 11px; padding: 11px; border: 1px solid #e2e8f0; border-radius: 16px; background: #f8fafc; text-align: left; transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
 }
-.calendar-event-reminder--active { border-color: #fde68a; box-shadow: 0 8px 22px rgba(245,158,11,.08); }
+.calendar-event-reminder strong, .calendar-event-reminder small { display: block; }
+.calendar-event-reminder strong { color: #334155; font-size: 12px; font-weight: 900; }
+.calendar-event-reminder small { margin-top: 2px; color: #64748b; font-size: 10px; line-height: 1.35; }
+.calendar-event-reminder--active { border-color: #fde68a; background: #fffbeb; box-shadow: 0 8px 22px rgba(245,158,11,.08); }
+.calendar-event-switch { position: relative; width: 44px; height: 26px; flex: 0 0 44px; border-radius: 999px; background: #e2e8f0; }
+.calendar-event-switch i { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 999px; background: #fff; box-shadow: 0 2px 6px rgba(15,23,42,.16); transition: transform .16s ease; }
+.calendar-event-switch.is-active { background: #fbbf24; }
+.calendar-event-switch.is-active i { transform: translateX(18px); }
+.calendar-event-advanced-toggle { display: grid; width: 100%; min-height: 48px; grid-template-columns: 24px minmax(0,1fr) auto; align-items: center; gap: 8px; padding: 9px 12px; border: 1px dashed #cbd5e1; border-radius: 15px; color: #64748b; font-size: 11px; font-weight: 850; text-align: left; }
+.calendar-event-advanced { display: grid; gap: 10px; padding: 3px 0; animation: fadeInFull .16s ease both; }
 .calendar-event-delete button { min-height: 50px; border-radius: 16px; }
 @media (min-width: 640px) {
   .calendar-event-sheet { box-shadow: 0 28px 90px rgba(15,23,42,.22) !important; }
+  .calendar-event-primary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .calendar-event-advanced { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .calendar-event-advanced__notes { grid-column: 1 / -1; }
 }
 @media (prefers-reduced-motion: reduce) {
   .calendar-event-sheet { animation: none !important; }

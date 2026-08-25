@@ -24,7 +24,7 @@ import {
 import { reconcileCalendarEventReminder } from "@/lib/reminders/calendarEventReminder";
 import { buildDayPlanDraft, findDayPlanConflicts, isValidDayPlanItemWithinWindow, isValidEventDuration, isValidTravelBuffer, reflowDayPlanDraft, reorderDayPlanDraft, resizeDayPlanDraft, selectDayPlanCandidates, summarizeDayPlanDraft, type DayPlanDraftItem, type DayPlanFixedEvent, type DayPlanMoveDirection } from "@/lib/events/dayPlanDraft";
 import { DEFAULT_PLANNER_PREFERENCES, loadPlannerPreferences, savePlannerPreferences, type PlannerPreferences } from "@/lib/repositories/plannerPreferences.repository";
-import { Bell, Briefcase, CalendarDays, Check, ChevronLeft, ChevronRight, Church, Clock3, Filter, Gift, Heart, Landmark, MapPin, Plus, Repeat2, Search, Settings2, Sparkles, Star, StickyNote, Tag, Timer, Trash2, UserRound, X } from "lucide-react";
+import { Bell, Briefcase, CalendarDays, Check, ChevronLeft, ChevronRight, Church, Clock3, Download, Filter, Gift, Heart, Landmark, MapPin, Plus, Repeat2, Search, Settings2, Sparkles, Star, StickyNote, Tag, Timer, Trash2, Upload, UserRound, X } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════
    TYPES
@@ -133,12 +133,14 @@ const CALENDAR_UI_COPY: Record<string, {
   when: string;
   allDay: string;
   advancedLabel: string;
+  holidayUnavailable: string;
+  retry: string;
 }> = {
-  uk: { all: "Усі", agenda: "Порядок денний", viewLabel: "Режим календаря", category: "Категорія", showAdvanced: "Додаткові параметри", hideAdvanced: "Сховати додаткові параметри", holidayToday: "Сьогодні · {country}", holidaySelected: "Обраний день · {country}", noHoliday: "На цей день немає загальнодержавного свята", countryLabel: "Країна свят", contentLabel: "Що показувати", myEvents: "Мої події", holidays: "Свята", nextHoliday: "Наступне свято: {title} · {date}", countrySearch: "Почніть вводити назву країни", when: "Коли", allDay: "Увесь день", advancedLabel: "Місце, повторення та нотатка" },
-  pl: { all: "Wszystkie", agenda: "Agenda", viewLabel: "Widok kalendarza", category: "Kategoria", showAdvanced: "Więcej opcji", hideAdvanced: "Ukryj dodatkowe opcje", holidayToday: "Dzisiaj · {country}", holidaySelected: "Wybrany dzień · {country}", noHoliday: "W tym dniu nie ma święta państwowego", countryLabel: "Kraj świąt", contentLabel: "Pokaż", myEvents: "Moje wydarzenia", holidays: "Święta", nextHoliday: "Następne święto: {title} · {date}", countrySearch: "Zacznij wpisywać nazwę kraju", when: "Kiedy", allDay: "Cały dzień", advancedLabel: "Miejsce, powtarzanie i notatka" },
-  en: { all: "All", agenda: "Agenda", viewLabel: "Calendar view", category: "Category", showAdvanced: "More options", hideAdvanced: "Hide additional options", holidayToday: "Today · {country}", holidaySelected: "Selected day · {country}", noHoliday: "There is no nationwide public holiday on this day", countryLabel: "Holiday country", contentLabel: "Show", myEvents: "My events", holidays: "Holidays", nextHoliday: "Next holiday: {title} · {date}", countrySearch: "Start typing a country name", when: "When", allDay: "All day", advancedLabel: "Location, recurrence and note" },
-  de: { all: "Alle", agenda: "Terminliste", viewLabel: "Kalenderansicht", category: "Kategorie", showAdvanced: "Weitere Optionen", hideAdvanced: "Zusätzliche Optionen ausblenden", holidayToday: "Heute · {country}", holidaySelected: "Ausgewählter Tag · {country}", noHoliday: "An diesem Tag gibt es keinen bundesweiten Feiertag", countryLabel: "Feiertagsland", contentLabel: "Anzeigen", myEvents: "Meine Termine", holidays: "Feiertage", nextHoliday: "Nächster Feiertag: {title} · {date}", countrySearch: "Land eingeben", when: "Wann", allDay: "Ganztägig", advancedLabel: "Ort, Wiederholung und Notiz" },
-  ru: { all: "Все", agenda: "Повестка", viewLabel: "Вид календаря", category: "Категория", showAdvanced: "Дополнительные параметры", hideAdvanced: "Скрыть дополнительные параметры", holidayToday: "Сегодня · {country}", holidaySelected: "Выбранный день · {country}", noHoliday: "В этот день нет общегосударственного праздника", countryLabel: "Страна праздников", contentLabel: "Показывать", myEvents: "Мои события", holidays: "Праздники", nextHoliday: "Следующий праздник: {title} · {date}", countrySearch: "Начните вводить название страны", when: "Когда", allDay: "Весь день", advancedLabel: "Место, повторение и заметка" },
+  uk: { all: "Усі", agenda: "Порядок денний", viewLabel: "Режим календаря", category: "Категорія", showAdvanced: "Додаткові параметри", hideAdvanced: "Сховати додаткові параметри", holidayToday: "Сьогодні · {country}", holidaySelected: "Обраний день · {country}", noHoliday: "На цей день немає загальнодержавного свята", countryLabel: "Країна свят", contentLabel: "Що показувати", myEvents: "Мої події", holidays: "Свята", nextHoliday: "Наступне свято: {title} · {date}", countrySearch: "Почніть вводити назву країни", when: "Коли", allDay: "Увесь день", advancedLabel: "Місце, повторення та нотатка", holidayUnavailable: "Не вдалося завантажити календар свят", retry: "Повторити" },
+  pl: { all: "Wszystkie", agenda: "Agenda", viewLabel: "Widok kalendarza", category: "Kategoria", showAdvanced: "Więcej opcji", hideAdvanced: "Ukryj dodatkowe opcje", holidayToday: "Dzisiaj · {country}", holidaySelected: "Wybrany dzień · {country}", noHoliday: "W tym dniu nie ma święta państwowego", countryLabel: "Kraj świąt", contentLabel: "Pokaż", myEvents: "Moje wydarzenia", holidays: "Święta", nextHoliday: "Następne święto: {title} · {date}", countrySearch: "Zacznij wpisywać nazwę kraju", when: "Kiedy", allDay: "Cały dzień", advancedLabel: "Miejsce, powtarzanie i notatka", holidayUnavailable: "Nie udało się wczytać kalendarza świąt", retry: "Spróbuj ponownie" },
+  en: { all: "All", agenda: "Agenda", viewLabel: "Calendar view", category: "Category", showAdvanced: "More options", hideAdvanced: "Hide additional options", holidayToday: "Today · {country}", holidaySelected: "Selected day · {country}", noHoliday: "There is no nationwide public holiday on this day", countryLabel: "Holiday country", contentLabel: "Show", myEvents: "My events", holidays: "Holidays", nextHoliday: "Next holiday: {title} · {date}", countrySearch: "Start typing a country name", when: "When", allDay: "All day", advancedLabel: "Location, recurrence and note", holidayUnavailable: "The holiday calendar could not be loaded", retry: "Try again" },
+  de: { all: "Alle", agenda: "Terminliste", viewLabel: "Kalenderansicht", category: "Kategorie", showAdvanced: "Weitere Optionen", hideAdvanced: "Zusätzliche Optionen ausblenden", holidayToday: "Heute · {country}", holidaySelected: "Ausgewählter Tag · {country}", noHoliday: "An diesem Tag gibt es keinen bundesweiten Feiertag", countryLabel: "Feiertagsland", contentLabel: "Anzeigen", myEvents: "Meine Termine", holidays: "Feiertage", nextHoliday: "Nächster Feiertag: {title} · {date}", countrySearch: "Land eingeben", when: "Wann", allDay: "Ganztägig", advancedLabel: "Ort, Wiederholung und Notiz", holidayUnavailable: "Der Feiertagskalender konnte nicht geladen werden", retry: "Erneut versuchen" },
+  ru: { all: "Все", agenda: "Повестка", viewLabel: "Вид календаря", category: "Категория", showAdvanced: "Дополнительные параметры", hideAdvanced: "Скрыть дополнительные параметры", holidayToday: "Сегодня · {country}", holidaySelected: "Выбранный день · {country}", noHoliday: "В этот день нет общегосударственного праздника", countryLabel: "Страна праздников", contentLabel: "Показывать", myEvents: "Мои события", holidays: "Праздники", nextHoliday: "Следующий праздник: {title} · {date}", countrySearch: "Начните вводить название страны", when: "Когда", allDay: "Весь день", advancedLabel: "Место, повторение и заметка", holidayUnavailable: "Не удалось загрузить календарь праздников", retry: "Повторить" },
 };
 
 type InsightTopic =
@@ -1153,6 +1155,7 @@ function DayPlanSheet({
 function DayDetailSheet({
   dateYMD,
   events,
+  observance,
   insights,
   onClose,
   onAdd,
@@ -1161,6 +1164,7 @@ function DayDetailSheet({
 }: {
   dateYMD: string;
   events: EventRow[];
+  observance?: LocalObservance | null;
   insights: Map<string, string>;
   onClose: () => void;
   onAdd: (ymd: string) => void;
@@ -1246,6 +1250,15 @@ function DayDetailSheet({
 
         {/* Events — scrollable, overscroll-contain stops bounce-through */}
         <div className="px-4 pb-6 overflow-y-auto overscroll-contain flex-1">
+          {observance && (
+            <div className="mb-3 flex items-center gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-blue-800">
+              <ObservanceIcon observance={observance} className="h-5 w-5 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-wider text-blue-500">{observance.countryName}</p>
+                <p className="truncate text-sm font-extrabold">{observance.title}</p>
+              </div>
+            </div>
+          )}
           {dateYMD >= today && (
             <button
               type="button"
@@ -1466,23 +1479,30 @@ function CalendarGrid({
   const eventMap = useMemo(() => {
     const m = new Map<string, EventRow[]>();
     events.forEach((ev) => {
-      const key = ev.date.slice(0, 7);
-      const ym = `${year}-${String(month + 1).padStart(2, "0")}`;
-      if (key !== ym) return;
       const prev = m.get(ev.date) ?? [];
       m.set(ev.date, [...prev, ev]);
     });
     return m;
-  }, [events, year, month]);
+  }, [events]);
 
-  const cells: (number | null)[] = [
-    ...Array(startDow).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
+  const cellCount = startDow + daysInMonth <= 35 ? 35 : 42;
+  const gridStart = new Date(year, month, 1 - startDow);
+  const cells = Array.from({ length: cellCount }, (_, index) => {
+    const date = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + index);
+    return {
+      day: date.getDate(),
+      dateStr: formatLocalDateOnly(date),
+      inMonth: date.getFullYear() === year && date.getMonth() === month,
+    };
+  });
   const weeks = Array.from({ length: cells.length / 7 }, (_, index) =>
     cells.slice(index * 7, index * 7 + 7)
   );
+  const focusDate = selectedDate && cells.some((cell) => cell.dateStr === selectedDate)
+    ? selectedDate
+    : cells.some((cell) => cell.dateStr === today)
+      ? today
+      : `${year}-${String(month + 1).padStart(2, "0")}-01`;
 
   return (
     <div
@@ -1525,13 +1545,7 @@ function CalendarGrid({
       <div className="hd-calendar-weeks" role="rowgroup">
         {weeks.map((week, weekIndex) => (
           <div className="hd-calendar-week" role="row" key={`week-${weekIndex}`}>
-          {week.map((day, dayIndex) => {
-          if (!day) return <div role="presentation" key={`e-${weekIndex}-${dayIndex}`} />;
-
-          const dateStr = `${year}-${String(month + 1).padStart(
-            2,
-            "0"
-          )}-${String(day).padStart(2, "0")}`;
+          {week.map(({ day, dateStr, inMonth }) => {
           const isToday = dateStr === today;
           const isSelected = dateStr === selectedDate;
           const dayEvents = eventMap.get(dateStr) ?? [];
@@ -1546,7 +1560,8 @@ function CalendarGrid({
               key={dateStr}
               role="gridcell"
               data-calendar-date={dateStr}
-              onClick={() => onSelectDate(dateStr)}
+              tabIndex={dateStr === focusDate ? 0 : -1}
+              onClick={() => inMonth ? onSelectDate(dateStr) : onNavigateDate(dateStr)}
               onDoubleClick={(event) => {
                 event.preventDefault();
                 onQuickAdd(dateStr);
@@ -1571,7 +1586,7 @@ function CalendarGrid({
               })}${holiday ? `. ${holiday.title}` : ""}`}
               aria-current={isToday ? "date" : undefined}
               aria-selected={isSelected}
-              className={`relative flex flex-col items-center justify-start py-1.5 rounded-xl transition-all active:scale-[.92] min-h-[52px] ${
+              className={`relative flex flex-col items-center justify-start py-1.5 rounded-xl transition-all active:scale-[.92] min-h-[52px] ${!inMonth ? "hd-calendar-day--outside " : ""}${
                 isSelected
                   ? "bg-sky-500 shadow-md shadow-sky-200"
                   : isToday
@@ -1632,6 +1647,8 @@ function CalendarGrid({
 }
 
 function CalendarAgendaView({
+  year,
+  month,
   events,
   observances,
   contentFilter,
@@ -1639,6 +1656,8 @@ function CalendarAgendaView({
   onEdit,
   onAdd,
 }: {
+  year: number;
+  month: number;
   events: EventRow[];
   observances: Record<string, LocalObservance>;
   contentFilter: CalendarContentFilter;
@@ -1650,21 +1669,22 @@ function CalendarAgendaView({
   const t = useTranslations("dashboard");
   const uiCopy = CALENDAR_UI_COPY[locale] ?? CALENDAR_UI_COPY.en;
   const today = todayYMD();
+  const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
   const groups = useMemo(() => {
     type AgendaEntry = { kind: "event"; event: EventRow } | { kind: "holiday"; observance: LocalObservance };
     const map = new Map<string, AgendaEntry[]>();
-    if (contentFilter !== "holidays") events.filter((event) => event.date >= today).slice(0, 100).forEach((event) => {
+    if (contentFilter !== "holidays") events.filter((event) => event.date.startsWith(monthPrefix)).slice(0, 100).forEach((event) => {
       const group = map.get(event.date) ?? [];
       group.push({ kind: "event", event });
       map.set(event.date, group);
     });
-    if (contentFilter !== "events") Object.entries(observances).filter(([date]) => date >= today).forEach(([date, observance]) => {
+    if (contentFilter !== "events") Object.entries(observances).filter(([date]) => date.startsWith(monthPrefix)).forEach(([date, observance]) => {
       const group = map.get(date) ?? [];
       group.push({ kind: "holiday", observance });
       map.set(date, group);
     });
     return [...map].sort(([left], [right]) => left.localeCompare(right)).slice(0, 100);
-  }, [contentFilter, events, observances, today]);
+  }, [contentFilter, events, monthPrefix, observances]);
 
   if (groups.length === 0) {
     return (
@@ -1723,6 +1743,7 @@ function CalendarAgendaView({
 function CalendarDayPanel({
   dateYMD,
   events,
+  observance,
   upcoming,
   onAdd,
   onEdit,
@@ -1730,6 +1751,7 @@ function CalendarDayPanel({
 }: {
   dateYMD: string;
   events: EventRow[];
+  observance?: LocalObservance | null;
   upcoming: EventRow[];
   onAdd: (date: string) => void;
   onEdit: (id: string) => void;
@@ -1751,6 +1773,13 @@ function CalendarDayPanel({
           <Plus aria-hidden="true" />
         </button>
       </div>
+
+      {observance && (
+        <div className={`hd-calendar-side__holiday hd-calendar-side__holiday--${observance.kind}`}>
+          <ObservanceIcon observance={observance} />
+          <span><small>{observance.countryName}</small><strong>{observance.title}</strong></span>
+        </div>
+      )}
 
       <div className="hd-calendar-side__section">
         {events.length === 0 ? (
@@ -1994,6 +2023,8 @@ export default function CalendarPage() {
   const [calendarContentFilter, setCalendarContentFilter] = useState<CalendarContentFilter>("all");
   const [yearObservances, setYearObservances] = useState<{ key: string; items: Record<string, LocalObservance> }>({ key: "", items: {} });
   const [calendarCountries, setCalendarCountries] = useState<Record<string, string>>({});
+  const [observancesError, setObservancesError] = useState(false);
+  const [observancesRetry, setObservancesRetry] = useState(0);
 
   const [addOpen, setAddOpen] = useState(false);
   const [mDate, setMDate] = useState("");
@@ -2042,6 +2073,7 @@ export default function CalendarPage() {
         }>;
       })
       .then(({ country, countries, observances }) => {
+        setObservancesError(false);
         const countryName = countries[country] ?? country;
         setCalendarCountries(countries);
         if (country !== calendarCountry) setCalendarCountry(country);
@@ -2050,9 +2082,12 @@ export default function CalendarPage() {
           items: Object.fromEntries(observances.map((item) => [item.date, { ...item, country, countryName }])),
         });
       })
-      .catch(() => undefined);
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setObservancesError(true);
+      });
     return () => controller.abort();
-  }, [calendarCountry, locale, setCalendarCountry, viewYear]);
+  }, [calendarCountry, locale, observancesRetry, setCalendarCountry, viewYear]);
 
   /* ── Init + realtime ── */
   useEffect(() => {
@@ -2276,12 +2311,7 @@ export default function CalendarPage() {
     return upcoming.filter((event) => visibleIds.has(event.id));
   }, [upcoming, visibleEvents]);
 
-  const agendaEvents = useMemo(() => {
-    if (calendarContentFilter === "holidays") return [];
-    if (calendarFilter === "all") return searchableEvents;
-    if (calendarFilter === "important") return searchableEvents.filter((event) => event.isImportant);
-    return searchableEvents.filter((event) => (event.category ?? "default") === calendarFilter);
-  }, [calendarContentFilter, calendarFilter, searchableEvents]);
+  const agendaEvents = calendarDisplayEvents;
 
   const selectedDateEvents = useMemo(() => {
     if (!selectedDate) return [];
@@ -2652,7 +2682,7 @@ export default function CalendarPage() {
   );
 
   const handleSelectDate = useCallback((dateYMD: string) => {
-    setSelectedDate((prev) => (prev === dateYMD ? null : dateYMD));
+    setSelectedDate(dateYMD);
   }, []);
 
   /* Export ICS */
@@ -2811,6 +2841,8 @@ export default function CalendarPage() {
         .hd-calendar-purpose__heart--religious { color: #7c3aed; }
         .hd-calendar-purpose__eyebrow { color: #0284c7; font-size: 9px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
         .hd-calendar-purpose__text { margin-top: 2px; color: #475569; font-size: 12px; font-weight: 650; line-height: 1.45; }
+        .hd-calendar-purpose__error { display: flex; align-items: center; gap: 8px; margin-top: 5px; color: #b45309; font-size: 10px; font-weight: 750; }
+        .hd-calendar-purpose__error button { padding: 2px 7px; border-radius: 999px; background: #fff7ed; color: #c2410c; font-weight: 900; text-decoration: underline; text-underline-offset: 2px; }
         .hd-calendar-purpose__date { margin-left: auto; align-self: center; color: #94a3b8; font-size: 10px; font-weight: 800; white-space: nowrap; }
         .hd-calendar-purpose__controls { display: flex; margin-left: auto; align-items: center; gap: 9px; }
         .hd-calendar-purpose__country-picker { display: flex; position: relative; min-width: 0; }
@@ -2864,6 +2896,8 @@ export default function CalendarPage() {
         .hd-calendar-day-holiday { display: flex; min-width: 0; align-items: center; gap: 4px; overflow: hidden; padding: 4px 6px; border: 1px solid #bfdbfe; border-radius: 7px; background: #eff6ff; color: #1d4ed8; font-size: 9px; font-weight: 800; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
         .hd-calendar-day-holiday svg { width: 11px; height: 11px; flex: 0 0 11px; stroke-width: 2.3; }
         .hd-calendar-day-holiday--religious { border-color: #ddd6fe; background: #f5f3ff; color: #6d28d9; }
+        .hd-calendar-day--outside { opacity: .42; background: #f8fafc; }
+        .hd-calendar-day--outside:hover { opacity: .72; }
         .hd-calendar-legend {
           display: flex; gap: 11px; margin: 12px 4px 0; padding-top: 11px;
           overflow-x: auto; border-top: 1px solid #eef2f7; scrollbar-width: none;
@@ -2937,6 +2971,13 @@ export default function CalendarPage() {
           .hd-calendar-side__eyebrow { color: #0284c7; font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
           .hd-calendar-side__add { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border-radius: 13px; background: #0ea5e9; color: white; }
           .hd-calendar-side__add svg { width: 18px; }
+          .hd-calendar-side__holiday { display: grid; grid-template-columns: 34px minmax(0,1fr); align-items: center; gap: 10px; padding: 11px; border: 1px solid #bfdbfe; border-radius: 16px; background: #eff6ff; color: #1d4ed8; }
+          .hd-calendar-side__holiday > svg { width: 18px; height: 18px; justify-self: center; }
+          .hd-calendar-side__holiday > span { display: grid; min-width: 0; }
+          .hd-calendar-side__holiday small { color: #60a5fa; font-size: 8px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+          .hd-calendar-side__holiday strong { overflow: hidden; font-size: 11px; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
+          .hd-calendar-side__holiday--religious { border-color: #ddd6fe; background: #f5f3ff; color: #6d28d9; }
+          .hd-calendar-side__holiday--religious small { color: #8b5cf6; }
           .hd-calendar-side__section { padding-top: 13px; border-top: 1px solid #eef2f7; }
           .hd-calendar-side__empty { display: grid; width: 100%; place-items: center; gap: 5px; padding: 24px 12px; border: 1px dashed #cbd5e1; border-radius: 18px; color: #64748b; }
           .hd-calendar-side__empty svg { width: 22px; color: #38bdf8; }
@@ -3025,6 +3066,12 @@ export default function CalendarPage() {
           <div>
             <h1 id="calendar-purpose-title" className="hd-calendar-purpose__eyebrow">{observanceEyebrow}</h1>
             <p className="hd-calendar-purpose__text">{observanceMessage}</p>
+            {observancesError && (
+              <p className="hd-calendar-purpose__error" role="status">
+                {uiCopy.holidayUnavailable}
+                <button type="button" onClick={() => setObservancesRetry((value) => value + 1)}>{uiCopy.retry}</button>
+              </p>
+            )}
           </div>
           <div className="hd-calendar-purpose__controls">
             <CalendarCountryPicker
@@ -3108,24 +3155,26 @@ export default function CalendarPage() {
             />
           )}
         </div>
-        <div className="hd-calendar-legend" aria-label={t("form.importantHint")}>
+        {calendarContentFilter !== "holidays" && <div className="hd-calendar-legend" aria-label={t("form.importantHint")}>
           <button type="button" className={calendarFilter === "all" ? "is-active" : ""} onClick={() => setCalendarFilter("all")} aria-pressed={calendarFilter === "all"}><Filter className="h-3 w-3" aria-hidden="true" />{uiCopy.all}</button>
           <button type="button" className={calendarFilter === "birthday" ? "is-active" : ""} onClick={() => setCalendarFilter("birthday")} aria-pressed={calendarFilter === "birthday"}><i className="bg-pink-400" />{t("categories.birthday")}</button>
           <button type="button" className={calendarFilter === "work" ? "is-active" : ""} onClick={() => setCalendarFilter("work")} aria-pressed={calendarFilter === "work"}><i className="bg-blue-400" />{t("categories.work")}</button>
           <button type="button" className={calendarFilter === "personal" ? "is-active" : ""} onClick={() => setCalendarFilter("personal")} aria-pressed={calendarFilter === "personal"}><i className="bg-emerald-400" />{t("categories.personal")}</button>
           <button type="button" className={calendarFilter === "important" ? "is-active" : ""} onClick={() => setCalendarFilter("important")} aria-pressed={calendarFilter === "important"}><i className="bg-amber-400 ring-2 ring-amber-100" />{t("form.important")}</button>
-        </div>
+        </div>}
         </section>
         ) : (
           <>
-          <div className="hd-calendar-legend hd-calendar-legend--agenda" aria-label={t("form.importantHint")}>
+          {calendarContentFilter !== "holidays" && <div className="hd-calendar-legend hd-calendar-legend--agenda" aria-label={t("form.importantHint")}>
             <button type="button" className={calendarFilter === "all" ? "is-active" : ""} onClick={() => setCalendarFilter("all")} aria-pressed={calendarFilter === "all"}><Filter className="h-3 w-3" aria-hidden="true" />{uiCopy.all}</button>
             <button type="button" className={calendarFilter === "birthday" ? "is-active" : ""} onClick={() => setCalendarFilter("birthday")} aria-pressed={calendarFilter === "birthday"}><i className="bg-pink-400" />{t("categories.birthday")}</button>
             <button type="button" className={calendarFilter === "work" ? "is-active" : ""} onClick={() => setCalendarFilter("work")} aria-pressed={calendarFilter === "work"}><i className="bg-blue-400" />{t("categories.work")}</button>
             <button type="button" className={calendarFilter === "personal" ? "is-active" : ""} onClick={() => setCalendarFilter("personal")} aria-pressed={calendarFilter === "personal"}><i className="bg-emerald-400" />{t("categories.personal")}</button>
             <button type="button" className={calendarFilter === "important" ? "is-active" : ""} onClick={() => setCalendarFilter("important")} aria-pressed={calendarFilter === "important"}><i className="bg-amber-400 ring-2 ring-amber-100" />{t("form.important")}</button>
-          </div>
+          </div>}
           <CalendarAgendaView
+            year={viewYear}
+            month={viewMonth}
             events={agendaEvents}
             observances={activeObservances}
             contentFilter={calendarContentFilter}
@@ -3167,6 +3216,7 @@ export default function CalendarPage() {
           <CalendarDayPanel
             dateYMD={sidePanelDate}
             events={sidePanelEvents}
+            observance={activeObservances[sidePanelDate] ?? (calendarCountry === getDefaultCalendarCountry(locale) ? getLocalObservance(sidePanelDate, locale) : null)}
             upcoming={visibleUpcoming}
             onAdd={openAdd}
             onEdit={openEdit}
@@ -3211,20 +3261,20 @@ export default function CalendarPage() {
               onClick={() => fileRef.current?.click()}
               className="text-xs text-slate-400 hover:text-slate-600 transition-colors font-medium flex items-center gap-1"
             >
-              📥 {t("navigation.import")}
+              <Upload className="h-4 w-4" aria-hidden="true" /> {t("navigation.import")}
             </button>
             <span className="text-slate-200">·</span>
             <button
               onClick={exportICS}
               className="text-xs text-slate-400 hover:text-slate-600 transition-colors font-medium flex items-center gap-1"
             >
-              📤 {t("navigation.export")}
+              <Download className="h-4 w-4" aria-hidden="true" /> {t("navigation.export")}
             </button>
             {people.length > 0 && (
               <>
                 <span className="text-slate-200">·</span>
                 <span className="text-xs text-pink-400 font-medium flex items-center gap-1">
-                  🎂 {t("navigation.birthdays", { count: people.length })}
+                  <Gift className="h-4 w-4" aria-hidden="true" /> {t("navigation.birthdays", { count: people.length })}
                 </span>
               </>
             )}
@@ -3237,6 +3287,7 @@ export default function CalendarPage() {
         <DayDetailSheet
           dateYMD={selectedDate}
           events={selectedDateEvents}
+          observance={activeObservances[selectedDate] ?? (calendarCountry === getDefaultCalendarCountry(locale) ? getLocalObservance(selectedDate, locale) : null)}
           insights={aiInsights}
           onClose={() => setSelectedDate(null)}
           onAdd={(ymd_) => {

@@ -35,6 +35,10 @@ test("Calendar exposes grid semantics, keyboard navigation, swipe navigation and
   assert.match(page, /role="gridcell"/);
   assert.match(page, /aria-current=\{isToday \? "date" : undefined\}/);
   assert.match(page, /ArrowLeft: -1[\s\S]*ArrowRight: 1[\s\S]*ArrowUp: -7[\s\S]*ArrowDown: 7/);
+  assert.match(page, /Home: -dayIndex[\s\S]*End: 6 - dayIndex/);
+  assert.match(page, /event\.key === "PageUp" \|\| event\.key === "PageDown"/);
+  assert.match(page, /tabIndex=\{dateStr === focusDate \? 0 : -1\}/);
+  assert.match(page, /hd-calendar-day--outside/);
   assert.match(page, /onTouchStart[\s\S]*onTouchEnd[\s\S]*onNextMonth/);
   assert.match(page, /aria-labelledby="calendar-day-title"/);
   assert.match(page, /aria-label=\{t\("accessibility\.closeDay"\)\}/);

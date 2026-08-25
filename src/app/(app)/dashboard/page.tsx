@@ -7,6 +7,7 @@ import type { CalendarEventRecord as EventRow } from "@/lib/repositories/events"
 import type { EventRecurrenceRule } from "@/lib/repositories/events";
 import { expandCalendarEventOccurrences } from "@/lib/events/eventRecurrence";
 import { addLocalDateOnlyDays, formatLocalDateOnly, parseLocalDateOnly } from "@/lib/events/dateOnly";
+import { searchCalendarEntries, type CalendarSearchEntry, type CalendarSearchKind } from "@/lib/events/calendarSearch";
 import { getCalendarCountryName, getDefaultCalendarCountry, getLocalObservance, type LocalObservance } from "@/lib/events/localObservances";
 import type {
   RealtimeChannel,
@@ -22,6 +23,7 @@ import {
   updateCalendarEvent,
 } from "@/lib/repositories/events";
 import { reconcileCalendarEventReminder } from "@/lib/reminders/calendarEventReminder";
+import { buildGiftStartHref } from "@/lib/gifts/giftNavigation";
 import { buildDayPlanDraft, findDayPlanConflicts, isValidDayPlanItemWithinWindow, isValidEventDuration, isValidTravelBuffer, reflowDayPlanDraft, reorderDayPlanDraft, resizeDayPlanDraft, selectDayPlanCandidates, summarizeDayPlanDraft, type DayPlanDraftItem, type DayPlanFixedEvent, type DayPlanMoveDirection } from "@/lib/events/dayPlanDraft";
 import { DEFAULT_PLANNER_PREFERENCES, loadPlannerPreferences, savePlannerPreferences, type PlannerPreferences } from "@/lib/repositories/plannerPreferences.repository";
 import { Bell, Briefcase, CalendarDays, Check, ChevronLeft, ChevronRight, Church, Clock3, Download, Filter, Gift, Heart, Landmark, MapPin, Plus, Repeat2, Search, Settings2, Sparkles, Star, StickyNote, Tag, Timer, Trash2, Upload, UserRound, X } from "lucide-react";
@@ -72,9 +74,9 @@ function mapRealtimeEvent(row: RealtimeEventRow): EventRow {
 
 const CAT_COLOR: Record<string, { dot: string; pill: string; text: string }> = {
   birthday: {
-    dot: "bg-pink-400",
-    pill: "bg-pink-50 border-pink-200",
-    text: "text-pink-700",
+    dot: "bg-amber-400",
+    pill: "bg-amber-50 border-amber-200",
+    text: "text-amber-800",
   },
   work: {
     dot: "bg-blue-400",
@@ -91,13 +93,6 @@ const CAT_COLOR: Record<string, { dot: string; pill: string; text: string }> = {
     pill: "bg-slate-50 border-slate-200",
     text: "text-slate-600",
   },
-};
-
-const CAT_EMOJI: Record<string, string> = {
-  birthday: "🎁",
-  work: "💼",
-  personal: "⭐",
-  default: "📌",
 };
 
 function ObservanceIcon({ observance, className }: { observance: LocalObservance; className?: string }) {
@@ -666,10 +661,11 @@ const CATEGORIES_ADD = [
   { value: "personal" },
 ] as const;
 
-function EventCategoryIcon({ category }: { category: typeof CATEGORIES_ADD[number]["value"] }) {
-  if (category === "birthday") return <Gift aria-hidden="true" />;
-  if (category === "work") return <Briefcase aria-hidden="true" />;
-  return <Star aria-hidden="true" />;
+function EventCategoryIcon({ category, className }: { category?: string | null; className?: string }) {
+  if (category === "birthday") return <Gift className={className} aria-hidden="true" />;
+  if (category === "work") return <Briefcase className={className} aria-hidden="true" />;
+  if (category === "personal") return <Star className={className} aria-hidden="true" />;
+  return <Tag className={className} aria-hidden="true" />;
 }
 
 function AddEditSheet({
@@ -1282,7 +1278,7 @@ function DayDetailSheet({
           ) : (
             <ul className="space-y-2">
               {events.map((ev) => {
-                const isBirthday = ev.id.startsWith("birthday-");
+                const isBirthday = ev.category === "birthday";
                 const cat = ev.category ?? "default";
                 const colors = CAT_COLOR[cat] ?? CAT_COLOR.default;
                 const insight = insights.get(ev.id);
@@ -1302,7 +1298,7 @@ function DayDetailSheet({
                       <div
                         className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${
                           isBirthday
-                            ? "bg-pink-100 text-pink-600"
+                            ? "bg-amber-100 text-amber-700"
                             : avatarClass(cleanTitle)
                         }`}
                       >
@@ -1344,18 +1340,23 @@ function DayDetailSheet({
                           </p>
                         )}
                       </div>
-                      {!isBirthday && (
+                      {ev.personId && (
                         <Link
-                          href={`/gift/start?eventId=${
-                            ev.id
-                          }&date=${encodeURIComponent(
-                            ev.date
-                          )}&title=${encodeURIComponent(ev.title)}`}
+                          href={buildGiftStartHref({
+                            personId: ev.personId,
+                            eventId: ev.id,
+                            date: ev.date,
+                            title: ev.title,
+                            category: ev.category,
+                            returnTo: `/dashboard?date=${ev.date}`,
+                          })}
                           onClick={(e) => e.stopPropagation()}
-                          className="w-8 h-8 rounded-xl bg-white/70 border border-white flex items-center justify-center text-sm hover:bg-white transition-colors shrink-0"
+                          className="flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-amber-200 bg-white/85 px-3 text-xs font-extrabold text-amber-800 transition-colors hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
                           title={t("day.giftIdea")}
+                          aria-label={`${t("day.giftIdea")}: ${ev.personName ?? cleanTitle}`}
                         >
-                          🎁
+                          <Gift className="h-4 w-4" aria-hidden="true" />
+                          <span className="hidden sm:inline">{t("day.giftIdea")}</span>
                         </Link>
                       )}
                     </div>
@@ -1407,9 +1408,7 @@ function UpcomingStrip({
               }`}
               style={{ animation: `stripIn .3s ease ${i * 0.05}s both` }}
             >
-              <span className="text-base leading-none">
-                {CAT_EMOJI[cat] ?? "📌"}
-              </span>
+              <EventCategoryIcon category={cat} className="h-4 w-4 shrink-0" />
               <div className="min-w-0">
                 <p
                   className={`text-xs font-bold leading-tight truncate max-w-[100px] ${
@@ -1545,7 +1544,7 @@ function CalendarGrid({
       <div className="hd-calendar-weeks" role="rowgroup">
         {weeks.map((week, weekIndex) => (
           <div className="hd-calendar-week" role="row" key={`week-${weekIndex}`}>
-          {week.map(({ day, dateStr, inMonth }) => {
+          {week.map(({ day, dateStr, inMonth }, dayIndex) => {
           const isToday = dateStr === today;
           const isSelected = dateStr === selectedDate;
           const dayEvents = eventMap.get(dateStr) ?? [];
@@ -1567,17 +1566,28 @@ function CalendarGrid({
                 onQuickAdd(dateStr);
               }}
               onKeyDown={(event) => {
-                const offsets: Partial<Record<typeof event.key, number>> = {
+                const offsets: Record<string, number> = {
                   ArrowLeft: -1,
                   ArrowRight: 1,
                   ArrowUp: -7,
                   ArrowDown: 7,
+                  Home: -dayIndex,
+                  End: 6 - dayIndex,
                 };
                 const offset = offsets[event.key];
-                if (offset === undefined) return;
+                let target = offset === undefined ? null : addLocalDateOnlyDays(dateStr, offset);
+                if (event.key === "PageUp" || event.key === "PageDown") {
+                  const current = parseLocalDateOnly(dateStr);
+                  if (current) {
+                    const monthOffset = event.key === "PageUp" ? -1 : 1;
+                    const targetMonth = new Date(current.getFullYear(), current.getMonth() + monthOffset, 1);
+                    const lastDay = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).getDate();
+                    target = formatLocalDateOnly(new Date(targetMonth.getFullYear(), targetMonth.getMonth(), Math.min(current.getDate(), lastDay)));
+                  }
+                }
+                if (!target) return;
                 event.preventDefault();
-                const target = addLocalDateOnlyDays(dateStr, offset);
-                if (target) onNavigateDate(target);
+                onNavigateDate(target);
               }}
               aria-label={`${t("accessibility.dayLabel", {
                 date: new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
@@ -1725,7 +1735,7 @@ function CalendarAgendaView({
                   <li key={`agenda-${event.id}`}>
                     <button type="button" className="hd-calendar-agenda-day__event" onClick={() => birthday ? onSelectDate(dateYMD) : onEdit(event.id)}>
                       <i className={CAT_COLOR[category]?.dot ?? CAT_COLOR.default.dot} />
-                      <span className="hd-calendar-agenda-day__time">{event.timeOfDay ?? CAT_EMOJI[category] ?? "📌"}</span>
+                      <span className="hd-calendar-agenda-day__time">{event.timeOfDay ?? <EventCategoryIcon category={category} />}</span>
                       <span className="hd-calendar-agenda-day__copy"><strong>{event.title.replace(/^🎂\s*/, "")}</strong><small>{event.personName ?? event.location ?? (event.notes ? event.notes.slice(0, 80) : daysLabel(event.date, t))}</small></span>
                       {event.isImportant && <span className="hd-calendar-agenda-day__important" aria-label={t("form.important")}>★</span>}
                     </button>
@@ -1791,7 +1801,7 @@ function CalendarDayPanel({
         ) : (
           <ul className="hd-calendar-agenda">
             {events.map((event) => {
-              const birthday = event.id.startsWith("birthday-");
+              const birthday = event.category === "birthday";
               const category = event.category ?? "default";
               const categoryLabel = category === "birthday"
                 ? t("categories.birthday")
@@ -1801,7 +1811,7 @@ function CalendarDayPanel({
                     ? t("categories.personal")
                     : t("categories.other");
               return (
-                <li key={event.id}>
+                <li key={event.id} className="rounded-2xl bg-white/70 p-1">
                   <button type="button" onClick={() => !birthday && onEdit(event.id)} disabled={birthday} className="hd-calendar-agenda__item">
                     <i className={CAT_COLOR[category]?.dot ?? CAT_COLOR.default.dot} />
                     <span className="hd-calendar-agenda__time">{event.timeOfDay ?? "—"}</span>
@@ -1811,6 +1821,23 @@ function CalendarDayPanel({
                     </span>
                     {event.isImportant && <span aria-label={t("form.important")}>★</span>}
                   </button>
+                  {event.personId && (
+                    <Link
+                      href={buildGiftStartHref({
+                        personId: event.personId,
+                        eventId: event.id,
+                        date: event.date,
+                        title: event.title,
+                        category: event.category,
+                        returnTo: `/dashboard?date=${event.date}`,
+                      })}
+                      className="mx-2 mb-2 flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 text-xs font-extrabold text-amber-800 transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                      aria-label={`${t("day.giftIdea")}: ${event.personName ?? event.title.replace(/^🎂\s*/, "")}`}
+                    >
+                      <Gift className="h-4 w-4" aria-hidden="true" />
+                      {t("day.giftIdea")}
+                    </Link>
+                  )}
                 </li>
               );
             })}
@@ -1825,7 +1852,7 @@ function CalendarDayPanel({
             {upcoming.slice(0, 5).map((event) => (
               <li key={`side-${event.id}`}>
                 <button type="button" onClick={() => onSelectDate(event.date)}>
-                  <span>{CAT_EMOJI[event.category ?? "default"] ?? "📌"}</span>
+                  <span><EventCategoryIcon category={event.category} /></span>
                   <span><strong>{event.title.replace(/^🎂\s*/, "")}</strong><small>{formatDateShort(event.date, locale)} · {daysLabel(event.date, t)}</small></span>
                 </button>
               </li>
@@ -1844,154 +1871,207 @@ function CalendarDayPanel({
 function SearchOverlay({
   events,
   insights,
+  observances,
   onClose,
-  onEdit,
+  onSelectDate,
+  onAdd,
 }: {
   events: EventRow[];
   insights: Map<string, string>;
+  observances: Record<string, LocalObservance>;
   onClose: () => void;
-  onEdit: (id: string) => void;
+  onSelectDate: (date: string) => void;
+  onAdd: () => void;
 }) {
   const locale = useLocale();
   const t = useTranslations("dashboard");
   const [q, setQ] = useState("");
+  const [filter, setFilter] = useState<"all" | CalendarSearchKind>("all");
+  const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const ref = useFocusTrap(true);
 
   useBodyScrollLock(true);
 
   useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 50);
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 50);
+    return () => {
+      window.clearTimeout(timer);
+      previousFocus?.focus();
+    };
   }, []);
 
+  type SearchPayload = { event?: EventRow; observance?: LocalObservance };
+  const entries = useMemo<CalendarSearchEntry<SearchPayload>[]>(() => {
+    const eventEntries = events.map((event): CalendarSearchEntry<SearchPayload> => ({
+      id: `event:${event.id}:${event.date}`,
+      kind: event.category === "birthday" ? "birthday" : "event",
+      title: event.title.replace(/^🎂\s*/, ""),
+      date: event.date,
+      searchText: [
+        event.personName,
+        event.notes,
+        event.location,
+        event.category === "birthday" ? t("categories.birthday")
+          : event.category === "work" ? t("categories.work")
+            : event.category === "personal" ? t("categories.personal")
+              : t("categories.other"),
+        event.timeOfDay,
+      ].filter(Boolean).join(" "),
+      payload: { event },
+    }));
+    const holidayEntries = Object.entries(observances).map(([date, observance]): CalendarSearchEntry<SearchPayload> => ({
+      id: `holiday:${date}:${observance.title}`,
+      kind: "holiday",
+      title: observance.title,
+      date,
+      searchText: `${observance.countryName} ${observance.kind} ${t("search.holidays")}`,
+      payload: { observance },
+    }));
+    return [...eventEntries, ...holidayEntries];
+  }, [events, observances, t]);
+
+  const today = formatLocalDateOnly(new Date());
   const results = useMemo(() => {
-    const lower = q.trim().toLowerCase();
-    if (!lower) return [];
-    return events
-      .filter((ev) =>
-        `${ev.title} ${ev.notes ?? ""} ${ev.personName ?? ""} ${ev.location ?? ""} ${ev.category ?? ""}`.toLocaleLowerCase(locale).includes(lower)
-      )
-      .slice(0, 20);
-  }, [events, locale, q]);
+    const scoped = filter === "all" ? entries : entries.filter((entry) => entry.kind === filter);
+    return searchCalendarEntries(scoped, q, locale, today);
+  }, [entries, filter, locale, q, today]);
+
+  const selectResult = useCallback((entry: CalendarSearchEntry<SearchPayload>) => {
+    onSelectDate(entry.date);
+    onClose();
+  }, [onClose, onSelectDate]);
+
+  const filters: Array<{ value: "all" | CalendarSearchKind; label: string }> = [
+    { value: "all", label: t("search.all") },
+    { value: "event", label: t("search.events") },
+    { value: "birthday", label: t("search.birthdays") },
+    { value: "holiday", label: t("search.holidays") },
+  ];
 
   return (
-    <div
-      ref={ref}
-      className="fixed inset-0 z-[400] flex flex-col bg-white"
-      role="dialog"
-      aria-modal="true"
-      aria-label={t("search.label")}
-      style={{
-        animation: "fadeInFull .2s ease both",
-        // Push content up when keyboard appears on iOS
-        paddingBottom: "env(safe-area-inset-bottom)",
-      }}
-      onKeyDown={(e) => e.key === "Escape" && onClose()}
-    >
-      {/* Search bar */}
-      <div className="flex items-center gap-3 px-4 pt-14 pb-3 border-b border-slate-100 flex-shrink-0">
-        <div className="flex-1 flex items-center gap-2 bg-slate-100 rounded-2xl px-3 h-11">
-          <span className="text-slate-400 text-sm">🔍</span>
+    <div className="fixed inset-0 z-[400] flex items-start justify-center bg-slate-950/30 backdrop-blur-[3px] sm:p-6 lg:pt-[7vh]" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section
+        ref={ref}
+        className="flex h-[100dvh] w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-[min(760px,calc(100dvh-48px))] sm:max-w-3xl sm:rounded-[28px]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="calendar-search-title"
+        style={{ animation: "fadeInFull .18s ease both", paddingBottom: "env(safe-area-inset-bottom)" }}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") onClose();
+          if (event.target === inputRef.current && event.key === "ArrowDown" && results.length) {
+            event.preventDefault();
+            setActiveIndex((index) => (index + 1) % results.length);
+          }
+          if (event.target === inputRef.current && event.key === "ArrowUp" && results.length) {
+            event.preventDefault();
+            setActiveIndex((index) => (index - 1 + results.length) % results.length);
+          }
+          if (event.target === inputRef.current && event.key === "Enter" && results[activeIndex]) {
+            event.preventDefault();
+            selectResult(results[activeIndex]);
+          }
+        }}
+      >
+      <header className="shrink-0 border-b border-slate-100 px-4 pb-4 pt-[calc(env(safe-area-inset-top)+14px)] sm:px-6 sm:pt-5">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[.16em] text-sky-500">{t("search.eyebrow")}</p>
+            <h2 id="calendar-search-title" className="mt-0.5 text-xl font-black tracking-tight text-slate-950">{t("search.title")}</h2>
+          </div>
+          <button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900" aria-label={t("search.close")}>
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="flex h-14 items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50/60 px-4 shadow-[0_0_0_3px_rgba(14,165,233,.06)] focus-within:border-sky-400 focus-within:bg-white">
+          <Search className="h-5 w-5 shrink-0 text-sky-500" aria-hidden="true" />
+          <label htmlFor="calendar-event-search" className="sr-only">{t("search.label")}</label>
           <input
+            id="calendar-event-search"
             ref={inputRef}
             type="search"
             placeholder={t("search.placeholder")}
             value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="flex-1 text-slate-900 bg-transparent outline-none placeholder-slate-400"
-            // FIX 5: 16px prevents Safari zoom on focus
-            style={{ fontSize: "16px" }}
+            onChange={(e) => { setQ(e.target.value); setActiveIndex(0); }}
+            autoComplete="off"
+            className="min-w-0 flex-1 bg-transparent text-base font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400"
+            aria-controls="calendar-search-results"
+            aria-activedescendant={results[activeIndex] ? `calendar-result-${activeIndex}` : undefined}
           />
           {q && (
-            <button
-              onClick={() => setQ("")}
-              className="text-slate-400 text-xs font-bold hover:text-slate-600"
+            <button type="button"
+              onClick={() => { setQ(""); setActiveIndex(0); }}
+              className="grid h-8 w-8 place-items-center rounded-full bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-700"
+              aria-label={t("search.clear")}
             >
-              ✕
+              <X className="h-4 w-4" aria-hidden="true" />
             </button>
           )}
         </div>
-        <button
-          onClick={onClose}
-          className="text-sm font-medium text-sky-500 hover:text-sky-700 transition-colors whitespace-nowrap"
-        >
-          {t("common.cancel")}
-        </button>
-      </div>
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label={t("search.filterLabel")}>
+          {filters.map((item) => (
+            <button key={item.value} type="button" aria-pressed={filter === item.value} onClick={() => { setFilter(item.value); setActiveIndex(0); }} className={`min-h-10 shrink-0 rounded-xl border px-4 text-sm font-extrabold transition ${filter === item.value ? "border-sky-500 bg-sky-500 text-white shadow-sm" : "border-slate-200 bg-white text-slate-600 hover:border-sky-200 hover:bg-sky-50"}`}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </header>
 
-      {/* Results — overscroll-contain prevents scroll bleed to body */}
-      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-3">
-        {!q.trim() ? (
-          <div className="text-center py-16">
-            <p className="text-4xl mb-3">🔍</p>
-            <p className="text-sm text-slate-400">{t("search.start")}</p>
-          </div>
-        ) : results.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-4xl mb-3">🌸</p>
-            <p className="text-sm text-slate-400">
-              {t("search.empty", { query: q })}
-            </p>
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+        {results.length === 0 ? (
+          <div className="mx-auto flex min-h-[320px] max-w-sm flex-col items-center justify-center text-center">
+            <div className="grid h-16 w-16 place-items-center rounded-2xl bg-slate-100 text-slate-400"><CalendarDays className="h-7 w-7" aria-hidden="true" /></div>
+            <h3 className="mt-5 text-lg font-black text-slate-900">{t("search.noResultsTitle")}</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-500">{t("search.noResultsDescription")}</p>
+            <div className="mt-5 flex gap-2">
+              {q && <button type="button" onClick={() => { setQ(""); setActiveIndex(0); }} className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm font-extrabold text-slate-700 hover:bg-slate-50">{t("search.clear")}</button>}
+              <button type="button" onClick={() => { onClose(); onAdd(); }} className="min-h-11 rounded-xl bg-sky-500 px-4 text-sm font-extrabold text-white hover:bg-sky-600">{t("navigation.addEvent")}</button>
+            </div>
           </div>
         ) : (
-          <ul className="space-y-2">
-            {results.map((ev) => {
-              const isBirthday = ev.id.startsWith("birthday-");
-              const cat = ev.category ?? "default";
+          <>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-xs font-black uppercase tracking-[.12em] text-slate-400">{q.trim() ? t("search.results", { count: results.length }) : t("search.upcoming")}</p>
+            <p className="hidden text-[11px] font-semibold text-slate-400 sm:block">↑↓ · Enter</p>
+          </div>
+          <ul id="calendar-search-results" className="space-y-2" role="listbox">
+            {results.map((entry, index) => {
+              const ev = entry.payload.event;
+              const holiday = entry.payload.observance;
+              const cat = ev?.category ?? "default";
               const colors = CAT_COLOR[cat] ?? CAT_COLOR.default;
-              const cleanTitle = ev.title.replace(/^🎂\s*/, "");
-              const insight = insights.get(ev.id);
+              const insight = ev ? insights.get(ev.id) ?? (ev.personId ? insights.get(`birthday-${ev.personId}`) : undefined) : undefined;
 
               return (
-                <li
-                  key={ev.id}
-                  className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
-                  onClick={() => {
-                    if (!isBirthday) {
-                      onEdit(ev.id);
-                      onClose();
-                    }
-                  }}
-                >
+                <li key={entry.id}>
+                <button id={`calendar-result-${index}`} type="button" role="option" aria-selected={index === activeIndex} onMouseEnter={() => setActiveIndex(index)} onClick={() => selectResult(entry)} className={`flex min-h-[76px] w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition ${index === activeIndex ? "border-sky-300 bg-sky-50 shadow-[0_8px_24px_rgba(14,165,233,.08)]" : "border-slate-100 bg-white hover:border-slate-200 hover:bg-slate-50"}`}>
                   <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm shrink-0 ${colors.pill} ${colors.text} font-bold border`}
+                    className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border ${holiday ? holiday.kind === "religious" ? "border-violet-200 bg-violet-50 text-violet-700" : "border-blue-200 bg-blue-50 text-blue-700" : `${colors.pill} ${colors.text}`}`}
                   >
-                    {CAT_EMOJI[cat] ?? "📌"}
+                    {holiday ? <ObservanceIcon observance={holiday} className="h-5 w-5" /> : <EventCategoryIcon category={cat} className="h-5 w-5" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-800 text-sm leading-tight">
-                      {cleanTitle}
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[11px] text-slate-400">
-                        {formatDateShort(ev.date, locale)}
-                        {ev.timeOfDay ? ` · ${ev.timeOfDay}` : ""}{ev.durationMinutes ? ` · ${ev.durationMinutes} ${t("form.minutes")}` : ""}
-                      </span>
-                      <span
-                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${urgencyBadge(
-                          ev.date
-                        )}`}
-                      >
-                        {daysLabel(ev.date, t)}
-                      </span>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="truncate text-sm font-extrabold text-slate-800">{entry.title}</p>
+                      <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-extrabold ${urgencyBadge(entry.date)}`}>{daysLabel(entry.date, t)}</span>
                     </div>
+                    <p className="mt-1 truncate text-xs font-medium text-slate-500">{formatDateShort(entry.date, locale)}{ev?.timeOfDay ? ` · ${ev.timeOfDay}` : ""}{ev?.personName ? ` · ${ev.personName}` : holiday ? ` · ${holiday.countryName}` : ""}</p>
                     {insight && (
-                      <p className="text-[11px] text-violet-500 mt-1">
-                        ✨ {insight}
-                      </p>
-                    )}
-                    {ev.notes && !isBirthday && (
-                      <p className="text-xs text-slate-400 mt-0.5 truncate">
-                        {ev.notes}
-                      </p>
+                      <p className="mt-1 truncate text-[11px] font-semibold text-violet-600">✨ {insight}</p>
                     )}
                   </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" aria-hidden="true" />
+                </button>
                 </li>
               );
             })}
           </ul>
+          </>
         )}
       </div>
+      </section>
     </div>
   );
 }
@@ -2246,7 +2326,14 @@ export default function CalendarPage() {
         recurrenceRule: "none",
       }));
     });
-    return [...standalone, ...recurring, ...birthdays].sort((a, b) => a.date.localeCompare(b.date));
+    const persisted = [...standalone, ...recurring];
+    const persistedBirthdays = new Set(
+      persisted
+        .filter((event) => event.category === "birthday" && event.personId)
+        .map((event) => `${event.personId}:${event.date}`),
+    );
+    return [...persisted, ...birthdays.filter((event) => !persistedBirthdays.has(`${event.personId}:${event.date}`))]
+      .sort((a, b) => a.date.localeCompare(b.date));
   }, [events, people]);
 
   const aiInsights = useMemo<Map<string, string>>(() => {
@@ -2920,6 +3007,7 @@ export default function CalendarPage() {
         .hd-calendar-agenda-day__event { display: grid; width: 100%; grid-template-columns: 6px 42px minmax(0,1fr) auto; align-items: center; gap: 8px; padding: 10px; border-radius: 14px; background: #f8fafc; text-align: left; }
         .hd-calendar-agenda-day__event > i { width: 6px; height: 30px; border-radius: 999px; }
         .hd-calendar-agenda-day__time { color: #64748b; font-size: 10px; font-weight: 850; }
+        .hd-calendar-agenda-day__time svg { width: 15px; height: 15px; }
         .hd-calendar-agenda-day__copy { display: grid; min-width: 0; }
         .hd-calendar-agenda-day__copy strong { overflow: hidden; color: #334155; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
         .hd-calendar-agenda-day__copy small { overflow: hidden; color: #94a3b8; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
@@ -2963,7 +3051,7 @@ export default function CalendarPage() {
           .hd-calendar-day-events { display: grid; min-width: 0; gap: 4px; margin-top: 8px; }
           .hd-calendar-day-holiday-dot { display: none; }
           .hd-calendar-day-event { display: flex; min-width: 0; align-items: center; gap: 4px; overflow: hidden; padding: 4px 6px; border-width: 1px; border-radius: 7px; color: #334155; font-size: 9px; font-weight: 750; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
-          .hd-calendar-day-event svg { width: 11px; height: 11px; flex: 0 0 11px; color: #ec4899; stroke-width: 2.3; }
+          .hd-calendar-day-event svg { width: 11px; height: 11px; flex: 0 0 11px; color: currentColor; stroke-width: 2.1; }
           .hd-calendar-day-more { color: #64748b; font-size: 9px; font-weight: 800; }
           .hd-calendar-side { display: grid; position: sticky; top: 84px; gap: 14px; padding: 18px; border: 1px solid rgba(255,255,255,.94); border-radius: 28px; background: rgba(255,255,255,.92); box-shadow: 0 18px 48px rgba(15,23,42,.075); }
           .hd-calendar-side__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -2995,6 +3083,8 @@ export default function CalendarPage() {
           .hd-calendar-side__upcoming button { display: grid; width: 100%; grid-template-columns: 28px minmax(0,1fr); align-items: center; gap: 8px; padding: 7px; border-radius: 12px; text-align: left; }
           .hd-calendar-side__upcoming button:hover { background: #f8fafc; }
           .hd-calendar-side__upcoming button > span:last-child { display: grid; min-width: 0; }
+          .hd-calendar-side__upcoming button > span:first-child { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 9px; background: #f1f5f9; color: #64748b; }
+          .hd-calendar-side__upcoming button > span:first-child svg { width: 14px; height: 14px; }
           .hd-calendar-side__upcoming strong { overflow: hidden; color: #475569; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
           .hd-calendar-side__upcoming small { color: #94a3b8; font-size: 9px; }
           .hd-calendar-upcoming { display: none; }
@@ -3157,7 +3247,7 @@ export default function CalendarPage() {
         </div>
         {calendarContentFilter !== "holidays" && <div className="hd-calendar-legend" aria-label={t("form.importantHint")}>
           <button type="button" className={calendarFilter === "all" ? "is-active" : ""} onClick={() => setCalendarFilter("all")} aria-pressed={calendarFilter === "all"}><Filter className="h-3 w-3" aria-hidden="true" />{uiCopy.all}</button>
-          <button type="button" className={calendarFilter === "birthday" ? "is-active" : ""} onClick={() => setCalendarFilter("birthday")} aria-pressed={calendarFilter === "birthday"}><i className="bg-pink-400" />{t("categories.birthday")}</button>
+          <button type="button" className={calendarFilter === "birthday" ? "is-active" : ""} onClick={() => setCalendarFilter("birthday")} aria-pressed={calendarFilter === "birthday"}><i className="bg-amber-400" />{t("categories.birthday")}</button>
           <button type="button" className={calendarFilter === "work" ? "is-active" : ""} onClick={() => setCalendarFilter("work")} aria-pressed={calendarFilter === "work"}><i className="bg-blue-400" />{t("categories.work")}</button>
           <button type="button" className={calendarFilter === "personal" ? "is-active" : ""} onClick={() => setCalendarFilter("personal")} aria-pressed={calendarFilter === "personal"}><i className="bg-emerald-400" />{t("categories.personal")}</button>
           <button type="button" className={calendarFilter === "important" ? "is-active" : ""} onClick={() => setCalendarFilter("important")} aria-pressed={calendarFilter === "important"}><i className="bg-amber-400 ring-2 ring-amber-100" />{t("form.important")}</button>
@@ -3167,7 +3257,7 @@ export default function CalendarPage() {
           <>
           {calendarContentFilter !== "holidays" && <div className="hd-calendar-legend hd-calendar-legend--agenda" aria-label={t("form.importantHint")}>
             <button type="button" className={calendarFilter === "all" ? "is-active" : ""} onClick={() => setCalendarFilter("all")} aria-pressed={calendarFilter === "all"}><Filter className="h-3 w-3" aria-hidden="true" />{uiCopy.all}</button>
-            <button type="button" className={calendarFilter === "birthday" ? "is-active" : ""} onClick={() => setCalendarFilter("birthday")} aria-pressed={calendarFilter === "birthday"}><i className="bg-pink-400" />{t("categories.birthday")}</button>
+            <button type="button" className={calendarFilter === "birthday" ? "is-active" : ""} onClick={() => setCalendarFilter("birthday")} aria-pressed={calendarFilter === "birthday"}><i className="bg-amber-400" />{t("categories.birthday")}</button>
             <button type="button" className={calendarFilter === "work" ? "is-active" : ""} onClick={() => setCalendarFilter("work")} aria-pressed={calendarFilter === "work"}><i className="bg-blue-400" />{t("categories.work")}</button>
             <button type="button" className={calendarFilter === "personal" ? "is-active" : ""} onClick={() => setCalendarFilter("personal")} aria-pressed={calendarFilter === "personal"}><i className="bg-emerald-400" />{t("categories.personal")}</button>
             <button type="button" className={calendarFilter === "important" ? "is-active" : ""} onClick={() => setCalendarFilter("important")} aria-pressed={calendarFilter === "important"}><i className="bg-amber-400 ring-2 ring-amber-100" />{t("form.important")}</button>
@@ -3273,7 +3363,7 @@ export default function CalendarPage() {
             {people.length > 0 && (
               <>
                 <span className="text-slate-200">·</span>
-                <span className="text-xs text-pink-400 font-medium flex items-center gap-1">
+                <span className="flex items-center gap-1 text-xs font-semibold text-amber-700">
                   <Gift className="h-4 w-4" aria-hidden="true" /> {t("navigation.birthdays", { count: people.length })}
                 </span>
               </>
@@ -3407,11 +3497,17 @@ export default function CalendarPage() {
         <SearchOverlay
           events={searchableEvents}
           insights={aiInsights}
+          observances={activeObservances}
           onClose={() => setShowSearch(false)}
-          onEdit={(id) => {
-            setShowSearch(false);
-            openEdit(id);
+          onSelectDate={(dateYMD) => {
+            const date = parseLocalDateOnly(dateYMD);
+            if (!date) return;
+            setViewYear(date.getFullYear());
+            setViewMonth(date.getMonth());
+            setCalendarView("month");
+            setSelectedDate(dateYMD);
           }}
+          onAdd={() => openAdd()}
         />
       )}
 

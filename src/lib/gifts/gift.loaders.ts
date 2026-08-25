@@ -32,6 +32,9 @@ import type {
   SaveGiftLinkInput,
 } from "./gift.types.ts";
 import { normalizeGiftHttpsUrl } from "./giftLinkUrl.ts";
+import { loadPersonProfile } from "../people/people.loaders.ts";
+import { isPersistedCalendarEventId } from "./giftNavigation.ts";
+import type { GiftRecipientContextViewModel } from "./gift.types.ts";
 
 async function authenticatedUserId(): Promise<string | null> {
   const { data, error } = await supabase.auth.getUser();
@@ -80,6 +83,55 @@ export async function createPersonGiftIdea(
     title,
     lifecycle: "idea",
   });
+}
+
+export async function loadGiftRecipientContext(
+  personId: string,
+  requestedEventId?: string | null,
+): Promise<GiftRecipientContextViewModel> {
+  const userId = await requiredUserId();
+  const profile = await loadPersonProfile(personId);
+  if (!profile.found || !profile.hero) {
+    return { found: false, person: null, event: null, highlights: [] };
+  }
+
+  let event: GiftRecipientContextViewModel["event"] = null;
+  if (isPersistedCalendarEventId(requestedEventId)) {
+    const { data, error } = await supabase
+      .from("events")
+      .select("id,title,date,category")
+      .eq("id", requestedEventId)
+      .eq("user_id", userId)
+      .eq("person_id", personId)
+      .maybeSingle();
+    if (error) throw new Error(`[gift.loaders] Event validation failed: ${error.message}`);
+    if (data && typeof data.id === "string" && typeof data.title === "string" && typeof data.date === "string") {
+      event = {
+        id: data.id,
+        title: data.title,
+        date: data.date,
+        category: typeof data.category === "string" ? data.category : null,
+      };
+    }
+  }
+
+  const highlights = [
+    ...profile.likes.filter((item) => item.userConfirmed).map((item) => ({ kind: "like" as const, value: item.value })),
+    ...profile.interests.filter((item) => item.userConfirmed).map((item) => ({ kind: "interest" as const, value: item.value })),
+    ...profile.importantFacts.filter((item) => item.userConfirmed).map((item) => ({ kind: "fact" as const, value: item.value })),
+  ].slice(0, 6);
+
+  return {
+    found: true,
+    person: {
+      id: profile.hero.id,
+      name: profile.hero.name,
+      relationLabel: profile.hero.relationLabel,
+      birthday: profile.hero.birthday,
+    },
+    event,
+    highlights,
+  };
 }
 
 export async function changePersonGiftLifecycle(

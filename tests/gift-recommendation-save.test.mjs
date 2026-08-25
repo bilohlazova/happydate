@@ -9,7 +9,7 @@ test("AI recommendation can be persisted for the active Person and Event", async
     source("src/app/gift/start/StartPageContent.tsx"),
     source("src/lib/gifts/gift.loaders.ts"),
   ]);
-  assert.match(page, /createPersonGiftIdea\(personId, title, form\.eventId\)/);
+  assert.match(page, /createPersonGiftIdea\(personId, title, recipientContext\?\.event\?\.id \?\? null\)/);
   assert.match(loaders, /eventId: eventId \?\? null/);
   assert.match(page, /recommendations\.saveForPerson/);
 });

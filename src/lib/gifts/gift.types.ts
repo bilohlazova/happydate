@@ -116,6 +116,26 @@ export interface GiftWorkspaceViewModel extends GiftCollectionViewModel {
   recommendationContext: GiftRecommendationContextViewModel;
 }
 
+export interface GiftRecipientContextViewModel {
+  found: boolean;
+  person: {
+    id: string;
+    name: string;
+    relationLabel: string | null;
+    birthday: string | null;
+  } | null;
+  event: {
+    id: string;
+    title: string;
+    date: string;
+    category: string | null;
+  } | null;
+  highlights: Array<{
+    kind: "like" | "interest" | "fact";
+    value: string;
+  }>;
+}
+
 /** Read-only projection reserved for a future AI recommender. */
 export interface GiftRecommendationContextViewModel {
   activeIdeas: GiftItemViewModel[];

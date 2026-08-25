@@ -35,3 +35,11 @@ test("retired concierge write is absent from React", async () => {
   const content = await source("src/app/gift/start/StartPageContent.tsx");
   assert.doesNotMatch(content, /giftRequestCompatibility|gift_requests|notify-gift/);
 });
+
+test("personalized Gift Workspace renders only after owned recipient context resolves", async () => {
+  const content = await source("src/app/gift/start/StartPageContent.tsx");
+  assert.match(content, /loadGiftRecipientContext\(personId, requestedEventId\)/);
+  assert.match(content, /recipientContext\?\.found/);
+  assert.match(content, /recipient\.knownTitle/);
+  assert.match(content, /recipient\.backToCalendar/);
+});

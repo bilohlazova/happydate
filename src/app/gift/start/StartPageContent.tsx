@@ -2,9 +2,11 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
+import { CalendarDays, ChevronLeft, Gift, Heart, Info, Sparkles, UserRound } from "lucide-react";
 import {
   GiftDiscoveryPanel,
   type GiftDiscoveryAnswerValue,
@@ -19,8 +21,8 @@ import type {
 } from "@/lib/gift-discovery";
 import type { HappyLearningDetectionCandidate } from "@/lib/happy-learning/happyLearningDetectV2.types";
 import { confirmHappyLearningCandidateWithSession } from "@/lib/happy-learning/happyLearningClient";
-import { createPersonGiftIdea, loadGiftWorkspace } from "@/lib/gifts/gift.loaders";
-import type { GiftWorkspaceViewModel } from "@/lib/gifts/gift.types";
+import { createPersonGiftIdea, loadGiftRecipientContext, loadGiftWorkspace } from "@/lib/gifts/gift.loaders";
+import type { GiftRecipientContextViewModel, GiftWorkspaceViewModel } from "@/lib/gifts/gift.types";
 import {
   requestGiftRecommendations,
   type GiftRecommendationsResult,
@@ -65,6 +67,8 @@ export default function GiftStartPage({
   const [savedSuggestionKeys, setSavedSuggestionKeys] = useState<string[]>([]);
   const [suggestionSaveErrorKey, setSuggestionSaveErrorKey] = useState<string | null>(null);
   const [liveWorkspace, setLiveWorkspace] = useState<GiftWorkspaceViewModel | null>(workspace);
+  const [recipientContext, setRecipientContext] = useState<GiftRecipientContextViewModel | null>(null);
+  const [recipientContextError, setRecipientContextError] = useState(false);
   const [workspaceRefreshFailed, setWorkspaceRefreshFailed] = useState(false);
   const [discoveryAnswers, setDiscoveryAnswers] = useState<GiftDiscoveryAnswers>({});
   const [skippedDiscoveryQuestions, setSkippedDiscoveryQuestions] = useState<string[]>([]);
@@ -78,6 +82,27 @@ export default function GiftStartPage({
   const requestSequenceRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const personId = sp.get("personId");
+  const requestedEventId = sp.get("eventId");
+  const requestedDate = sp.get("date");
+  const requestedTitle = sp.get("title");
+  const requestedOccasion = sp.get("occasion");
+  const requestedReturnTo = sp.get("returnTo");
+  const returnTo = requestedReturnTo?.startsWith("/") && !requestedReturnTo.startsWith("//")
+    ? requestedReturnTo
+    : "/dashboard";
+
+  const [form, setForm] = useState<FormState>(() => ({
+    eventId: null,
+    eventTitle: requestedTitle ?? "",
+    eventDate: requestedDate,
+    forWhom: "",
+    gender: "",
+    age: "",
+    interests: "",
+    occasion: requestedOccasion ?? requestedTitle ?? "",
+    budget: 150,
+    notes: "",
+  }));
 
   useEffect(() => {
     // Keep the editable client workspace aligned after a server refresh.
@@ -85,19 +110,34 @@ export default function GiftStartPage({
     setLiveWorkspace(workspace);
   }, [workspace]);
 
-  // ініціалізація форми один раз
-  const [form, setForm] = useState<FormState>(() => ({
-    eventId: sp.get("eventId"),
-    eventTitle: sp.get("title") ?? "",
-    eventDate: sp.get("date"),
-    forWhom: "",
-    gender: "",
-    age: "",
-    interests: "",
-    occasion: sp.get("title") ?? "",
-    budget: 150,
-    notes: "",
-  }));
+  useEffect(() => {
+    let active = true;
+    if (!personId) return () => { active = false; };
+    loadGiftRecipientContext(personId, requestedEventId)
+      .then((context) => {
+        if (!active) return;
+        setRecipientContextError(false);
+        setRecipientContext(context);
+        if (context.event) {
+          setForm((current) => ({
+            ...current,
+            eventId: context.event!.id,
+            eventTitle: context.event!.title,
+            eventDate: context.event!.date,
+            occasion: context.event!.category ?? requestedOccasion ?? current.occasion,
+          }));
+        } else {
+          setForm((current) => ({ ...current, eventId: null }));
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setRecipientContext(null);
+          setRecipientContextError(true);
+        }
+      });
+    return () => { active = false; };
+  }, [personId, requestedEventId, requestedOccasion]);
 
   function discoveryQuestionType(questionId: string): GiftDiscoveryQuestionType | null {
     const maybeType = questionId.split(":").at(-1);
@@ -316,6 +356,33 @@ export default function GiftStartPage({
     ? visibleMemoryCandidates(recommendations.memoryCandidates)[0] ?? null
     : null;
 
+  const visibleWorkspace = useMemo<GiftWorkspaceViewModel | null>(() => {
+    if (!liveWorkspace || !personId) return liveWorkspace;
+    const activeIdeas = liveWorkspace.activeIdeas.filter((gift) => gift.personId === personId);
+    const history = liveWorkspace.history.filter((gift) => gift.personId === personId);
+    const all = [...activeIdeas, ...history];
+    const counts = {
+      idea: all.filter((gift) => gift.lifecycle === "idea").length,
+      selected: all.filter((gift) => gift.lifecycle === "selected").length,
+      purchased: all.filter((gift) => gift.lifecycle === "purchased").length,
+      given: all.filter((gift) => gift.lifecycle === "given").length,
+    };
+    return {
+      ...liveWorkspace,
+      activeIdeas,
+      history,
+      counts,
+      personIds: liveWorkspace.personIds.filter((id) => id === personId),
+      eventIds: [...new Set(all.map((gift) => gift.eventId).filter((id): id is string => Boolean(id)))],
+      recommendationContext: {
+        activeIdeas,
+        confirmedHistory: history,
+        personIds: [personId],
+        eventIds: [...new Set(all.map((gift) => gift.eventId).filter((id): id is string => Boolean(id)))],
+      },
+    };
+  }, [liveWorkspace, personId]);
+
   function recommendationKey(title: string, category: string): string {
     return `${category}:${title.replace(/\s+/g, " ").trim().toLocaleLowerCase(locale)}`;
   }
@@ -327,7 +394,7 @@ export default function GiftStartPage({
     setSavingSuggestionKey(key);
     setSuggestionSaveErrorKey(null);
     try {
-      await createPersonGiftIdea(personId, title, form.eventId);
+      await createPersonGiftIdea(personId, title, recipientContext?.event?.id ?? null);
       setSavedSuggestionKeys((current) => [...new Set([...current, key])]);
       try {
         setLiveWorkspace(await loadGiftWorkspace());
@@ -345,23 +412,85 @@ export default function GiftStartPage({
   return (
     <main className={`gift-care-page ${MobileUI.screen}`}>
       <div className={`gift-care-layout ${MobileUI.contentBottom} mx-auto w-full px-4 py-5 sm:px-5`}>
+        {personId && (
+          <Link href={returnTo} className="mb-3 inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-extrabold text-slate-600 transition-colors hover:bg-white hover:text-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400">
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+            {t("recipient.backToCalendar")}
+          </Link>
+        )}
+
         {/* HERO */}
         <header className="gift-care-hero mb-5">
           <div className="gift-care-hero__glow" aria-hidden="true"><span>♥</span></div>
           <div className="gift-care-hero__content">
           <div className="gift-care-hero__badge inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 text-sm font-semibold text-sky-700 border border-white/70">
-            {t("hero.badge")}
+            <Gift className="h-4 w-4" aria-hidden="true" />
+            {recipientContext?.person ? t("recipient.badge") : t("hero.badge")}
           </div>
           <h1 className="gift-care-hero__title mt-3">
-            {t("hero.title")}
+            {recipientContext?.person
+              ? t("recipient.title", { name: recipientContext.person.name })
+              : t("hero.title")}
           </h1>
           <p className="gift-care-hero__subtitle mt-2">
-            {t("hero.subtitle")}
+            {recipientContext?.person
+              ? t("recipient.subtitle", { name: recipientContext.person.name })
+              : t("hero.subtitle")}
           </p>
+          {recipientContext?.person && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {form.eventDate && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-white bg-white/80 px-3 py-2 text-xs font-extrabold text-slate-700">
+                  <CalendarDays className="h-4 w-4 text-sky-500" aria-hidden="true" />
+                  {new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric" }).format(new Date(`${form.eventDate}T12:00:00`))}
+                </span>
+              )}
+              {recipientContext.person.relationLabel && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-white bg-white/80 px-3 py-2 text-xs font-extrabold text-slate-700">
+                  <UserRound className="h-4 w-4 text-violet-500" aria-hidden="true" />
+                  {recipientContext.person.relationLabel}
+                </span>
+              )}
+            </div>
+          )}
           </div>
         </header>
 
-        {personId && (
+        {personId && !recipientContext && !recipientContextError && (
+          <div className="mb-4 h-28 animate-pulse rounded-[25px] bg-white/70" aria-label={t("recipient.loading")} />
+        )}
+
+        {(recipientContextError || recipientContext?.found === false) && (
+          <div className="mb-4 flex gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-800" role="alert">
+            <Info className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+            <div><strong>{t("recipient.errorTitle")}</strong><p className="mt-1">{t("recipient.errorDescription")}</p></div>
+          </div>
+        )}
+
+        {recipientContext?.found && recipientContext.person && (
+          <section className="gift-care-recommendations mb-4 p-4 sm:p-5" aria-labelledby="gift-known-context">
+            <div className="flex items-start gap-3">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-pink-100 text-pink-600"><Heart className="h-5 w-5" aria-hidden="true" /></span>
+              <div className="min-w-0 flex-1">
+                <h2 id="gift-known-context" className="gift-care-section-title">{t("recipient.knownTitle", { name: recipientContext.person.name })}</h2>
+                <p className="mt-1 text-sm text-slate-600">{t("recipient.knownDescription")}</p>
+                {recipientContext.highlights.length ? (
+                  <ul className="mt-3 flex flex-wrap gap-2">
+                    {recipientContext.highlights.map((highlight) => (
+                      <li key={`${highlight.kind}:${highlight.value}`} className="inline-flex items-center gap-1.5 rounded-full border border-sky-100 bg-white px-3 py-2 text-xs font-bold text-slate-700">
+                        <Sparkles className="h-3.5 w-3.5 text-sky-500" aria-hidden="true" />{highlight.value}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-3 rounded-2xl bg-amber-50 p-3 text-sm font-semibold text-amber-900">{t("recipient.noHighlights", { name: recipientContext.person.name })}</p>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {personId && recipientContext?.found && (
           <section className="gift-care-recommendations mb-4 p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
@@ -541,7 +670,7 @@ export default function GiftStartPage({
           </section>
         )}
 
-        <GiftWorkspacePanel workspace={liveWorkspace} hasError={workspaceError || workspaceRefreshFailed} />
+        <GiftWorkspacePanel workspace={visibleWorkspace} hasError={workspaceError || workspaceRefreshFailed} />
 
         <ComingSoonNotice
           className="mb-4"

@@ -8,5 +8,7 @@ test("Calendar exposes a responsive visual hierarchy, legend and important-day s
   assert.match(source, /hd-calendar-legend/);
   assert.match(source, /hasImportantEvent/);
   assert.match(source, /aria-label=\{t\("navigation\.today"\)\}/);
+  assert.match(source, /function EventCategoryIcon/);
+  assert.doesNotMatch(source, /CAT_EMOJI/);
   assert.match(source, /@media \(prefers-reduced-motion: reduce\)/);
 });

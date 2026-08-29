@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "targetBehaviorVersion": "assistant-2026-08-23.1",
+  "targetBehaviorVersion": "assistant-2026-08-29.1",
   "scenarios": [
     {
       "id": "known-memory-before-question",

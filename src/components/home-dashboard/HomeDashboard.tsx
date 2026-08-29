@@ -10,6 +10,7 @@ import UpcomingEventsSection from "./UpcomingEventsSection";
 import HappyRecommendationsSection from "./HappyRecommendationsSection";
 import HomeErrorState from "./HomeErrorState";
 import HomeEmptyState from "./HomeEmptyState";
+import WellbeingCheckIn from "./WellbeingCheckIn";
 import type { ReminderRecord } from "@/lib/repositories/reminders";
 import type { GiftOutcomeValue } from "@/lib/gifts/gift.types";
 
@@ -35,10 +36,13 @@ export default function HomeDashboard({ viewModel, reminder, inAppDeliveryCount,
   const t = useTranslations("home");
   return (
     <div className="hd-screen overflow-x-hidden">
-      <div className="mx-auto w-full max-w-[980px] px-4 pb-[calc(32px+var(--hd-nav-height)+env(safe-area-inset-bottom))] pt-5 sm:px-6 md:pb-10 md:pt-8">
-        <HomeGreeting greeting={viewModel.greeting} />
-        <TodaySummary insights={viewModel.todayInsights} count={viewModel.stats.importantCount} statsLabel={t("stats.label")} statsDescription={t("stats.description")} emptyLabel={t("summary.empty")} />
-        <HomeAssistantActions briefing={viewModel.assistantActions.briefing} locale={SPEECH_LOCALES[viewModel.locale] ?? viewModel.locale} onAsk={onAskHappy} labels={{ ask: t("assistant.ask"), listen: t("assistant.listen"), pause: t("assistant.pause"), resume: t("assistant.resume"), stop: t("assistant.stop"), read: t("assistant.read"), progress: t("assistant.progress"), interrupted: t("assistant.interrupted"), modeLabel: t("assistant.modeLabel"), shortMode: t("assistant.shortMode"), detailedMode: t("assistant.detailedMode"), briefTitle: t("assistant.sectionLabel"), close: t("assistant.close"), speechError: t("assistant.speechError") }} />
+      <div className="mx-auto w-full max-w-[1060px] px-4 pb-[calc(32px+var(--hd-nav-height)+env(safe-area-inset-bottom))] pt-5 sm:px-6 md:pb-12 md:pt-8">
+        <section className="overflow-hidden rounded-[2rem] border border-white/80 bg-[radial-gradient(circle_at_92%_4%,rgba(125,211,252,.34),transparent_28%),linear-gradient(135deg,#ffffff_0%,#f0f9ff_100%)] p-5 shadow-[0_22px_60px_rgba(15,23,42,0.07)] sm:p-7">
+          <HomeGreeting greeting={viewModel.greeting} />
+          <WellbeingCheckIn locale={viewModel.locale} userName={viewModel.greeting.name} />
+          <TodaySummary insights={viewModel.todayInsights} count={viewModel.stats.importantCount} statsLabel={t("stats.label")} statsDescription={t("stats.description")} emptyLabel={t("summary.empty")} />
+          <HomeAssistantActions briefing={viewModel.assistantActions.briefing} locale={SPEECH_LOCALES[viewModel.locale] ?? viewModel.locale} onAsk={onAskHappy} labels={{ ask: t("assistant.ask"), listen: t("assistant.listen"), pause: t("assistant.pause"), resume: t("assistant.resume"), stop: t("assistant.stop"), read: t("assistant.read"), progress: t("assistant.progress"), interrupted: t("assistant.interrupted"), modeLabel: t("assistant.modeLabel"), shortMode: t("assistant.shortMode"), detailedMode: t("assistant.detailedMode"), briefTitle: t("assistant.sectionLabel"), close: t("assistant.close"), speechError: t("assistant.speechError") }} />
+        </section>
 
         {inAppDeliveryCount > 0 && (
           <div className="mt-5 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-950" role="status">
@@ -50,11 +54,11 @@ export default function HomeDashboard({ viewModel, reminder, inAppDeliveryCount,
         {viewModel.isEmpty ? (
           <HomeEmptyState title={t("empty.title")} description={t("empty.description")} addPerson={t("empty.addPerson")} addEvent={t("empty.addEvent")} />
         ) : (
-          <>
-            {viewModel.featuredEvent && <FeaturedEventCard event={viewModel.featuredEvent} preferencesLabel={t("featured.preferences")} reminder={reminder} reminderBusy={reminderBusy} reminderError={reminderError} reminderLabels={{ completed: t("reminder.completed"), complete: t("reminder.complete"), snooze: t("reminder.snooze"), snoozed: t("reminder.snoozed"), undo: t("reminder.undo"), pickGift: t("reminder.pickGift"), error: t("reminder.error") }} onCompleteReminder={onCompleteReminder} onSnoozeReminder={onSnoozeReminder} onUndoReminder={onUndoReminder} onPickGift={onPickGift} />}
+          <div id="home-plan">
+            {viewModel.featuredEvent && <FeaturedEventCard event={viewModel.featuredEvent} locale={viewModel.locale} preferencesLabel={t("featured.preferences")} giftContextLabel={t("recommendations.addContextDescription", { name: viewModel.featuredEvent.personName ?? "" })} reminder={reminder} reminderBusy={reminderBusy} reminderError={reminderError} reminderLabels={{ completed: t("reminder.completed"), complete: t("reminder.complete"), snooze: t("reminder.snooze"), snoozed: t("reminder.snoozed"), undo: t("reminder.undo"), pickGift: t("reminder.pickGift"), error: t("reminder.error") }} onCompleteReminder={onCompleteReminder} onSnoozeReminder={onSnoozeReminder} onUndoReminder={onUndoReminder} onPickGift={onPickGift} />}
             <UpcomingEventsSection events={viewModel.upcomingEvents} title={t("upcoming.title")} allLabel={t("upcoming.all")} />
             <HappyRecommendationsSection recommendations={viewModel.recommendations} title={t("recommendations.title")} onGiftOutcome={onGiftOutcome} onGiftFollowUp={onGiftFollowUp} followUpLabels={{ answerLabel: t("recommendations.giftOutcomeAnswerLabel"), liked: t("recommendations.giftOutcomeLiked"), notLiked: t("recommendations.giftOutcomeNotLiked"), unsure: t("recommendations.giftOutcomeUnsure"), snooze: t("recommendations.giftOutcomeSnooze"), dismiss: t("recommendations.giftOutcomeDismiss"), error: t("recommendations.giftOutcomeActionError") }} />
-          </>
+          </div>
         )}
       </div>
     </div>

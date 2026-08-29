@@ -199,7 +199,18 @@ function classifyMemories(memories: HomeMemory[]) {
   return { gifts, notes, memories: remembered, preferences };
 }
 
-function buildFeatured(event: HomeEvent | null, memories: HomeMemory[], locale: AppLocale, t: HomeTranslate): HomeFeaturedEvent | null {
+function birthdayAgeOnEvent(event: HomeEvent, people: HomePerson[]): number | null {
+  if (event.source !== "birthday" || !event.personId) return null;
+  const birthday = people.find((person) => person.id === event.personId)?.birthday ?? null;
+  const birthYear = birthday && /^(\d{4})-\d{2}-\d{2}$/.exec(birthday)?.[1];
+  const eventYear = /^(\d{4})-\d{2}-\d{2}$/.exec(event.date)?.[1];
+  if (!birthYear || !eventYear) return null;
+  const age = Number(eventYear) - Number(birthYear);
+  // Reject malformed/future years and implausible values instead of exposing a false age.
+  return Number.isInteger(age) && age >= 0 && age <= 130 ? age : null;
+}
+
+function buildFeatured(event: HomeEvent | null, people: HomePerson[], memories: HomeMemory[], locale: AppLocale, t: HomeTranslate): HomeFeaturedEvent | null {
   if (!event) return null;
   const classified = event.personId
     ? classifyMemories(personMemories(memories, event.personId))
@@ -219,6 +230,7 @@ function buildFeatured(event: HomeEvent | null, memories: HomeMemory[], locale: 
     preferences: classified.preferences.slice(0, 2),
     metrics,
     ctaLabel: event.source === "birthday" ? t("featured.personCta") : t("featured.eventCta"),
+    birthdayAge: birthdayAgeOnEvent(event, people),
   };
 }
 
@@ -349,7 +361,7 @@ export function buildHomeViewModel(data: HomeRepositoryData, locale: AppLocale, 
   const name = resolveHomeUserName(data);
   const events = normalizeEvents(data.people, data.events, now);
   const featured = selectFeatured(events);
-  const featuredCard = buildFeatured(featured, data.memories, locale, t);
+  const featuredCard = buildFeatured(featured, data.people, data.memories, locale, t);
   const pendingGiftOutcome = (data.pendingGiftOutcomes ?? []).flatMap((gift) => {
     const person = data.people.find((item) => item.id === gift.personId);
     return person ? [{ id: gift.id, title: gift.title, personName: person.name }] : [];

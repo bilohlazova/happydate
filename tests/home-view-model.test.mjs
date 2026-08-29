@@ -73,6 +73,18 @@ test("birthday metrics count active projected knowledge and exclude journal", ()
   assert.deepEqual(model.featuredEvent?.metrics.map((metric) => [metric.id, metric.count]), [["gifts", 1], ["notes", 1]]);
 });
 
+test("a birthday with a confirmed birth year shows the age reached on that occurrence", () => {
+  const model = buildHomeViewModel(data({
+    people: [{ id: "p1", name: "Ola", birthday: "1990-07-20", relationLabel: "Siostra" }],
+  }), "pl", t, new Date(2026, 6, 17));
+  assert.equal(model.featuredEvent?.birthdayAge, 36);
+
+  const withoutYear = buildHomeViewModel(data({
+    people: [{ id: "p2", name: "Maja", birthday: "07-20", relationLabel: "Siostra" }],
+  }), "pl", t, new Date(2026, 6, 17));
+  assert.equal(withoutYear.featuredEvent?.birthdayAge, null);
+});
+
 test("profile name falls back to auth metadata and then email", () => {
   const metadata = buildHomeViewModel(data({ profile: { fullName: "" }, authMetadataName: "Anna Kowalska" }), "pl", t);
   assert.equal(metadata.greeting.name, "Anna");

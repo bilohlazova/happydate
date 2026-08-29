@@ -9,7 +9,7 @@ type SafeDiagnostic = {
 const SAFE_VALUE = /^[a-zA-Z0-9._:-]{1,80}$/;
 const ORCHESTRATION_REASONS = new Set(["home_daily_context"]);
 const ORCHESTRATION_ACTIONS = new Set(["open_gift_assistant"]);
-const ASSISTANT_BEHAVIOR_VERSIONS = new Set(["assistant-2026-08-23.1"]);
+const ASSISTANT_BEHAVIOR_VERSIONS = new Set(["assistant-2026-08-23.1", "assistant-2026-08-29.1"]);
 const AI_PRICING_VERSIONS = new Set(["gpt-4.1-mini-standard-2026-08-16"]);
 
 type OrchestrationTraceInput = {

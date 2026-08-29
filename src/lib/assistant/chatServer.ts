@@ -9,6 +9,7 @@ import type { AssistantSavedGiftLinkContext } from "./savedGiftLinkContext.serve
 import { formatAssistantSavedGiftLinkContext } from "./chatContract.ts";
 import { ASSISTANT_BEHAVIOR_MANIFEST } from "./assistantBehaviorManifest.ts";
 import { AI_COST_POLICY, estimateInputTokens, estimatedUsd, type AiBudget, type AiBudgetReservation, type AiTokenUsage } from "./aiBudget.ts";
+import { buildAssistantResponsePlan } from "./responsePlan.ts";
 
 export type AssistantProviderMessage = AssistantConversationItem | { role: "system"; content: string };
 export type AssistantProviderOutput = {
@@ -179,6 +180,7 @@ export async function createAssistantChatResponse(
   const savedGiftLinkContext = formatAssistantSavedGiftLinkContext(serverSavedGiftLinks);
   const messages: AssistantProviderMessage[] = [
     { role: "system", content: buildAssistantSystemPrompt(request.locale) },
+    { role: "system", content: buildAssistantResponsePlan(request) },
     ...(context ? [{ role: "system" as const, content: context }] : []),
     ...(giftOutcomeContext ? [{ role: "system" as const, content: giftOutcomeContext }] : []),
     ...(savedGiftLinkContext ? [{ role: "system" as const, content: savedGiftLinkContext }] : []),

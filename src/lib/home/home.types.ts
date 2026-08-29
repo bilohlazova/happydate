@@ -127,6 +127,8 @@ export interface HomeFeaturedEvent extends HomeEvent {
   preferences: string[];
   metrics: HomeEventMetric[];
   ctaLabel: string;
+  /** The age reached on this specific birthday occurrence; never inferred without a year. */
+  birthdayAge: number | null;
 }
 
 export interface HomeUpcomingEvent extends HomeEvent {

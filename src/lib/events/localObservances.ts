@@ -1,4 +1,5 @@
 import { formatLocalDateOnly, parseLocalDateOnly } from "@/lib/events/dateOnly";
+import { orthodoxEasterDate } from "@/lib/events/holidayObservances";
 
 export type CalendarCountry = string;
 
@@ -53,6 +54,8 @@ const FIXED: Record<CalendarCountry, Record<string, string>> = {
   RU: { "01-01": "newYear", "01-07": "christmas", "05-01": "labour", "05-09": "victory", "06-12": "independence", "11-04": "unity" },
 };
 
+const RELIGIOUS_KEYS = new Set(["christmas", "christmas2", "easter", "easterMonday", "epiphany", "assumption", "allSaints", "goodFriday"]);
+
 function normalizeLocale(locale: string): LocaleCode {
   const short = locale.toLowerCase().split("-")[0];
   return short === "uk" || short === "pl" || short === "de" || short === "ru" ? short : "en";
@@ -89,16 +92,20 @@ export function getLocalObservance(dateYMD: string, locale: string): LocalObserv
   const country = LOCALE_COUNTRY[language];
   const monthDay = dateYMD.slice(5);
   let key = FIXED[country][monthDay];
-  const kind: LocalObservance["kind"] = key ? "public" : "religious";
 
   if (!key) {
-    const easter = westernEaster(date.getFullYear());
-    if (dateYMD === shiftedDate(easter, 0) && country !== "UA" && country !== "RU") key = "easter";
-    else if (dateYMD === shiftedDate(easter, 1) && country !== "UA" && country !== "RU") key = "easterMonday";
-    else if (dateYMD === shiftedDate(easter, -2) && (country === "DE" || country === "GB")) key = "goodFriday";
+    if (country === "UA" || country === "RU") {
+      if (dateYMD === orthodoxEasterDate(date.getFullYear())) key = "easter";
+    } else {
+      const easter = westernEaster(date.getFullYear());
+      if (dateYMD === shiftedDate(easter, 0)) key = "easter";
+      else if (dateYMD === shiftedDate(easter, 1)) key = "easterMonday";
+      else if (dateYMD === shiftedDate(easter, -2) && (country === "DE" || country === "GB")) key = "goodFriday";
+    }
   }
 
   if (!key) return null;
+  const kind: LocalObservance["kind"] = RELIGIOUS_KEYS.has(key) ? "religious" : "public";
   return { country, countryName: COUNTRY_NAMES[language][country], title: LABELS[key][language], kind };
 }
 

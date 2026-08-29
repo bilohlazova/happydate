@@ -19,6 +19,7 @@ import { getAssistantEnvironmentStatus, getMissingAssistantConfiguration } from 
 import { readFile } from "node:fs/promises";
 import { buildAssistantPeopleContext } from "../src/lib/assistant/peopleContext.ts";
 import { buildAssistantMemoryContext } from "../src/lib/assistant/memoryContext.ts";
+import { buildAssistantResponsePlan, classifyAssistantResponseIntent } from "../src/lib/assistant/responsePlan.ts";
 
 function validRequest(overrides = {}) {
   return {
@@ -33,6 +34,32 @@ function validRequest(overrides = {}) {
 test("chat validation rejects an empty or oversized message", () => {
   assert.equal(parseAssistantChatRequest(validRequest({ message: "  " })).success, false);
   assert.equal(parseAssistantChatRequest(validRequest({ message: "x".repeat(ASSISTANT_CHAT_LIMITS.messageLength + 1) })).success, false);
+});
+
+test("response planning recognizes gift, calendar and person questions across product languages", () => {
+  assert.equal(classifyAssistantResponseIntent("Допоможи обрати подарунок мамі"), "gift");
+  assert.equal(classifyAssistantResponseIntent("Zaplanuj moje wydarzenia"), "schedule");
+  assert.equal(classifyAssistantResponseIntent("Was mag Alex?"), "person");
+  assert.equal(classifyAssistantResponseIntent("How are you?"), "general");
+});
+
+test("gift response plan avoids gender stereotypes and explains evidence-led advice", () => {
+  const parsed = parseAssistantChatRequest(validRequest({
+    message: "Порадь подарунок для Діми",
+    locale: "uk",
+    context: {
+      userName: null, insight: null, events: [],
+      people: [{ id: "dima", name: "Діма", relation: "friend", birthday: null, gender: "male" }],
+      memories: [{ personName: "Діма", memories: [{ title: null, content: "Любить настільні ігри", occurredOn: null, importance: 2 }] }],
+      activePersonId: "dima", personResolutionStatus: "resolved",
+    },
+  }));
+  assert.equal(parsed.success, true);
+  if (!parsed.success) return;
+  const plan = buildAssistantResponsePlan(parsed.data);
+  assert.match(plan, /2–3 meaningfully different gift directions/);
+  assert.match(plan, /Do not use gender as a shortcut/);
+  assert.match(plan, /saved preference context is available/);
 });
 
 test("unknown locale safely falls back to Polish", () => {
@@ -322,7 +349,7 @@ test("streaming response reuses history and emits provider chunks", async () => 
     },
   );
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get("X-HappyDate-Assistant-Version"), "assistant-2026-08-23.1");
+  assert.equal(response.headers.get("X-HappyDate-Assistant-Version"), "assistant-2026-08-29.1");
   assert.equal(await response.text(), "Hello world");
   assert.equal(capturedMessages.at(-2).content, "Earlier");
   assert.equal(capturedMessages.at(-1).content, "Pomóż mi zaplanować dzień");

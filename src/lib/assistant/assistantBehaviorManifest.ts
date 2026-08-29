@@ -7,10 +7,10 @@ import { ASSISTANT_CHAT_CONFIG } from "./chatConfig.ts";
  */
 export const ASSISTANT_BEHAVIOR_MANIFEST = Object.freeze({
   schemaVersion: 1,
-  behaviorVersion: "assistant-2026-08-23.1",
-  promptVersion: "happy-system-prompt-v2",
-  promptFingerprint: "sha256:d39524b3077ad6ababa2af8b0cc17289aa4b434a347ca41206415ecc39134b57",
-  contextSchemaVersion: "assistant-context-v6",
+  behaviorVersion: "assistant-2026-08-29.1",
+  promptVersion: "happy-system-prompt-v3",
+  promptFingerprint: "sha256:5023ae97eb34b8e0a39b829579fa9f9327bc51df0a41df1f86eb1b5fc4c6285f",
+  contextSchemaVersion: "assistant-context-v7",
   modelConfigVersion: "chat-model-config-v1",
   model: ASSISTANT_CHAT_CONFIG.model,
   temperature: ASSISTANT_CHAT_CONFIG.temperature,

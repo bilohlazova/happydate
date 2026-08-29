@@ -27,8 +27,8 @@ export default function DesktopAppNav() {
               href={item.href}
               className={`flex min-h-10 items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 ${
                 active
-                  ? "bg-sky-100 text-sky-700 shadow-sm ring-1 ring-sky-200/80"
-                  : "text-slate-600 hover:bg-white hover:text-sky-700"
+                  ? "bg-[#effafb] text-[#19778f] shadow-sm ring-1 ring-[#cdebf0]"
+                  : "text-slate-600 hover:bg-white hover:text-[#19778f]"
               }`}
               aria-current={active ? "page" : undefined}
             >

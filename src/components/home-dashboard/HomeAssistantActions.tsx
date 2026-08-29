@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MessageCircle, Pause, Play, Volume2 } from "lucide-react";
+import { MessageCircle, Pause, Play, Sparkles, Volume2 } from "lucide-react";
 import { useSpeechBrief } from "@/hooks/useSpeechBrief";
 import { briefingTextForMode } from "@/lib/home/buildDailyBriefing";
 import type { DailyBriefing, DailyBriefingMode } from "@/lib/home/buildDailyBriefing";
@@ -48,16 +48,28 @@ export default function HomeAssistantActions({ briefing, locale, labels, onAsk }
   };
 
   return (
-    <section className="mt-4" aria-label={labels.briefTitle}>
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <span className="text-xs font-bold text-slate-500">{labels.modeLabel}</span>
+    <section className="mt-0" aria-label={labels.briefTitle}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-[0_8px_18px_rgba(2,132,199,.22)]" aria-hidden="true"><Sparkles size={18} /></span>
+          <div>
+            <p className="text-sm font-black text-slate-950">{labels.briefTitle}</p>
+            <p className="mt-0.5 text-xs font-semibold text-slate-500">{labels.modeLabel}</p>
+          </div>
+        </div>
         <div className="inline-flex rounded-xl bg-slate-100 p-1" role="group" aria-label={labels.modeLabel}>
           <button type="button" onClick={() => chooseMode("short")} aria-pressed={mode === "short"} className={`min-h-9 rounded-lg px-3 text-xs font-extrabold ${mode === "short" ? "bg-white text-sky-700 shadow-sm" : "text-slate-500"}`}>{labels.shortMode}</button>
           <button type="button" onClick={() => chooseMode("detailed")} aria-pressed={mode === "detailed"} className={`min-h-9 rounded-lg px-3 text-xs font-extrabold ${mode === "detailed" ? "bg-white text-sky-700 shadow-sm" : "text-slate-500"}`}>{labels.detailedMode}</button>
         </div>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <button type="button" onClick={onAsk} className="hd-button min-h-12 border border-sky-100 bg-white text-sky-700 shadow-sm hover:bg-sky-50">
+      <div className="mt-4 rounded-2xl border border-sky-100 bg-[linear-gradient(135deg,#f8fdff_0%,#eff9ff_100%)] px-4 py-3.5">
+        <div className="flex items-start gap-3">
+          <span className="mt-1 flex h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-100" aria-label="Active" />
+          <p className="min-w-0 text-sm font-semibold leading-6 text-slate-700">{briefText}</p>
+        </div>
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <button type="button" onClick={onAsk} className="hd-button min-h-12 border border-sky-600 bg-sky-600 text-white shadow-[0_10px_20px_rgba(2,132,199,.18)] hover:bg-sky-700">
           <MessageCircle size={18} aria-hidden="true" /> {labels.ask}
         </button>
         <button type="button" onClick={handleBrief} className="hd-button min-h-12 border border-sky-100 bg-white text-sky-700 shadow-sm hover:bg-sky-50" aria-pressed={speech.speaking && !speech.paused}>

@@ -71,7 +71,7 @@ export default function Header() {
   return (
     <>
       <header
-        className="sticky top-0 z-40 border-b border-white/20 bg-gradient-to-r from-sky-500/95 to-cyan-400/95 shadow-[0_8px_22px_rgba(14,165,233,0.12)] backdrop-blur-xl"
+        className="sticky top-0 z-40 border-b border-white/25 bg-[linear-gradient(100deg,#249fbd_0%,#35b8cb_58%,#55cbd8_100%)] shadow-[0_8px_22px_rgba(36,159,189,0.13)] backdrop-blur-xl"
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         <div className="hd-container flex h-14 items-center justify-between">

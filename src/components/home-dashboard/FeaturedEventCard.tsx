@@ -79,7 +79,7 @@ export default function FeaturedEventCard({
               <p className="mt-1 text-sm font-medium leading-relaxed text-slate-600">
                 {event.preferences.length ? <><Sparkles className="mr-1 inline h-4 w-4 text-amber-600" aria-hidden="true" />{event.preferences.join(" · ")}</> : giftContextLabel}
               </p>
-              <button type="button" onClick={onPickGift} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl bg-slate-900 px-3.5 text-sm font-extrabold text-white transition hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">
+              <button type="button" onClick={onPickGift} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-amber-200 bg-[#fff8ec] px-3.5 text-sm font-extrabold text-[#925213] transition hover:bg-[#ffefd6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">
                 <Gift size={16} aria-hidden="true" />{reminderLabels.pickGift}
                 <ChevronRight size={16} aria-hidden="true" />
               </button>

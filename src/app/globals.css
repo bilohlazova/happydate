@@ -5,28 +5,28 @@
    DESIGN TOKENS
 ═══════════════════════════════════════════════════════════ */
 :root {
-  --background: #f7f9fc;
-  --foreground: #111827;
-  --hd-canvas: #f7f9fc;
+  --background: #f6f8fb;
+  --foreground: #162033;
+  --hd-canvas: #f6f8fb;
   --hd-surface: #ffffff;
   --hd-surface-muted: #f8fafc;
-  --hd-text: #111827;
-  --hd-text-muted: #64748b;
-  --hd-border: rgba(226, 232, 240, .82);
-  --hd-brand: #0ea5e9;
-  --hd-brand-strong: #0284c7;
-  --hd-accent: #ec4899;
-  --hd-success: #10b981;
+  --hd-text: #162033;
+  --hd-text-muted: #61708a;
+  --hd-border: #e2e9f0;
+  --hd-brand: #249fbd;
+  --hd-brand-strong: #19778f;
+  --hd-accent: #b97732;
+  --hd-success: #16856a;
   --hd-screen-max: 430px;
   --hd-screen-wide: 520px;
   --hd-space-page-x: 16px;
   --hd-space-page-y: 14px;
   --hd-nav-height: 64px;
-  --hd-radius-card: 22px;
-  --hd-radius-control: 15px;
+  --hd-radius-card: 18px;
+  --hd-radius-control: 12px;
   --hd-control-height: 44px;
-  --hd-shadow-card: 0 16px 42px rgba(15,23,42,.065);
-  --hd-shadow-soft: 0 8px 22px rgba(15,23,42,.05);
+  --hd-shadow-card: 0 16px 38px rgba(22,32,51,.08);
+  --hd-shadow-soft: 0 6px 18px rgba(22,32,51,.055);
   color-scheme: light;
 }
 
@@ -55,8 +55,8 @@ html {
 
 body {
   background:
-    radial-gradient(1200px 600px at 80% -100px, rgba(255,199,164,.18), transparent 60%),
-    radial-gradient(900px 500px at -10% 30%, rgba(146,231,255,.18), transparent 55%),
+    radial-gradient(1200px 600px at 80% -100px, rgba(196,107,45,.07), transparent 60%),
+    radial-gradient(900px 500px at -10% 30%, rgba(36,159,189,.08), transparent 55%),
     var(--background);
   color: var(--foreground);
   font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
@@ -420,9 +420,9 @@ label[for], summary {
 }
 
 .hd-button-primary {
-  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  background: linear-gradient(135deg, var(--hd-brand), #54c8d5);
   color: #fff;
-  box-shadow: 0 10px 24px rgba(14,165,233,.24);
+  box-shadow: 0 10px 24px rgba(36,159,189,.2);
 }
 
 .hd-icon-button {
@@ -585,7 +585,7 @@ label[for], summary {
 }
 
 .hd-bottom-nav__item.is-active {
-  color: #db2777;
+  color: var(--hd-brand);
 }
 
 .hd-bottom-nav__icon {

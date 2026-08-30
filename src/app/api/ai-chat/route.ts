@@ -8,7 +8,7 @@ import { createAssistantChatResponse, type AssistantProviderMessage } from "@/li
 import { loadAssistantGiftOutcomeContext } from "@/lib/assistant/giftOutcomeContext.server";
 import { loadAssistantSavedGiftLinkContext } from "@/lib/assistant/savedGiftLinkContext.server";
 import { readBoundedJson } from "@/lib/server/readBoundedJson";
-import { logOperationalError } from "@/lib/observability/safeLogger";
+import { logOperationalError, logOperationalWarning } from "@/lib/observability/safeLogger";
 import { getHomeRepositoryData } from "@/lib/repositories/home/home.repository";
 import { buildGuestAssistantRequest, buildVerifiedAssistantRequest } from "@/lib/assistant/verifiedAssistantContext.server";
 import { createConfiguredAiBudget, type AiTokenUsage } from "@/lib/assistant/aiBudget";
@@ -93,28 +93,30 @@ export async function POST(request: Request) {
         if (identity.kind !== "authenticated" || !identity.userId) {
           return { request: buildGuestAssistantRequest(clientRequest) };
         }
-        const rlsSession = createAssistantRlsClient(request);
-        if (!rlsSession) throw new Error("RLS client unavailable");
-        const homeData = await getHomeRepositoryData(
-          rlsSession.client,
-          identity.userId,
-          rlsSession.accessToken,
-        );
-        const verifiedRequest = buildVerifiedAssistantRequest(clientRequest, homeData);
-        const [serverGiftOutcomes, serverSavedGiftLinks] = verifiedRequest.context.activePerson
-          && verifiedRequest.context.personResolutionStatus === "resolved"
-            ? await Promise.all([
-                loadAssistantGiftOutcomeContext({
-                  userId: identity.userId,
-                  personId: verifiedRequest.context.activePerson.id,
-                }),
-                loadAssistantSavedGiftLinkContext({
-                  userId: identity.userId,
-                  personId: verifiedRequest.context.activePerson.id,
-                }),
-              ])
-            : [[], []];
-        return { request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks };
+        try {
+          const rlsSession = createAssistantRlsClient(request);
+          if (!rlsSession) throw new Error("RLS client unavailable");
+          const homeData = await getHomeRepositoryData(
+            rlsSession.client,
+            identity.userId,
+            rlsSession.accessToken,
+          );
+          const verifiedRequest = buildVerifiedAssistantRequest(clientRequest, homeData);
+          const [serverGiftOutcomes, serverSavedGiftLinks] = verifiedRequest.context.activePerson
+            && verifiedRequest.context.personResolutionStatus === "resolved"
+              ? await Promise.all([
+                  loadAssistantGiftOutcomeContext({ userId: identity.userId, personId: verifiedRequest.context.activePerson.id }),
+                  loadAssistantSavedGiftLinkContext({ userId: identity.userId, personId: verifiedRequest.context.activePerson.id }),
+                ])
+              : [[], []];
+          return { request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks };
+        } catch (error) {
+          // A temporary context failure must never make the conversation unavailable.
+          logOperationalWarning("assistant-chat", "verified-context-fallback", {
+            reason: error instanceof Error ? error.name : "unknown",
+          });
+          return { request: buildGuestAssistantRequest(clientRequest) };
+        }
       },
     },
   );

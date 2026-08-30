@@ -79,7 +79,7 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent }: We
 
   const addUserLine = (text: string) => setLines((current) => [...current, { id: nextId.current++, author: "user", text }]);
 
-  const typeHappyLine = (text: string) => {
+  const typeHappyLine = (text: string, revealPlan = true) => {
     const id = nextId.current++;
     setBusy(true);
     setLines((current) => [...current, { id, author: "happy", text: "" }]);
@@ -87,13 +87,13 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent }: We
     if (reduceMotion) {
       setLines((current) => current.map((line) => line.id === id ? { ...line, text } : line));
       setBusy(false);
-      setPlanReady(true);
+      setPlanReady(revealPlan);
       return;
     }
     [...text].forEach((_, index) => {
       const timeout = window.setTimeout(() => {
         setLines((current) => current.map((line) => line.id === id ? { ...line, text: text.slice(0, index + 1) } : line));
-        if (index === text.length - 1) { setBusy(false); setPlanReady(true); }
+        if (index === text.length - 1) { setBusy(false); setPlanReady(revealPlan); }
       }, 13 * (index + 1));
       timers.current.push(timeout);
     });
@@ -123,9 +123,13 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent }: We
       if (insertError) { setBusy(false); setError(copy.error); return; }
       setBusy(false);
     }
-    const reply = mood === "good" ? copy.goodReply : mood === "low" ? copy.lowReply : mood === "custom" ? personalReply(userText ?? "", copy.customReply) : copy.skipReply;
+    const gratitude = /(дякую|готов.{0,6}(план|поді|рухат)|покажи.{0,8}(план|поді))/i.test(userText ?? "");
+    const needsConversation = mood === "low" || (mood === "custom" && !gratitude && /(важк|поган|нема.{0,8}настро|втом|поговор)/i.test(userText ?? ""));
+    const reply = gratitude
+      ? "Будь ласка. Я поруч, якщо захочеш повернутися до розмови. А зараз я підготував для тебе короткий план найближчих важливих подій."
+      : mood === "good" ? copy.goodReply : mood === "low" ? copy.lowReply : mood === "custom" ? personalReply(userText ?? "", copy.customReply) : copy.skipReply;
     const plan = featuredEvent ? ` ${featuredEvent.title} — ${featuredEvent.countdownLabel}.` : "";
-    typeHappyLine(`${reply}${plan}`);
+    typeHappyLine(`${reply}${needsConversation ? "" : plan}`, !needsConversation);
   };
 
   const submitNote = () => {

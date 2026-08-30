@@ -10,6 +10,7 @@ import { formatAssistantSavedGiftLinkContext } from "./chatContract.ts";
 import { ASSISTANT_BEHAVIOR_MANIFEST } from "./assistantBehaviorManifest.ts";
 import { AI_COST_POLICY, estimateInputTokens, estimatedUsd, type AiBudget, type AiBudgetReservation, type AiTokenUsage } from "./aiBudget.ts";
 import { buildAssistantResponsePlan } from "./responsePlan.ts";
+import { wellbeingMode } from "./wellbeingConversation.ts";
 
 export type AssistantProviderMessage = AssistantConversationItem | { role: "system"; content: string };
 export type AssistantProviderOutput = {
@@ -180,6 +181,9 @@ export async function createAssistantChatResponse(
   const savedGiftLinkContext = formatAssistantSavedGiftLinkContext(serverSavedGiftLinks);
   const messages: AssistantProviderMessage[] = [
     { role: "system", content: buildAssistantSystemPrompt(request.locale) },
+    { role: "system", content: wellbeingMode(request.message) === "emotional_conversation"
+      ? "The user may be sharing something personal. Respond warmly and specifically to their words. Do not automatically redirect to calendar, gifts, or tasks. Ask at most one gentle question when it helps. Do not claim to store their message or act as a therapist."
+      : "The user appears ready to move on from a personal exchange. Acknowledge them briefly, then you may naturally summarize verified upcoming events and offer a practical next step." },
     { role: "system", content: buildAssistantResponsePlan(request) },
     ...(context ? [{ role: "system" as const, content: context }] : []),
     ...(giftOutcomeContext ? [{ role: "system" as const, content: giftOutcomeContext }] : []),

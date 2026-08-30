@@ -4,13 +4,20 @@ import { useEffect, useRef, useState } from "react";
 import { Heart, Send, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import type { HomeFeaturedEvent } from "@/lib/home/home.types";
+import { wellbeingMode, wellbeingReply } from "@/lib/assistant/wellbeingConversation";
 
 type Mood = "good" | "low" | "skip" | "custom";
 type Line = { id: number; author: "happy" | "user"; text: string };
 
 function personalReply(message: string, fallback: string) {
   const value = message.toLocaleLowerCase();
-  if (/хоч.{0,8}(поговор|розпов)|поговор|важк|поган|нема.{0,8}настро|втом/.test(value)) {
+  if (/(не вистачає|бракує).{0,24}(розмов|спілкуван|людей)/.test(value)) {
+    return "Розумію. Коли бракує живого спілкування, навіть звичайний день може відчуватися порожнім. Хочеш просто трохи поговорити чи розкажеш, за ким найбільше сумуєш?";
+  }
+  if (/(не знаю.{0,18}(що|як).{0,18}(зі мною|відчува)|сама не знаю)/.test(value)) {
+    return "Так теж буває. Не завжди треба одразу розуміти причину. Можемо просто побути тут без потреби все пояснювати.";
+  }
+  if (/хоч.{0,8}(поговор|розпов)|поговор|важк|поган|нема.{0,8}настро|втом|посвар|робот.{0,12}(дістал|важк)/.test(value)) {
     return "Розумію. Якщо хочеш, розкажи, що сталося — можемо спокійно це проговорити. Тобі не потрібно підбирати правильні слова.";
   }
   if (/(добре|супер|раді|щаслив|чудов)/.test(value)) {
@@ -62,6 +69,7 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent }: We
   const [busy, setBusy] = useState(false);
   const [planReady, setPlanReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recentLowCheckins, setRecentLowCheckins] = useState(0);
   const timers = useRef<number[]>([]);
   const nextId = useRef(1);
 
@@ -73,6 +81,10 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent }: We
       if (!user || !active) return setEnabled(false);
       const { data } = await supabase.from("profiles").select("wellbeing_personalization_enabled").eq("id", user.id).maybeSingle();
       if (active) setEnabled(data?.wellbeing_personalization_enabled === true);
+      if (data?.wellbeing_personalization_enabled) {
+        const { data: checkins } = await supabase.from("user_wellbeing_checkins").select("mood").eq("user_id", user.id).order("created_at", { ascending: false }).limit(6);
+        if (active) setRecentLowCheckins((checkins ?? []).filter((item) => item.mood === "low").length);
+      }
     })();
     return () => { active = false; timerStore.forEach(window.clearTimeout); };
   }, []);
@@ -123,11 +135,12 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent }: We
       if (insertError) { setBusy(false); setError(copy.error); return; }
       setBusy(false);
     }
-    const gratitude = /(дякую|готов.{0,6}(план|поді|рухат)|покажи.{0,8}(план|поді))/i.test(userText ?? "");
-    const needsConversation = mood === "low" || (mood === "custom" && !gratitude && /(важк|поган|нема.{0,8}настро|втом|поговор)/i.test(userText ?? ""));
+    const gratitude = wellbeingMode(userText ?? "") === "daily_guidance";
+    const needsConversation = mood === "low" || (mood === "custom" && !gratitude && /(важк|поган|нема.{0,8}настро|втом|поговор|не вистачає|бракує|не знаю|посвар|робот)/i.test(userText ?? ""));
+    const contextualReply = mood === "custom" ? wellbeingReply(userText ?? "", recentLowCheckins >= 2) : null;
     const reply = gratitude
       ? "Будь ласка. Я поруч, якщо захочеш повернутися до розмови. А зараз я підготував для тебе короткий план найближчих важливих подій."
-      : mood === "good" ? copy.goodReply : mood === "low" ? copy.lowReply : mood === "custom" ? personalReply(userText ?? "", copy.customReply) : copy.skipReply;
+      : contextualReply ?? (mood === "good" ? copy.goodReply : mood === "low" ? (recentLowCheckins >= 2 ? "Схоже, останнім часом тобі справді непросто. Не вимагай від себе забагато сьогодні. Якщо захочеш, можемо просто трохи поговорити." : copy.lowReply) : mood === "custom" ? personalReply(userText ?? "", copy.customReply) : copy.skipReply);
     const plan = featuredEvent ? ` ${featuredEvent.title} — ${featuredEvent.countdownLabel}.` : "";
     typeHappyLine(`${reply}${needsConversation ? "" : plan}`, !needsConversation);
   };

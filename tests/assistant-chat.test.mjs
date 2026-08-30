@@ -20,6 +20,7 @@ import { readFile } from "node:fs/promises";
 import { buildAssistantPeopleContext } from "../src/lib/assistant/peopleContext.ts";
 import { buildAssistantMemoryContext } from "../src/lib/assistant/memoryContext.ts";
 import { buildAssistantResponsePlan, classifyAssistantResponseIntent } from "../src/lib/assistant/responsePlan.ts";
+import { wellbeingMode, wellbeingReply } from "../src/lib/assistant/wellbeingConversation.ts";
 
 function validRequest(overrides = {}) {
   return {
@@ -41,6 +42,12 @@ test("response planning recognizes gift, calendar and person questions across pr
   assert.equal(classifyAssistantResponseIntent("Zaplanuj moje wydarzenia"), "schedule");
   assert.equal(classifyAssistantResponseIntent("Was mag Alex?"), "person");
   assert.equal(classifyAssistantResponseIntent("How are you?"), "general");
+});
+
+test("wellbeing mode keeps emotional sharing separate from daily guidance", () => {
+  assert.equal(wellbeingMode("Мені сьогодні дуже важко"), "emotional_conversation");
+  assert.equal(wellbeingMode("Дякую, покажи мій план"), "daily_guidance");
+  assert.match(wellbeingReply("мені не вистачає розмов", false) ?? "", /спілкування/);
 });
 
 test("gift response plan avoids gender stereotypes and explains evidence-led advice", () => {

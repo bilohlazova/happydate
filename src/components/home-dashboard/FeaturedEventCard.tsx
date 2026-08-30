@@ -50,15 +50,16 @@ export default function FeaturedEventCard({
     <section className="mt-6 overflow-hidden rounded-[1.75rem] border border-slate-100 bg-white p-4 shadow-[0_18px_48px_rgba(15,23,42,0.07)] sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className={`text-[11px] font-black uppercase tracking-[0.12em] ${event.isImportant ? "text-pink-600" : "text-sky-600"}`}>{event.label}</p>
+          <p className={`text-[11px] font-black uppercase tracking-[0.12em] ${event.isImportant ? "text-amber-700" : "text-sky-600"}`}>{event.label}</p>
           <h2 className="mt-2 text-xl font-black leading-tight tracking-[-0.02em] text-slate-950 sm:text-2xl">{event.title}</h2>
+          {event.relationLabel && <p className="mt-1 text-sm font-bold text-slate-500">{event.relationLabel}</p>}
           <p className="mt-2 text-sm font-semibold capitalize text-slate-500">{event.dateLabel}{event.timeOfDay ? ` · ${event.timeOfDay}` : ""}{event.durationMinutes ? ` · ${event.durationMinutes} min` : ""} · {event.countdownLabel}</p>
         </div>
-        <span className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${event.daysUntil <= 7 ? "bg-pink-50 text-pink-700" : "bg-sky-50 text-sky-700"}`}>{event.countdownLabel}</span>
+        <span className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${event.daysUntil <= 7 ? "bg-amber-50 text-amber-800" : "bg-sky-50 text-sky-700"}`}>{event.countdownLabel}</span>
       </div>
 
       {event.birthdayAge !== null && (
-        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-extrabold text-violet-800">
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-extrabold text-amber-900">
           <span aria-hidden="true">🎈</span>{birthdayAgeLabel(event.birthdayAge, locale)}
         </div>
       )}

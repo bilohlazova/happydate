@@ -3,9 +3,21 @@
 import { useEffect, useRef, useState } from "react";
 import { Heart, Send, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import type { HomeFeaturedEvent } from "@/lib/home/home.types";
 
 type Mood = "good" | "low" | "skip" | "custom";
 type Line = { id: number; author: "happy" | "user"; text: string };
+
+function personalReply(message: string, fallback: string) {
+  const value = message.toLocaleLowerCase();
+  if (/хоч.{0,8}(поговор|розпов)|поговор|важк|поган|нема.{0,8}настро|втом/.test(value)) {
+    return "Розумію. Якщо хочеш, розкажи, що сталося — можемо спокійно це проговорити. Тобі не потрібно підбирати правильні слова.";
+  }
+  if (/(добре|супер|раді|щаслив|чудов)/.test(value)) {
+    return "Мені дуже приємно це чути. Нехай у цьому дні буде ще трохи того, що додає тобі сил.";
+  }
+  return fallback;
+}
 
 const COPY = {
   uk: {
@@ -21,7 +33,7 @@ const COPY = {
     goodReply: "Радію це чути. Нехай цей стан залишиться з тобою. Я переглянув важливі справи та підготував короткий фокус на найближчий час.",
     lowReply: "Мені шкода, що день непростий. Не потрібно пояснювати більше, ніж хочеш. Я поруч — а поки підготував короткий фокус на найближчі важливі справи.",
     skipReply: "Розумію і поважаю твій вибір. Я переглянув твої справи та підготував короткий фокус на найближчий час.",
-    customReply: "Дякую, що поділився. Я збережу це приватно для твоєї персональної підтримки. А зараз підготував важливі справи найближчим часом.",
+    customReply: "Дякую, що поділився. Я поруч. А зараз я переглянув найближчі важливі справи, щоб тобі не доводилося тримати все в голові.",
     error: "Не вдалося зберегти відповідь. Спробуй ще раз.",
   },
   en: {
@@ -39,9 +51,10 @@ function getCopy(locale: string) {
 interface WellbeingCheckInProps {
   locale: string;
   userName?: string | null;
+  featuredEvent?: HomeFeaturedEvent | null;
 }
 
-export default function WellbeingCheckIn({ locale, userName }: WellbeingCheckInProps) {
+export default function WellbeingCheckIn({ locale, userName, featuredEvent }: WellbeingCheckInProps) {
   const copy = getCopy(locale);
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
@@ -110,7 +123,9 @@ export default function WellbeingCheckIn({ locale, userName }: WellbeingCheckInP
       if (insertError) { setBusy(false); setError(copy.error); return; }
       setBusy(false);
     }
-    typeHappyLine(mood === "good" ? copy.goodReply : mood === "low" ? copy.lowReply : mood === "custom" ? copy.customReply : copy.skipReply);
+    const reply = mood === "good" ? copy.goodReply : mood === "low" ? copy.lowReply : mood === "custom" ? personalReply(userText ?? "", copy.customReply) : copy.skipReply;
+    const plan = featuredEvent ? ` ${featuredEvent.title} — ${featuredEvent.countdownLabel}.` : "";
+    typeHappyLine(`${reply}${plan}`);
   };
 
   const submitNote = () => {
@@ -141,7 +156,7 @@ export default function WellbeingCheckIn({ locale, userName }: WellbeingCheckInP
               </div>
               <div className="mt-2 flex gap-2"><input value={note} onChange={(event) => setNote(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitNote(); }} disabled={busy} maxLength={1000} placeholder={copy.placeholder} className="min-h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 disabled:bg-slate-50" /><button type="button" onClick={submitNote} disabled={busy || !note.trim()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-600 text-white disabled:opacity-40" aria-label={copy.send}><Send size={16} /></button></div>
             </>}
-            {planReady && <button type="button" onClick={() => document.getElementById("home-plan")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl bg-sky-600 px-4 text-sm font-bold text-white transition hover:bg-sky-700"><Sparkles size={16} aria-hidden="true" />{copy.plan}</button>}
+            {planReady && <button type="button" onClick={() => { const plan = document.getElementById("home-plan"); plan?.scrollIntoView({ behavior: "smooth", block: "start" }); plan?.classList.add("ring-2", "ring-sky-200"); window.setTimeout(() => plan?.classList.remove("ring-2", "ring-sky-200"), 1600); }} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl bg-sky-600 px-4 text-sm font-bold text-white transition hover:bg-sky-700"><Sparkles size={16} aria-hidden="true" />{copy.plan}</button>}
           </>}
           {error && <p role="alert" className="mt-2 text-sm font-medium text-rose-700">{error}</p>}
         </div>

@@ -61,7 +61,7 @@ export default function ReminderActions({
             <Clock3 size={16} aria-hidden="true" />{reminder.state === "snoozed" ? labels.snoozed : labels.snooze}
           </button>
           {canPickGift && (
-            <button type="button" disabled={busy} onClick={onPickGift} className="hd-button min-h-11 border border-pink-200 bg-pink-50 px-3 text-pink-700 hover:bg-pink-100 disabled:opacity-50">
+            <button type="button" disabled={busy} onClick={onPickGift} className="hd-button min-h-11 border border-amber-200 bg-amber-50 px-3 text-amber-800 hover:bg-amber-100 disabled:opacity-50">
               <Gift size={16} aria-hidden="true" />{labels.pickGift}
             </button>
           )}
@@ -71,4 +71,3 @@ export default function ReminderActions({
     </div>
   );
 }
-

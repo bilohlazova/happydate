@@ -118,6 +118,7 @@ export interface PersonProfileViewModel {
     birthday: string | null;
     daysUntilBirthday: number | null;
   } | null;
+  pets: import("@/lib/repositories/petRepository").PetRow[];
   likes: PersonKnowledgeValueViewModel[];
   dislikes: PersonKnowledgeValueViewModel[];
   interests: PersonKnowledgeValueViewModel[];

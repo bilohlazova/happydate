@@ -18,6 +18,7 @@
     "askHappy": "Happy fragen",
     "addNote": "Notiz hinzufügen",
     "birthdayCountdown": "{days, plural, =0 {Geburtstag heute} =1 {Geburtstag morgen} other {Geburtstag in # Tagen}}",
+    "pets": { "title": "Haustiere", "add": "Haustier hinzufügen", "edit": "Bearbeiten", "unlink": "Verknüpfung lösen", "unlinkConfirm": "{name} von dieser Person trennen? Das Haustierprofil bleibt für andere verknüpfte Personen verfügbar.", "close": "Haustierdetails schließen", "name": "Name", "species": "Tierart", "breed": "Rasse (optional)", "birthDate": "Geburtsdatum (optional)", "note": "Notiz (optional)", "save": "Speichern", "saving": "Speichern…", "cancel": "Abbrechen", "error": "Das Haustier konnte nicht gespeichert werden. Bitte erneut versuchen." },
     "gifts": {
       "title": "Geschenke und gespeicherte Optionen",
       "subtitle": "Plane Geschenke für {name} und speichere hilfreiche Links.",

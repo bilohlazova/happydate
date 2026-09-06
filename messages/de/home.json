@@ -1,1 +1,170 @@
-{"greeting":{"named":"Hallo, {name}!","fallback":"Hallo!","subtitle":"Das ist heute für dich wichtig."},"stats":{"label":"wichtige Punkte","description":"Happy behält wichtige Menschen und Daten im Blick."},"summary":{"empty":"Für heute gibt es keine dringenden Punkte."},"assistant":{"ask":"Happy fragen","listen":"Kurzes Briefing anhören","pause":"Briefing pausieren","resume":"Briefing fortsetzen","stop":"Briefing stoppen","read":"Kurzes Briefing lesen","sectionLabel":"Happy Aktionen","close":"Schließen","speechError":"Die Sprachausgabe ist fehlgeschlagen. Du kannst das Briefing unten lesen.","progress":"Fortschritt des Audio-Briefings","interrupted":"Die Wiedergabe wurde vom System unterbrochen. Tippe auf Anhören, um das Briefing sicher neu zu starten.","modeLabel":"Länge des Briefings","shortMode":"Kurz","detailedMode":"Ausführlich"},"countdown":{"today":"heute","tomorrow":"morgen","days":"in {count} Tagen"},"events":{"birthdayTitle":"Geburtstag: {name}"},"categories":{"birthday":"Geburtstag","anniversary":"Jahrestag","work":"Arbeit","personal":"Persönlich","other":"Sonstiges"},"insights":{"birthday":"Geburtstag von {name} — {countdown}","event":"{title} — {countdown}","savedGifts":"Du hast {count} gespeicherte Geschenkideen","hasPreferences":"Happy kennt bereits einige Vorlieben von {name}"},"brief":{"intro":"Du hast heute {count} wichtige Punkte.","featured":"Als Nächstes: {title}, {countdown}.","greetingNamed":"Guten Tag, {name}.","greetingFallback":"Guten Tag.","todayNone":"Für heute stehen keine wichtigen Ereignisse an.","todayEvents":"Heute wichtig: {events}.","upcoming":"Das nächste wichtige Ereignis ist {title}, {countdown}.","savedGiftIdea":"Für {name} ist bereits eine Geschenkidee gespeichert: {value}.","savedPreference":"Zu {name} ist ein wichtiger Hinweis gespeichert: {value}.","giftOffer":"Wenn du möchtest, helfe ich dir, ein Geschenk für {name} vorzubereiten.","giftQuestion":"Der wichtige Termin für {name} rückt näher. Möchtest du Hilfe bei der Geschenkauswahl?","preferenceQuestion":"Für den wichtigen Termin von {name} bleibt noch Zeit. Möchtest du eine aktuelle Vorliebe ergänzen?","postGiftQuestion":"Das Geschenk „{gift}“ wurde {name} bereits überreicht. Möchtest du sagen, ob es gut angekommen ist?","knowledgeReviewQuestion":"Eine Information über {name} wurde länger nicht geprüft: „{value}“. Ist sie noch aktuell?","todayScheduled":"Heute nach Uhrzeit: {events}.","todayMixed":"Heute nach Uhrzeit: {scheduled}. Außerdem ohne feste Uhrzeit: {unscheduled}.","eventAtLocation":"{event}, Ort: {location}","eventWithTravelBuffer":"{event}. Plane davor {minutes} Minuten für die Fahrt ein"},"featured":{"importantLabel":"Nächstes wichtiges Datum","nextLabel":"Nächstes Ereignis","preferences":"Gespeicherte Vorlieben","personCta":"Personenprofil ansehen","eventCta":"Im Kalender ansehen"},"reminder":{"deliveryReady":"Happy erinnert dich: {count, plural, one {# wichtige Aufgabe wartet} other {# wichtige Aufgaben warten}} auf dich.","completed":"Als erledigt markiert","complete":"Ich habe gratuliert","snooze":"In 3 Stunden erinnern","snoozed":"Erinnerung verschoben","undo":"Rückgängig","pickGift":"Geschenk auswählen","pickGiftPrompt":"Hilf mir, ein Geschenk für {name} auszuwählen. Nutze nur Informationen, die ich in HappyDate gespeichert habe.","error":"Die Änderung konnte nicht gespeichert werden. Bitte versuche es erneut."},"metrics":{"savedGifts":"{count} gespeicherte Ideen","notes":"{count} Notizen","memories":"{count} Erinnerungen"},"upcoming":{"title":"Bevorstehende Ereignisse","all":"Alle ansehen"},"recommendations":{"title":"Happy empfiehlt","reviewGiftsTitle":"Gespeicherte Ideen ansehen","reviewGiftsDescription":"Du hast {count} gespeicherte Geschenkideen.","addGiftTitle":"Geschenkidee speichern","addGiftDescription":"Speichere eine echte Idee für {name}.","addContextTitle":"Informationen zur Person ergänzen","addContextDescription":"Einige Vorlieben von {name} helfen bei der Vorbereitung.","memoriesTitle":"Gemeinsame Erinnerungen ansehen","memoriesDescription":"Du hast {count} gespeicherte Erinnerungen.","giftOutcomeTitle":"Hat {name} das Geschenk gefallen?","giftOutcomeDescription":"Sag Happy, wie „{gift}“ angekommen ist. Happy merkt sich nur deine Antwort.","knowledgeReviewTitle":"Prüfe eine Information über {name}","knowledgeReviewDescription":"Ist das noch aktuell: „{value}“?","giftOutcomeAnswerLabel":"Wie kam das Geschenk an?","giftOutcomeLiked":"Es hat gefallen","giftOutcomeNotLiked":"Es hat nicht gefallen","giftOutcomeUnsure":"Schwer zu sagen","giftOutcomeSaved":"Antwort gespeichert: {outcome}.","giftOutcomeValue":{"liked":"es hat gefallen","not_liked":"es hat nicht gefallen","unsure":"schwer zu sagen"},"giftOutcomeUndo":"Rückgängig","giftOutcomeUndoing":"Wird rückgängig gemacht…","giftOutcomeUndoError":"Die Antwort konnte nicht rückgängig gemacht werden. Bitte erneut versuchen.","giftOutcomeAddNote":"Notiz hinzufügen","giftOutcomeNoteLabel":"Was soll Happy über die Reaktion speichern?","giftOutcomeNotePlaceholder":"Zum Beispiel: Mama mochte besonders die Farbe…","giftOutcomeSaveNote":"Notiz speichern","giftOutcomeSavingNote":"Wird gespeichert…","giftOutcomeSkipNote":"Nicht jetzt","giftOutcomeNoteError":"Die Notiz konnte nicht gespeichert werden. Die Antwort ist bereits gespeichert — bitte erneut versuchen.","giftOutcomeNoteCount":"{count}/500","giftOutcomeSnooze":"In 3 Tagen erinnern","giftOutcomeDismiss":"Nicht mehr nach diesem Geschenk fragen","giftOutcomeActionError":"Die Auswahl konnte nicht gespeichert werden. Bitte erneut versuchen."},"empty":{"title":"Beginne mit einer wichtigen Person oder einem Ereignis","description":"Füge eine Person oder ein Datum hinzu. Happy zeigt nur Informationen aus deinen Daten.","addPerson":"Person hinzufügen","addEvent":"Ereignis hinzufügen"},"error":{"title":"Einige Daten sind vorübergehend nicht verfügbar","description":"Wir zeigen die sicher geladenen Bereiche.","retry":"Erneut versuchen"},"legacyMood":{"title":"Modus wählen","energy":{"title":"Gib mir Energie","subtitle":"Ein positiver Start in den Tag"},"quick":{"title":"Kurz und klar","subtitle":"Die wichtigsten Informationen in 20 Sekunden"},"calm":{"title":"Ruhig","subtitle":"Ohne Eile und mit mehr Details"},"surprise":{"title":"Überrasche mich","subtitle":"HappyDate wählt den besten Weg"}}}
+{
+  "greeting": {
+    "named": "Hallo, {name}!",
+    "fallback": "Hallo!",
+    "subtitle": "Das ist heute für dich wichtig."
+  },
+  "stats": {
+    "label": "wichtige Punkte",
+    "description": "Happy behält wichtige Menschen und Daten im Blick."
+  },
+  "summary": {
+    "empty": "Für heute gibt es keine dringenden Punkte."
+  },
+  "assistant": {
+    "ask": "Happy fragen",
+    "listen": "Kurzes Briefing anhören",
+    "pause": "Briefing pausieren",
+    "resume": "Briefing fortsetzen",
+    "stop": "Briefing stoppen",
+    "read": "Kurzes Briefing lesen",
+    "sectionLabel": "Happy Aktionen",
+    "close": "Schließen",
+    "speechError": "Die Sprachausgabe ist fehlgeschlagen. Du kannst das Briefing unten lesen.",
+    "progress": "Fortschritt des Audio-Briefings",
+    "interrupted": "Die Wiedergabe wurde vom System unterbrochen. Tippe auf Anhören, um das Briefing sicher neu zu starten.",
+    "modeLabel": "Länge des Briefings",
+    "shortMode": "Kurz",
+    "detailedMode": "Ausführlich"
+  },
+  "countdown": {
+    "today": "heute",
+    "tomorrow": "morgen",
+    "days": "in {count} Tagen"
+  },
+  "events": {
+    "birthdayTitle": "Geburtstag: {name}"
+  },
+  "categories": {
+    "birthday": "Geburtstag",
+    "anniversary": "Jahrestag",
+    "work": "Arbeit",
+    "personal": "Persönlich",
+    "other": "Sonstiges"
+  },
+  "insights": {
+    "birthday": "Geburtstag von {name} — {countdown}",
+    "event": "{title} — {countdown}",
+    "savedGifts": "Du hast {count} gespeicherte Geschenkideen",
+    "hasPreferences": "Happy kennt bereits einige Vorlieben von {name}"
+  },
+  "brief": {
+    "intro": "Du hast heute {count} wichtige Punkte.",
+    "featured": "Als Nächstes: {title}, {countdown}.",
+    "greetingNamed": "Guten Tag, {name}.",
+    "greetingFallback": "Guten Tag.",
+    "todayNone": "Für heute stehen keine wichtigen Ereignisse an.",
+    "todayEvents": "Heute wichtig: {events}.",
+    "upcoming": "Das nächste wichtige Ereignis ist {title}, {countdown}.",
+    "savedGiftIdea": "Für {name} ist bereits eine Geschenkidee gespeichert: {value}.",
+    "savedPreference": "Zu {name} ist ein wichtiger Hinweis gespeichert: {value}.",
+    "giftOffer": "Wenn du möchtest, helfe ich dir, ein Geschenk für {name} vorzubereiten.",
+    "giftQuestion": "Der wichtige Termin für {name} rückt näher. Möchtest du Hilfe bei der Geschenkauswahl?",
+    "preferenceQuestion": "Für den wichtigen Termin von {name} bleibt noch Zeit. Möchtest du eine aktuelle Vorliebe ergänzen?",
+    "postGiftQuestion": "Das Geschenk „{gift}“ wurde {name} bereits überreicht. Möchtest du sagen, ob es gut angekommen ist?",
+    "knowledgeReviewQuestion": "Eine Information über {name} wurde länger nicht geprüft: „{value}“. Ist sie noch aktuell?",
+    "todayScheduled": "Heute nach Uhrzeit: {events}.",
+    "todayMixed": "Heute nach Uhrzeit: {scheduled}. Außerdem ohne feste Uhrzeit: {unscheduled}.",
+    "eventAtLocation": "{event}, Ort: {location}",
+    "eventWithTravelBuffer": "{event}. Plane davor {minutes} Minuten für die Fahrt ein"
+  },
+  "featured": {
+    "importantLabel": "Nächstes wichtiges Datum",
+    "nextLabel": "Nächstes Ereignis",
+    "preferences": "Gespeicherte Vorlieben",
+    "personCta": "Personenprofil ansehen",
+    "eventCta": "Im Kalender ansehen"
+  },
+  "reminder": {
+    "deliveryReady": "Happy erinnert dich: {count, plural, one {# wichtige Aufgabe wartet} other {# wichtige Aufgaben warten}} auf dich.",
+    "completed": "Als erledigt markiert",
+    "complete": "Ich habe gratuliert",
+    "snooze": "In 3 Stunden erinnern",
+    "snoozed": "Erinnerung verschoben",
+    "undo": "Rückgängig",
+    "pickGift": "Geschenk auswählen",
+    "pickGiftPrompt": "Hilf mir, ein Geschenk für {name} auszuwählen. Nutze nur Informationen, die ich in HappyDate gespeichert habe.",
+    "error": "Die Änderung konnte nicht gespeichert werden. Bitte versuche es erneut."
+  },
+  "metrics": {
+    "savedGifts": "{count} gespeicherte Ideen",
+    "notes": "{count} Notizen",
+    "memories": "{count} Erinnerungen"
+  },
+  "upcoming": {
+    "title": "Als Nächstes",
+    "all": "Alle",
+    "next": "Danach",
+    "emptyTitle": "Am Horizont ist es gerade ruhig ✨",
+    "emptyDescription": "Wenn du wichtige Daten hinzufügst, erscheinen sie hier."
+  },
+  "recommendations": {
+    "title": "Happy empfiehlt",
+    "reviewGiftsTitle": "Gespeicherte Ideen ansehen",
+    "reviewGiftsDescription": "Du hast {count} gespeicherte Geschenkideen.",
+    "addGiftTitle": "Geschenkidee speichern",
+    "addGiftDescription": "Speichere eine echte Idee für {name}.",
+    "addContextTitle": "Informationen zur Person ergänzen",
+    "addContextDescription": "Einige Vorlieben von {name} helfen bei der Vorbereitung.",
+    "memoriesTitle": "Gemeinsame Erinnerungen ansehen",
+    "memoriesDescription": "Du hast {count} gespeicherte Erinnerungen.",
+    "giftOutcomeTitle": "Hat {name} das Geschenk gefallen?",
+    "giftOutcomeDescription": "Sag Happy, wie „{gift}“ angekommen ist. Happy merkt sich nur deine Antwort.",
+    "knowledgeReviewTitle": "Prüfe eine Information über {name}",
+    "knowledgeReviewDescription": "Ist das noch aktuell: „{value}“?",
+    "giftOutcomeAnswerLabel": "Wie kam das Geschenk an?",
+    "giftOutcomeLiked": "Es hat gefallen",
+    "giftOutcomeNotLiked": "Es hat nicht gefallen",
+    "giftOutcomeUnsure": "Schwer zu sagen",
+    "giftOutcomeSaved": "Antwort gespeichert: {outcome}.",
+    "giftOutcomeValue": {
+      "liked": "es hat gefallen",
+      "not_liked": "es hat nicht gefallen",
+      "unsure": "schwer zu sagen"
+    },
+    "giftOutcomeUndo": "Rückgängig",
+    "giftOutcomeUndoing": "Wird rückgängig gemacht…",
+    "giftOutcomeUndoError": "Die Antwort konnte nicht rückgängig gemacht werden. Bitte erneut versuchen.",
+    "giftOutcomeAddNote": "Notiz hinzufügen",
+    "giftOutcomeNoteLabel": "Was soll Happy über die Reaktion speichern?",
+    "giftOutcomeNotePlaceholder": "Zum Beispiel: Mama mochte besonders die Farbe…",
+    "giftOutcomeSaveNote": "Notiz speichern",
+    "giftOutcomeSavingNote": "Wird gespeichert…",
+    "giftOutcomeSkipNote": "Nicht jetzt",
+    "giftOutcomeNoteError": "Die Notiz konnte nicht gespeichert werden. Die Antwort ist bereits gespeichert — bitte erneut versuchen.",
+    "giftOutcomeNoteCount": "{count}/500",
+    "giftOutcomeSnooze": "In 3 Tagen erinnern",
+    "giftOutcomeDismiss": "Nicht mehr nach diesem Geschenk fragen",
+    "giftOutcomeActionError": "Die Auswahl konnte nicht gespeichert werden. Bitte erneut versuchen."
+  },
+  "empty": {
+    "title": "Beginne mit einer wichtigen Person oder einem Ereignis",
+    "description": "Füge eine Person oder ein Datum hinzu. Happy zeigt nur Informationen aus deinen Daten.",
+    "addPerson": "Person hinzufügen",
+    "addEvent": "Ereignis hinzufügen"
+  },
+  "error": {
+    "title": "Einige Daten sind vorübergehend nicht verfügbar",
+    "description": "Wir zeigen die sicher geladenen Bereiche.",
+    "retry": "Erneut versuchen"
+  },
+  "legacyMood": {
+    "title": "Modus wählen",
+    "energy": {
+      "title": "Gib mir Energie",
+      "subtitle": "Ein positiver Start in den Tag"
+    },
+    "quick": {
+      "title": "Kurz und klar",
+      "subtitle": "Die wichtigsten Informationen in 20 Sekunden"
+    },
+    "calm": {
+      "title": "Ruhig",
+      "subtitle": "Ohne Eile und mit mehr Details"
+    },
+    "surprise": {
+      "title": "Überrasche mich",
+      "subtitle": "HappyDate wählt den besten Weg"
+    }
+  }
+}

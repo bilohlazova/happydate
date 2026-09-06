@@ -7,7 +7,6 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
-import DesktopAppNav from "@/components/DesktopAppNav";
 import { getAppMetadata } from "@/i18n/metadata";
 import NativeDeepLinkBridge from "@/components/NativeDeepLinkBridge";
 import ClientErrorReporter from "@/components/ClientErrorReporter";
@@ -62,9 +61,6 @@ export default async function RootLayout({
 
           {/* HEADER — сам розтягується під статус-бар через paddingTop у Header.tsx */}
           <Header />
-
-          {/* DESKTOP APP NAV */}
-          <DesktopAppNav />
 
           {/* CONTENT */}
           <main className="hd-main">

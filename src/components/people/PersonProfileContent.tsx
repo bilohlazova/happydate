@@ -26,6 +26,7 @@ import {
 import ChatAssistantModal from "@/components/ChatAssistantModal";
 import Avatar from "@/components/people/Avatar";
 import { PersonGiftManager } from "@/components/people/PersonGiftManager";
+import { PetsSection } from "@/components/people/PetsSection";
 import type {
   PersonBrainInsightViewModel,
   PersonKnowledgeValueViewModel,
@@ -109,36 +110,20 @@ export function PersonProfileContent({
             t={t}
           />
 
-          <div className="person-profile-columns mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)] lg:gap-4">
-            <div className="person-profile-primary flex min-w-0 flex-col gap-3">
-              <BrainSection items={viewModel.brainInsights} t={t} />
-              <TimelineSection items={viewModel.timeline} locale={locale} t={t} />
-
-              <PersonGiftManager personId={hero.id} personName={hero.name} onChanged={onProfileChanged} />
-
-              <GiftLearningAuditSection
-                items={viewModel.confirmedGiftOutcomes}
-                aiPreview={viewModel.giftOutcomeAiPreview}
-                profileLearningEnabled={viewModel.giftOutcomeLearningEnabled}
-                locale={locale}
-                onChanged={onProfileChanged}
-                t={t}
-              />
-            </div>
-
-            <div className="person-profile-knowledge flex min-w-0 flex-col gap-3">
-
+          <div className="person-profile-flow mt-3 flex min-w-0 flex-col gap-3">
+            <BrainSection items={viewModel.brainInsights} t={t} />
+            <PetsSection personId={hero.id} pets={viewModel.pets} onChanged={onProfileChanged} />
             <div className="grid gap-3 sm:grid-cols-2">
               <KnowledgeSection personId={hero.id} icon={<Heart />} title={t("profileUi.likes")} tone="rose" items={viewModel.likes} empty={t("profileUi.empty.likes")} onChanged={onProfileChanged} t={t} />
               <KnowledgeSection personId={hero.id} icon={<Ban />} title={t("profileUi.dislikes")} tone="slate" items={viewModel.dislikes} empty={t("profileUi.empty.dislikes")} onChanged={onProfileChanged} t={t} />
             </div>
-
             <KnowledgeSection personId={hero.id} icon={<Target />} title={t("profileUi.interests")} tone="sky" items={viewModel.interests} empty={t("profileUi.empty.interests")} onChanged={onProfileChanged} t={t} />
             <KnowledgeSection personId={hero.id} icon={<NotebookPen />} title={t("profileUi.importantFacts")} tone="amber" items={viewModel.importantFacts} empty={t("profileUi.empty.importantFacts")} onChanged={onProfileChanged} t={t} />
+            <PersonGiftManager personId={hero.id} personName={hero.name} onChanged={onProfileChanged} />
+            <TimelineSection items={viewModel.timeline} locale={locale} t={t} />
             <KnowledgeReviewSection personId={hero.id} review={viewModel.knowledgeReview} onChanged={onProfileChanged} t={t} />
             <KnowledgeConflictSection personId={hero.id} conflicts={viewModel.knowledgeConflicts} onChanged={onProfileChanged} t={t} />
             <ArchivedKnowledgeSection personId={hero.id} items={viewModel.archivedKnowledge} onChanged={onProfileChanged} t={t} />
-          </div>
           </div>
         </div>
       </main>
@@ -148,6 +133,8 @@ export function PersonProfileContent({
   );
 }
 
+// Kept as a settings-ready control while intentionally hidden from the person profile.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function GiftLearningAuditSection({
   items,
   aiPreview,
@@ -546,6 +533,7 @@ function ProfileHero({
 }) {
   const hero = model.hero!;
   const peopleT = useTranslations("people");
+  const locale = useLocale();
   const healthLabel = model.health ? t(`profileUi.health.${model.health.level}`) : null;
   const relationVariant = hero.gender === "female" || hero.gender === "male"
     ? hero.gender
@@ -562,6 +550,12 @@ function ProfileHero({
           <h1 className="truncate text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{hero.name}</h1>
           {relationLabel && <p className="mt-0.5 truncate text-sm font-bold text-slate-500">{relationLabel}</p>}
           <div className="mt-2 flex flex-wrap gap-1.5">
+            {hero.birthday && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[0.7rem] font-extrabold text-rose-600">
+                <CalendarDays className="h-3.5 w-3.5" />
+                {formatBirthdayDate(hero.birthday, locale)}
+              </span>
+            )}
             {hero.daysUntilBirthday !== null && (
               <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[0.7rem] font-extrabold text-rose-600">
                 <CalendarDays className="h-3.5 w-3.5" />
@@ -576,15 +570,6 @@ function ProfileHero({
           </div>
         </div>
       </div>
-
-      {model.health && model.health.missingAreas.length > 0 && (
-        <div className="relative mt-3 rounded-2xl bg-slate-50/90 px-3 py-2.5">
-          <p className="text-[0.68rem] font-black uppercase tracking-wide text-slate-500">{t("profileUi.health.missing")}</p>
-          <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">
-            {model.health.missingAreas.slice(0, 3).map((area) => t(`profileUi.health.areas.${area.id}`)).join(" • ")}
-          </p>
-        </div>
-      )}
 
       <div className="relative mt-3 grid grid-cols-2 gap-2">
         <button type="button" onClick={onAsk} className="flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 px-3 text-sm font-extrabold text-white shadow-[0_10px_24px_rgba(14,165,233,0.2)] transition active:scale-[0.98]">
@@ -978,6 +963,13 @@ function formatTimelineDate(value: string, locale: string): string {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return value;
   return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(date);
+}
+
+function formatBirthdayDate(value: string, locale: string): string {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  if (!Number.isFinite(date.getTime())) return value;
+  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" }).format(date);
 }
 
 function formatAuditDate(value: string, locale: string): string {

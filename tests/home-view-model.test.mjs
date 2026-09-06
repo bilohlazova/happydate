@@ -52,6 +52,24 @@ test("featured event prefers a supported important event inside seven days", () 
   assert.equal(model.featuredEvent?.id, "anniversary");
 });
 
+test("featured relation labels use the active locale instead of a stored Polish label", () => {
+  const relationMessages = { "family.male": "Родина" };
+  const relationT = (key) => relationMessages[key] ?? key;
+  const model = buildHomeViewModel(data({
+    people: [{
+      id: "p1",
+      name: "Давід",
+      birthday: "2024-10-04",
+      relationLabel: "Rodzina",
+      relationKey: "family",
+      gender: "male",
+    }],
+  }), "uk", t, new Date(2026, 7, 30), relationT);
+
+  assert.equal(model.featuredEvent?.relationLabel, "Родина");
+  assert.doesNotMatch(model.featuredEvent?.relationLabel ?? "", /Rodzina/);
+});
+
 test("regular events never inherit a person by matching the title", () => {
   const model = buildHomeViewModel(data({
     people: [{ id: "p1", name: "Ola", birthday: null, relationLabel: "Siostra" }],
@@ -138,7 +156,7 @@ test("Home cards show a confirmed event time and birthdays remain without one", 
     { id: "meeting", title: "Meeting", date: "2026-07-17", timeOfDay: "10:15", category: "work", notes: null },
   ] }), "pl", t, new Date(2026, 6, 17));
   assert.equal(timed.featuredEvent?.timeOfDay, "10:15");
-  assert.equal(timed.upcomingEvents[0]?.timeOfDay, "10:15");
+  assert.equal(timed.upcomingEvents.length, 0);
 
   const birthday = buildHomeViewModel(data({
     people: [{ id: "p1", name: "Ola", birthday: "1990-07-17", relationLabel: "Siostra" }],

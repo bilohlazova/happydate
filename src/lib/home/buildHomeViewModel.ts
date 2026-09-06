@@ -12,6 +12,7 @@ import type {
 } from "./home.types";
 import type { AppLocale } from "@/i18n/config";
 import { buildDailyBriefing } from "./buildDailyBriefing.ts";
+import { normalizeRelationValue } from "../people/canonicalRelation.ts";
 
 const IMPORTANT_CATEGORIES = new Set(["birthday", "anniversary"]);
 
@@ -83,7 +84,23 @@ function isStoredBirthdayDuplicate(
   });
 }
 
-function normalizeEvents(people: HomePerson[], storedEvents: HomeRepositoryData["events"], now: Date): HomeEvent[] {
+function localizedRelationLabel(person: HomePerson | null | undefined, relationT?: HomeTranslate): string | null {
+  if (!person) return null;
+  const gender = person.gender === "female" || person.gender === "male" ? person.gender : "neutral";
+  if (!person.relationKey) return person.relationLabel;
+  if (person.relationKey === "other") {
+    const standardOtherLabels = new Set(["other", "inne", "інше", "другое", "andere"]);
+    if (!standardOtherLabels.has(normalizeRelationValue(person.relationLabel ?? ""))) return person.relationLabel;
+  }
+  return relationT?.(`${person.relationKey}.${gender}`) ?? person.relationLabel;
+}
+
+function normalizeEvents(
+  people: HomePerson[],
+  storedEvents: HomeRepositoryData["events"],
+  now: Date,
+  relationT?: HomeTranslate,
+): HomeEvent[] {
   const peopleById = new Map(people.map((person) => [person.id, person]));
   const birthdayEvents = people.flatMap((person): HomeEvent[] => {
     if (!person.birthday) return [];
@@ -101,7 +118,7 @@ function normalizeEvents(people: HomePerson[], storedEvents: HomeRepositoryData[
       category: "birthday",
       personId: person.id,
       personName: person.name,
-      relationLabel: person.relationLabel,
+      relationLabel: localizedRelationLabel(person, relationT),
       isImportant: true,
       href: `/people/${encodeURIComponent(person.id)}`,
       daysUntil: daysUntil(date, now),
@@ -127,7 +144,9 @@ function normalizeEvents(people: HomePerson[], storedEvents: HomeRepositoryData[
       category,
       personId: event.personId ?? null,
       personName: event.personId ? peopleById.get(event.personId)?.name ?? null : null,
-      relationLabel: event.personId ? peopleById.get(event.personId)?.relationLabel ?? null : null,
+      relationLabel: event.personId
+        ? localizedRelationLabel(peopleById.get(event.personId), relationT)
+        : null,
       isImportant: category ? IMPORTANT_CATEGORIES.has(category) : false,
       href: "/dashboard",
       daysUntil: remaining,
@@ -357,9 +376,15 @@ function hasHigherPriorityCareQuestion(featured: HomeEvent | null, memories: Hom
     || (featured.daysUntil > 14 && featured.daysUntil <= 30 && classified.preferences.length === 0);
 }
 
-export function buildHomeViewModel(data: HomeRepositoryData, locale: AppLocale, t: HomeTranslate, now = new Date()): HomeViewModel {
+export function buildHomeViewModel(
+  data: HomeRepositoryData,
+  locale: AppLocale,
+  t: HomeTranslate,
+  now = new Date(),
+  relationT?: HomeTranslate,
+): HomeViewModel {
   const name = resolveHomeUserName(data);
-  const events = normalizeEvents(data.people, data.events, now);
+  const events = normalizeEvents(data.people, data.events, now, relationT);
   const featured = selectFeatured(events);
   const featuredCard = buildFeatured(featured, data.people, data.memories, locale, t);
   const pendingGiftOutcome = (data.pendingGiftOutcomes ?? []).flatMap((gift) => {
@@ -408,7 +433,11 @@ export function buildHomeViewModel(data: HomeRepositoryData, locale: AppLocale, 
     stats: { importantCount },
     assistantActions: { briefText: briefing.text, briefing },
     featuredEvent: featuredCard,
-    upcomingEvents: buildUpcoming(events, locale, t),
+    upcomingEvents: buildUpcoming(
+      featured ? events.filter((event) => event.id !== featured.id) : events,
+      locale,
+      t,
+    ),
     recommendations,
     isEmpty: data.people.length === 0 && data.events.length === 0 && data.memories.length === 0 && (data.pendingGiftOutcomes ?? []).length === 0,
     errors: data.errors,

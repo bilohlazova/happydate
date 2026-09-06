@@ -7,6 +7,7 @@ import { createConfiguredAssistantRateLimiter } from "@/lib/assistant/rateLimite
 import { createAssistantChatResponse, type AssistantProviderMessage } from "@/lib/assistant/chatServer";
 import { loadAssistantGiftOutcomeContext } from "@/lib/assistant/giftOutcomeContext.server";
 import { loadAssistantSavedGiftLinkContext } from "@/lib/assistant/savedGiftLinkContext.server";
+import { loadAssistantPetContext } from "@/lib/assistant/petContext.server";
 import { readBoundedJson } from "@/lib/server/readBoundedJson";
 import { logOperationalError, logOperationalWarning } from "@/lib/observability/safeLogger";
 import { getHomeRepositoryData } from "@/lib/repositories/home/home.repository";
@@ -102,14 +103,15 @@ export async function POST(request: Request) {
             rlsSession.accessToken,
           );
           const verifiedRequest = buildVerifiedAssistantRequest(clientRequest, homeData);
-          const [serverGiftOutcomes, serverSavedGiftLinks] = verifiedRequest.context.activePerson
+          const [serverGiftOutcomes, serverSavedGiftLinks, serverPets] = verifiedRequest.context.activePerson
             && verifiedRequest.context.personResolutionStatus === "resolved"
               ? await Promise.all([
                   loadAssistantGiftOutcomeContext({ userId: identity.userId, personId: verifiedRequest.context.activePerson.id }),
                   loadAssistantSavedGiftLinkContext({ userId: identity.userId, personId: verifiedRequest.context.activePerson.id }),
+                  loadAssistantPetContext({ userId: identity.userId, personId: verifiedRequest.context.activePerson.id }),
                 ])
-              : [[], []];
-          return { request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks };
+              : [[], [], []];
+          return { request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks, serverPets };
         } catch (error) {
           // A temporary context failure must never make the conversation unavailable.
           logOperationalWarning("assistant-chat", "verified-context-fallback", {

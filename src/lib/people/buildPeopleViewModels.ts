@@ -3,6 +3,7 @@ import { buildMemoryInsightForPerson } from "../brain/engines/memoryInsightEngin
 import type { Insight, PersonKnowledge } from "../brain/types.ts";
 import { getAiEligibleKnowledge, type KnowledgeItem } from "../knowledge/index.ts";
 import type { PersonRow } from "../repositories/person.types.ts";
+import type { PetRow } from "../repositories/petRepository.ts";
 import type { GiftRecord } from "../gifts/gift.types.ts";
 import type { KnowledgeChangeHistoryRow } from "../repositories/knowledgeRepository.ts";
 import { buildGiftOutcomeLearningSignals } from "../gift-intelligence/giftOutcomeLearningSignals.ts";
@@ -355,6 +356,7 @@ export function buildPersonProfileViewModel({
   knowledge,
   knowledgeChanges = [],
   gifts = [],
+  pets = [],
   giftOutcomeLearningEnabled = true,
   currentDate = new Date(),
   isAuthenticated = true,
@@ -363,12 +365,13 @@ export function buildPersonProfileViewModel({
   knowledge: KnowledgeItem[];
   knowledgeChanges?: KnowledgeChangeHistoryRow[];
   gifts?: GiftRecord[];
+  pets?: PetRow[];
   giftOutcomeLearningEnabled?: boolean;
   currentDate?: Date;
   isAuthenticated?: boolean;
 }): PersonProfileViewModel {
   if (!person) return {
-    isAuthenticated, found: false, hero: null, likes: [], dislikes: [], interests: [], giftIdeas: [], giftHistory: [], importantFacts: [], archivedKnowledge: [], knowledgeConflicts: [], knowledgeReview: null, timeline: [], brainInsights: [], confirmedGiftOutcomes: [], giftOutcomeAiPreview: [], giftOutcomeLearningEnabled: false, health: null,
+    isAuthenticated, found: false, hero: null, pets: [], likes: [], dislikes: [], interests: [], giftIdeas: [], giftHistory: [], importantFacts: [], archivedKnowledge: [], knowledgeConflicts: [], knowledgeReview: null, timeline: [], brainInsights: [], confirmedGiftOutcomes: [], giftOutcomeAiPreview: [], giftOutcomeLearningEnabled: false, health: null,
     actions: { addMemoryUrl: null, addGiftIdeaUrl: null, addImportantInformationUrl: null, canAskHappy: false },
   };
   const visible = activeVisible(knowledge).filter((item) => item.personId === person.id);
@@ -400,6 +403,7 @@ export function buildPersonProfileViewModel({
       birthday: person.birthday,
       daysUntilBirthday: daysUntilBirthday(person.birthday, currentDate),
     },
+    pets,
     likes: values(preferences.filter((item) => item.polarity === "likes" || item.polarity === "prefers"), historyByMemoryId),
     dislikes: values(preferences.filter((item) => item.polarity === "dislikes" || item.polarity === "avoids"), historyByMemoryId),
     interests: values(interestRecords, historyByMemoryId),

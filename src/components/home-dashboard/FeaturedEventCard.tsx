@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Gift, Sparkles } from "lucide-react";
+import { ChevronRight, Gift } from "lucide-react";
 import type { HomeFeaturedEvent } from "@/lib/home/home.types";
 import type { ReminderRecord } from "@/lib/repositories/reminders";
 import ReminderActions from "./ReminderActions";
@@ -47,22 +47,28 @@ export default function FeaturedEventCard({
   onPickGift,
 }: FeaturedEventCardProps) {
   return (
-    <section className="mt-6 overflow-hidden rounded-[1.75rem] border border-slate-100 bg-white p-4 shadow-[0_18px_48px_rgba(15,23,42,0.07)] sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+    <section className="overflow-hidden rounded-[1.35rem] border border-amber-200/70 bg-[linear-gradient(120deg,#fffdf8_0%,#fffaf0_100%)] p-4 shadow-[0_12px_34px_rgba(146,82,19,0.07)] sm:p-5">
+      <div className="grid gap-4 md:grid-cols-[72px_minmax(0,1fr)_auto] md:items-center">
+        <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl bg-white text-amber-700 shadow-sm ring-1 ring-amber-100">
+          <span className="text-xl" aria-hidden="true">{event.source === "birthday" ? "🎂" : "📅"}</span>
+          <span className="mt-1 text-[10px] font-extrabold uppercase tracking-wide">{event.countdownLabel}</span>
+        </div>
         <div className="min-w-0">
-          <p className={`text-[11px] font-black uppercase tracking-[0.12em] ${event.isImportant ? "text-amber-700" : "text-sky-600"}`}>{event.label}</p>
-          <h2 className="mt-2 text-xl font-black leading-tight tracking-[-0.02em] text-slate-950 sm:text-2xl">{event.title}</h2>
+          <p className={`text-[11px] font-extrabold uppercase tracking-[0.12em] ${event.isImportant ? "text-amber-700" : "text-sky-700"}`}>{event.label}</p>
+          <h2 className="mt-1.5 text-xl font-bold leading-tight tracking-[-0.02em] text-slate-950 sm:text-[1.35rem]">{event.title}</h2>
           {event.relationLabel && <p className="mt-1 text-sm font-bold text-slate-500">{event.relationLabel}</p>}
-          <p className="mt-2 text-sm font-semibold capitalize text-slate-500">{event.dateLabel}{event.timeOfDay ? ` · ${event.timeOfDay}` : ""}{event.durationMinutes ? ` · ${event.durationMinutes} min` : ""} · {event.countdownLabel}</p>
+          {event.birthdayAge !== null && (
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white/80 px-3 py-1.5 text-sm font-bold text-amber-900">
+              <span aria-hidden="true">🎈</span>{birthdayAgeLabel(event.birthdayAge, locale)}
+            </div>
+          )}
+          <p className="mt-3 text-sm font-medium capitalize text-slate-600">{event.dateLabel}{event.timeOfDay ? ` · ${event.timeOfDay}` : ""}{event.durationMinutes ? ` · ${event.durationMinutes} min` : ""} · {event.countdownLabel}</p>
         </div>
-        <span className={`rounded-full px-3 py-1.5 text-xs font-extrabold ${event.daysUntil <= 7 ? "bg-amber-50 text-amber-800" : "bg-sky-50 text-sky-700"}`}>{event.countdownLabel}</span>
+        <div className="flex flex-col gap-2 sm:flex-row md:w-48 md:flex-col">
+          {event.personId && event.daysUntil <= 60 && <button type="button" onClick={onPickGift} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 text-sm font-bold text-white transition hover:bg-amber-700 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"><Gift size={16} aria-hidden="true" />{reminderLabels.pickGift}</button>}
+          <Link href={event.href} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50">{event.ctaLabel}<ChevronRight size={16} aria-hidden="true" /></Link>
+        </div>
       </div>
-
-      {event.birthdayAge !== null && (
-        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-extrabold text-amber-900">
-          <span aria-hidden="true">🎈</span>{birthdayAgeLabel(event.birthdayAge, locale)}
-        </div>
-      )}
 
       {event.preferences.length > 0 && (
         <div className="mt-4 rounded-2xl bg-amber-50 px-3.5 py-3">
@@ -71,23 +77,7 @@ export default function FeaturedEventCard({
         </div>
       )}
 
-      {event.personId && event.daysUntil <= 60 && (
-        <div className="mt-4 rounded-2xl border border-amber-200/80 bg-[linear-gradient(120deg,#fffbeb_0%,#fff7ed_100%)] p-3.5 sm:p-4">
-          <div className="flex gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-amber-700 shadow-sm" aria-hidden="true"><Gift size={19} /></span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-black text-slate-900">{reminderLabels.pickGift}</p>
-              <p className="mt-1 text-sm font-medium leading-relaxed text-slate-600">
-                {event.preferences.length ? <><Sparkles className="mr-1 inline h-4 w-4 text-amber-600" aria-hidden="true" />{event.preferences.join(" · ")}</> : giftContextLabel}
-              </p>
-              <button type="button" onClick={onPickGift} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-amber-200 bg-[#fff8ec] px-3.5 text-sm font-extrabold text-[#925213] transition hover:bg-[#ffefd6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2">
-                <Gift size={16} aria-hidden="true" />{reminderLabels.pickGift}
-                <ChevronRight size={16} aria-hidden="true" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {event.personId && event.daysUntil <= 60 && !event.preferences.length && <p className="mt-4 text-sm leading-6 text-slate-600">{giftContextLabel}</p>}
 
       {event.metrics.length > 0 && (
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
@@ -99,9 +89,6 @@ export default function FeaturedEventCard({
         </div>
       )}
 
-      <Link href={event.href} className="hd-button mt-4 min-h-11 w-full border border-sky-200 bg-white text-sky-700 hover:bg-sky-50">
-        {event.ctaLabel}<ChevronRight size={16} aria-hidden="true" />
-      </Link>
       {reminder && (
         <ReminderActions
           reminder={reminder}

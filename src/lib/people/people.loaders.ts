@@ -3,6 +3,7 @@ import { archiveOwnedPersonKnowledge, deleteArchivedOwnedPersonKnowledge, getKno
 import { getOwnedPersonById, getPeople } from "@/lib/repositories/personRepository";
 import { loadCanonicalGiftsForPerson } from "@/lib/gifts/gift.repository";
 import { loadGiftOutcomeLearningEnabled } from "@/lib/repositories/profile/giftOutcomeLearning.repository";
+import { createPetForPerson, getPetsForPerson, unlinkPetFromPerson, updatePet } from "@/lib/repositories/petRepository";
 import { buildPeoplePageViewModel, buildPersonProfileViewModel } from "./buildPeopleViewModels";
 import type { PeoplePageViewModel, PersonProfileViewModel } from "./peopleData.types";
 
@@ -36,13 +37,32 @@ export async function loadPersonProfile(
   const person = await getOwnedPersonById(userId, personId);
   if (!person) return buildPersonProfileViewModel({ person: null, knowledge: [], currentDate });
 
-  const [profile, knowledgeChanges, gifts, giftOutcomeLearningEnabled] = await Promise.all([
+  const [profile, knowledgeChanges, gifts, giftOutcomeLearningEnabled, pets] = await Promise.all([
     getKnowledgeForPerson({ personId, includeArchived: true }),
     listKnowledgeChangeHistoryForOwnedPerson({ userId, personId }),
     loadCanonicalGiftsForPerson(userId, personId),
     loadGiftOutcomeLearningEnabled(userId),
+    getPetsForPerson(userId, personId),
   ]);
-  return buildPersonProfileViewModel({ person, knowledge: profile?.items ?? [], knowledgeChanges, gifts, giftOutcomeLearningEnabled, currentDate });
+  return buildPersonProfileViewModel({ person, knowledge: profile?.items ?? [], knowledgeChanges, gifts, pets, giftOutcomeLearningEnabled, currentDate });
+}
+
+export async function addPersonPet(input: { personId: string; name: string; species: string; breed?: string; birthDate?: string; note?: string }): Promise<void> {
+  const userId = await authenticatedUserId();
+  if (!userId) throw new Error("Authentication required");
+  await createPetForPerson({ userId, ...input });
+}
+
+export async function editPersonPet(input: { petId: string; name: string; species: string; breed?: string; birthDate?: string; note?: string }): Promise<void> {
+  const userId = await authenticatedUserId();
+  if (!userId) throw new Error("Authentication required");
+  await updatePet({ userId, ...input });
+}
+
+export async function removePersonPet(personId: string, petId: string): Promise<void> {
+  const userId = await authenticatedUserId();
+  if (!userId) throw new Error("Authentication required");
+  await unlinkPetFromPerson(userId, personId, petId);
 }
 
 export async function changePersonKnowledgeValue(personId: string, knowledgeId: string, value: string): Promise<void> {

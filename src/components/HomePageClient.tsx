@@ -98,6 +98,7 @@ export default function HomePageClient() {
   const localeValue = useLocale();
   const locale = isSupportedLocale(localeValue) ? localeValue : "pl";
   const homeT = useTranslations("home");
+  const relationT = useTranslations("people.relationships");
   const [viewModel, setViewModel] = useState<HomeViewModel | null>(null);
   const [fatalError, setFatalError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -143,6 +144,8 @@ export default function HomePageClient() {
           data,
           locale,
           (key, values) => homeT(key as never, values as never),
+          new Date(),
+          (key, values) => relationT(key as never, values as never),
         );
         setViewModel(nextViewModel);
         if (nextViewModel.recommendations.some((item) => item.knowledgeReview)) {
@@ -167,7 +170,7 @@ export default function HomePageClient() {
       });
 
     return () => { cancelled = true; };
-  }, [homeT, locale, reloadKey]);
+  }, [homeT, locale, relationT, reloadKey]);
 
   const runReminderAction = useCallback(async (
     action: (id: string) => Promise<ReminderRecord>,
@@ -268,7 +271,12 @@ export default function HomePageClient() {
         />
       )}
       <CookieConsent />
-      <ChatAssistantModal open={chatOpen} onClose={() => setChatOpen(false)} initialPrompt={chatInitialPrompt} />
+      <ChatAssistantModal
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        initialPrompt={chatInitialPrompt}
+        autoSubmitInitialPrompt={Boolean(chatInitialPrompt)}
+      />
     </>
   );
 }

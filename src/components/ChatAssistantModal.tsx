@@ -23,6 +23,7 @@ interface ChatAssistantModalProps {
   open: boolean;
   onClose: () => void;
   initialPrompt?: string | null;
+  autoSubmitInitialPrompt?: boolean;
 }
 
 const ACTION_DEFINITIONS = [
@@ -56,7 +57,7 @@ const INITIAL_HAPPY_LEARNING_STATE: ChatHappyLearningState = {
   detectionStatus: "idle",
 };
 
-export default function ChatAssistantModal({ open, onClose, initialPrompt = null }: ChatAssistantModalProps) {
+export default function ChatAssistantModal({ open, onClose, initialPrompt = null, autoSubmitInitialPrompt = false }: ChatAssistantModalProps) {
   const t = useTranslations("assistant");
   const locale = useLocale();
   const router = useRouter();
@@ -82,6 +83,7 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const messageIdRef = useRef(0);
   const localeRef = useRef(locale);
+  const submittedInitialPromptRef = useRef<string | null>(null);
 
   const actions: AssistantAction[] = ACTION_DEFINITIONS.map((definition) => ({
     id: definition.id,
@@ -152,12 +154,16 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
   }, [cancelActiveResponse, closeAssistant, open]);
 
   useEffect(() => {
-    if (!open || !initialPrompt || messages.length > 0) return;
+    if (!open || autoSubmitInitialPrompt || !initialPrompt || messages.length > 0) return;
     // Seed a newly opened controlled composer without overwriting user input.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setValue((current) => current.trim() ? current : initialPrompt);
     requestAnimationFrame(() => textareaRef.current?.focus());
-  }, [initialPrompt, messages.length, open]);
+  }, [autoSubmitInitialPrompt, initialPrompt, messages.length, open]);
+
+  useEffect(() => {
+    if (!open) submittedInitialPromptRef.current = null;
+  }, [open]);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -451,6 +457,29 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
     setMessages((current) => [...current, userMessage, assistantMessage]);
     void streamAssistantResponse(content, conversation, assistantMessage.id, nextPersonContext);
   }
+
+  useEffect(() => {
+    if (!open || !autoSubmitInitialPrompt || !initialPrompt || homeContext.loading) return;
+    if (submittedInitialPromptRef.current === initialPrompt || isResponding || isHomeExiting) return;
+    submittedInitialPromptRef.current = initialPrompt;
+
+    homeTimerRef.current = setTimeout(() => {
+      if (messages.length === 0) {
+        commitFirstMessage(initialPrompt);
+        return;
+      }
+
+      const conversation = buildConversationHistory(messages);
+      const userMessage: ChatMessage = { id: nextMessageId(), role: "user", content: initialPrompt, status: "complete" };
+      const nextPersonContext = handlePotentialHappyLearning(initialPrompt, userMessage.id);
+      const assistantMessage: ChatMessage = { id: nextMessageId(), role: "assistant", content: "", status: "streaming", personId: nextPersonContext.activePersonId };
+      setMessages((current) => [...current, userMessage, assistantMessage]);
+      void streamAssistantResponse(initialPrompt, conversation, assistantMessage.id, nextPersonContext);
+    }, 0);
+    // This effect consumes one explicit prompt per chat opening. Message changes are
+    // intentionally excluded so streaming updates cannot submit it a second time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSubmitInitialPrompt, homeContext.loading, initialPrompt, open]);
 
   function dismissHappyLearningCandidate(candidateId: string) {
     setHappyLearning((current) => ({

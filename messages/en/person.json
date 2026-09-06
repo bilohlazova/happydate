@@ -18,6 +18,7 @@
     "askHappy": "Ask Happy",
     "addNote": "Add note",
     "birthdayCountdown": "{days, plural, =0 {Birthday today} =1 {Birthday tomorrow} other {Birthday in # days}}",
+    "pets": { "title": "Pets", "add": "Add pet", "edit": "Edit", "unlink": "Unlink", "unlinkConfirm": "Unlink {name} from this person? The pet profile will remain available to other linked people.", "close": "Close pet details", "name": "Name", "species": "Species", "breed": "Breed (optional)", "birthDate": "Birth date (optional)", "note": "Note (optional)", "save": "Save", "saving": "Saving…", "cancel": "Cancel", "error": "The pet could not be saved. Please try again." },
     "gifts": {
       "title": "Gifts and saved options",
       "subtitle": "Plan gifts for {name} and keep useful links.",

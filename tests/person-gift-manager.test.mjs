@@ -77,10 +77,13 @@ test("confirmed outcome can be excluded from learning without deleting it", asyn
   assert.match(loader, /setGiftOutcomeLearning/);
 });
 
-test("Person profile audits learning-active and history-only outcomes", async () => {
+test("Person profile keeps technical gift-learning controls out of the visible profile flow", async () => {
   const profile = await source("src/components/people/PersonProfileContent.tsx");
   assert.match(profile, /GiftLearningAuditSection/);
-  assert.match(profile, /confirmedGiftOutcomes/);
+  const layoutStart = profile.indexOf('<div className="person-profile-flow');
+  const layoutEnd = profile.indexOf("<ChatAssistantModal", layoutStart);
+  const visibleLayout = profile.slice(layoutStart, layoutEnd);
+  assert.doesNotMatch(visibleLayout, /confirmedGiftOutcomes|GiftLearningAuditSection|learningAudit/);
   assert.match(profile, /item\.learningEnabled/);
   assert.match(profile, /role="switch"/);
   assert.match(profile, /changePersonGiftOutcomeLearning/);

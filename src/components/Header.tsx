@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabaseClient";
-import { HEADER_NAV_ITEMS } from "@/i18n/shellNavigation";
+import { BOTTOM_NAV_ITEMS, HEADER_NAV_ITEMS, isAppShellPath } from "@/i18n/shellNavigation";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import { getLocaleCookie, setLocaleCookie } from "@/i18n/localeCookie";
 import { shouldSynchronizeProfileLocale } from "@/i18n/profileLocaleSync";
@@ -22,6 +22,7 @@ export default function Header() {
   const [isLoggedIn,    setIsLoggedIn]    = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const synchronizedProfileRef = useRef<string | null>(null);
+  const appShell = isAppShellPath(pathname);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,33 +72,38 @@ export default function Header() {
   return (
     <>
       <header
-        className="sticky top-0 z-40 border-b border-white/25 bg-[linear-gradient(100deg,#249fbd_0%,#35b8cb_58%,#55cbd8_100%)] shadow-[0_8px_22px_rgba(36,159,189,0.13)] backdrop-blur-xl"
+        className={cx(
+          "sticky top-0 z-40 border-b backdrop-blur-xl",
+          appShell
+            ? "border-slate-200/80 bg-white/92 shadow-[0_4px_18px_rgba(15,23,42,0.045)]"
+            : "border-white/25 bg-[linear-gradient(100deg,#249fbd_0%,#35b8cb_58%,#55cbd8_100%)] shadow-[0_8px_22px_rgba(36,159,189,0.13)]",
+        )}
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
-        <div className="hd-container flex h-14 items-center justify-between">
+        <div className={cx("mx-auto flex h-14 w-full items-center justify-between px-4 sm:px-6", appShell ? "max-w-[1160px]" : "max-w-5xl")}>
 
           {/* LOGO */}
-          <Link href="/" className="min-w-0 truncate text-lg font-extrabold text-white">
+          <Link href="/" className={cx("min-w-0 truncate text-lg font-extrabold", appShell ? "text-slate-950" : "text-white")}>
             🎁 HappyDate
           </Link>
 
           {/* DESKTOP NAV */}
           <nav
-            className="hidden gap-6 text-sm text-white sm:flex"
+            className={cx("hidden items-center text-sm md:flex", appShell ? "gap-1" : "gap-6 text-white")}
             aria-label={translate("header.navigationLabel")}
           >
-            {HEADER_NAV_ITEMS.map((item) => (
+            {(appShell ? BOTTOM_NAV_ITEMS : HEADER_NAV_ITEMS).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cx(
-                  "transition",
-                  pathname.startsWith(item.href)
-                    ? "underline font-semibold"
-                    : "opacity-90 hover:opacity-100"
+                  appShell ? "rounded-xl px-3 py-2 font-bold transition-colors" : "transition",
+                  appShell
+                    ? ((item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)) ? "bg-cyan-50 text-[#19778f]" : "text-slate-600 hover:bg-slate-50 hover:text-[#19778f]")
+                    : pathname.startsWith(item.href) ? "font-semibold underline" : "opacity-90 hover:opacity-100"
                 )}
               >
-                {translate(`header.${item.labelKey}`)}
+                {translate(`${appShell ? "bottom" : "header"}.${item.labelKey}` as never)}
               </Link>
             ))}
           </nav>
@@ -106,7 +112,7 @@ export default function Header() {
           <div className="flex items-center gap-3">
             <LanguageSwitcher isAuthenticated={isLoggedIn} />
             {/* Login — тільки якщо не залогінений */}
-            {!isLoggedIn && (
+            {!isLoggedIn && !appShell && (
               <Link
                 href="/auth/login"
                 className="hd-button min-h-9 bg-white/18 px-3 text-sm font-bold text-white"
@@ -118,7 +124,7 @@ export default function Header() {
             {/* HAMBURGER — мобільний доступ до тих самих посилань */}
             <button
               onClick={() => setMobileMenuOpen((v) => !v)}
-              className="hd-icon-button hd-mobile-menu-button text-xl text-white"
+              className={cx("hd-icon-button hd-mobile-menu-button text-xl", appShell ? "hidden text-slate-700" : "text-white")}
               aria-label={translate(
                 mobileMenuOpen ? "header.closeMenu" : "header.openMenu",
               )}
@@ -131,7 +137,7 @@ export default function Header() {
         </div>
 
         {/* MOBILE MENU */}
-        {mobileMenuOpen && (
+        {mobileMenuOpen && !appShell && (
           <div
             id="happydate-mobile-menu"
             className="bg-white/96 shadow-lg backdrop-blur-xl sm:hidden"

@@ -18,6 +18,7 @@
     "askHappy": "Zapytaj Happy",
     "addNote": "Dodaj notatkę",
     "birthdayCountdown": "{days, plural, =0 {Urodziny dzisiaj} =1 {Urodziny jutro} other {Urodziny za # dni}}",
+    "pets": { "title": "Zwierzęta", "add": "Dodaj zwierzę", "edit": "Edytuj", "unlink": "Odłącz", "unlinkConfirm": "Odłączyć {name} od tej osoby? Profil zwierzęcia pozostanie dostępny dla innych powiązanych osób.", "close": "Zamknij szczegóły zwierzęcia", "name": "Imię", "species": "Gatunek", "breed": "Rasa (opcjonalnie)", "birthDate": "Data urodzenia (opcjonalnie)", "note": "Notatka (opcjonalnie)", "save": "Zapisz", "saving": "Zapisywanie…", "cancel": "Anuluj", "error": "Nie udało się zapisać zwierzęcia. Spróbuj ponownie." },
     "gifts": {
       "title": "Prezenty i zapisane propozycje",
       "subtitle": "Planuj prezenty dla {name} i zachowuj przydatne linki.",

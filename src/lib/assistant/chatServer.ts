@@ -1,6 +1,6 @@
 import { ASSISTANT_CHAT_CONFIG, type AssistantIdentityKind } from "./chatConfig.ts";
 import type { AssistantChatRequest, AssistantConversationItem } from "./chatContract.ts";
-import { buildAssistantSystemPrompt, formatAssistantContext, parseAssistantChatRequest } from "./chatContract.ts";
+import { buildAssistantSystemPrompt, formatAssistantContext, formatAssistantPetContext, parseAssistantChatRequest } from "./chatContract.ts";
 import type { AssistantRateLimiter } from "./rateLimiter.ts";
 import { logAiUsageEvent, logOperationalError, logOperationalWarning } from "../observability/safeLogger.ts";
 import type { AssistantGiftOutcomeContext } from "./giftOutcomeContext.server.ts";
@@ -8,6 +8,7 @@ import { formatAssistantGiftOutcomeContext } from "./chatContract.ts";
 import type { AssistantSavedGiftLinkContext } from "./savedGiftLinkContext.server.ts";
 import { formatAssistantSavedGiftLinkContext } from "./chatContract.ts";
 import { ASSISTANT_BEHAVIOR_MANIFEST } from "./assistantBehaviorManifest.ts";
+import type { AssistantPetContext } from "./petContext.server.ts";
 import { AI_COST_POLICY, estimateInputTokens, estimatedUsd, type AiBudget, type AiBudgetReservation, type AiTokenUsage } from "./aiBudget.ts";
 import { buildAssistantResponsePlan } from "./responsePlan.ts";
 import { wellbeingMode } from "./wellbeingConversation.ts";
@@ -54,10 +55,12 @@ type ChatResponseOptions = {
   timeoutMs?: number;
   serverGiftOutcomes?: readonly AssistantGiftOutcomeContext[];
   serverSavedGiftLinks?: readonly AssistantSavedGiftLinkContext[];
+  serverPets?: readonly AssistantPetContext[];
   prepareRequest?: (request: AssistantChatRequest) => Promise<{
     request: AssistantChatRequest;
     serverGiftOutcomes?: readonly AssistantGiftOutcomeContext[];
     serverSavedGiftLinks?: readonly AssistantSavedGiftLinkContext[];
+    serverPets?: readonly AssistantPetContext[];
   }>;
   budget?: AiBudget | null;
 };
@@ -161,12 +164,14 @@ export async function createAssistantChatResponse(
   let request: AssistantChatRequest = parsed.data;
   let serverGiftOutcomes = options.serverGiftOutcomes ?? [];
   let serverSavedGiftLinks = options.serverSavedGiftLinks ?? [];
+  let serverPets = options.serverPets ?? [];
   if (options.prepareRequest) {
     try {
       const prepared = await options.prepareRequest(request);
       request = prepared.request;
       serverGiftOutcomes = prepared.serverGiftOutcomes ?? [];
       serverSavedGiftLinks = prepared.serverSavedGiftLinks ?? [];
+      serverPets = prepared.serverPets ?? [];
     } catch {
       await release?.();
       logger("verified context unavailable", { category: "verified_context_unavailable" });
@@ -179,6 +184,7 @@ export async function createAssistantChatResponse(
   const context = formatAssistantContext(request.context);
   const giftOutcomeContext = formatAssistantGiftOutcomeContext(serverGiftOutcomes);
   const savedGiftLinkContext = formatAssistantSavedGiftLinkContext(serverSavedGiftLinks);
+  const petContext = formatAssistantPetContext(serverPets);
   const messages: AssistantProviderMessage[] = [
     { role: "system", content: buildAssistantSystemPrompt(request.locale) },
     { role: "system", content: wellbeingMode(request.message) === "emotional_conversation"
@@ -188,6 +194,7 @@ export async function createAssistantChatResponse(
     ...(context ? [{ role: "system" as const, content: context }] : []),
     ...(giftOutcomeContext ? [{ role: "system" as const, content: giftOutcomeContext }] : []),
     ...(savedGiftLinkContext ? [{ role: "system" as const, content: savedGiftLinkContext }] : []),
+    ...(petContext ? [{ role: "system" as const, content: petContext }] : []),
     ...request.conversation,
     { role: "user", content: request.message },
   ];

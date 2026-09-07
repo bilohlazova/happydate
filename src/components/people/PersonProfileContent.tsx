@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -10,23 +11,33 @@ import {
   Bot,
   BrainCircuit,
   CalendarDays,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
   CheckCircle2,
   Copy,
   EyeOff,
   Heart,
   LoaderCircle,
+  MoreHorizontal,
   NotebookPen,
   Pencil,
+  Plus,
   RotateCcw,
   Sparkles,
   Target,
   Trash2,
+  X,
 } from "lucide-react";
 
 import ChatAssistantModal from "@/components/ChatAssistantModal";
 import Avatar from "@/components/people/Avatar";
 import { PersonGiftManager } from "@/components/people/PersonGiftManager";
+import { PersonActionsSheet } from "@/components/people/PeoplePageContent";
 import { PetsSection } from "@/components/people/PetsSection";
+import { PersonSymbolSection } from "@/components/people/PersonSymbolSection";
+import { PersonNotesSection } from "@/components/people/PersonNotesSection";
 import type {
   PersonBrainInsightViewModel,
   PersonKnowledgeValueViewModel,
@@ -35,11 +46,12 @@ import type {
 } from "@/lib/people/peopleData.types";
 import { MobileUI } from "@/lib/theme/mobile";
 import { changePersonGiftOutcomeLearning, confirmPersonGiftOutcome } from "@/lib/gifts/gift.loaders";
-import { archivePersonKnowledge, changePersonKnowledgeValue, permanentlyDeleteArchivedPersonKnowledge, resolvePersonKnowledgeConflict, restorePersonKnowledge, reviewPersonKnowledge } from "@/lib/people/people.loaders";
+import { addPersonKnowledge, archivePersonKnowledge, changePersonKnowledgeValue, permanentlyDeleteArchivedPersonKnowledge, resolvePersonKnowledgeConflict, restorePersonKnowledge, reviewPersonKnowledge } from "@/lib/people/people.loaders";
 import type { GiftOutcomeValue } from "@/lib/gifts/gift.types";
 import type { ConfirmedGiftOutcomeViewModel } from "@/lib/people/peopleData.types";
 import { GIFT_OUTCOME_AI_CONTEXT_LIMIT, formatGiftOutcomeAiContextExport, formatGiftOutcomeAiContextGeneratedAt, formatGiftOutcomeAiContextTime } from "@/lib/gift-intelligence/giftOutcomeAiContextPreview";
 import { recordKnowledgeReviewInteraction } from "@/lib/repositories/knowledgeReviewInteractions.repository";
+import { logOperationalError } from "@/lib/observability/safeLogger";
 
 type Translator = ReturnType<typeof useTranslations<"person">>;
 const CLIPBOARD_WRITE_TIMEOUT_MS = 10_000;
@@ -83,7 +95,33 @@ export function PersonProfileContent({
 }) {
   const t = useTranslations("person");
   const locale = useLocale();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [personActionsMode, setPersonActionsMode] = useState<"edit" | "delete" | null>(null);
+  const requestedView = searchParams.get("view");
+  const views = ["profile", "about", "notes", "gifts", "history"] as const;
+  type AlbumView = (typeof views)[number];
+  const activeView: AlbumView = views.includes(requestedView as AlbumView) ? requestedView as AlbumView : "profile";
+  const activeIndex = views.indexOf(activeView);
+  const touchStart = useRef<number | null>(null);
+
+  function navigateAlbum(next: AlbumView) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("view", next);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  useEffect(() => {
+    function onKey(event: globalThis.KeyboardEvent) {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement) return;
+      if (event.key === "ArrowRight" && activeIndex < views.length - 1) navigateAlbum(views[activeIndex + 1]);
+      if (event.key === "ArrowLeft" && activeIndex > 0) navigateAlbum(views[activeIndex - 1]);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   if (loading) return <PersonProfileSkeleton label={t("profile.loading")} />;
 
@@ -98,39 +136,70 @@ export function PersonProfileContent({
         aria-label={t("accessibility.profile", { name: hero.name })}
         className={`person-profile-page ${MobileUI.screen} ${MobileUI.contentBottom}`}
       >
-        <div className="person-profile-layout mx-auto w-full px-4 sm:px-5">
+        <div className="person-profile-layout mx-auto w-full max-w-[1120px] px-4 sm:px-5">
           <Link href="/people" className="person-profile-back">
             <ArrowLeft aria-hidden="true" />
             {t("profile.back")}
           </Link>
 
-          <ProfileHero
-            model={viewModel}
-            onAsk={() => setAssistantOpen(true)}
-            t={t}
-          />
-
-          <div className="person-profile-flow mt-3 flex min-w-0 flex-col gap-3">
-            <BrainSection items={viewModel.brainInsights} t={t} />
-            <PetsSection personId={hero.id} pets={viewModel.pets} onChanged={onProfileChanged} />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <KnowledgeSection personId={hero.id} icon={<Heart />} title={t("profileUi.likes")} tone="rose" items={viewModel.likes} empty={t("profileUi.empty.likes")} onChanged={onProfileChanged} t={t} />
-              <KnowledgeSection personId={hero.id} icon={<Ban />} title={t("profileUi.dislikes")} tone="slate" items={viewModel.dislikes} empty={t("profileUi.empty.dislikes")} onChanged={onProfileChanged} t={t} />
-            </div>
-            <KnowledgeSection personId={hero.id} icon={<Target />} title={t("profileUi.interests")} tone="sky" items={viewModel.interests} empty={t("profileUi.empty.interests")} onChanged={onProfileChanged} t={t} />
-            <KnowledgeSection personId={hero.id} icon={<NotebookPen />} title={t("profileUi.importantFacts")} tone="amber" items={viewModel.importantFacts} empty={t("profileUi.empty.importantFacts")} onChanged={onProfileChanged} t={t} />
-            <PersonGiftManager personId={hero.id} personName={hero.name} onChanged={onProfileChanged} />
-            <TimelineSection items={viewModel.timeline} locale={locale} t={t} />
-            <KnowledgeReviewSection personId={hero.id} review={viewModel.knowledgeReview} onChanged={onProfileChanged} t={t} />
-            <KnowledgeConflictSection personId={hero.id} conflicts={viewModel.knowledgeConflicts} onChanged={onProfileChanged} t={t} />
-            <ArchivedKnowledgeSection personId={hero.id} items={viewModel.archivedKnowledge} onChanged={onProfileChanged} t={t} />
+          <AlbumNavigation active={activeView} personName={hero.name} onNavigate={navigateAlbum} />
+          <div
+            key={activeView}
+            className="mt-4 min-w-0 animate-[album-enter_.24s_ease-out] motion-reduce:animate-none"
+            onTouchStart={(event) => { touchStart.current = event.touches[0]?.clientX ?? null; }}
+            onTouchEnd={(event) => { const start = touchStart.current; const end = event.changedTouches[0]?.clientX; touchStart.current = null; if (start == null || end == null || Math.abs(end - start) < 55) return; const next = end < start ? activeIndex + 1 : activeIndex - 1; if (next >= 0 && next < views.length) navigateAlbum(views[next]); }}
+          >
+            {activeView === "profile" && <div className="grid gap-4 lg:grid-cols-[1.3fr_.7fr]"><ProfileHero model={viewModel} onAsk={() => setAssistantOpen(true)} onEdit={() => setPersonActionsMode("edit")} onDelete={() => setPersonActionsMode("delete")} t={t} /><div className="flex flex-col gap-4"><PetsSection personId={hero.id} pets={viewModel.pets} onChanged={onProfileChanged} />{viewModel.symbol && <PersonSymbolSection personId={hero.id} personName={hero.name} symbol={viewModel.symbol} onChanged={onProfileChanged} />}</div></div>}
+            {activeView === "about" && <div className="grid gap-4 lg:grid-cols-[1.35fr_.65fr]"><AboutPersonSection personId={hero.id} personName={hero.name} likes={viewModel.likes} dislikes={viewModel.dislikes} interests={viewModel.interests} importantFacts={viewModel.importantFacts} onChanged={onProfileChanged} t={t} /><div className="flex flex-col gap-4"><BrainSection items={viewModel.brainInsights} t={t} /><KnowledgeReviewSection personId={hero.id} review={viewModel.knowledgeReview} onChanged={onProfileChanged} t={t} /></div></div>}
+            {activeView === "notes" && <PersonNotesSection personId={hero.id} personName={hero.name} notes={viewModel.notes} onChanged={onProfileChanged} />}
+            {activeView === "gifts" && <PersonGiftManager personId={hero.id} personName={hero.name} onChanged={onProfileChanged} />}
+            {activeView === "history" && <div className="grid gap-4 lg:grid-cols-[1.25fr_.75fr]"><div className="flex flex-col gap-4"><TimelineSection items={viewModel.timeline} locale={locale} t={t} />{viewModel.happyConversations.length > 0 && <section className="rounded-[2rem] bg-white/90 p-5 shadow-sm sm:p-7"><h2 className="text-xl font-extrabold text-slate-900">{locale === "uk" ? "Розмови з Happy" : "Conversations with Happy"}</h2><div className="mt-4 space-y-4">{viewModel.happyConversations.slice(0, 5).map((turn) => <article key={turn.id} className="rounded-2xl bg-slate-50 p-4"><time className="text-xs font-bold text-slate-400">{new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(turn.created_at))}</time><p className="mt-2 text-sm font-semibold text-slate-700">{turn.user_message}</p><p className="mt-2 text-sm leading-6 text-violet-700">{turn.happy_response}</p></article>)}</div></section>}</div><div className="flex flex-col gap-4"><PersonSymbolSection personId={hero.id} personName={hero.name} symbol={viewModel.symbol} onChanged={onProfileChanged} /><KnowledgeConflictSection personId={hero.id} conflicts={viewModel.knowledgeConflicts} onChanged={onProfileChanged} t={t} /><ArchivedKnowledgeSection personId={hero.id} items={viewModel.archivedKnowledge} onChanged={onProfileChanged} t={t} /></div></div>}
           </div>
         </div>
       </main>
 
       <ChatAssistantModal open={assistantOpen} onClose={() => setAssistantOpen(false)} />
+      <PersonActionsSheet
+        person={personActionsMode ? {
+          id: hero.id,
+          name: hero.name,
+          relationship: hero.relationship,
+          relation_label: hero.relationLabel,
+          relation_key: hero.relationKey,
+          relation_category: hero.relationCategory,
+          birthday: hero.birthday,
+          gender: hero.gender,
+        } : null}
+        initialMode={personActionsMode ?? "actions"}
+        onClose={() => setPersonActionsMode(null)}
+        onUpdated={async () => {
+          setPersonActionsMode(null);
+          await onProfileChanged?.();
+        }}
+        onDeleted={() => {
+          setPersonActionsMode(null);
+          router.replace("/people");
+          router.refresh();
+        }}
+      />
     </>
   );
+}
+
+function AlbumNavigation({ active, personName, onNavigate }: { active: "profile" | "about" | "notes" | "gifts" | "history"; personName: string; onNavigate: (view: "profile" | "about" | "notes" | "gifts" | "history") => void }) {
+  const locale = useLocale();
+  const items = [
+    ["profile", locale === "uk" ? "Профіль" : "Profile"],
+    ["about", locale === "uk" ? `Про ${personName}` : `About ${personName}`],
+    ["notes", locale === "uk" ? "Спогади" : "Memories"],
+    ["gifts", locale === "uk" ? "Подарунки" : "Gifts"],
+    ["history", locale === "uk" ? "Історія" : "History"],
+  ] as const;
+  const index = items.findIndex(([key]) => key === active);
+  return <nav aria-label={locale === "uk" ? "Сторінки альбому" : "Album pages"} className="sticky top-2 z-20 rounded-2xl bg-white/90 p-2 shadow-sm backdrop-blur">
+    <div className="flex items-center gap-2"><button disabled={index === 0} onClick={() => onNavigate(items[index - 1][0])} className="min-h-11 min-w-11 rounded-xl hover:bg-slate-100 disabled:opacity-30" aria-label={locale === "uk" ? "Попередня сторінка" : "Previous page"}><ChevronLeft className="mx-auto" /></button><div className="min-w-0 flex-1 overflow-x-auto"><div className="flex min-w-max justify-center gap-1">{items.map(([key, label]) => <button key={key} aria-current={active === key ? "page" : undefined} onClick={() => onNavigate(key)} className={`min-h-11 rounded-xl px-3 text-sm font-bold transition ${active === key ? "bg-sky-100 text-sky-800" : "text-slate-500 hover:bg-slate-50"}`}>{label}</button>)}</div></div><span className="whitespace-nowrap text-sm font-bold text-slate-500">{index + 1} / {items.length}</span><button disabled={index === items.length - 1} onClick={() => onNavigate(items[index + 1][0])} className="min-h-11 min-w-11 rounded-xl hover:bg-slate-100 disabled:opacity-30" aria-label={locale === "uk" ? "Наступна сторінка" : "Next page"}><ChevronRight className="mx-auto" /></button></div>
+    <div className="mt-1 flex justify-center gap-1.5 sm:hidden">{items.map(([key]) => <button key={key} aria-label={key} onClick={() => onNavigate(key)} className={`h-2 rounded-full ${active === key ? "w-5 bg-sky-500" : "w-2 bg-slate-200"}`} />)}</div>
+  </nav>;
 }
 
 // Kept as a settings-ready control while intentionally hidden from the person profile.
@@ -525,14 +594,19 @@ function learningSignalTone(signal: ConfirmedGiftOutcomeViewModel["learningSigna
 function ProfileHero({
   model,
   onAsk,
+  onEdit,
+  onDelete,
   t,
 }: {
   model: PersonProfileViewModel;
   onAsk: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
   t: Translator;
 }) {
   const hero = model.hero!;
   const peopleT = useTranslations("people");
+  const formT = useTranslations("personForm");
   const locale = useLocale();
   const healthLabel = model.health ? t(`profileUi.health.${model.health.level}`) : null;
   const relationVariant = hero.gender === "female" || hero.gender === "male"
@@ -544,11 +618,20 @@ function ProfileHero({
   return (
     <section className="person-profile-hero relative overflow-hidden rounded-[1.4rem] border border-white/80 bg-white/85 p-4 shadow-[0_16px_44px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:p-5">
       <div className="absolute -right-12 -top-16 h-40 w-40 rounded-full bg-gradient-to-br from-sky-200/60 to-blue-100/10 blur-2xl" aria-hidden="true" />
-      <div className="relative flex items-center gap-3.5">
+      <div className="relative flex items-start gap-3.5">
         <Avatar name={hero.name} className="!h-16 !w-16 !shrink-0 !text-xl !shadow-lg sm:!h-20 sm:!w-20 sm:!text-2xl" />
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{hero.name}</h1>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <h1 className="min-w-0 flex-1 truncate text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{hero.name}</h1>
+            <button type="button" onClick={onEdit} aria-label={formT("title.edit")} title={formT("title.edit")} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-700 transition hover:bg-sky-100 active:scale-95">
+              <Pencil className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button type="button" onClick={onDelete} aria-label={formT("delete.action")} title={formT("delete.action")} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-600 transition hover:bg-rose-100 active:scale-95">
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
           {relationLabel && <p className="mt-0.5 truncate text-sm font-bold text-slate-500">{relationLabel}</p>}
+          {hero.note && <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-600">{hero.note}</p>}
           <div className="mt-2 flex flex-wrap gap-1.5">
             {hero.birthday && (
               <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[0.7rem] font-extrabold text-rose-600">
@@ -598,14 +681,142 @@ const toneClasses = {
   amber: "bg-amber-50 text-amber-600",
 } as const;
 
-function KnowledgeSection({ personId, icon, title, tone, items, empty, onChanged, t }: { personId: string; icon: ReactNode; title: string; tone: keyof typeof toneClasses; items: PersonKnowledgeValueViewModel[]; empty: string; onChanged?: () => void | Promise<void>; t: Translator }) {
+type AboutFactKind = "like" | "dislike" | "interest" | "important_fact";
+type AboutFact = PersonKnowledgeValueViewModel & { kind: AboutFactKind };
+
+function AboutPersonSection({ personId, personName, likes, dislikes, interests, importantFacts, onChanged, t }: { personId: string; personName: string; likes: PersonKnowledgeValueViewModel[]; dislikes: PersonKnowledgeValueViewModel[]; interests: PersonKnowledgeValueViewModel[]; importantFacts: PersonKnowledgeValueViewModel[]; onChanged?: () => void | Promise<void>; t: Translator }) {
+  const facts: AboutFact[] = [
+    ...likes.map((item) => ({ ...item, kind: "like" as const })),
+    ...dislikes.map((item) => ({ ...item, kind: "dislike" as const })),
+    ...interests.map((item) => ({ ...item, kind: "interest" as const })),
+    ...importantFacts.map((item) => ({ ...item, kind: "important_fact" as const })),
+  ];
+  const [showAll, setShowAll] = useState(false);
+  const [editor, setEditor] = useState<"new" | AboutFact | null>(null);
+  const [actionFact, setActionFact] = useState<AboutFact | null>(null);
+  const [deleteFact, setDeleteFact] = useState<AboutFact | null>(null);
+  const [value, setValue] = useState("");
+  const [kind, setKind] = useState<AboutFactKind>("important_fact");
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const visibleFacts = showAll ? facts : facts.slice(0, 5);
+
+  function openNew() {
+    setValue("");
+    setKind("important_fact");
+    setFailed(false);
+    setEditor("new");
+  }
+
+  function openEdit(fact: AboutFact) {
+    setValue(fact.value);
+    setKind(fact.kind);
+    setFailed(false);
+    setEditor(fact);
+  }
+
+  async function save() {
+    const normalized = value.replace(/\s+/g, " ").trim();
+    if (!normalized || busy) return;
+    setBusy(true);
+    setFailed(false);
+    try {
+      if (editor === "new") await addPersonKnowledge(personId, kind, normalized);
+      else if (editor) await changePersonKnowledgeValue(personId, editor.id, normalized);
+      setEditor(null);
+      await onChanged?.();
+    } catch (error) {
+      logOperationalError("about-person", "save-failed", error);
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    if (!deleteFact || busy) return;
+    setBusy(true);
+    setFailed(false);
+    try {
+      await archivePersonKnowledge(personId, deleteFact.id);
+      await permanentlyDeleteArchivedPersonKnowledge(personId, deleteFact.id);
+      setDeleteFact(null);
+      await onChanged?.();
+    } catch (error) {
+      logOperationalError("about-person", "delete-failed", error);
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <>
+    <ProfileSection icon={<BookHeart />} title={t("profileUi.aboutPerson.title", { name: personName })} tone="violet" action={<button type="button" onClick={openNew} className="flex min-h-11 items-center gap-1 rounded-xl px-2 text-xs font-extrabold text-violet-700"><Plus className="h-4 w-4" />{t("profileUi.aboutPerson.add")}</button>}>
+      {facts.length === 0 ? <div className="rounded-xl bg-slate-50 p-3"><p className="text-xs font-semibold leading-5 text-slate-500">{t("profileUi.aboutPerson.empty", { name: personName })}</p><button type="button" onClick={openNew} className="mt-2 min-h-11 rounded-xl bg-violet-600 px-3 text-xs font-extrabold text-white">{t("profileUi.aboutPerson.addFirst")}</button></div> : <>
+        <ul className="space-y-1" aria-label={t("profileUi.aboutPerson.listLabel", { name: personName })}>
+          {visibleFacts.map((fact) => <li key={fact.id} className="group flex min-h-11 items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-slate-50">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-600">{fact.kind === "like" ? <Heart className="h-4 w-4 text-rose-500" /> : fact.kind === "dislike" ? <Ban className="h-4 w-4" /> : fact.kind === "interest" ? <Target className="h-4 w-4 text-sky-600" /> : <NotebookPen className="h-4 w-4 text-amber-600" />}</span>
+            <span className="min-w-0 flex-1 text-sm font-semibold leading-5 text-slate-700">{factDisplay(fact, t)}</span>
+            <button type="button" onClick={() => { setFailed(false); setActionFact(fact); }} aria-label={t("profileUi.aboutPerson.factActions", { fact: fact.value })} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500 opacity-100 hover:bg-white hover:text-violet-700 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"><MoreHorizontal className="h-5 w-5" /></button>
+          </li>)}
+        </ul>
+        {facts.length > 5 && <button type="button" onClick={() => setShowAll((current) => !current)} className="mt-2 min-h-11 rounded-xl px-2 text-sm font-extrabold text-violet-700">{t(showAll ? "profileUi.aboutPerson.showLess" : "profileUi.aboutPerson.showAll", { count: facts.length })}</button>}
+      </>}
+    </ProfileSection>
+
+    {(actionFact || editor || deleteFact) && <div className="fixed inset-0 z-50">
+      <button type="button" aria-label={t("profileUi.aboutPerson.close")} onClick={() => { setActionFact(null); setEditor(null); setDeleteFact(null); }} className="absolute inset-0 bg-slate-950/25" />
+      <section className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[520px] rounded-t-[1.35rem] bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-18px_60px_rgba(15,23,42,0.22)]" aria-label={deleteFact ? t("profileUi.aboutPerson.deleteTitle") : t("profileUi.aboutPerson.editorTitle", { name: personName })}>
+        <div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-black text-slate-950">{deleteFact ? t("profileUi.aboutPerson.deleteTitle") : actionFact ? factDisplay(actionFact, t) : t("profileUi.aboutPerson.editorTitle", { name: personName })}</h2><button type="button" onClick={() => { setActionFact(null); setEditor(null); setDeleteFact(null); }} className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-50 text-slate-500"><X className="h-5 w-5" /></button></div>
+        {actionFact ? <div className="grid gap-2"><button type="button" onClick={() => { const fact = actionFact; setActionFact(null); openEdit(fact); }} className="flex min-h-11 items-center gap-2 rounded-xl bg-violet-50 px-3 text-sm font-extrabold text-violet-700"><Pencil className="h-4 w-4" />{t("profileUi.aboutPerson.edit")}</button><button type="button" onClick={() => { setDeleteFact(actionFact); setActionFact(null); }} className="flex min-h-11 items-center gap-2 rounded-xl bg-rose-50 px-3 text-sm font-extrabold text-rose-600"><Trash2 className="h-4 w-4" />{t("profileUi.aboutPerson.delete")}</button></div> : deleteFact ? <><p className="rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{t("profileUi.aboutPerson.deleteConfirm", { fact: deleteFact.value })}</p>{failed && <p role="alert" className="mt-2 text-xs font-bold text-rose-600">{t("profileUi.aboutPerson.error")}</p>}<div className="mt-3 grid grid-cols-2 gap-2"><button type="button" disabled={busy} onClick={() => setDeleteFact(null)} className="min-h-11 rounded-xl bg-slate-50 text-sm font-extrabold text-slate-600">{t("profileUi.aboutPerson.cancel")}</button><button type="button" disabled={busy} onClick={() => void remove()} className="min-h-11 rounded-xl bg-rose-600 text-sm font-extrabold text-white">{busy ? t("profileUi.aboutPerson.deleting") : t("profileUi.aboutPerson.delete")}</button></div></> : <>
+          <label htmlFor="about-person-value" className="text-sm font-extrabold text-slate-700">{t("profileUi.aboutPerson.question", { name: personName })}</label><textarea id="about-person-value" autoFocus rows={3} maxLength={500} value={value} onChange={(event) => setValue(event.target.value)} placeholder={t("profileUi.aboutPerson.placeholder", { name: personName })} className="mt-2 w-full resize-none rounded-xl border border-violet-200 p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-violet-200" />
+          {editor === "new" && <label className="mt-3 block text-xs font-extrabold text-slate-600">{t("profileUi.aboutPerson.categoryOptional")}<select value={kind} onChange={(event) => setKind(event.target.value as AboutFactKind)} className="mt-1 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"><option value="important_fact">{t("profileUi.aboutPerson.categories.important")}</option><option value="like">{t("profileUi.aboutPerson.categories.like")}</option><option value="dislike">{t("profileUi.aboutPerson.categories.dislike")}</option><option value="interest">{t("profileUi.aboutPerson.categories.interest")}</option></select></label>}
+          {failed && <p role="alert" className="mt-2 text-xs font-bold text-rose-600">{t("profileUi.aboutPerson.error")}</p>}<div className="mt-3 grid grid-cols-2 gap-2"><button type="button" disabled={busy} onClick={() => setEditor(null)} className="min-h-11 rounded-xl bg-slate-50 text-sm font-extrabold text-slate-600">{t("profileUi.aboutPerson.cancel")}</button><button type="button" disabled={busy || !value.trim()} onClick={() => void save()} className="min-h-11 rounded-xl bg-violet-600 text-sm font-extrabold text-white disabled:opacity-50">{busy ? t("profileUi.aboutPerson.saving") : t("profileUi.aboutPerson.save")}</button></div>
+          {editor !== "new" && <button type="button" disabled={busy} onClick={() => { setDeleteFact(editor); setEditor(null); setFailed(false); }} className="mt-3 min-h-11 w-full rounded-xl text-sm font-extrabold text-rose-600">{t("profileUi.aboutPerson.delete")}</button>}
+        </>}
+      </section>
+    </div>}
+  </>;
+}
+
+function factDisplay(fact: AboutFact, t: Translator): string {
+  if (fact.kind === "like") return t("profileUi.aboutPerson.fact.like", { value: fact.value });
+  if (fact.kind === "dislike") return t("profileUi.aboutPerson.fact.dislike", { value: fact.value });
+  if (fact.kind === "interest") return t("profileUi.aboutPerson.fact.interest", { value: fact.value });
+  return fact.value;
+}
+
+// Retained temporarily for the archived knowledge-detail pattern while the new aggregated presentation settles.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function KnowledgeSection({ personId, kind, collapsible = false, icon, title, tone, items, empty, onChanged, t }: { personId: string; kind: "like" | "dislike" | "interest" | "important_fact"; collapsible?: boolean; icon: ReactNode; title: string; tone: keyof typeof toneClasses; items: PersonKnowledgeValueViewModel[]; empty: string; onChanged?: () => void | Promise<void>; t: Translator }) {
   const locale = useLocale();
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [archiveId, setArchiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [expanded, setExpanded] = useState(!collapsible);
+  const [newValue, setNewValue] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [errorId, setErrorId] = useState<string | null>(null);
+
+  async function add() {
+    const value = newValue.replace(/\s+/g, " ").trim();
+    if (!value || value.length > 500 || busyId) return;
+    setBusyId("new");
+    setErrorId(null);
+    try {
+      await addPersonKnowledge(personId, kind, value);
+      setNewValue("");
+      setAdding(false);
+      await onChanged?.();
+    } catch (addError) {
+      logOperationalError("person-knowledge", "create-failed", addError);
+      setErrorId("new");
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   async function save(item: PersonKnowledgeValueViewModel) {
     const value = draft.replace(/\s+/g, " ").trim();
@@ -639,12 +850,52 @@ function KnowledgeSection({ personId, icon, title, tone, items, empty, onChanged
     }
   }
 
+  async function remove(item: PersonKnowledgeValueViewModel) {
+    if (busyId) return;
+    setBusyId(item.id);
+    setErrorId(null);
+    try {
+      await archivePersonKnowledge(personId, item.id);
+      await permanentlyDeleteArchivedPersonKnowledge(personId, item.id);
+      setArchiveId(null);
+      setDetailsId(null);
+      await onChanged?.();
+    } catch {
+      setErrorId(item.id);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
-    <ProfileSection icon={icon} title={title} tone={tone}>
+    <ProfileSection icon={icon} title={title} tone={tone} action={
+      <div className="flex items-center gap-1">
+        {collapsible && items.length > 0 && <button type="button" aria-expanded={expanded} aria-controls={`knowledge-list-${kind}`} onClick={() => setExpanded((value) => !value)} className="flex min-h-11 items-center gap-1 rounded-xl px-2 text-xs font-extrabold text-slate-600">
+          {t("profileUi.knowledgeAudit.itemCount", { count: items.length })}
+          {expanded ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
+          <span className="sr-only">{t(expanded ? "profileUi.knowledgeAudit.hideList" : "profileUi.knowledgeAudit.showList")}</span>
+        </button>}
+        <button type="button" onClick={() => { setExpanded(true); setAdding(true); }} className="flex min-h-11 items-center gap-1 rounded-xl px-2 text-xs font-extrabold text-sky-700">
+          <Plus className="h-4 w-4" aria-hidden="true" /> <span className="hidden min-[380px]:inline">{t("profileUi.knowledgeAudit.add")}</span>
+        </button>
+      </div>
+    }>
+      {collapsible && items.length > 0 && !expanded ? null : <div id={`knowledge-list-${kind}`}>
+      {adding && (
+        <div className="mb-3 rounded-xl bg-slate-50 p-2.5">
+          <label htmlFor={`knowledge-new-${kind}`} className="sr-only">{t("profileUi.knowledgeAudit.addPlaceholder")}</label>
+          <input id={`knowledge-new-${kind}`} autoFocus value={newValue} maxLength={500} onChange={(event) => setNewValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void add(); }} placeholder={t("profileUi.knowledgeAudit.addPlaceholder")} className="min-h-11 w-full rounded-xl border border-sky-200 bg-white px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-sky-300" />
+          {errorId === "new" && <p className="mt-2 text-xs font-bold text-rose-600" role="alert">{t("profileUi.knowledgeAudit.error")}</p>}
+          <div className="mt-2 flex gap-2">
+            <button type="button" disabled={!newValue.trim() || busyId === "new"} onClick={() => void add()} className="min-h-11 rounded-xl bg-sky-600 px-3 text-xs font-extrabold text-white disabled:opacity-50">{busyId === "new" ? t("profileUi.knowledgeAudit.saving") : t("profileUi.knowledgeAudit.save")}</button>
+            <button type="button" disabled={busyId === "new"} onClick={() => { setAdding(false); setNewValue(""); }} className="min-h-11 rounded-xl px-3 text-xs font-extrabold text-slate-600">{t("profileUi.knowledgeAudit.cancel")}</button>
+          </div>
+        </div>
+      )}
       {items.length ? (
         <ul className="flex flex-wrap gap-2">
           {items.map((item) => (
-            <li key={item.id} className="w-full rounded-xl bg-slate-50 px-3 py-2 text-sm font-bold leading-5 text-slate-700 ring-1 ring-slate-100">
+            <li key={item.id} className="w-full rounded-xl bg-slate-50 px-3 py-2 text-sm font-bold leading-5 text-slate-700 ring-1 ring-slate-100 sm:w-auto">
               {editingId === item.id ? (
                 <div className="space-y-2">
                   <label className="block text-xs font-extrabold text-slate-600" htmlFor={`knowledge-edit-${item.id}`}>{t("profileUi.knowledgeAudit.valueLabel")}</label>
@@ -654,7 +905,8 @@ function KnowledgeSection({ personId, icon, title, tone, items, empty, onChanged
                     <button type="button" disabled={busyId === item.id} onClick={() => setEditingId(null)} className="min-h-10 rounded-xl px-3 text-xs font-extrabold text-slate-600">{t("profileUi.knowledgeAudit.cancel")}</button>
                   </div>
                 </div>
-              ) : <span className="block [overflow-wrap:anywhere]">{item.value}</span>}
+              ) : <div className="flex items-center gap-1.5"><span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{item.value}</span><button type="button" onClick={() => { setDraft(item.value); setEditingId(item.id); setArchiveId(null); }} aria-label={t("profileUi.knowledgeAudit.edit")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sky-700 hover:bg-white"><Pencil className="h-4 w-4" /></button><button type="button" onClick={() => { setArchiveId(item.id); setEditingId(null); }} aria-label={t("profileUi.knowledgeAudit.delete")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-rose-600 hover:bg-white"><Trash2 className="h-4 w-4" /></button></div>}
+              {archiveId === item.id && <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl bg-rose-50 p-2"><span className="mr-auto text-xs font-semibold text-rose-700">{t("profileUi.knowledgeAudit.confirmDelete")}</span><button type="button" disabled={Boolean(busyId)} onClick={() => void remove(item)} className="min-h-11 rounded-xl bg-rose-600 px-3 text-xs font-extrabold text-white">{busyId === item.id ? t("profileUi.knowledgeAudit.archiving") : t("profileUi.knowledgeAudit.delete")}</button><button type="button" disabled={Boolean(busyId)} onClick={() => setArchiveId(null)} className="min-h-11 rounded-xl px-3 text-xs font-extrabold text-slate-600">{t("profileUi.knowledgeAudit.cancel")}</button></div>}
               {item.userConfirmed && (
                 <div className="mt-1">
                   <span className="inline-flex items-center gap-1 text-[0.62rem] font-extrabold uppercase tracking-wide text-emerald-700"><CheckCircle2 className="size-3" aria-hidden="true" /> {t("profileUi.knowledgeSource.confirmedByYou")}</span>
@@ -684,6 +936,7 @@ function KnowledgeSection({ personId, icon, title, tone, items, empty, onChanged
           ))}
         </ul>
       ) : <EmptyCopy>{empty}</EmptyCopy>}
+      </div>}
     </ProfileSection>
   );
 }
@@ -921,12 +1174,13 @@ function BrainSection({ items, t }: { items: PersonBrainInsightViewModel[]; t: T
   );
 }
 
-function ProfileSection({ icon, title, tone, accent = false, className = "", children }: { icon: ReactNode; title: string; tone: keyof typeof toneClasses; accent?: boolean; className?: string; children: ReactNode }) {
+function ProfileSection({ icon, title, tone, accent = false, className = "", action, children }: { icon: ReactNode; title: string; tone: keyof typeof toneClasses; accent?: boolean; className?: string; action?: ReactNode; children: ReactNode }) {
   return (
     <section className={`${className} rounded-[1.2rem] border p-3.5 shadow-[0_10px_28px_rgba(15,23,42,0.05)] backdrop-blur-xl sm:p-4 ${accent ? "border-violet-100 bg-gradient-to-br from-violet-50/90 to-white/90" : "border-white/80 bg-white/85"}`}>
       <div className="mb-3 flex items-center gap-2">
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl [&>svg]:h-4 [&>svg]:w-4 ${toneClasses[tone]}`}>{icon}</span>
         <h2 className="text-sm font-black text-slate-900 sm:text-base">{title}</h2>
+        {action && <div className="ml-auto">{action}</div>}
       </div>
       {children}
     </section>

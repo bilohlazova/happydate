@@ -4,11 +4,14 @@ import type { Insight, PersonKnowledge } from "../brain/types.ts";
 import { getAiEligibleKnowledge, type KnowledgeItem } from "../knowledge/index.ts";
 import type { PersonRow } from "../repositories/person.types.ts";
 import type { PetRow } from "../repositories/petRepository.ts";
+import type { PersonSymbolRow } from "../repositories/personSymbolRepository.ts";
+import type { PersonHappyConversationRow } from "../repositories/personHappyConversationRepository.ts";
 import type { GiftRecord } from "../gifts/gift.types.ts";
 import type { KnowledgeChangeHistoryRow } from "../repositories/knowledgeRepository.ts";
 import { buildGiftOutcomeLearningSignals } from "../gift-intelligence/giftOutcomeLearningSignals.ts";
 import { projectGiftOutcomeAiContext } from "../gift-intelligence/giftOutcomeAiContextPreview.ts";
 import { canonicalRelationKey } from "./canonicalRelation.ts";
+import { buildPersonMemoryProfile, isProfileNote, knowledgeEpistemicType, noticeRelationshipConnections } from "../memory-engine/index.ts";
 import type {
   PeoplePageViewModel,
   PersonBrainInsightViewModel,
@@ -94,6 +97,8 @@ function valueModel(item: KnowledgeItem, history: readonly KnowledgeChangeHistor
     userConfirmed: item.classification?.userConfirmed === true,
     sourceExcerpt: item.evidence.originalText,
     capturedAt: item.evidence.capturedAt,
+    epistemicType: knowledgeEpistemicType(item),
+    isProfileNote: isProfileNote(item),
     changeHistory: history.map((change) => ({
       id: change.id,
       previousValue: change.previous_value,
@@ -267,7 +272,7 @@ function mergeGiftValues(
     const key = gift.value.toLocaleLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    result.push({ id: gift.id, value: gift.value, category: gift.lifecycle, sourceKind: "gift", userConfirmed: false, sourceExcerpt: null, capturedAt: gift.createdAt, changeHistory: [] });
+    result.push({ id: gift.id, value: gift.value, category: gift.lifecycle, sourceKind: "gift", userConfirmed: false, sourceExcerpt: null, capturedAt: gift.createdAt, epistemicType: "fact", isProfileNote: false, changeHistory: [] });
   }
   return result;
 }
@@ -357,6 +362,8 @@ export function buildPersonProfileViewModel({
   knowledgeChanges = [],
   gifts = [],
   pets = [],
+  symbol = null,
+  happyConversations = [],
   giftOutcomeLearningEnabled = true,
   currentDate = new Date(),
   isAuthenticated = true,
@@ -366,12 +373,14 @@ export function buildPersonProfileViewModel({
   knowledgeChanges?: KnowledgeChangeHistoryRow[];
   gifts?: GiftRecord[];
   pets?: PetRow[];
+  symbol?: PersonSymbolRow | null;
+  happyConversations?: PersonHappyConversationRow[];
   giftOutcomeLearningEnabled?: boolean;
   currentDate?: Date;
   isAuthenticated?: boolean;
 }): PersonProfileViewModel {
   if (!person) return {
-    isAuthenticated, found: false, hero: null, pets: [], likes: [], dislikes: [], interests: [], giftIdeas: [], giftHistory: [], importantFacts: [], archivedKnowledge: [], knowledgeConflicts: [], knowledgeReview: null, timeline: [], brainInsights: [], confirmedGiftOutcomes: [], giftOutcomeAiPreview: [], giftOutcomeLearningEnabled: false, health: null,
+    memoryProfile: null, isAuthenticated, found: false, hero: null, pets: [], symbol: null, likes: [], dislikes: [], interests: [], giftIdeas: [], giftHistory: [], importantFacts: [], notes: [], memories: [], relationshipObservations: [], happyConversations: [], archivedKnowledge: [], knowledgeConflicts: [], knowledgeReview: null, timeline: [], brainInsights: [], confirmedGiftOutcomes: [], giftOutcomeAiPreview: [], giftOutcomeLearningEnabled: false, health: null,
     actions: { addMemoryUrl: null, addGiftIdeaUrl: null, addImportantInformationUrl: null, canAskHappy: false },
   };
   const visible = activeVisible(knowledge).filter((item) => item.personId === person.id);
@@ -392,6 +401,7 @@ export function buildPersonProfileViewModel({
   const addMemoryUrl = `/care/add-memory?personId=${encodeURIComponent(person.id)}`;
   const outcomeAudit = confirmedGiftOutcomes(gifts, giftOutcomeLearningEnabled);
   return {
+    memoryProfile: buildPersonMemoryProfile({ personId: person.id, personName: person.name, relationLabel: relationLabel(person), birthday: person.birthday, knowledge: visible, symbol, pets: pets.map((pet) => ({ name: pet.name, species: pet.species, note: pet.note })), chronology: [...timeline(visible), ...canonicalGiftTimeline(gifts)].map((item) => ({ id: item.id, title: item.title, date: item.date })), happyConversations: happyConversations.map((turn) => ({ id: turn.id, userMessage: turn.user_message, happyResponse: turn.happy_response, createdAt: turn.created_at })) }),
     isAuthenticated,
     found: true,
     hero: {
@@ -399,11 +409,15 @@ export function buildPersonProfileViewModel({
       name: person.name,
       relationLabel: relationLabel(person),
       relationKey: relationKey(person),
+      relationCategory: person.relation_category,
+      relationship: person.relationship,
       gender: person.gender,
       birthday: person.birthday,
       daysUntilBirthday: daysUntilBirthday(person.birthday, currentDate),
+      note: person.notes,
     },
     pets,
+    symbol,
     likes: values(preferences.filter((item) => item.polarity === "likes" || item.polarity === "prefers"), historyByMemoryId),
     dislikes: values(preferences.filter((item) => item.polarity === "dislikes" || item.polarity === "avoids"), historyByMemoryId),
     interests: values(interestRecords, historyByMemoryId),
@@ -413,6 +427,15 @@ export function buildPersonProfileViewModel({
     ),
     giftHistory: mergeGiftValues(values(visible.filter(givenGift), historyByMemoryId), gifts.filter((gift) => gift.lifecycle === "given")),
     importantFacts: values(visible.filter((item) => item.kind === "fact"), historyByMemoryId),
+    notes: values(visible.filter((item) => item.kind === "note" || isProfileNote(item)), historyByMemoryId),
+    memories: values(visible.filter((item) => item.kind === "experience" && !isProfileNote(item)), historyByMemoryId),
+    relationshipObservations: noticeRelationshipConnections(
+      visible.filter((item) => item.kind === "experience" && !isProfileNote(item)).flatMap((item) => {
+        const value = meaningful(item.value) ?? meaningful(item.title);
+        return value ? [{ id: item.id, epistemicType: "memory" as const, authority: "user" as const, text: value, occurredOn: item.occurredOn }] : [];
+      }),
+    ),
+    happyConversations,
     archivedKnowledge: values(archived, historyByMemoryId),
     knowledgeConflicts: conflicts,
     knowledgeReview: dueKnowledgeReview(visible, conflicts, currentDate),

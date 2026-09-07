@@ -7,6 +7,13 @@
     "loadError": "Das Profil konnte nicht geladen werden. Bitte versuche es erneut."
   },
   "profileUi": {
+    "aboutPerson": {
+      "title": "Über {name}", "add": "Hinzufügen", "addFirst": "Ersten Fakt hinzufügen", "empty": "Hier erscheinen Dinge, die man über {name} wissen sollte.",
+      "listLabel": "Fakten über {name}", "showAll": "Alle {count} anzeigen →", "showLess": "Weniger anzeigen", "question": "Was möchten Sie über {name} festhalten?", "placeholder": "Zum Beispiel: {name} angelt gern",
+      "categoryOptional": "Kategorie (optional)", "categories": { "like": "Mag", "dislike": "Mag nicht", "interest": "Interesse", "important": "Wichtig" },
+      "fact": { "like": "Mag: {value}", "dislike": "Mag nicht: {value}", "interest": "Interesse: {value}" }, "factActions": "Aktionen für „{fact}”", "editorTitle": "Über {name}", "edit": "Bearbeiten",
+      "save": "Speichern", "saving": "Wird gespeichert…", "delete": "Löschen", "deleteTitle": "Fakt löschen", "deleteConfirm": "„{fact}“ löschen?", "deleting": "Wird gelöscht…", "cancel": "Abbrechen", "close": "Schließen", "error": "Die Änderung konnte nicht gespeichert werden. Bitte erneut versuchen."
+    },
     "likes": "Mag",
     "dislikes": "Mag nicht",
     "interests": "Interessen",
@@ -58,6 +65,8 @@
         "unsure": "Nicht sicher"
       },
       "deleteLink": "Link löschen",
+      "editLink": "Link bearbeiten",
+      "saveLinkEdit": "Änderungen speichern",
       "confirmDeleteLink": "Diesen gespeicherten Link löschen?",
       "confirmGiven": "Bestätigen, dass „{gift}“ an {name} verschenkt wurde? Es wird im Geschenkverlauf gespeichert.",
       "editGift": "Geschenkidee bearbeiten",
@@ -99,6 +108,13 @@
     },
     "knowledgeSource": { "confirmedByYou": "Von dir bestätigt" },
     "knowledgeAudit": {
+      "add": "Hinzufügen",
+      "addPlaceholder": "Neue Information eingeben",
+      "delete": "Löschen",
+      "confirmDelete": "Diesen Eintrag entfernen?",
+      "showList": "Liste öffnen",
+      "hideList": "Liste schließen",
+      "itemCount": "{count, plural, one {# Eintrag} other {# Einträge}}",
       "showDetails": "Quelle", "hideDetails": "Ausblenden", "source": "Quelle", "excerpt": "Genauer Ausschnitt", "confirmedAt": "Bestätigt",
       "sources": { "chat_message": "Gespräch mit Happy", "gift_discovery": "Geschenksuche" },
       "valueLabel": "Was HappyDate behalten soll", "edit": "Korrigieren", "save": "Speichern", "saving": "Wird gespeichert…", "cancel": "Abbrechen",

@@ -2,7 +2,7 @@ import type { PersonRelationKey } from "../repositories/person.types.ts";
 
 const LEGACY_RELATION_KEYS: Record<string, PersonRelationKey> = {
   // spouse
-  zona: "spouse", maz: "spouse", malzonka: "spouse", malzonek: "spouse",
+  zona: "spouse", maz: "spouse", moz: "spouse", malzonka: "spouse", malzonek: "spouse",
   "maz / zona": "spouse",
   wife: "spouse", husband: "spouse", spouse: "spouse", "супруг / супруга": "spouse", "ehepartner/in": "spouse",
   дружина: "spouse", чоловік: "spouse", подружжя: "spouse",

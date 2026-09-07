@@ -491,16 +491,30 @@ function PeopleAlphabetIndex({
   );
 }
 
-function PersonActionsSheet({
+export type EditablePerson = Pick<
+  PersonRow,
+  | "id"
+  | "name"
+  | "relationship"
+  | "relation_label"
+  | "relation_key"
+  | "relation_category"
+  | "birthday"
+  | "gender"
+>;
+
+export function PersonActionsSheet({
   person,
   onClose,
   onUpdated,
   onDeleted,
+  initialMode = "actions",
 }: {
-  person: PersonRow | null;
+  person: EditablePerson | null;
   onClose: () => void;
   onUpdated: (person: PersonRow) => void;
   onDeleted: (personId: string) => void;
+  initialMode?: "actions" | "edit" | "delete";
 }) {
   const formT = useTranslations("personForm");
   const peopleT = useTranslations("people");
@@ -522,7 +536,7 @@ function PersonActionsSheet({
 
     // Reset the controlled editor whenever the selected person changes.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMode("actions");
+    setMode(initialMode);
     setName(person.name);
     setRelationship(relationLabel);
     setRelationKey(getPersonRelationKey(person));
@@ -534,7 +548,7 @@ function PersonActionsSheet({
     setGender(person.gender ?? "unspecified");
     setSaving(false);
     setError(null);
-  }, [person]);
+  }, [initialMode, person]);
 
   if (!person) return null;
 
@@ -647,7 +661,6 @@ function PersonActionsSheet({
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 className={MobileUI.input}
-                aria-label={formT("accessibility.birthdayInput")}
               />
             </Field>
             <GenderSelectField
@@ -741,7 +754,7 @@ function PersonActionsSheet({
 }
 
 function localizedPersonRelation(
-  person: PersonRow,
+  person: EditablePerson,
   t: ReturnType<typeof useTranslations<"people">>,
 ) {
   const key = getPersonRelationKey(person);

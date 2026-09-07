@@ -23,6 +23,11 @@ export interface RelationOption {
   };
 }
 
+type PersonRelationFields = Pick<
+  PersonRow,
+  "relationship" | "relation_label" | "relation_key" | "gender"
+>;
+
 export const RELATION_OPTIONS: RelationOption[] = [
   {
     key: "spouse",
@@ -159,14 +164,14 @@ export function getRelationCategoryForKey(
   return getRelationDefinition(relationKey)?.category ?? null;
 }
 
-export function getPersonRelationKey(person: PersonRow): RelationKey | null {
+export function getPersonRelationKey(person: PersonRelationFields): RelationKey | null {
   return canonicalRelationKey(
     person.relation_key,
     person.relation_label ?? person.relationship,
   );
 }
 
-export function getPersonRelationLabel(person: PersonRow) {
+export function getPersonRelationLabel(person: PersonRelationFields) {
   const key = getPersonRelationKey(person);
 
   if (!key) {

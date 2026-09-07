@@ -21,6 +21,7 @@ import {
   setCanonicalGiftOutcomeLearning,
   setCanonicalGiftOutcomeFollowUp,
   updateCanonicalGiftTitle,
+  updateSavedGiftLink,
 } from "./gift.persistence.ts";
 
 export {
@@ -38,6 +39,7 @@ export {
   setCanonicalGiftOutcomeLearning as setGiftOutcomeLearning,
   setCanonicalGiftOutcomeFollowUp as setGiftOutcomeFollowUp,
   updateCanonicalGiftTitle as updateGiftTitle,
+  updateSavedGiftLink,
 };
 
 export interface GiftRepositoryScope {

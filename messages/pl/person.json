@@ -7,6 +7,13 @@
     "loadError": "Nie udało się załadować profilu. Spróbuj ponownie."
   },
   "profileUi": {
+    "aboutPerson": {
+      "title": "O osobie: {name}", "add": "Dodaj", "addFirst": "Dodaj pierwszy fakt", "empty": "Tutaj pojawią się rzeczy, które warto pamiętać o {name}.",
+      "listLabel": "Fakty o {name}", "showAll": "Pokaż wszystkie ({count}) →", "showLess": "Pokaż mniej", "question": "Co chcesz zapamiętać o {name}?", "placeholder": "Na przykład: {name} lubi wędkowanie",
+      "categoryOptional": "Kategoria (opcjonalnie)", "categories": { "like": "Lubi", "dislike": "Nie lubi", "interest": "Zainteresowanie", "important": "Ważne" },
+      "fact": { "like": "Lubi: {value}", "dislike": "Nie lubi: {value}", "interest": "Zainteresowanie: {value}" }, "factActions": "Działania dla faktu „{fact}”", "editorTitle": "O osobie: {name}", "edit": "Edytuj",
+      "save": "Zapisz", "saving": "Zapisywanie…", "delete": "Usuń", "deleteTitle": "Usuń fakt", "deleteConfirm": "Usunąć „{fact}”?", "deleting": "Usuwanie…", "cancel": "Anuluj", "close": "Zamknij", "error": "Nie udało się zapisać zmiany. Spróbuj ponownie."
+    },
     "likes": "Lubi",
     "dislikes": "Nie lubi",
     "interests": "Zainteresowania",
@@ -58,6 +65,8 @@
         "unsure": "Nie wiem"
       },
       "deleteLink": "Usuń link",
+      "editLink": "Edytuj link",
+      "saveLinkEdit": "Zapisz zmiany",
       "confirmDeleteLink": "Usunąć ten zapisany link?",
       "confirmGiven": "Potwierdzić, że „{gift}” został wręczony osobie {name}? Trafi do historii prezentów.",
       "editGift": "Edytuj pomysł na prezent",
@@ -99,6 +108,13 @@
     },
     "knowledgeSource": { "confirmedByYou": "Potwierdzone przez Ciebie" },
     "knowledgeAudit": {
+      "add": "Dodaj",
+      "addPlaceholder": "Wpisz nową informację",
+      "delete": "Usuń",
+      "confirmDelete": "Usunąć ten wpis?",
+      "showList": "Rozwiń listę",
+      "hideList": "Zwiń listę",
+      "itemCount": "{count, plural, one {# wpis} few {# wpisy} many {# wpisów} other {# wpisu}}",
       "showDetails": "Źródło", "hideDetails": "Ukryj", "source": "Źródło", "excerpt": "Dokładny fragment", "confirmedAt": "Potwierdzono",
       "sources": { "chat_message": "Rozmowa z Happy", "gift_discovery": "Dobór prezentu" },
       "valueLabel": "Co HappyDate ma pamiętać", "edit": "Popraw", "save": "Zapisz", "saving": "Zapisywanie…", "cancel": "Anuluj",

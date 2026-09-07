@@ -13,6 +13,9 @@ import { logOperationalError, logOperationalWarning } from "@/lib/observability/
 import { getHomeRepositoryData } from "@/lib/repositories/home/home.repository";
 import { buildGuestAssistantRequest, buildVerifiedAssistantRequest } from "@/lib/assistant/verifiedAssistantContext.server";
 import { createConfiguredAiBudget, type AiTokenUsage } from "@/lib/assistant/aiBudget";
+import { loadAssistantPersonSymbol } from "@/lib/assistant/personSymbolContext.server";
+import { buildPersonMemoryProfile, formatPersonMemoryProfileForAssistant } from "@/lib/memory-engine";
+import { loadPersonHappyConversationHistory, savePersonHappyConversation } from "@/lib/assistant/happyConversationHistory.server";
 
 export const runtime = "nodejs";
 
@@ -90,6 +93,12 @@ export async function POST(request: Request) {
       identity,
       rateLimiter,
       budget,
+      onCompleted: async (preparedRequest, responseText) => {
+        if (identity.kind !== "authenticated" || !identity.userId) return;
+        const active = preparedRequest.context.personResolutionStatus === "resolved" ? preparedRequest.context.activePerson : null;
+        if (!active) return;
+        await savePersonHappyConversation({ userId: identity.userId, personId: active.id, userMessage: preparedRequest.message, happyResponse: responseText });
+      },
       prepareRequest: async (clientRequest) => {
         if (identity.kind !== "authenticated" || !identity.userId) {
           return { request: buildGuestAssistantRequest(clientRequest) };
@@ -103,15 +112,30 @@ export async function POST(request: Request) {
             rlsSession.accessToken,
           );
           const verifiedRequest = buildVerifiedAssistantRequest(clientRequest, homeData);
-          const [serverGiftOutcomes, serverSavedGiftLinks, serverPets] = verifiedRequest.context.activePerson
+          const [serverGiftOutcomes, serverSavedGiftLinks, serverPets, serverSymbol, serverHappyConversations] = verifiedRequest.context.activePerson
             && verifiedRequest.context.personResolutionStatus === "resolved"
               ? await Promise.all([
                   loadAssistantGiftOutcomeContext({ userId: identity.userId, personId: verifiedRequest.context.activePerson.id }),
                   loadAssistantSavedGiftLinkContext({ userId: identity.userId, personId: verifiedRequest.context.activePerson.id }),
                   loadAssistantPetContext({ userId: identity.userId, personId: verifiedRequest.context.activePerson.id }),
+                  loadAssistantPersonSymbol({ userId: identity.userId, personId: verifiedRequest.context.activePerson.id }),
+                  loadPersonHappyConversationHistory({ userId: identity.userId, personId: verifiedRequest.context.activePerson.id }),
                 ])
-              : [[], [], []];
-          return { request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks, serverPets };
+              : [[], [], [], null, []];
+          const active = verifiedRequest.context.activePerson;
+          const homePerson = active ? homeData.people.find((person) => person.id === active.id) : null;
+          const serverPersonMemoryProfile = active && homePerson ? formatPersonMemoryProfileForAssistant(buildPersonMemoryProfile({
+            personId: active.id,
+            personName: active.name,
+            relationLabel: active.relation,
+            birthday: active.birthday,
+            knowledge: homeData.knowledge,
+            symbol: serverSymbol,
+            pets: serverPets,
+            happyConversations: serverHappyConversations,
+            locale: verifiedRequest.locale === "uk" ? "uk" : "en",
+          })) : null;
+          return { request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks, serverPets, serverPersonMemoryProfile };
         } catch (error) {
           // A temporary context failure must never make the conversation unavailable.
           logOperationalWarning("assistant-chat", "verified-context-fallback", {

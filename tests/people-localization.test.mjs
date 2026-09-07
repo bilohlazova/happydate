@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { createTranslator } from "next-intl";
+import { canonicalRelationKey } from "../src/lib/people/canonicalRelation.ts";
 
 const root = process.cwd();
 const locales = ["pl", "uk", "en", "ru", "de"];
@@ -39,6 +40,13 @@ test("relationship labels include gender-aware client and neutral fallback", asy
     assert.deepEqual([t("people.relationships.client.male"), t("people.relationships.client.female")], expected[locale]);
     assert.ok(t("people.relationships.client.neutral"));
   }
+});
+
+test("legacy Polish spouse labels localize through the canonical relationship key", () => {
+  assert.equal(canonicalRelationKey(null, "Mąż"), "spouse");
+  assert.equal(canonicalRelationKey(null, "Móż"), "spouse");
+  assert.equal(canonicalRelationKey(null, "Żona"), "spouse");
+  assert.equal(canonicalRelationKey(null, "Własna relacja"), "other");
 });
 
 test("People presentation preserves user values and unprefixed routes", async () => {

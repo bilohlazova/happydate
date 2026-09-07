@@ -12,6 +12,7 @@ import {
   confirmPersonGiftOutcome,
   choosePersonGiftLink,
   createPersonGiftIdea,
+  editPersonGiftLink,
   loadPersonGiftManagement,
   movePersonGiftLink,
   removePersonGiftIdea,
@@ -47,6 +48,8 @@ export function PersonGiftManager({ personId, personName, onChanged }: { personI
   const [linkGiftId, setLinkGiftId] = useState("");
   const [editingGiftId, setEditingGiftId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const [ideaFormOpen, setIdeaFormOpen] = useState(false);
+  const [linkFormOpen, setLinkFormOpen] = useState(false);
   const ideaInputRef = useRef<HTMLInputElement>(null);
 
   const reload = useCallback(async () => {
@@ -68,6 +71,7 @@ export function PersonGiftManager({ personId, personName, onChanged }: { personI
     if (url.searchParams.get("action") !== "add-gift-idea") return;
     url.searchParams.delete("action");
     window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    setIdeaFormOpen(true);
     requestAnimationFrame(() => {
       document.getElementById("gift-workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
       ideaInputRef.current?.focus({ preventScroll: true });
@@ -125,6 +129,7 @@ export function PersonGiftManager({ personId, personName, onChanged }: { personI
     await run("idea", async () => {
       await createPersonGiftIdea(personId, title);
       setIdeaTitle("");
+      setIdeaFormOpen(false);
     });
   }
 
@@ -137,6 +142,7 @@ export function PersonGiftManager({ personId, personName, onChanged }: { personI
       setLinkUrl("");
       setLinkTitle("");
       setLinkGiftId("");
+      setLinkFormOpen(false);
     });
   }
 
@@ -189,10 +195,15 @@ export function PersonGiftManager({ personId, personName, onChanged }: { personI
 
       {failed && <p role="alert" className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">{t("error")}</p>}
 
-      <form onSubmit={addIdea} className="mt-4 flex gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => setIdeaFormOpen((open) => !open)} aria-expanded={ideaFormOpen} className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-violet-50 px-3 text-xs font-extrabold text-violet-700"><Plus className="h-4 w-4" />{t("addIdea")}</button>
+        <button type="button" onClick={() => setLinkFormOpen((open) => !open)} aria-expanded={linkFormOpen} className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-sky-50 px-3 text-xs font-extrabold text-sky-700"><Link2 className="h-4 w-4" />{t("saveLink")}</button>
+      </div>
+
+      {ideaFormOpen && <form onSubmit={addIdea} className="mt-3 flex gap-2">
         <input ref={ideaInputRef} value={ideaTitle} onChange={(event) => setIdeaTitle(event.target.value)} maxLength={280} placeholder={t("ideaPlaceholder")} aria-label={t("ideaPlaceholder")} className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100" />
         <button disabled={busy !== null || !ideaTitle.trim()} className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-violet-600 px-3 text-sm font-extrabold text-white disabled:opacity-45"><Plus className="h-4 w-4" /> <span className="hidden sm:inline">{t("addIdea")}</span></button>
-      </form>
+      </form>}
 
       <div className="mt-3 space-y-2">
         {!model ? <Loading label={t("loading")} /> : gifts.length === 0 ? <Empty text={t("emptyIdeas")} /> : gifts.map((gift) => {
@@ -219,7 +230,7 @@ export function PersonGiftManager({ personId, personName, onChanged }: { personI
               {!gift.canChangeLifecycle && <p className="mt-2 text-[0.68rem] font-semibold text-slate-400">{t("legacyReadOnly")}</p>}
               {gift.finalSelection && <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-2.5"><p className="text-[0.68rem] font-black uppercase tracking-wide text-emerald-700">{t("finalSelection")}</p>{gift.finalSelection.url ? <a href={gift.finalSelection.url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1.5 break-all text-xs font-extrabold text-emerald-900">{gift.finalSelection.title || host(gift.finalSelection.url)}<ExternalLink className="h-3.5 w-3.5 shrink-0" /></a> : <p className="mt-1 text-xs font-semibold text-emerald-800">{t("finalSelectionWithoutLink")}</p>}{gift.finalSelection.priceAmount !== null && <p className="mt-1 text-xs font-bold text-emerald-800">{t("finalPrice")}: {gift.finalSelection.priceAmount} {gift.finalSelection.currency ?? ""}</p>}{gift.finalSelection.decisionNote && <p className="mt-1 text-xs font-semibold italic text-emerald-800">{gift.finalSelection.decisionNote}</p>}</div>}
               {gift.lifecycle === "given" && gift.canChangeLifecycle && <GiftOutcomeFeedback current={gift.finalOutcome} busy={busy === `outcome-${gift.id}` || busy === `outcome-learning-${gift.id}`} question={t("outcomeQuestion", { gift: gift.title })} noteLabel={t("outcomeNoteLabel")} notePlaceholder={t("outcomeNotePlaceholder")} saveLabel={t("saveOutcome")} confirmedLabel={t("outcomeConfirmed")} learningLabel={t("outcomeLearningLabel")} learningDescription={t("outcomeLearningDescription")} options={{ liked: t("outcome.liked"), not_liked: t("outcome.not_liked"), unsure: t("outcome.unsure") }} onSave={(outcome, note) => void run(`outcome-${gift.id}`, () => confirmPersonGiftOutcome(gift.id, outcome, note))} onLearningChange={(enabled) => void run(`outcome-learning-${gift.id}`, () => changePersonGiftOutcomeLearning(gift.id, enabled))} />}
-              {giftLinks.length > 0 && <div className="mt-3 border-t border-sky-100 pt-2.5"><p className="mb-2 text-[0.68rem] font-black uppercase tracking-wide text-sky-700">{t("giftLinks", { count: giftLinks.length })}</p><div className="space-y-2">{giftLinks.map((link) => <SavedLinkRow key={link.id} link={link} gifts={assignableGifts} busy={busy} deleteLabel={t("deleteLink")} moveLabel={t("moveLinkLabel")} withoutGiftLabel={t("linkWithoutGift")} preferredLabel={t("preferredOption")} reasonLabel={t("decisionReason")} reasonPlaceholder={t("decisionReasonPlaceholder")} chooseLabel={t("chooseOption")} updateChoiceLabel={t("updateChoice")} removeChoiceLabel={t("removeChoice")} onPreference={(preferred, note) => void run(`prefer-${link.id}`, () => choosePersonGiftLink(link.id, preferred, note))} onMove={(giftId) => void run(`move-${link.id}`, () => movePersonGiftLink(link.id, giftId))} onDelete={() => { if (window.confirm(t("confirmDeleteLink"))) void run(link.id, () => removePersonGiftLink(link.id)); }} />)}</div></div>}
+              {giftLinks.length > 0 && <div className="mt-3 border-t border-sky-100 pt-2.5"><p className="mb-2 text-[0.68rem] font-black uppercase tracking-wide text-sky-700">{t("giftLinks", { count: giftLinks.length })}</p><div className="space-y-2">{giftLinks.map((link) => <SavedLinkRow key={link.id} link={link} gifts={assignableGifts} busy={busy} deleteLabel={t("deleteLink")} editLabel={t("editLink")} saveLabel={t("saveLinkEdit")} cancelLabel={t("cancelGiftEdit")} moveLabel={t("moveLinkLabel")} withoutGiftLabel={t("linkWithoutGift")} preferredLabel={t("preferredOption")} reasonLabel={t("decisionReason")} reasonPlaceholder={t("decisionReasonPlaceholder")} chooseLabel={t("chooseOption")} updateChoiceLabel={t("updateChoice")} removeChoiceLabel={t("removeChoice")} onEdit={(url, title) => void run(`edit-link-${link.id}`, () => editPersonGiftLink(link.id, url, title))} onPreference={(preferred, note) => void run(`prefer-${link.id}`, () => choosePersonGiftLink(link.id, preferred, note))} onMove={(giftId) => void run(`move-${link.id}`, () => movePersonGiftLink(link.id, giftId))} onDelete={() => { if (window.confirm(t("confirmDeleteLink"))) void run(link.id, () => removePersonGiftLink(link.id)); }} />)}</div></div>}
             </article>
           );
         })}
@@ -227,17 +238,17 @@ export function PersonGiftManager({ personId, personName, onChanged }: { personI
 
       <div className="my-4 h-px bg-violet-100" />
       <div className="flex items-center gap-2"><Link2 className="h-4 w-4 text-sky-600" /><h3 className="text-sm font-black text-slate-900">{t("linksTitle")}</h3></div>
-      <form onSubmit={addLink} className="mt-3 grid gap-2 sm:grid-cols-2">
+      {linkFormOpen && <form onSubmit={addLink} className="mt-3 grid gap-2 sm:grid-cols-2">
         <input type="url" inputMode="url" required pattern="https://.*" value={linkUrl} onChange={(event) => setLinkUrl(event.target.value)} placeholder={t("urlPlaceholder")} aria-label={t("urlPlaceholder")} className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100" />
         <input value={linkTitle} onChange={(event) => setLinkTitle(event.target.value)} maxLength={280} placeholder={t("linkTitlePlaceholder")} aria-label={t("linkTitlePlaceholder")} className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100" />
         <select value={linkGiftId} onChange={(event) => setLinkGiftId(event.target.value)} aria-label={t("linkGiftLabel")} className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 sm:col-span-2"><option value="">{t("linkWithoutGift")}</option>{linkableGifts.map((gift) => <option key={gift.id} value={gift.id}>{gift.title}</option>)}</select>
         <button disabled={busy !== null || !linkUrl.trim()} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-sky-600 px-3 text-sm font-extrabold text-white disabled:opacity-45 sm:col-span-2">{busy === "link" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}{t("saveLink")}</button>
-      </form>
+      </form>}
       <div className="mt-3 space-y-2">
         {model && model.savedLinks.length === 0 && <Empty text={t("emptyLinks")} />}
         {model && model.savedLinks.length > 0 && <p className="text-[0.68rem] font-black uppercase tracking-wide text-slate-500">{t("unassignedLinks")}</p>}
         {model && model.savedLinks.length > 0 && unassignedLinks.length === 0 && <Empty text={t("emptyUnassignedLinks")} />}
-        {unassignedLinks.map((link) => <SavedLinkRow key={link.id} link={link} gifts={assignableGifts} busy={busy} deleteLabel={t("deleteLink")} moveLabel={t("moveLinkLabel")} withoutGiftLabel={t("linkWithoutGift")} preferredLabel={t("preferredOption")} reasonLabel={t("decisionReason")} reasonPlaceholder={t("decisionReasonPlaceholder")} chooseLabel={t("chooseOption")} updateChoiceLabel={t("updateChoice")} removeChoiceLabel={t("removeChoice")} onPreference={(preferred, note) => void run(`prefer-${link.id}`, () => choosePersonGiftLink(link.id, preferred, note))} onMove={(giftId) => void run(`move-${link.id}`, () => movePersonGiftLink(link.id, giftId))} onDelete={() => { if (window.confirm(t("confirmDeleteLink"))) void run(link.id, () => removePersonGiftLink(link.id)); }} />)}
+        {unassignedLinks.map((link) => <SavedLinkRow key={link.id} link={link} gifts={assignableGifts} busy={busy} deleteLabel={t("deleteLink")} editLabel={t("editLink")} saveLabel={t("saveLinkEdit")} cancelLabel={t("cancelGiftEdit")} moveLabel={t("moveLinkLabel")} withoutGiftLabel={t("linkWithoutGift")} preferredLabel={t("preferredOption")} reasonLabel={t("decisionReason")} reasonPlaceholder={t("decisionReasonPlaceholder")} chooseLabel={t("chooseOption")} updateChoiceLabel={t("updateChoice")} removeChoiceLabel={t("removeChoice")} onEdit={(url, title) => void run(`edit-link-${link.id}`, () => editPersonGiftLink(link.id, url, title))} onPreference={(preferred, note) => void run(`prefer-${link.id}`, () => choosePersonGiftLink(link.id, preferred, note))} onMove={(giftId) => void run(`move-${link.id}`, () => movePersonGiftLink(link.id, giftId))} onDelete={() => { if (window.confirm(t("confirmDeleteLink"))) void run(link.id, () => removePersonGiftLink(link.id)); }} />)}
       </div>
       <p className="mt-3 text-[0.68rem] font-semibold leading-5 text-slate-400">{t("linkDisclaimer")}</p>
     </section>
@@ -264,6 +275,26 @@ function GiftOutcomeFeedback({ current, busy, question, noteLabel, notePlacehold
     </label>}
   </div>;
 }
-function SavedLinkRow({ link, gifts, busy, deleteLabel, moveLabel, withoutGiftLabel, preferredLabel, reasonLabel, reasonPlaceholder, chooseLabel, updateChoiceLabel, removeChoiceLabel, onPreference, onMove, onDelete }: { link: SavedGiftLink; gifts: GiftItemViewModel[]; busy: string | null; deleteLabel: string; moveLabel: string; withoutGiftLabel: string; preferredLabel: string; reasonLabel: string; reasonPlaceholder: string; chooseLabel: string; updateChoiceLabel: string; removeChoiceLabel: string; onPreference: (preferred: boolean, note: string | null) => void; onMove: (giftId: string | null) => void; onDelete: () => void }) { const [note, setNote] = useState(link.decisionNote ?? ""); useEffect(() => setNote(link.decisionNote ?? ""), [link.decisionNote]); const moving = busy === `move-${link.id}`; const choosing = busy === `prefer-${link.id}`; return <div className={`rounded-xl p-2.5 ${link.isPreferred ? "bg-amber-50 ring-1 ring-amber-200" : "bg-sky-50/80"}`}><div className="flex items-center gap-2"><a href={link.url} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1"><span className="flex items-center gap-1.5 truncate text-sm font-extrabold text-sky-800">{link.title || host(link.url)}<ExternalLink className="h-3.5 w-3.5 shrink-0" /></span><span className="block truncate text-[0.68rem] font-semibold text-sky-600/70">{host(link.url)}</span></a>{link.isPreferred && <span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-200/70 px-2 py-1 text-[0.62rem] font-black uppercase text-amber-800"><Star className="h-3 w-3 fill-current" />{preferredLabel}</span>}<button type="button" disabled={busy !== null} onClick={onDelete} aria-label={deleteLabel} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-rose-500 shadow-sm disabled:opacity-45">{busy === link.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}</button></div><div className="mt-2 flex items-center gap-2"><select value={link.giftId ?? ""} disabled={busy !== null} onChange={(event) => onMove(event.target.value || null)} aria-label={moveLabel} className="min-h-9 min-w-0 flex-1 rounded-lg border border-sky-100 bg-white px-2 text-xs font-bold text-slate-600 outline-none focus:border-sky-400 disabled:opacity-45"><option value="">{withoutGiftLabel}</option>{gifts.map((gift) => <option key={gift.id} value={gift.id}>{gift.title}</option>)}</select>{moving && <LoaderCircle className="h-4 w-4 shrink-0 animate-spin text-sky-600" />}</div>{link.giftId && <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]"><input value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} aria-label={reasonLabel} placeholder={reasonPlaceholder} className="min-h-9 min-w-0 rounded-lg border border-amber-100 bg-white px-2 text-xs font-semibold text-slate-700 outline-none focus:border-amber-400" /><button type="button" disabled={busy !== null} onClick={() => onPreference(true, note.trim() || null)} className="min-h-9 rounded-lg bg-amber-500 px-3 text-xs font-extrabold text-white disabled:opacity-45">{choosing ? <LoaderCircle className="mx-auto h-4 w-4 animate-spin" /> : link.isPreferred ? updateChoiceLabel : chooseLabel}</button>{link.isPreferred && <button type="button" disabled={busy !== null} onClick={() => onPreference(false, null)} className="text-left text-[0.68rem] font-bold text-rose-600 sm:col-span-2">{removeChoiceLabel}</button>}</div>}</div>; }
+function SavedLinkRow({ link, gifts, busy, deleteLabel, editLabel, saveLabel, cancelLabel, moveLabel, withoutGiftLabel, preferredLabel, reasonLabel, reasonPlaceholder, chooseLabel, updateChoiceLabel, removeChoiceLabel, onEdit, onPreference, onMove, onDelete }: { link: SavedGiftLink; gifts: GiftItemViewModel[]; busy: string | null; deleteLabel: string; editLabel: string; saveLabel: string; cancelLabel: string; moveLabel: string; withoutGiftLabel: string; preferredLabel: string; reasonLabel: string; reasonPlaceholder: string; chooseLabel: string; updateChoiceLabel: string; removeChoiceLabel: string; onEdit: (url: string, title: string | null) => void; onPreference: (preferred: boolean, note: string | null) => void; onMove: (giftId: string | null) => void; onDelete: () => void }) {
+  const [note, setNote] = useState(link.decisionNote ?? "");
+  const [editing, setEditing] = useState(false);
+  const [url, setUrl] = useState(link.url);
+  const [title, setTitle] = useState(link.title ?? "");
+  useEffect(() => { setNote(link.decisionNote ?? ""); setUrl(link.url); setTitle(link.title ?? ""); setEditing(false); }, [link]);
+  const moving = busy === `move-${link.id}`;
+  const choosing = busy === `prefer-${link.id}`;
+  const editingBusy = busy === `edit-link-${link.id}`;
+  return <div className={`rounded-xl p-2.5 ${link.isPreferred ? "bg-amber-50 ring-1 ring-amber-200" : "bg-sky-50/80"}`}>
+    {editing ? <form onSubmit={(event) => { event.preventDefault(); onEdit(url.trim(), title.trim() || null); }} className="grid gap-2">
+      <input type="url" required pattern="https://.*" value={url} onChange={(event) => setUrl(event.target.value)} className="min-h-11 rounded-xl border border-sky-200 bg-white px-3 text-sm" />
+      <input value={title} maxLength={280} onChange={(event) => setTitle(event.target.value)} className="min-h-11 rounded-xl border border-sky-200 bg-white px-3 text-sm" />
+      <div className="flex gap-2"><button disabled={busy !== null || !url.trim()} className="min-h-11 rounded-xl bg-sky-600 px-3 text-xs font-extrabold text-white">{editingBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : saveLabel}</button><button type="button" disabled={busy !== null} onClick={() => setEditing(false)} className="min-h-11 rounded-xl px-3 text-xs font-extrabold text-slate-600">{cancelLabel}</button></div>
+    </form> : <>
+      <div className="flex items-center gap-2"><a href={link.url} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1"><span className="flex items-center gap-1.5 truncate text-sm font-extrabold text-sky-800">{link.title || host(link.url)}<ExternalLink className="h-3.5 w-3.5 shrink-0" /></span><span className="block truncate text-[0.68rem] font-semibold text-sky-600/70">{host(link.url)}</span></a>{link.isPreferred && <span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-200/70 px-2 py-1 text-[0.62rem] font-black uppercase text-amber-800"><Star className="h-3 w-3 fill-current" />{preferredLabel}</span>}<button type="button" disabled={busy !== null} onClick={() => setEditing(true)} aria-label={editLabel} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-sky-700 shadow-sm disabled:opacity-45"><Pencil className="h-4 w-4" /></button><button type="button" disabled={busy !== null} onClick={onDelete} aria-label={deleteLabel} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-rose-500 shadow-sm disabled:opacity-45">{busy === link.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}</button></div>
+      <div className="mt-2 flex items-center gap-2"><select value={link.giftId ?? ""} disabled={busy !== null} onChange={(event) => onMove(event.target.value || null)} aria-label={moveLabel} className="min-h-11 min-w-0 flex-1 rounded-lg border border-sky-100 bg-white px-2 text-xs font-bold text-slate-600 outline-none focus:border-sky-400 disabled:opacity-45"><option value="">{withoutGiftLabel}</option>{gifts.map((gift) => <option key={gift.id} value={gift.id}>{gift.title}</option>)}</select>{moving && <LoaderCircle className="h-4 w-4 shrink-0 animate-spin text-sky-600" />}</div>
+      {link.giftId && <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]"><input value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} aria-label={reasonLabel} placeholder={reasonPlaceholder} className="min-h-11 min-w-0 rounded-lg border border-amber-100 bg-white px-2 text-xs font-semibold text-slate-700 outline-none focus:border-amber-400" /><button type="button" disabled={busy !== null} onClick={() => onPreference(true, note.trim() || null)} className="min-h-11 rounded-lg bg-amber-500 px-3 text-xs font-extrabold text-white disabled:opacity-45">{choosing ? <LoaderCircle className="mx-auto h-4 w-4 animate-spin" /> : link.isPreferred ? updateChoiceLabel : chooseLabel}</button>{link.isPreferred && <button type="button" disabled={busy !== null} onClick={() => onPreference(false, null)} className="min-h-11 text-left text-[0.68rem] font-bold text-rose-600 sm:col-span-2">{removeChoiceLabel}</button>}</div>}
+    </>}
+  </div>;
+}
 function Loading({ label }: { label: string }) { return <p className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-500"><LoaderCircle className="h-4 w-4 animate-spin" />{label}</p>; }
 function Empty({ text }: { text: string }) { return <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-500">{text}</p>; }

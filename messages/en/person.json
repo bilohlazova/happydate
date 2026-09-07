@@ -7,6 +7,13 @@
     "loadError": "The profile could not be loaded. Please try again."
   },
   "profileUi": {
+    "aboutPerson": {
+      "title": "About {name}", "add": "Add", "addFirst": "Add the first fact", "empty": "Things worth remembering about {name} will appear here.",
+      "listLabel": "Facts about {name}", "showAll": "Show all {count} →", "showLess": "Show less", "question": "What would you like to remember about {name}?", "placeholder": "For example, {name} loves fishing",
+      "categoryOptional": "Category (optional)", "categories": { "like": "Likes", "dislike": "Dislikes", "interest": "Interest", "important": "Important" },
+      "fact": { "like": "Likes: {value}", "dislike": "Dislikes: {value}", "interest": "Interest: {value}" }, "factActions": "Actions for “{fact}”", "editorTitle": "About {name}", "edit": "Edit",
+      "save": "Save", "saving": "Saving…", "delete": "Delete", "deleteTitle": "Delete fact", "deleteConfirm": "Delete “{fact}”?", "deleting": "Deleting…", "cancel": "Cancel", "close": "Close", "error": "The change could not be saved. Please try again."
+    },
     "likes": "Likes",
     "dislikes": "Dislikes",
     "interests": "Interests",
@@ -58,6 +65,8 @@
         "unsure": "Not sure"
       },
       "deleteLink": "Delete link",
+      "editLink": "Edit link",
+      "saveLinkEdit": "Save changes",
       "confirmDeleteLink": "Delete this saved link?",
       "confirmGiven": "Confirm that “{gift}” was given to {name}? It will be added to gift history.",
       "editGift": "Edit gift idea",
@@ -99,6 +108,13 @@
     },
     "knowledgeSource": { "confirmedByYou": "Confirmed by you" },
     "knowledgeAudit": {
+      "add": "Add",
+      "addPlaceholder": "Enter new information",
+      "delete": "Delete",
+      "confirmDelete": "Remove this entry?",
+      "showList": "Expand list",
+      "hideList": "Collapse list",
+      "itemCount": "{count, plural, one {# item} other {# items}}",
       "showDetails": "Source", "hideDetails": "Hide", "source": "Source", "excerpt": "Exact excerpt", "confirmedAt": "Confirmed",
       "sources": { "chat_message": "Conversation with Happy", "gift_discovery": "Gift discovery" },
       "valueLabel": "What HappyDate should remember", "edit": "Correct", "save": "Save", "saving": "Saving…", "cancel": "Cancel",

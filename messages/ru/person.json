@@ -7,6 +7,13 @@
     "loadError": "Не удалось загрузить профиль. Попробуйте ещё раз."
   },
   "profileUi": {
+    "aboutPerson": {
+      "title": "О {name}", "add": "Добавить", "addFirst": "Добавить первый факт", "empty": "Здесь появятся вещи, которые стоит помнить о {name}.",
+      "listLabel": "Факты о {name}", "showAll": "Показать все ({count}) →", "showLess": "Скрыть лишнее", "question": "Что вы хотите запомнить о {name}?", "placeholder": "Например, {name} любит рыбалку",
+      "categoryOptional": "Категория (необязательно)", "categories": { "like": "Нравится", "dislike": "Не нравится", "interest": "Интерес", "important": "Важно" },
+      "fact": { "like": "Нравится: {value}", "dislike": "Не нравится: {value}", "interest": "Интерес: {value}" }, "factActions": "Действия для факта «{fact}»", "editorTitle": "О {name}", "edit": "Редактировать",
+      "save": "Сохранить", "saving": "Сохраняем…", "delete": "Удалить", "deleteTitle": "Удалить факт", "deleteConfirm": "Удалить «{fact}»?", "deleting": "Удаляем…", "cancel": "Отмена", "close": "Закрыть", "error": "Не удалось сохранить изменение. Попробуйте ещё раз."
+    },
     "likes": "Нравится",
     "dislikes": "Не нравится",
     "interests": "Интересы",
@@ -58,6 +65,8 @@
         "unsure": "Не уверена/уверен"
       },
       "deleteLink": "Удалить ссылку",
+      "editLink": "Редактировать ссылку",
+      "saveLinkEdit": "Сохранить изменения",
       "confirmDeleteLink": "Удалить эту сохранённую ссылку?",
       "confirmGiven": "Подтвердить, что «{gift}» уже подарен для {name}? Запись попадёт в историю.",
       "editGift": "Редактировать идею подарка",
@@ -99,6 +108,13 @@
     },
     "knowledgeSource": { "confirmedByYou": "Подтверждено вами" },
     "knowledgeAudit": {
+      "add": "Добавить",
+      "addPlaceholder": "Введите новую информацию",
+      "delete": "Удалить",
+      "confirmDelete": "Удалить эту запись?",
+      "showList": "Развернуть список",
+      "hideList": "Скрыть список",
+      "itemCount": "{count, plural, one {# запись} few {# записи} many {# записей} other {# записи}}",
       "showDetails": "Источник", "hideDetails": "Скрыть", "source": "Источник", "excerpt": "Точный фрагмент", "confirmedAt": "Подтверждено",
       "sources": { "chat_message": "Разговор с Happy", "gift_discovery": "Подбор подарка" },
       "valueLabel": "Что HappyDate должен помнить", "edit": "Исправить", "save": "Сохранить", "saving": "Сохраняем…", "cancel": "Отмена",

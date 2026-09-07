@@ -353,6 +353,19 @@ export async function moveSavedGiftLink(
   return mapLink(data);
 }
 
+export async function updateSavedGiftLink(
+  userId: string,
+  linkId: string,
+  input: Pick<SaveGiftLinkInput, "url" | "title">,
+): Promise<SavedGiftLink> {
+  const { data, error } = await supabase.from("gift_links")
+    .update({ url: normalizedHttpsUrl(input.url), title: input.title?.trim() || null })
+    .eq("id", linkId).eq("user_id", userId)
+    .select(LINK_COLUMNS).returns<GiftLinkRow[]>().single();
+  if (error) throw failure("updateSavedGiftLink", error.message);
+  return mapLink(data);
+}
+
 export async function setPreferredGiftLink(
   userId: string,
   linkId: string,

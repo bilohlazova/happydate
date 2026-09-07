@@ -56,11 +56,14 @@ type ChatResponseOptions = {
   serverGiftOutcomes?: readonly AssistantGiftOutcomeContext[];
   serverSavedGiftLinks?: readonly AssistantSavedGiftLinkContext[];
   serverPets?: readonly AssistantPetContext[];
+  serverPersonMemoryProfile?: string | null;
+  onCompleted?: (request: AssistantChatRequest, responseText: string) => Promise<void>;
   prepareRequest?: (request: AssistantChatRequest) => Promise<{
     request: AssistantChatRequest;
     serverGiftOutcomes?: readonly AssistantGiftOutcomeContext[];
     serverSavedGiftLinks?: readonly AssistantSavedGiftLinkContext[];
     serverPets?: readonly AssistantPetContext[];
+    serverPersonMemoryProfile?: string | null;
   }>;
   budget?: AiBudget | null;
 };
@@ -165,6 +168,7 @@ export async function createAssistantChatResponse(
   let serverGiftOutcomes = options.serverGiftOutcomes ?? [];
   let serverSavedGiftLinks = options.serverSavedGiftLinks ?? [];
   let serverPets = options.serverPets ?? [];
+  let serverPersonMemoryProfile = options.serverPersonMemoryProfile ?? null;
   if (options.prepareRequest) {
     try {
       const prepared = await options.prepareRequest(request);
@@ -172,6 +176,7 @@ export async function createAssistantChatResponse(
       serverGiftOutcomes = prepared.serverGiftOutcomes ?? [];
       serverSavedGiftLinks = prepared.serverSavedGiftLinks ?? [];
       serverPets = prepared.serverPets ?? [];
+      serverPersonMemoryProfile = prepared.serverPersonMemoryProfile ?? null;
     } catch {
       await release?.();
       logger("verified context unavailable", { category: "verified_context_unavailable" });
@@ -195,6 +200,7 @@ export async function createAssistantChatResponse(
     ...(giftOutcomeContext ? [{ role: "system" as const, content: giftOutcomeContext }] : []),
     ...(savedGiftLinkContext ? [{ role: "system" as const, content: savedGiftLinkContext }] : []),
     ...(petContext ? [{ role: "system" as const, content: petContext }] : []),
+    ...(serverPersonMemoryProfile ? [{ role: "system" as const, content: serverPersonMemoryProfile }] : []),
     ...request.conversation,
     { role: "user", content: request.message },
   ];
@@ -233,11 +239,15 @@ export async function createAssistantChatResponse(
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
+        let completedText = "";
         try {
           for await (const chunk of output) {
             if (abort.signal.aborted) break;
             if (typeof chunk !== "string") throw Object.assign(new Error("invalid provider response"), { status: 422 });
-            if (chunk) controller.enqueue(encoder.encode(chunk));
+            if (chunk) {
+              if (completedText.length < 8000) completedText += chunk.slice(0, 8000 - completedText.length);
+              controller.enqueue(encoder.encode(chunk));
+            }
           }
           const actualUsage = await usage;
           if (actualUsage) {
@@ -252,6 +262,9 @@ export async function createAssistantChatResponse(
               pricingVersion: AI_COST_POLICY.version,
             });
           }
+          if (completedText.trim()) await options.onCompleted?.(request, completedText).catch(() => {
+            logOperationalWarning("assistant-chat", "conversation-history-save-skipped");
+          });
           controller.close();
         } catch (error) {
           if (options.signal?.aborted) controller.close();

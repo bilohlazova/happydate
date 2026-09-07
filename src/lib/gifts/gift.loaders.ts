@@ -11,6 +11,7 @@ import {
   moveSavedGiftLink,
   saveGiftLink,
   setPreferredGiftLink,
+  updateSavedGiftLink,
   setGiftLifecycle,
   setGiftOutcome,
   setGiftOutcomeNote,
@@ -204,6 +205,10 @@ export async function savePersonGiftLinkOnce(
 
 export async function removePersonGiftLink(linkId: string): Promise<void> {
   await deleteSavedGiftLink(await requiredUserId(), linkId);
+}
+
+export async function editPersonGiftLink(linkId: string, url: string, title: string | null): Promise<void> {
+  await updateSavedGiftLink(await requiredUserId(), linkId, { url, title });
 }
 
 export async function movePersonGiftLink(

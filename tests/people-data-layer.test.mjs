@@ -84,6 +84,8 @@ test("profile projection carries confirmed source evidence without changing user
     userConfirmed: true,
     sourceExcerpt: "Anna lubi fotografię",
     capturedAt: "2026-08-09T12:00:00Z",
+    epistemicType: "fact",
+    isProfileNote: false,
     changeHistory: [],
   });
 });

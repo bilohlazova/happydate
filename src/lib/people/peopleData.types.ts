@@ -56,6 +56,8 @@ export interface PersonKnowledgeValueViewModel {
   userConfirmed: boolean;
   sourceExcerpt: string | null;
   capturedAt: string | null;
+  epistemicType: import("@/lib/memory-engine").MemoryEpistemicType;
+  isProfileNote: boolean;
   changeHistory: Array<{
     id: string;
     previousValue: string;
@@ -107,6 +109,7 @@ export interface PersonKnowledgeConflictViewModel {
 }
 
 export interface PersonProfileViewModel {
+  memoryProfile: import("@/lib/memory-engine").PersonMemoryProfile | null;
   isAuthenticated: boolean;
   found: boolean;
   hero: {
@@ -114,17 +117,25 @@ export interface PersonProfileViewModel {
     name: string;
     relationLabel: string | null;
     relationKey: import("@/lib/repositories/person.types").PersonRelationKey | null;
+    relationCategory: import("@/lib/repositories/person.types").PersonRelationCategory | null;
+    relationship: string | null;
     gender: import("@/lib/repositories/person.types").PersonGender;
     birthday: string | null;
     daysUntilBirthday: number | null;
+    note: string | null;
   } | null;
   pets: import("@/lib/repositories/petRepository").PetRow[];
+  symbol: import("@/lib/repositories/personSymbolRepository").PersonSymbolRow | null;
   likes: PersonKnowledgeValueViewModel[];
   dislikes: PersonKnowledgeValueViewModel[];
   interests: PersonKnowledgeValueViewModel[];
   giftIdeas: PersonKnowledgeValueViewModel[];
   giftHistory: PersonKnowledgeValueViewModel[];
   importantFacts: PersonKnowledgeValueViewModel[];
+  notes: PersonKnowledgeValueViewModel[];
+  memories: PersonKnowledgeValueViewModel[];
+  relationshipObservations: import("@/lib/memory-engine").RelationshipObservation[];
+  happyConversations: import("@/lib/repositories/personHappyConversationRepository").PersonHappyConversationRow[];
   archivedKnowledge: PersonKnowledgeValueViewModel[];
   knowledgeConflicts: PersonKnowledgeConflictViewModel[];
   knowledgeReview: {

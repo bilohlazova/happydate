@@ -7,6 +7,17 @@
     "loadError": "Не вдалося завантажити профіль. Спробуйте ще раз."
   },
   "profileUi": {
+    "aboutPerson": {
+      "title": "Про {name}", "add": "Додати", "addFirst": "Додати перший факт",
+      "empty": "Тут з’являтимуться речі, які варто пам’ятати про {name}.",
+      "listLabel": "Факти про {name}", "showAll": "Показати всі {count} →", "showLess": "Сховати зайве",
+      "question": "Що хочете запам’ятати про {name}?", "placeholder": "Наприклад, {name} любить риболовлю",
+      "categoryOptional": "Категорія (необов’язково)", "categories": { "like": "Подобається", "dislike": "Не подобається", "interest": "Інтерес", "important": "Важливо" },
+      "fact": { "like": "Подобається: {value}", "dislike": "Не подобається: {value}", "interest": "Інтерес: {value}" },
+      "factActions": "Дії для факту «{fact}»", "editorTitle": "Про {name}", "edit": "Редагувати", "save": "Зберегти", "saving": "Зберігаємо…",
+      "delete": "Видалити", "deleteTitle": "Видалити факт", "deleteConfirm": "Видалити «{fact}»?", "deleting": "Видаляємо…",
+      "cancel": "Скасувати", "close": "Закрити", "error": "Не вдалося зберегти зміну. Спробуйте ще раз."
+    },
     "likes": "Подобається",
     "dislikes": "Не подобається",
     "interests": "Інтереси",
@@ -58,6 +69,8 @@
         "unsure": "Не впевнена/ий"
       },
       "deleteLink": "Видалити посилання",
+      "editLink": "Редагувати посилання",
+      "saveLinkEdit": "Зберегти зміни",
       "confirmDeleteLink": "Видалити це збережене посилання?",
       "confirmGiven": "Підтвердити, що «{gift}» вже подаровано для {name}? Цей запис потрапить в історію.",
       "editGift": "Редагувати ідею подарунка",
@@ -99,6 +112,13 @@
     },
     "knowledgeSource": { "confirmedByYou": "Підтверджено вами" },
     "knowledgeAudit": {
+      "add": "Додати",
+      "addPlaceholder": "Введіть нову інформацію",
+      "delete": "Видалити",
+      "confirmDelete": "Прибрати цей запис?",
+      "showList": "Розгорнути список",
+      "hideList": "Сховати список",
+      "itemCount": "{count, plural, one {# запис} few {# записи} many {# записів} other {# запису}}",
       "showDetails": "Джерело",
       "hideDetails": "Сховати",
       "source": "Джерело",

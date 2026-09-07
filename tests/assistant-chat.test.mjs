@@ -356,7 +356,7 @@ test("streaming response reuses history and emits provider chunks", async () => 
     },
   );
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get("X-HappyDate-Assistant-Version"), "assistant-2026-08-29.1");
+  assert.equal(response.headers.get("X-HappyDate-Assistant-Version"), "assistant-2026-09-07.1");
   assert.equal(await response.text(), "Hello world");
   assert.equal(capturedMessages.at(-2).content, "Earlier");
   assert.equal(capturedMessages.at(-1).content, "Pomóż mi zaplanować dzień");
@@ -428,7 +428,7 @@ test("saved gift link loader is server-only, bounded and owner-person scoped", a
   assert.match(loader, /ASSISTANT_SAVED_GIFT_LINK_LIMIT = 8/);
   assert.match(loader, /parsed\.protocol === "https:"/);
   assert.match(route, /personResolutionStatus === "resolved"/);
-  assert.match(route, /return \{ request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks, serverPets \}/);
+  assert.match(route, /return \{ request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks, serverPets, serverPersonMemoryProfile \}/);
 });
 
 test("gift outcome loader is server-only, consent-aware and owner-scoped", async () => {
@@ -442,7 +442,7 @@ test("gift outcome loader is server-only, consent-aware and owner-scoped", async
   assert.match(loader, /ASSISTANT_GIFT_OUTCOME_LIMIT/);
   assert.match(route, /identity\.userId/);
   assert.match(route, /personResolutionStatus === "resolved"/);
-  assert.match(route, /return \{ request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks, serverPets \}/);
+  assert.match(route, /return \{ request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks, serverPets, serverPersonMemoryProfile \}/);
   assert.match(route, /prepareRequest: async/);
 });
 

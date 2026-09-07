@@ -79,7 +79,6 @@ function legacySemantics(type: string): LegacySemantics {
 }
 
 function taggedPolarity(row: MemoryRow): KnowledgePolarity | null {
-  if (row.source !== "chat_message") return null;
   const tags = new Set(row.ai_tags ?? []);
   if (tags.has("dislike")) return "dislikes";
   if (tags.has("like")) return "likes";

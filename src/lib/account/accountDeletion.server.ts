@@ -3,7 +3,7 @@ import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabasePublicConfig } from "@/lib/supabase/publicConfig";
 
-export const ACCOUNT_STORAGE_BUCKETS = ["avatars", "memory-images", "memory-audio"] as const;
+export const ACCOUNT_STORAGE_BUCKETS = ["avatars", "memory-images", "memory-audio", "person-symbols"] as const;
 const STORAGE_PAGE_SIZE = 1000;
 const STORAGE_REMOVE_BATCH_SIZE = 100;
 const MAX_STORAGE_DIRECTORIES = 5000;

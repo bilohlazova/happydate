@@ -21,15 +21,16 @@ export default function Header() {
   const router = useRouter();
   const [user, setUser] = useState<{ id: string; email?: string; user_metadata?: Record<string, unknown> } | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const isLoggedIn = Boolean(user);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const synchronizedProfileRef = useRef<string | null>(null);
   const appShell = isAppShellPath(pathname);
 
   useEffect(() => {
     let cancelled = false;
-    const applyUser = async (user: { id: string } | null | undefined) => {
+    const applyUser = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null | undefined) => {
       if (cancelled) return;
-      setUser(user ? { id: user.id, email: (user as any).email, user_metadata: (user as any).user_metadata } : null);
+      setUser(user ? { id: user.id, email: user.email, user_metadata: user.user_metadata } : null);
       if (!user) {
         synchronizedProfileRef.current = null;
         return;
@@ -111,7 +112,7 @@ export default function Header() {
 
           {/* RIGHT SIDE */}
           <div className="flex items-center gap-3">
-            <LanguageSwitcher isAuthenticated={Boolean(user)} />
+            <LanguageSwitcher isAuthenticated={isLoggedIn} />
             {/* Login — тільки якщо не залогінений */}
             {!user && (
               <Link

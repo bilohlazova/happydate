@@ -204,6 +204,7 @@ function PersonalDataCard({
 /* ─────────────────────────────────────────
    SETTINGS CARD
 ───────────────────────────────────────── */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SettingsCard({
   outcomeLearningEnabled,
   outcomeLearningBusy,
@@ -263,6 +264,7 @@ function SettingsCard({
 /* ─────────────────────────────────────────
    SECURITY CARD
 ───────────────────────────────────────── */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SecurityCard() {
   const translate = useTranslations("profile.security");
   const futureT = useTranslations("profile.future");
@@ -293,6 +295,7 @@ function SecurityCard() {
 /* ─────────────────────────────────────────
    LOGOUT
 ───────────────────────────────────────── */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function LogoutButton({ onLogout }: { onLogout: () => void }) {
   const translate = useTranslations("profile.actions");
   return (
@@ -392,11 +395,13 @@ export default function ProfilePage() {
     refresh();
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.replace("/");
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const changeOutcomeLearning = async (enabled: boolean) => {
     if (outcomeLearningBusy) return;
     const previous = outcomeLearningEnabled;
@@ -453,13 +458,6 @@ export default function ProfilePage() {
         onSubmit={save}
       />
 
-      <SettingsCard
-        outcomeLearningEnabled={outcomeLearningEnabled}
-        outcomeLearningBusy={outcomeLearningBusy}
-        onOutcomeLearningChange={changeOutcomeLearning}
-      />
-      <SecurityCard />
-      <LogoutButton onLogout={handleLogout} />
     </main>
   );
 }

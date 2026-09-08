@@ -12,6 +12,7 @@ type DeleteState = "loading" | "ready" | "deleting" | "reauthentication" | "erro
 
 export default function DeleteAccountPage() {
   const t = useTranslations("profile.deleteAccountSettings");
+  const settingsT = useTranslations("profile.settings");
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -77,7 +78,7 @@ export default function DeleteAccountPage() {
 
   return (
     <SettingsPageShell
-      backLabel={t("back")}
+      backLabel={settingsT("title")}
       title={t("title")}
       description={t("description")}
       icon={<Trash2 size={22} />}

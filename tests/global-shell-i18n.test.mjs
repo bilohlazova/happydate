@@ -27,11 +27,11 @@ async function translator(locale) {
 }
 
 const expectedHeaders = {
-  pl: ["Usługi", "Opinie", "O nas", "Zaloguj się", "Wyloguj"],
-  uk: ["Послуги", "Відгуки", "Про нас", "Увійти", "Вийти"],
-  en: ["Services", "Reviews", "About us", "Log in", "Log out"],
-  ru: ["Услуги", "Отзывы", "О нас", "Войти", "Выйти"],
-  de: ["Angebote", "Bewertungen", "Über uns", "Anmelden", "Abmelden"],
+  pl: ["Usługi", "O nas", "Zaloguj się", "Zarejestruj się"],
+  uk: ["Послуги", "Про нас", "Увійти", "Зареєструватися"],
+  en: ["Services", "About us", "Log in", "Register"],
+  ru: ["Услуги", "О нас", "Войти", "Регистрация"],
+  de: ["Angebote", "Über uns", "Anmelden", "Registrieren"],
 };
 
 for (const locale of locales) {
@@ -40,10 +40,9 @@ for (const locale of locales) {
     assert.deepEqual(
       [
         translate("navigation.header.services"),
-        translate("navigation.header.reviews"),
         translate("navigation.header.about"),
         translate("navigation.header.login"),
-        translate("navigation.header.logout"),
+        translate("navigation.header.register"),
       ],
       expectedHeaders[locale],
     );
@@ -109,18 +108,35 @@ test("global shell routes are locale-independent and have no locale prefix", () 
   ].map((item) => item.href);
   assert.deepEqual(routes, [
     "/services",
-    "/reviews",
     "/about",
     "/",
     "/people",
     "/notes",
     "/dashboard",
-    "/profile",
+    "/about",
+    "/services",
+    "/contact",
     "/regulamin",
     "/privacy",
     "/regulamin-zwrotow",
   ]);
   assert.equal(routes.some((route) => /^\/(pl|uk|en|ru|de)(\/|$)/.test(route)), false);
+});
+
+test("authenticated shell keeps app navigation and profile actions", async () => {
+  const header = await readFile(path.join(root, "src/components/Header.tsx"), "utf8");
+  const profile = await readFile(path.join(root, "src/app/(app)/profile/page.tsx"), "utf8");
+  const shell = await readFile(path.join(root, "src/i18n/shellNavigation.ts"), "utf8");
+  const settings = await readFile(path.join(root, "src/app/(app)/settings/page.tsx"), "utf8");
+  const deleteAccount = await readFile(path.join(root, "src/app/(app)/settings/delete-account/page.tsx"), "utf8");
+  for (const href of ['href: "/"', 'href: "/people"', 'href: "/notes"', 'href: "/dashboard"']) assert.match(shell, new RegExp(href));
+  for (const label of ["profile", "settings", "logout"]) assert.match(header, new RegExp(`header\\.${label}`));
+  assert.doesNotMatch(header, /header\.reviews/);
+  assert.doesNotMatch(profile, /<SettingsCard|<SecurityCard|<LogoutButton/);
+  assert.match(settings, /settings\.notifications/);
+  assert.match(settings, /settings\.giftLearning/);
+  assert.match(settings, /settings\.language/);
+  assert.match(deleteAccount, /settings\/delete-account|settingsT\("title"\)/);
 });
 
 test("invalid locale still resolves to Polish", () => {

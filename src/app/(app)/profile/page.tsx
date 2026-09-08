@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { useAvatar } from "@/hooks/useAvatar";
@@ -12,7 +12,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { isSupportedLocale } from "@/i18n/config";
 import { formatProfileMemberSince } from "@/lib/profile/profilePresentation";
 import { updateGiftOutcomeLearningEnabled } from "@/lib/repositories/profile/giftOutcomeLearning.repository";
-import { ComingSoonNotice } from "@/components/ui/ComingSoonNotice";
+import { formatMembershipDuration, memberSinceLabels, profileUi } from "@/i18n/profileUi";
+// Social preview copy: «На одній хвилі» is provided by the locale dictionary.
 
 /* ═══════════════════════════════════════════════════════════
    PROFILE PAGE — Account Center
@@ -46,23 +47,28 @@ function ProfileSettingRow({ row, soonLabel, danger = false }: { row: SettingRow
 ───────────────────────────────────────── */
 function ProfileHero({
   avatarUrl, avatarFallback, fullName, email, createdAt,
-  points, hasCare, surveyCompleted, avatarLoading, onPickAvatar,
+  surveyCompleted, avatarLoading, onPickAvatar, onEdit,
 }: {
   avatarUrl: string | null;
   avatarFallback: string;
   fullName: string;
   email: string | null;
   createdAt: string | null;
-  points: number;
-  hasCare: boolean;
   surveyCompleted: boolean;
   avatarLoading: boolean;
   onPickAvatar: () => void;
+  onEdit: () => void;
 }) {
   const translate = useTranslations("profile");
   const localeValue = useLocale();
   const locale = isSupportedLocale(localeValue) ? localeValue : "pl";
+  const copy = profileUi[locale];
   const memberSince = createdAt ? formatProfileMemberSince(createdAt, locale) : null;
+  const [now, setNow] = useState<number | null>(null);
+  // Membership age is captured once after mount to keep render pure.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setNow(Date.now()), []);
+  const membershipDuration = useMemo(() => createdAt && now ? formatMembershipDuration(locale, Math.max(0, Math.floor((now - new Date(createdAt).getTime()) / (30.44 * 24 * 60 * 60 * 1000)))) : null, [createdAt, locale, now]);
   return (
     <section className="pr-hero">
       <div className="pr-hero__glow" aria-hidden="true" />
@@ -106,21 +112,14 @@ function ProfileHero({
           {email    && <p className="pr-hero__email">{email}</p>}
           {memberSince && (
             <p className="pr-hero__since">
-              {translate("membership.memberSince", { date: memberSince })}
+              {memberSinceLabels[locale].replace("{date}", memberSince)}
             </p>
           )}
+          {membershipDuration && <p className="text-xs font-bold text-cyan-700">{copy.together.replace("{duration}", membershipDuration)}</p>}
+          <button type="button" className="pr-btn-ghost mt-2 min-h-9 px-3 text-xs" onClick={onEdit}>{copy.edit}</button>
         </div>
       </div>
 
-      <div className="pr-badges">
-        <span className="pr-badge pr-badge--points">⭐ {translate("hero.points", { points })}</span>
-        {hasCare && <span className="pr-badge pr-badge--care">💛 {translate("hero.care")}</span>}
-        {surveyCompleted ? (
-          <span className="pr-badge pr-badge--done">✅ {translate("hero.surveyComplete")}</span>
-        ) : (
-          <Link href="/survey" className="pr-badge pr-badge--cta">{translate("hero.surveyReward")} →</Link>
-        )}
-      </div>
     </section>
   );
 }
@@ -311,6 +310,9 @@ function LogoutButton({ onLogout }: { onLogout: () => void }) {
 export default function ProfilePage() {
   const router = useRouter();
   const translate = useTranslations("profile");
+  const localeValue = useLocale();
+  const profileLocale = isSupportedLocale(localeValue) ? localeValue : "pl";
+  const copy = profileUi[profileLocale];
 
   const [userId,    setUserId]    = useState<string | null>(null);
   const [email,     setEmail]     = useState<string | null>(null);
@@ -322,12 +324,13 @@ export default function ProfilePage() {
 
   const [saving,  setSaving]  = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
 
   const [points,          setPoints]          = useState(0);
   const [surveyCompleted, setSurveyCompleted] = useState(false);
-  const [hasCare,         setHasCare]         = useState(false);
   const [outcomeLearningEnabled, setOutcomeLearningEnabled] = useState(true);
   const [outcomeLearningBusy, setOutcomeLearningBusy] = useState(false);
+  const [counts, setCounts] = useState({ people: 0, dates: 0, memories: 0 });
 
   /* ── Capacitor Camera upload hook ────────────────────────── */
   const { state: avatarState, pickAndUpload } = useAvatarUpload({
@@ -378,7 +381,12 @@ export default function ProfilePage() {
       ]);
 
       setSurveyCompleted(Boolean(survey?.is_completed));
-      setHasCare(!!sub);
+      void sub;
+      const [{ count: people }, { count: dates }] = await Promise.all([
+        supabase.from("people").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("events").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      ]);
+      setCounts({ people: people ?? 0, dates: dates ?? 0, memories: 0 });
     };
     load();
   }, [router]);
@@ -427,7 +435,6 @@ export default function ProfilePage() {
       <header className="pr-page-intro">
         <span className="pr-page-intro__eyebrow">HappyDate</span>
         <h1>{translate("title")}</h1>
-        <p>{translate("subtitle")}</p>
       </header>
       <ProfileHero
         avatarUrl={avatarUrl}
@@ -435,28 +442,19 @@ export default function ProfilePage() {
         fullName={fullName}
         email={email}
         createdAt={createdAt}
-        points={points}
-        hasCare={hasCare}
         surveyCompleted={surveyCompleted}
         avatarLoading={avatarLoading}
         onPickAvatar={pickAndUpload}
+        onEdit={() => setEditing(true)}
       />
 
-      <ComingSoonNotice
-        badge={translate("future.soon")}
-        title={translate("future.statusTitle")}
-        description={translate("future.statusDescription")}
-      />
+      <section className="pr-card border-cyan-100 bg-gradient-to-br from-white to-cyan-50/60"><div className="flex items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><span className="pr-card__icon">✨</span><p className="pr-card__title">{copy.socialTitle}</p><span className="rounded-full bg-cyan-100 px-2 py-1 text-[10px] font-extrabold uppercase tracking-wide text-cyan-700">{copy.soon}</span></div><p className="mt-3 text-sm font-bold leading-6 text-slate-800">{copy.socialLead}</p><p className="mt-1 text-sm leading-6 text-slate-600">{copy.socialDescription}</p></div></div><div className="mt-3 flex flex-wrap gap-2 text-xs font-bold text-slate-600"><span className="rounded-full bg-white px-3 py-2 shadow-sm">☕ {copy.coffee}</span><span className="rounded-full bg-white px-3 py-2 shadow-sm">🚶 {copy.walk}</span><span className="rounded-full bg-white px-3 py-2 shadow-sm">💬 {copy.talk}</span></div><p className="mt-3 text-xs font-bold text-slate-500">🔒 {copy.location}</p></section>
 
-      <CareCard hasCare={hasCare} />
+      <section className="pr-card"><div className="pr-card__header"><span className="pr-card__icon">⭐</span><p className="pr-card__title">Ваш прогрес</p></div><div className="flex items-center justify-between gap-3"><p className="text-xl font-black text-slate-900">{points} <span className="text-sm font-bold text-slate-500">балів</span></p><Link href="/survey" className="inline-flex min-h-9 items-center rounded-xl bg-cyan-600 px-3 text-xs font-bold text-white">Пройти анкету</Link></div><p className="mt-1 text-sm text-slate-500">+100 балів за коротку анкету</p><div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-cyan-500" style={{ width: `${(Number(Boolean(avatarUrl)) + Number(Boolean(fullName.trim())) + Number(surveyCompleted)) / 3 * 100}%` }} /></div><p className="mt-2 text-sm text-slate-500">{avatarUrl && fullName.trim() && surveyCompleted ? "Профіль заповнено 🎉" : [!avatarUrl && "Додайте фото", !fullName.trim() && "Вкажіть ім’я", !surveyCompleted && "Пройдіть коротку анкету"].filter(Boolean).join(" · ")}</p></section>
 
-      <PersonalDataCard
-        fullName={fullName}
-        saving={saving}
-        message={message}
-        onChange={setFullName}
-        onSubmit={save}
-      />
+      <section className="pr-card"><div className="pr-card__header"><span className="pr-card__icon">♡</span><p className="pr-card__title">Мій HappyDate</p></div><div className="grid grid-cols-3 gap-2 text-center">{[[counts.people, "Люди", "/people"], [counts.dates, "Важливі дати", "/dashboard"], [counts.memories, "Спогади", "/notes"]].map(([value, label, href]) => <Link href={String(href)} key={String(label)} className="rounded-xl bg-slate-50 p-3 hover:bg-cyan-50"><strong className="block text-xl text-slate-900">{value}</strong><span className="text-xs font-bold text-slate-500">{label}</span></Link>)}</div></section>
+
+      {editing && <div className="fixed inset-0 z-50 grid items-end bg-slate-900/35 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={translate("account.title")}><div className="mx-auto w-full max-w-xl rounded-t-[2rem] bg-white p-5 shadow-2xl sm:rounded-[2rem]"><div className="mb-3 flex items-center justify-between"><h2 className="text-xl font-extrabold text-slate-900">{translate("account.title")}</h2><button type="button" className="grid h-11 w-11 place-items-center rounded-full bg-slate-100" onClick={() => setEditing(false)} aria-label="Close">✕</button></div><PersonalDataCard fullName={fullName} saving={saving} message={message} onChange={setFullName} onSubmit={async (event) => { await save(event); setEditing(false); }} /></div></div>}
 
     </main>
   );

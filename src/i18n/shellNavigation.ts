@@ -12,7 +12,6 @@ export const BOTTOM_NAV_ITEMS = [
 
 export const FOOTER_LINKS = [
   { href: "/about", labelKey: "about" },
-  { href: "/services", labelKey: "services" },
   { href: "/contact", labelKey: "contact" },
   { href: "/regulamin", labelKey: "terms" },
   { href: "/privacy", labelKey: "privacy" },

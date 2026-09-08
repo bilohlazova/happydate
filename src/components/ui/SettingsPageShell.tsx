@@ -9,7 +9,7 @@ export function SettingsPageShell({ backLabel, title, description, icon, childre
       <div className="hd-page-shell__container">
         <section className="hd-page-card">
           <header className="hd-page-card__header">
-            <Link href="/profile" className="hd-page-back"><ArrowLeft size={15} aria-hidden="true" />{backLabel}</Link>
+            <Link href="/settings" className="hd-page-back"><ArrowLeft size={15} aria-hidden="true" />{backLabel}</Link>
             <div className="hd-page-heading">
               <span className="hd-page-heading__icon" aria-hidden="true">{icon}</span>
               <div><h1>{title}</h1><p>{description}</p></div>

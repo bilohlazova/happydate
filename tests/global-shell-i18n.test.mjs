@@ -114,7 +114,6 @@ test("global shell routes are locale-independent and have no locale prefix", () 
     "/notes",
     "/dashboard",
     "/about",
-    "/services",
     "/contact",
     "/regulamin",
     "/privacy",
@@ -133,9 +132,9 @@ test("authenticated shell keeps app navigation and profile actions", async () =>
   for (const label of ["profile", "settings", "logout"]) assert.match(header, new RegExp(`header\\.${label}`));
   assert.doesNotMatch(header, /header\.reviews/);
   assert.doesNotMatch(profile, /<SettingsCard|<SecurityCard|<LogoutButton/);
-  assert.match(settings, /settings\.notifications/);
-  assert.match(settings, /settings\.giftLearning/);
-  assert.match(settings, /settings\.language/);
+  assert.match(settings, /\/settings\/notifications/);
+  assert.match(settings, /\/settings\/personalization/);
+  assert.match(settings, /\/settings\/app/);
   assert.match(deleteAccount, /settings\/delete-account|settingsT\("title"\)/);
 });
 

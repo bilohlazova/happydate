@@ -1866,9 +1866,12 @@ label[for], summary {
   .people-page-header__copy { padding-right: 0; }
   .people-page-header__title { max-width: 7ch; font-size: 34px; }
   .people-page-header__subtitle { max-width: 24ch; font-size: 12px; }
-  .people-page-header__action { align-self: stretch; margin-top: 16px; }
-  .people-page-header__action > div > button { width: 100%; min-height: 46px; justify-content: center; padding-inline: 13px; }
+  .people-page-header__action { align-self: flex-start; margin-top: 12px; }
+  .people-page-header__action > div > button { width: auto; max-width: 100%; min-height: 44px; justify-content: center; padding-inline: 13px; }
   .people-person-card__date { min-width: 66px; padding-inline: 6px; }
+  .people-summary-card, .people-recommendation { padding: 14px !important; border-radius: 20px; }
+  .people-search-dock { padding: 10px !important; }
+  .people-person-card__content { padding: 12px !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   .people-add-menu, .people-person-card, .people-recommendation__action, .people-loading__avatar, .people-loading__copy i { animation: none !important; transition: none !important; }
@@ -2931,3 +2934,27 @@ label[for], summary {
 .fund-preview{min-height:100svh;padding-bottom:80px;background:#fffaf6;color:#251d39}.fund-preview__hero{text-align:center;padding:32px 20px 76px;background:radial-gradient(circle at 15% 15%,#ffe29a99,transparent 28%),radial-gradient(circle at 85% 5%,#e9c8ff,transparent 32%),linear-gradient(145deg,#fff4dd,#fae9f5)}.fund-preview__hero>a{display:block;width:min(820px,100%);margin:0 auto 38px;text-align:left;color:#786686;text-decoration:none}.fund-preview__hero>p{margin:0;color:#a25b42;font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.fund-preview__hero h1{max-width:720px;margin:12px auto;font-size:clamp(34px,7vw,60px);line-height:1.02}.fund-preview__hero>div{max-width:620px;margin:auto;color:#685c73;line-height:1.7}.fund-preview__body{position:relative;display:grid;gap:28px;width:min(820px,calc(100% - 32px));margin:-38px auto 0}.fund-preview__body>section,.fund-preview__body>blockquote{border:1px solid #eadff0;border-radius:28px;background:#fff;box-shadow:0 18px 44px #5d356212}.fund-preview__demo{display:flex;align-items:center;justify-content:center;gap:42px;padding:32px;background:linear-gradient(135deg,#fffef7,#fff4fa)!important}.fund-preview__demo small{color:#9b849f;text-transform:uppercase;letter-spacing:.08em}.fund-preview__demo h2{margin:8px 0 14px}.fund-preview__demo p{margin:8px 0 0;color:#75667e}.fund-preview__jar{width:116px}.fund-preview__lid{width:68px;height:16px;margin:auto;border-radius:7px;background:#f9bd55}.fund-preview__glass{position:relative;overflow:hidden;height:132px;border:4px solid #e5dce6;border-radius:20px 20px 30px 30px;background:#fbfffd}.fund-preview__fill{position:absolute;inset:auto 0 0;height:72%;display:grid;place-items:center;background:linear-gradient(#92e6c1,#46bf91);color:#fff;font-weight:900}.fund-preview__glass>i{position:absolute;top:16px;right:14px;color:#f28aa7;font-style:normal}.fund-preview__avatars{display:flex}.fund-preview__avatars span{display:grid;place-items:center;width:38px;height:38px;margin-right:-7px;border:2px solid white;border-radius:50%;background:#f9edf5}.fund-preview__flow{padding:30px}.fund-preview__flow>div{display:grid;grid-template-columns:1fr 1fr;gap:12px}.fund-preview__flow article{padding:18px;border-radius:18px;background:#faf5ff}.fund-preview__flow b{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#8b5cf6;color:#fff}.fund-preview__flow h3{margin:13px 0 6px}.fund-preview__flow p{margin:0;color:#74687b;line-height:1.55}.fund-preview__trust{padding:28px;background:#2c2340!important;color:#fff}.fund-preview__trust h2{margin-top:0}.fund-preview__trust ul{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0;list-style:none;color:#eee6ff}.fund-preview__body blockquote{margin:0;padding:28px;text-align:center;color:#795692;font-size:20px;font-weight:700;line-height:1.5;background:#fbf5ff}@media(max-width:620px){.fund-preview__demo{gap:22px;padding:24px}.fund-preview__flow>div,.fund-preview__trust ul{grid-template-columns:1fr}.fund-preview__flow{padding:22px}}
 /* Give Good — warm purpose without pretending a charity programme is live. */
 .good-preview{min-height:100svh;padding-bottom:80px;background:#fffaf8;color:#2c1d35}.good-preview__hero{text-align:center;padding:32px 20px 76px;background:radial-gradient(circle at 15% 20%,#ffd7df,transparent 28%),radial-gradient(circle at 85% 10%,#fff0a8,transparent 30%),linear-gradient(145deg,#fff6f8,#fffbee)}.good-preview__hero>a{display:block;width:min(820px,100%);margin:0 auto 22px;text-align:left;color:#875f75;text-decoration:none}.good-preview__heart{display:grid;place-items:center;width:72px;height:72px;margin:0 auto 17px;border-radius:26px 26px 32px;background:linear-gradient(145deg,#ff718f,#f2476d);color:white;font-size:34px;transform:rotate(-4deg);box-shadow:0 15px 35px #eb527642}.good-preview__hero>p{font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:#b23e62}.good-preview__hero h1{max-width:720px;margin:10px auto 14px;font-size:clamp(34px,7vw,58px);line-height:1.04}.good-preview__hero>div:last-child{max-width:630px;margin:auto;color:#745f6e;line-height:1.7}.good-preview__body{position:relative;display:grid;gap:28px;width:min(820px,calc(100% - 32px));margin:-38px auto 0}.good-preview__body>section,.good-preview__body>blockquote{border:1px solid #f0dfe6;border-radius:28px;background:#fff;box-shadow:0 18px 45px #823c5512}.good-preview__directions,.good-preview__flow,.good-preview__trust{padding:30px}.good-preview__directions>div{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.good-preview__directions article{padding:20px 16px;border-radius:20px;background:linear-gradient(145deg,#fff9f6,#fffef1)}.good-preview__directions span{font-size:30px}.good-preview__directions h3{margin:12px 0 7px}.good-preview__directions p,.good-preview__flow p{margin:0;color:#786a76;line-height:1.55}.good-preview__flow article{display:flex;gap:16px;padding:17px 0;border-top:1px solid #f3e8ed}.good-preview__flow article:first-of-type{border-top:0}.good-preview__flow b{color:#e34d73}.good-preview__flow h3{margin:0 0 5px}.good-preview__trust{background:#3a2434!important;color:#fff}.good-preview__trust ul{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0;list-style:none;color:#ffe5ee}.good-preview__body blockquote{margin:0;padding:29px;text-align:center;font-size:20px;font-weight:700;line-height:1.5;color:#a13558;background:#fff3f6}@media(max-width:650px){.good-preview__directions>div,.good-preview__trust ul{grid-template-columns:1fr}.good-preview__directions,.good-preview__flow,.good-preview__trust{padding:22px}}
+@media (max-width: 767px) {
+  html, body { overflow-x: hidden; }
+  footer { padding-bottom: calc(var(--hd-nav-height) + env(safe-area-inset-bottom)) !important; }
+  .hd-mobile-menu-button { min-width: 44px; min-height: 44px; }
+  #happydate-mobile-menu { max-height: calc(100dvh - 64px); overflow-y: auto; padding: 8px 12px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(226,232,240,.8); }
+  #happydate-mobile-menu a, #happydate-mobile-menu button { min-height: 44px; border-radius: 12px; }
+  .hd-screen > div { padding-top: .75rem; }
+  .hd-screen > div > section:first-child { border-radius: 1.25rem; padding: .875rem; }
+  .hd-screen section[id="upcoming"] { padding-top: 1.25rem; }
+  .hd-screen section[id="upcoming"] > div.mb-3 { margin-bottom: .5rem; }
+  .hd-screen .mt-7 { margin-top: 1.25rem; }
+  .hd-screen .mt-5 { margin-top: .875rem; }
+  .hd-screen [aria-label="Персональна турбота HappyDate"] { padding: .75rem; }
+  .hd-screen [aria-label="Персональна турбота HappyDate"] .mt-3 { margin-top: .625rem; }
+  .pr-hero { padding: 14px !important; border-radius: 22px; }
+  .pr-hero__inner { gap: 12px !important; }
+  .pr-avatar-wrap { transform: scale(.9); transform-origin: left center; }
+  .pr-card { padding: 14px !important; border-radius: 20px; }
+  .pr-card__header { margin-bottom: 9px; }
+  .pr-card .grid.grid-cols-3 a { padding: 10px 6px !important; }
+  .auth-care-page { align-items: flex-start !important; padding-top: 1rem !important; padding-bottom: 1rem !important; }
+  .auth-care-card { border-radius: 22px !important; padding: 1rem !important; }
+  .legal-document__body, .privacy-trust, .terms-guide, .returns-guide { overflow-wrap: anywhere; }
+}

@@ -17,6 +17,7 @@ function cx(...cls: Array<string | false | null | undefined>) {
 
 export default function Header() {
   const translate = useTranslations("navigation");
+  const footerTranslate = useTranslations("navigation.footer");
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<{ id: string; email?: string; user_metadata?: Record<string, unknown> } | null>(null);
@@ -135,7 +136,7 @@ export default function Header() {
             {/* HAMBURGER — мобільний доступ до тих самих посилань */}
             <button
               onClick={() => setMobileMenuOpen((v) => !v)}
-              className={cx("hd-icon-button hd-mobile-menu-button text-xl", appShell ? "hidden text-slate-700" : "text-white")}
+              className={cx("hd-icon-button hd-mobile-menu-button text-xl md:hidden", appShell ? "text-slate-700" : "text-white")}
               aria-label={translate(
                 mobileMenuOpen ? "header.closeMenu" : "header.openMenu",
               )}
@@ -148,12 +149,12 @@ export default function Header() {
         </div>
 
         {/* MOBILE MENU */}
-        {mobileMenuOpen && !appShell && (
+        {mobileMenuOpen && (
           <div
             id="happydate-mobile-menu"
             className="bg-white/96 shadow-lg backdrop-blur-xl sm:hidden"
           >
-            {HEADER_NAV_ITEMS.map((item) => (
+            {(appShell ? [{ href: "/services", labelKey: "services" }, { href: "/about", labelKey: "about" }, { href: "/profile", labelKey: "profile" }, { href: "/settings", labelKey: "settings" }, { href: "/contact", labelKey: "contact" }] : HEADER_NAV_ITEMS).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -165,7 +166,7 @@ export default function Header() {
                     : "hover:bg-gray-100"
                 )}
               >
-                {translate(`header.${item.labelKey}`)}
+                {item.labelKey === "contact" ? footerTranslate("contact") : translate(`header.${item.labelKey}` as never)}
               </Link>
             ))}
 

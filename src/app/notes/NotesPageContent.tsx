@@ -1399,7 +1399,8 @@ export default function NotesPageContent() {
           .hd-memory-threads { margin: 0 14px 16px; padding: 17px; border-radius: 21px; }
           .hd-memory-threads-heading { display: block; margin-bottom: 13px; }
           .hd-memory-threads-trust { display: inline-flex; margin-top: 10px; }
-          .hd-memory-thread-list { grid-template-columns: 1fr; gap: 9px; }
+          .hd-memory-thread-list { display: flex; gap: 9px; overflow-x: auto; margin-right: -17px; padding-right: 17px; padding-bottom: 3px; scroll-snap-type: x proximity; }
+          .hd-memory-thread { flex: 0 0 min(82vw, 300px); scroll-snap-align: start; }
           .hd-memory-thread { min-height: 70px; }
           .hd-ai-section { border-radius: 20px; padding: 16px; }
           .hd-feed { grid-template-columns: 1fr; gap: 11px; }

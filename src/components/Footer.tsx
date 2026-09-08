@@ -32,7 +32,9 @@ export default function Footer() {
             <span key={item.href} className="contents">
               {index > 0 && <span aria-hidden="true">·</span>}
               <Link href={item.href} className={linkCls}>
-                {translate(`footer.${item.labelKey}` as never)}
+                {item.labelKey === "services"
+                  ? translate("header.services")
+                  : translate(`footer.${item.labelKey}` as never)}
               </Link>
             </span>
           ))}

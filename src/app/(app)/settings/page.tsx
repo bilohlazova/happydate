@@ -1,20 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { Bell, Database, Globe2, LockKeyhole, Shield, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 export default function SettingsPage() {
   const t = useTranslations("profile");
-  const rows = [
-    ["🔔", t("settings.notifications"), "/settings/reminders"],
-    ["⏰", t("settings.reminders"), "/settings/reminders"],
-    ["✨", t("settings.aiSuggestions"), null],
-    ["🧠", t("settings.giftLearning.title"), null],
-    ["🌍", t("settings.language.title"), null],
-    ["🔑", t("security.changePassword"), "/auth/reset"],
-    ["📱", t("security.activeSessions"), "/settings/sessions"],
-    ["🔒", t("security.privacy"), "/privacy"],
-    ["📦", t("security.exportData"), "/settings/export"],
+  const groups = [
+    [t("settings.title"), [[Bell, t("settings.notifications"), "/settings/reminders"], [Sparkles, t("settings.giftLearning.title"), "/settings/personalization"], [Shield, t("hero.care"), "/settings/plan"]]],
+    [t("security.title"), [[Shield, t("security.privacy"), "/privacy"], [LockKeyhole, t("security.activeSessions"), "/settings/sessions"], [Database, t("security.exportData"), "/settings/export"]]],
+    [t("settings.language.title"), [[Globe2, t("settings.language.title"), "/settings/app"]]],
   ] as const;
-  return <main className="safe-container mx-auto max-w-3xl py-10"><header className="mb-6"><h1 className="text-3xl font-extrabold text-slate-900">{t("settings.title")}</h1><p className="mt-2 text-slate-600">{t("subtitle")}</p></header><section className="pr-card"><ul className="pr-rows">{rows.map(([icon, label, href]) => <li key={label}>{href ? <Link href={href} className="pr-row"><span className="pr-row__icon">{icon}</span><span className="pr-row__label">{label}</span><span className="pr-row__arrow">›</span></Link> : <div className="pr-row pr-row--future"><span className="pr-row__icon">{icon}</span><span className="pr-row__label">{label}</span><span className="pr-row__soon">{t("future.soon")}</span></div>}</li>)}</ul></section><section className="pr-card mt-5"><h2 className="pr-card__title">{t("security.title")}</h2><Link href="/settings/delete-account" className="pr-row pr-row--danger mt-3"><span className="pr-row__icon">🗑️</span><span className="pr-row__label">{t("security.deleteAccount")}</span><span className="pr-row__arrow">›</span></Link></section></main>;
+  return <main className="hd-page-shell"><div className="hd-page-shell__container"><section className="hd-page-card"><header className="hd-page-card__header"><div className="hd-page-heading"><span className="hd-page-heading__icon"><LockKeyhole size={22} /></span><div><h1>{t("settings.title")}</h1><p>{t("subtitle")}</p></div></div></header><div className="hd-page-card__body">{groups.map(([title, rows]) => <section key={title} className="mb-6"><h2 className="mb-2 px-1 text-sm font-extrabold uppercase tracking-wide text-slate-400">{title}</h2><div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">{rows.map(([Icon, label, href]) => <Link key={label} href={href} className="flex min-h-16 items-center gap-4 border-b border-slate-100 px-5 py-3 last:border-0 hover:bg-slate-50"><Icon size={20} className="shrink-0 text-cyan-600" aria-hidden="true" /><span className="flex-1 font-bold text-slate-800">{label}</span><span className="text-xl text-slate-400" aria-hidden="true">›</span></Link>)}</div></section>)}<section><h2 className="mb-2 px-1 text-sm font-extrabold uppercase tracking-wide text-slate-400">{t("security.title")}</h2><Link href="/settings/delete-account" className="flex min-h-16 items-center gap-4 rounded-3xl border border-rose-200 bg-white px-5 py-3 text-rose-600 hover:bg-rose-50"><span className="flex-1 font-bold">{t("security.deleteAccount")}</span><span aria-hidden="true">›</span></Link></section></div></section></div></main>;
 }

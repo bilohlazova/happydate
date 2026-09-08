@@ -1,18 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { FOOTER_LINKS, isAppShellPath } from "@/i18n/shellNavigation";
+import { FOOTER_LINKS } from "@/i18n/shellNavigation";
 
 const linkCls =
   "underline underline-offset-2 decoration-white/70 hover:text-white hover:decoration-white transition-colors duration-200";
 
 export default function Footer() {
   const translate = useTranslations("navigation");
-  const pathname = usePathname();
-  if (isAppShellPath(pathname)) return null;
-
   return (
     <footer
       className="bg-gradient-to-r from-sky-400 to-cyan-400 text-white text-xs"
@@ -36,7 +32,7 @@ export default function Footer() {
             <span key={item.href} className="contents">
               {index > 0 && <span aria-hidden="true">·</span>}
               <Link href={item.href} className={linkCls}>
-                {translate(`footer.${item.labelKey}`)}
+                {translate(`footer.${item.labelKey}` as never)}
               </Link>
             </span>
           ))}

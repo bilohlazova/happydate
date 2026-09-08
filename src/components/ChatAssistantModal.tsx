@@ -22,6 +22,7 @@ import { supabase } from "@/lib/supabaseClient";
 interface ChatAssistantModalProps {
   open: boolean;
   onClose: () => void;
+  onPersonMemoryUpdated?: (personId?: string) => void | Promise<void>;
   initialPrompt?: string | null;
   autoSubmitInitialPrompt?: boolean;
 }
@@ -57,7 +58,7 @@ const INITIAL_HAPPY_LEARNING_STATE: ChatHappyLearningState = {
   detectionStatus: "idle",
 };
 
-export default function ChatAssistantModal({ open, onClose, initialPrompt = null, autoSubmitInitialPrompt = false }: ChatAssistantModalProps) {
+export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdated, initialPrompt = null, autoSubmitInitialPrompt = false }: ChatAssistantModalProps) {
   const t = useTranslations("assistant");
   const locale = useLocale();
   const router = useRouter();
@@ -412,6 +413,9 @@ export default function ChatAssistantModal({ open, onClose, initialPrompt = null
           message.id === assistantMessageId ? { ...message, status: "complete" as const } : message,
         ),
       ]);
+      if (requestPersonContext.resolutionStatus === "resolved" && requestPersonContext.activePersonId) {
+        await onPersonMemoryUpdated?.(requestPersonContext.activePersonId);
+      }
     } catch (error) {
       if (controller.signal.aborted) return;
       const failure = error as { code?: string; retryAfter?: number };

@@ -85,6 +85,6 @@ export interface PersonMemoryProfile {
   symbol: SymbolMemoryLayers | null;
   notes: PersonMemoryEntry[];
   observations: RelationshipObservation[];
-  /** Reserved: conversations are not yet persisted per person. */
+  /** Bounded server-persisted turns: user messages are memory, Happy replies are interpretations. */
   happyConversations: PersonMemoryEntry[];
 }

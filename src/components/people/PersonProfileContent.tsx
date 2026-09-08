@@ -158,7 +158,7 @@ export function PersonProfileContent({
         </div>
       </main>
 
-      <ChatAssistantModal open={assistantOpen} onClose={() => setAssistantOpen(false)} />
+      <ChatAssistantModal open={assistantOpen} onClose={() => setAssistantOpen(false)} onPersonMemoryUpdated={onProfileChanged} />
       <PersonActionsSheet
         person={personActionsMode ? {
           id: hero.id,

@@ -5,26 +5,35 @@ import test from "node:test";
 
 const root = process.cwd();
 
-test("services separates the available care foundation from future rituals", async () => {
+test("services separates the available foundation from future services", async () => {
   const page = await readFile(path.join(root, "src/app/services/page.tsx"), "utf8");
 
-  assert.match(page, /availableNow/);
-  assert.match(page, /freeNow/);
-  assert.match(page, /<ComingSoonNotice/);
+  assert.match(page, /getServicesTranslations\("services"\)/);
+  assert.match(page, /current\.badge/);
+  assert.match(page, /current\.cta/);
+  assert.match(page, /future\.status/);
   assert.match(page, /services-soul__soon-badge/);
-  assert.doesNotMatch(page, /carePrice/);
-  assert.doesNotMatch(page, /href=\{s\.href\}/);
+  assert.match(page, /listen.*groupMessage.*sharedGift.*kindness.*heavenMessage/s);
+  assert.doesNotMatch(page, /carePrice|freeNow|<ComingSoonNotice/);
+  assert.doesNotMatch(page, /checkout|pricing|subscription|purchase/i);
+  assert.equal((page.match(/<Link href=/g) ?? []).length, 1);
 });
 
-test("every future service is explicitly marked soon in every locale", async () => {
+test("the available foundation and five future services are localized in every locale", async () => {
   for (const locale of ["uk", "pl", "en", "de", "ru"]) {
     const services = JSON.parse(
-      await readFile(path.join(root, `messages/${locale}/static.json`), "utf8"),
-    ).services;
+      await readFile(path.join(root, `messages/${locale}/services.json`), "utf8"),
+    );
 
-    assert.ok(services.soon);
-    assert.ok(services.futureNoticeText);
-    assert.equal(Object.keys(services.currentFeatures).length, 4);
-    assert.doesNotMatch(services.careDescription, /subscription|subskrypcja|підписка|подписка|abo/i);
+    assert.ok(services.current.badge);
+    assert.ok(services.current.cta);
+    assert.equal(Object.keys(services.current.features).length, 4);
+    assert.equal(Object.keys(services.future).filter((key) => !["eyebrow", "title", "description", "status"].includes(key)).length, 5);
+    assert.ok(services.future.status);
+    for (const key of ["listen", "groupMessage", "sharedGift", "kindness", "heavenMessage"]) {
+      assert.ok(services.future[key].title);
+      assert.ok(services.future[key].description);
+      assert.doesNotMatch(services.future[key].description, /checkout|pricing|subscription|purchase|payment/i);
+    }
   }
 });

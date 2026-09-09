@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { Gift, Heart, Lock, MessageCircle, MessagesSquare, Moon, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-import { ComingSoonNotice } from "@/components/ui/ComingSoonNotice";
+const ICONS: Record<string, LucideIcon> = { heart: Heart, message: MessageCircle, messages: MessagesSquare, users: Users, gift: Gift, moon: Moon, lock: Lock };
+const getServicesTranslations = getTranslations as unknown as (namespace: string) => Promise<(key: string) => string>;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("static.services");
+  const t = await getServicesTranslations("services");
   return {
     title: t("metaTitle"),
     description: t("metaDescription"),
@@ -14,76 +17,63 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const FUTURE_SERVICES = [
-  ["💬", "listen"],
-  ["🌙", "heaven"],
-  ["🎥", "group"],
-  ["💸", "fund"],
-  ["🕊️", "good"],
-] as const;
-
 export default async function ServicesPage() {
-  const t = await getTranslations("static.services");
-
+  const t = await getServicesTranslations("services");
+  const futureServices = ["listen", "groupMessage", "sharedGift", "kindness", "heavenMessage"] as const;
   return (
-    <main className="services-soul">
+    <main className="services-page">
       <section className="services-soul__hero">
-        <p className="services-soul__eyebrow">{t("eyebrow")}</p>
-        <h1>{t("title")}</h1>
-        <p>{t("subtitle")}</p>
+        <p className="services-soul__eyebrow">{t("hero.eyebrow")}</p>
+        <h1>{t("hero.title")}</h1>
+        <p>{t("hero.description")}</p>
       </section>
 
       <section className="services-soul__current" aria-labelledby="current-care-title">
         <div className="services-soul__care-copy">
-          <span className="services-soul__status">{t("availableNow")}</span>
-          <p className="services-soul__eyebrow">HappyDate Care</p>
-          <h2 id="current-care-title">{t("currentTitle")}</h2>
-          <p>{t("careDescription")}</p>
+          <span className="services-soul__status">{t("current.badge")}</span>
+          <p className="services-soul__eyebrow">{t("current.eyebrow")}</p>
+          <h2 id="current-care-title">{t("current.title")}</h2>
+          <p>{t("current.description")}</p>
           <div className="services-soul__features">
-            {(["dates", "notes", "reminders", "briefing"] as const).map((key) => (
-              <span key={key}>✓ {t(`currentFeatures.${key}`)}</span>
-            ))}
+            {(["people", "dates", "memories", "happy"] as const).map((key) => <span key={key}>✓ {t(`current.features.${key}`)}</span>)}
           </div>
-          <Link href="/care">{t("see")}</Link>
+          <Link href="/">{t("current.cta")}</Link>
         </div>
         <div className="services-soul__care-heart" aria-hidden="true">
-          <span>💛</span>
-          <small>{t("freeNow")}</small>
+          <Heart aria-hidden="true" size={54} strokeWidth={1.5} />
+          <small>{t("current.visualLabel")}</small>
         </div>
       </section>
 
       <section className="services-soul__future" aria-labelledby="future-services-title">
         <div className="services-soul__section-heading">
-          <p className="services-soul__eyebrow">{t("futureEyebrow")}</p>
-          <h2 id="future-services-title">{t("rituals")}</h2>
-          <p>{t("futureSubtitle")}</p>
+          <p className="services-soul__eyebrow">{t("future.eyebrow")}</p>
+          <h2 id="future-services-title">{t("future.title")}</h2>
+          <p>{t("future.description")}</p>
         </div>
 
-        <ComingSoonNotice
-          badge={t("soon")}
-          title={t("futureNoticeTitle")}
-          description={t("futureNoticeText")}
-        />
-
         <div className="services-soul__future-grid">
-          {FUTURE_SERVICES.map(([emoji, key]) => (
-            <article key={key}>
-              <span className="services-soul__future-icon" aria-hidden="true">{emoji}</span>
+          {futureServices.map((key) => {
+            const Icon = ICONS[t(`icons.${key}`)];
+            return <article key={key}>
+              <span className="services-soul__future-icon" aria-hidden="true"><Icon size={20} strokeWidth={1.8} /></span>
               <div>
-                <span className="services-soul__soon-badge">{t("soon")}</span>
-                <h3>{t(`items.${key}.title`)}</h3>
-                <p>{t(`items.${key}.description`)}</p>
+                <span className="services-soul__soon-badge">{t("future.status")}</span>
+                <h3>{t(`future.${key}.title`)}</h3>
+                <p>{t(`future.${key}.description`)}</p>
               </div>
-            </article>
-          ))}
+            </article>;
+          })}
         </div>
       </section>
 
       <section className="services-soul__principle">
-        <span aria-hidden="true">✦</span>
+        <Lock aria-hidden="true" size={24} strokeWidth={1.8} />
         <div>
-          <h2>{t("principleTitle")}</h2>
-          <p>{t("principleText")}</p>
+          <p className="services-soul__eyebrow">{t("privacy.eyebrow")}</p>
+          <h2>{t("privacy.title")}</h2>
+          <p>{t("privacy.description")}</p>
+          <div className="services-soul__trust">{(["control", "private", "context"] as const).map((key) => <span key={key}>{t(`privacy.points.${key}`)}</span>)}</div>
         </div>
       </section>
     </main>

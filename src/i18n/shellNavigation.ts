@@ -27,6 +27,7 @@ const APP_SHELL_PREFIXES = [
   "/gift",
   "/settings",
   "/survey",
+  "/services",
 ] as const;
 
 export function isAppShellPath(pathname: string): boolean {

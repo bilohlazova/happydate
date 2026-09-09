@@ -20,6 +20,7 @@ type MemoryCaptureMessages = typeof import("../../messages/pl/memoryCapture.json
 type DashboardMessages = typeof import("../../messages/pl/dashboard.json");
 type CareMessages = typeof import("../../messages/pl/care.json");
 type StaticMessages = typeof import("../../messages/pl/static.json");
+type ServicesMessages = typeof import("../../messages/pl/services.json");
 
 export interface AppMessages extends AbstractIntlMessages {
   common: CommonMessages;
@@ -38,6 +39,7 @@ export interface AppMessages extends AbstractIntlMessages {
   dashboard: DashboardMessages;
   care: CareMessages;
   static: StaticMessages;
+  services: ServicesMessages;
 }
 
 type CommonMessageLoader = () => Promise<CommonMessages>;
@@ -56,6 +58,7 @@ type MemoryCaptureMessageLoader = () => Promise<MemoryCaptureMessages>;
 type DashboardMessageLoader = () => Promise<DashboardMessages>;
 type CareMessageLoader = () => Promise<CareMessages>;
 type StaticMessageLoader = () => Promise<StaticMessages>;
+type ServicesMessageLoader = () => Promise<ServicesMessages>;
 
 const COMMON_MESSAGE_LOADERS: Record<AppLocale, CommonMessageLoader> = {
   pl: () =>
@@ -68,6 +71,14 @@ const COMMON_MESSAGE_LOADERS: Record<AppLocale, CommonMessageLoader> = {
     import("../../messages/ru/common.json").then((module) => module.default),
   de: () =>
     import("../../messages/de/common.json").then((module) => module.default),
+};
+
+const SERVICES_MESSAGE_LOADERS: Record<AppLocale, ServicesMessageLoader> = {
+  pl: () => import("../../messages/pl/services.json").then((module) => module.default),
+  uk: () => import("../../messages/uk/services.json").then((module) => module.default),
+  en: () => import("../../messages/en/services.json").then((module) => module.default),
+  ru: () => import("../../messages/ru/services.json").then((module) => module.default),
+  de: () => import("../../messages/de/services.json").then((module) => module.default),
 };
 
 const NAVIGATION_MESSAGE_LOADERS: Record<AppLocale, NavigationMessageLoader> = {
@@ -392,6 +403,7 @@ export async function loadMessages(locale: AppLocale): Promise<AppMessages> {
     dashboard,
     care,
     staticMessages,
+    services,
   ] = await Promise.all([
     loadCommonMessages(locale),
     loadNavigationMessages(locale),
@@ -409,6 +421,7 @@ export async function loadMessages(locale: AppLocale): Promise<AppMessages> {
     DASHBOARD_MESSAGE_LOADERS[locale](),
     CARE_MESSAGE_LOADERS[locale](),
     STATIC_MESSAGE_LOADERS[locale](),
+    SERVICES_MESSAGE_LOADERS[locale](),
   ]);
   return {
     common,
@@ -427,5 +440,6 @@ export async function loadMessages(locale: AppLocale): Promise<AppMessages> {
     dashboard,
     care,
     static: staticMessages,
+    services,
   };
 }

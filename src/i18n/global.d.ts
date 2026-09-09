@@ -14,6 +14,7 @@ import type memoryCaptureMessages from "../../messages/pl/memoryCapture.json";
 import type dashboardMessages from "../../messages/pl/dashboard.json";
 import type careMessages from "../../messages/pl/care.json";
 import type staticMessages from "../../messages/pl/static.json";
+import type servicesMessages from "../../messages/pl/services.json";
 import type { AppLocale } from "./config";
 
 declare module "next-intl" {
@@ -36,6 +37,7 @@ declare module "next-intl" {
       dashboard: typeof dashboardMessages;
       care: typeof careMessages;
       static: typeof staticMessages;
+      services: typeof servicesMessages;
     };
   }
 }

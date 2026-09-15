@@ -11,6 +11,7 @@ export type VerifiedAssistantProjection = {
   events: AssistantEventContext[];
   people: AssistantPersonContext[];
   memories: AssistantMemoryGroupContext[];
+  giftContext?: AssistantChatRequest["context"]["giftContext"];
 };
 
 /** Replaces all client-supplied private facts with an owner-verified projection. */
@@ -40,6 +41,7 @@ export function replaceAssistantContext(
       personResolutionStatus: activePerson
         ? "resolved"
         : request.context.personResolutionStatus === "ambiguous" ? "ambiguous" : "none",
+      ...(verified.giftContext ? { giftContext: verified.giftContext } : {}),
     },
   };
 }

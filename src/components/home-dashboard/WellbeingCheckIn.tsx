@@ -86,6 +86,7 @@ export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, on
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [planReady, setPlanReady] = useState(false);
+  const [hasResponded, setHasResponded] = useState(false);
   const [birthdayStep, setBirthdayStep] = useState<BirthdayStep>(null);
   const [giftTitle, setGiftTitle] = useState("");
   const [savingGift, setSavingGift] = useState(false);
@@ -144,7 +145,7 @@ export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, on
 
   const answer = async (mood: Mood, userText?: string) => {
     if (busy) return;
-    setError(null); setPlanReady(false);
+    setError(null); setPlanReady(false); setHasResponded(true);
     const displayText = userText ?? (mood === "good" ? copy.good : mood === "neutral" ? copy.neutral : mood === "low" ? copy.low : copy.skip);
     addUserLine(displayText);
     if (mood !== "skip") {
@@ -158,9 +159,10 @@ export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, on
     }
     const contextualReply = mood === "custom" ? wellbeingReply(userText ?? "", recentLowCheckins >= 2) : null;
     const reply = contextualReply ?? (mood === "custom" ? personalReply(userText ?? "", copy.customReply) : locale === "pl" ? (mood === "good" ? "Miło to słyszeć 💙" : "Rozumiem. Jestem obok 💙") : locale === "en" ? (mood === "good" ? "I’m glad to hear it 💙" : "I understand. I’m here 💙") : locale === "de" ? (mood === "good" ? "Das freut mich 💙" : "Ich verstehe. Ich bin da 💙") : locale === "ru" ? (mood === "good" ? "Рад это слышать 💙" : "Понимаю. Я рядом 💙") : (mood === "good" ? "Рада це чути 💙" : "Розумію. Я поруч 💙"));
-    const eventMessage = featuredEvent ? ` ${featuredEvent.countdownLabel} ${featuredEvent.source === "birthday" ? (locale === "uk" ? "день народження" : locale === "pl" ? "urodziny" : "a birthday") : (locale === "uk" ? "важлива подія" : locale === "pl" ? "ważne wydarzenie" : "an important event")} — ${featuredEvent.title}.` : (locale === "uk" ? " Схоже, найближчим часом у тебе немає важливих подій." : locale === "pl" ? " Wygląda na to, że w najbliższym czasie nie masz ważnych wydarzeń." : " It looks like you have no important events coming up soon.");
+    const isBirthdayEvent = featuredEvent?.source === "birthday" || featuredEvent?.category === "birthday";
+    const eventMessage = featuredEvent ? ` ${featuredEvent.countdownLabel} ${isBirthdayEvent ? (locale === "uk" ? "день народження" : locale === "pl" ? "urodziny" : "a birthday") : (locale === "uk" ? "важлива подія" : locale === "pl" ? "ważne wydarzenie" : "an important event")} — ${featuredEvent.title}.` : (locale === "uk" ? " Схоже, найближчим часом у тебе немає важливих подій." : locale === "pl" ? " Wygląda na to, że w najbliższym czasie nie masz ważnych wydarzeń." : " It looks like you have no important events coming up soon.");
     typeHappyLine(`${reply}${eventMessage}`, true);
-    if (featuredEvent?.source === "birthday") setBirthdayStep("ask");
+    if (isBirthdayEvent) setBirthdayStep("ask");
   };
 
   const submitNote = () => {
@@ -180,7 +182,7 @@ export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, on
             <div className="mt-3 space-y-2" aria-live="polite">
               {lines.map((line) => <div key={line.id} className={line.author === "happy" ? "max-w-[88%] rounded-[1.1rem] rounded-tl-sm bg-slate-100/80 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700 sm:max-w-[72%]" : "ml-auto max-w-[80%] rounded-[1.1rem] rounded-tr-sm bg-sky-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-800 sm:max-w-[58%]"}>{line.text || <span className="inline-flex gap-1" aria-label="HappyDate друкує"><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-500" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-500 [animation-delay:150ms]" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-500 [animation-delay:300ms]" /></span>}</div>)}
             </div>
-            {!planReady && <>
+            {!hasResponded && <>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" disabled={busy} onClick={() => void answer("good")} className="min-h-10 rounded-xl bg-emerald-50 px-3 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50">{copy.good}</button>
                 <button type="button" disabled={busy} onClick={() => void answer("neutral")} className="min-h-10 rounded-xl bg-slate-100 px-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200 disabled:opacity-50">{copy.neutral}</button>
@@ -189,17 +191,17 @@ export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, on
               <button type="button" disabled={busy} onClick={() => void answer("skip")} className="mt-1 min-h-9 text-sm font-semibold text-slate-500 underline-offset-4 transition hover:text-slate-700 hover:underline disabled:opacity-50">{copy.skip}</button>
               <div className="mt-2 flex max-w-md gap-2"><input value={note} onChange={(event) => setNote(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitNote(); }} disabled={busy} maxLength={1000} placeholder="Написати Happy…" className="min-h-10 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100 disabled:bg-slate-50" /><button type="button" onClick={submitNote} disabled={busy || !note.trim()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-600 text-white disabled:opacity-40" aria-label={copy.send}><Send size={16} /></button></div>
             </>}
-            {planReady && <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+            {hasResponded && planReady && <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
               {featuredEvent && <Link href={featuredEvent.href} className="inline-flex min-h-9 items-center rounded-xl bg-sky-600 px-3.5 font-bold text-white transition hover:bg-sky-700">{actions.view}</Link>}
               <button type="button" onClick={() => { setPlanReady(false); setBirthdayStep(null); }} className="font-semibold text-slate-500 underline-offset-4 hover:text-slate-700 hover:underline">{actions.later}</button>
               <Link href="/dashboard" className="font-bold text-sky-700 underline-offset-4 hover:underline">{actions.all}</Link>
             </div>}
-            {planReady && birthdayStep === "ask" && <div className="mt-4 max-w-md space-y-2">
+            {hasResponded && planReady && birthdayStep === "ask" && <div className="mt-4 max-w-md space-y-2">
               <div className="max-w-[88%] rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700">Ти вже обрав подарунок?</div>
               <div className="flex flex-wrap gap-2"><button type="button" onClick={() => setBirthdayStep("save")} className="min-h-9 rounded-xl bg-slate-100 px-3 text-sm font-bold text-slate-700">Так, уже обрав</button><button type="button" onClick={() => setBirthdayStep("choose")} className="min-h-9 rounded-xl bg-slate-100 px-3 text-sm font-bold text-slate-700">Ще ні</button></div>
             </div>}
-            {planReady && birthdayStep === "save" && <div className="mt-3 max-w-md space-y-2"><div className="max-w-[88%] rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700">Що саме ти обрав для {featuredEvent?.title}?</div><p className="text-xs leading-5 text-slate-500">Це буде збережено в історії подарунків цієї людини.</p><div className="flex gap-2"><input value={giftTitle} onChange={(event) => setGiftTitle(event.target.value)} placeholder="Наприклад, книга" maxLength={280} className="min-h-10 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-sky-400 focus:bg-white" /><button type="button" disabled={!giftTitle.trim() || !onSaveGift || savingGift} onClick={async () => { if (!onSaveGift) return; setSavingGift(true); try { await onSaveGift(giftTitle.trim()); setGiftTitle(""); setBirthdayStep(null); } finally { setSavingGift(false); } }} className="min-h-10 shrink-0 rounded-xl bg-sky-600 px-3 text-sm font-bold text-white disabled:opacity-50">Так, записати</button></div><button type="button" onClick={() => setBirthdayStep(null)} className="min-h-9 text-sm font-semibold text-slate-500">Не зараз</button></div>}
-            {planReady && birthdayStep === "choose" && <div className="mt-3 max-w-md space-y-2"><div className="max-w-[88%] rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700">Хочеш, я допоможу щось підібрати?</div><div className="flex flex-wrap gap-2"><button type="button" onClick={() => setBirthdayStep(null)} className="min-h-9 rounded-xl px-3 text-sm font-semibold text-slate-600">Ні, впораюсь сам</button><button type="button" onClick={onPickGift} disabled={!onPickGift} className="min-h-9 rounded-xl bg-sky-600 px-3 text-sm font-bold text-white disabled:opacity-50">Так, бо взагалі не знаю що 😅</button></div></div>}
+            {hasResponded && planReady && birthdayStep === "save" && <div className="mt-3 max-w-md space-y-2"><div className="max-w-[88%] rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700">Що саме ти обрав для {featuredEvent?.title}?</div><p className="text-xs leading-5 text-slate-500">Це буде збережено в історії подарунків цієї людини.</p><div className="flex gap-2"><input value={giftTitle} onChange={(event) => setGiftTitle(event.target.value)} placeholder="Наприклад, книга" maxLength={280} className="min-h-10 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-sky-400 focus:bg-white" /><button type="button" disabled={!giftTitle.trim() || !onSaveGift || savingGift} onClick={async () => { if (!onSaveGift) return; setSavingGift(true); try { await onSaveGift(giftTitle.trim()); setGiftTitle(""); setBirthdayStep(null); } finally { setSavingGift(false); } }} className="min-h-10 shrink-0 rounded-xl bg-sky-600 px-3 text-sm font-bold text-white disabled:opacity-50">Так, записати</button></div><button type="button" onClick={() => setBirthdayStep(null)} className="min-h-9 text-sm font-semibold text-slate-500">Не зараз</button></div>}
+            {hasResponded && planReady && birthdayStep === "choose" && <div className="mt-3 max-w-md space-y-2"><div className="max-w-[88%] rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700">Хочеш, я допоможу щось підібрати?</div><div className="flex flex-wrap gap-2"><button type="button" onClick={() => setBirthdayStep(null)} className="min-h-9 rounded-xl px-3 text-sm font-semibold text-slate-600">Ні, впораюсь сам</button><button type="button" onClick={onPickGift} disabled={!onPickGift} className="min-h-9 rounded-xl bg-sky-600 px-3 text-sm font-bold text-white disabled:opacity-50">Так, бо взагалі не знаю що 😅</button></div></div>}
           </>}
           {error && <p role="alert" className="mt-2 text-sm font-medium text-rose-700">{error}</p>}
         </div>

@@ -25,6 +25,7 @@ interface ChatAssistantModalProps {
   onPersonMemoryUpdated?: (personId?: string) => void | Promise<void>;
   initialPrompt?: string | null;
   autoSubmitInitialPrompt?: boolean;
+  giftRequest?: { personId: string; eventId: string } | null;
 }
 
 const ACTION_DEFINITIONS = [
@@ -58,7 +59,7 @@ const INITIAL_HAPPY_LEARNING_STATE: ChatHappyLearningState = {
   detectionStatus: "idle",
 };
 
-export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdated, initialPrompt = null, autoSubmitInitialPrompt = false }: ChatAssistantModalProps) {
+export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdated, initialPrompt = null, autoSubmitInitialPrompt = false, giftRequest = null }: ChatAssistantModalProps) {
   const t = useTranslations("assistant");
   const locale = useLocale();
   const router = useRouter();
@@ -376,6 +377,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
             memories: homeContext.isAuthenticated ? homeContext.memories : [],
             activePersonId: homeContext.isAuthenticated ? requestPersonContext.activePersonId : null,
             personResolutionStatus: homeContext.isAuthenticated ? requestPersonContext.resolutionStatus : "none",
+            giftRequest,
           },
         }),
         signal: controller.signal,

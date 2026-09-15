@@ -109,6 +109,7 @@ export default function HomePageClient() {
   const [reloadKey, setReloadKey] = useState(0);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInitialPrompt, setChatInitialPrompt] = useState<string | null>(null);
+  const [chatGiftRequest, setChatGiftRequest] = useState<{ personId: string; eventId: string } | null>(null);
   const [reminder, setReminder] = useState<ReminderRecord | null>(null);
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminderError, setReminderError] = useState<string | null>(null);
@@ -208,11 +209,13 @@ export default function HomePageClient() {
   }, [runReminderAction]);
 
   const pickGift = useCallback(() => {
-    const name = viewModel?.featuredEvent?.personName;
+    const event = viewModel?.featuredEvent;
+    const name = event?.personName;
     if (!name) return;
+    setChatGiftRequest(event.personId ? { personId: event.personId, eventId: event.id } : null);
     setChatInitialPrompt(homeT("reminder.pickGiftPrompt", { name }));
     setChatOpen(true);
-  }, [homeT, viewModel?.featuredEvent?.personName]);
+  }, [homeT, viewModel?.featuredEvent]);
 
   const saveGift = useCallback(async (title: string) => {
     const event = viewModel?.featuredEvent;
@@ -272,7 +275,7 @@ export default function HomePageClient() {
           <HomeErrorState title={homeT("error.title")} description={homeT("error.description")} retry={homeT("error.retry")} onRetry={reload} />
         </div>
       )}
-      {viewModel && user && <HomeDashboard viewModel={viewModel} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatInitialPrompt(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} />}
+      {viewModel && user && <HomeDashboard viewModel={viewModel} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} />}
       {giftOutcomeConfirmation && (
         <GiftOutcomeConfirmation
           message={homeT("recommendations.giftOutcomeSaved", { outcome: homeT(`recommendations.giftOutcomeValue.${giftOutcomeConfirmation.outcome}` as never) })}
@@ -291,6 +294,7 @@ export default function HomePageClient() {
         onClose={() => setChatOpen(false)}
         initialPrompt={chatInitialPrompt}
         autoSubmitInitialPrompt={Boolean(chatInitialPrompt)}
+        giftRequest={chatGiftRequest}
       />
     </>
   );

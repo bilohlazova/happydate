@@ -137,6 +137,7 @@
     "giftOutcomeDismiss": "Do not ask about this gift",
     "giftOutcomeActionError": "Could not save your choice. Try again."
   },
+  "guest": {"title":"Keep what matters close","description":"HappyDate helps you remember important people, dates, memories and the small details that are easy to lose in everyday life.","register":"Create an account","login":"Log in","previewTitle":"Start with an important person or event","previewDescription":"Create your personal space so Happy can help you stay close and keep what matters from getting lost.","people":"Important people","dates":"Important dates","memories":"Memories and notes"},
   "empty": {
     "title": "Start with an important person or event",
     "description": "Add your first person or date. Happy will only show information based on your data.",

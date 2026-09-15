@@ -137,6 +137,7 @@
     "giftOutcomeDismiss": "Nicht mehr nach diesem Geschenk fragen",
     "giftOutcomeActionError": "Die Auswahl konnte nicht gespeichert werden. Bitte erneut versuchen."
   },
+  "guest": {"title":"Bewahren Sie, was wichtig ist","description":"HappyDate hilft Ihnen, wichtige Menschen, Daten, Erinnerungen und kleine Details im Blick zu behalten, die im Alltag leicht verloren gehen.","register":"Konto erstellen","login":"Anmelden","previewTitle":"Beginnen Sie mit einer wichtigen Person oder einem Ereignis","previewDescription":"Erstellen Sie Ihren persönlichen Raum, damit Happy Ihnen hilft, Nähe zu bewahren und Wichtiges nicht zu verlieren.","people":"Wichtige Menschen","dates":"Wichtige Daten","memories":"Erinnerungen und Notizen"},
   "empty": {
     "title": "Beginne mit einer wichtigen Person oder einem Ereignis",
     "description": "Füge eine Person oder ein Datum hinzu. Happy zeigt nur Informationen aus deinen Daten.",

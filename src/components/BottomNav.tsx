@@ -3,12 +3,14 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { BOTTOM_NAV_ITEMS, isAppShellPath } from "@/i18n/shellNavigation";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function BottomNav() {
   const translate = useTranslations("navigation");
   const pathname = usePathname();
   const router = useRouter();
-  if (!isAppShellPath(pathname)) return null;
+  const { user, loading } = useAuth();
+  if (!isAppShellPath(pathname) || loading || !user) return null;
 
   return (
     <nav

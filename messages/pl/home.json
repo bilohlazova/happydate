@@ -137,6 +137,7 @@
     "giftOutcomeDismiss": "Nie pytaj o ten prezent",
     "giftOutcomeActionError": "Nie udało się zapisać wyboru. Spróbuj ponownie."
   },
+  "guest": {"title":"Pamiętaj o tym, co ważne","description":"HappyDate pomaga pamiętać o ważnych osobach, datach, wspomnieniach i drobnych szczegółach, które łatwo zgubić w codzienności.","register":"Utwórz konto","login":"Zaloguj się","previewTitle":"Zacznij od ważnej osoby lub wydarzenia","previewDescription":"Utwórz swoją przestrzeń, aby Happy pomagał Ci być blisko i nie gubić tego, co ważne.","people":"Ważne osoby","dates":"Ważne daty","memories":"Wspomnienia i notatki"},
   "empty": {
     "title": "Zacznij od ważnej osoby lub wydarzenia",
     "description": "Dodaj pierwszą osobę albo datę. Happy pokaże tutaj tylko informacje oparte na Twoich danych.",

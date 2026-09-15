@@ -10,6 +10,7 @@ import BottomNav from "@/components/BottomNav";
 import { getAppMetadata } from "@/i18n/metadata";
 import NativeDeepLinkBridge from "@/components/NativeDeepLinkBridge";
 import ClientErrorReporter from "@/components/ClientErrorReporter";
+import { AuthProvider } from "@/components/AuthProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,7 +43,7 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} className="h-full">
-      <body
+      <body data-authenticated="false"
         className={`
           ${geistSans.variable}
           ${geistMono.variable}
@@ -55,6 +56,7 @@ export default async function RootLayout({
           messages={messages}
           timeZone={timeZone}
         >
+          <AuthProvider>
           <NativeDeepLinkBridge />
           <ClientErrorReporter />
           <div className="flex min-h-screen flex-col">
@@ -71,13 +73,12 @@ export default async function RootLayout({
           <div className="md:hidden">
             <BottomNav />
           </div>
-
           {/* DESKTOP FOOTER */}
           <div className="hidden md:block">
             <Footer />
           </div>
-
           </div>
+          </AuthProvider>
         </NextIntlClientProvider>
       </body>
     </html>

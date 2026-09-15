@@ -12,7 +12,7 @@ import { updateCurrentUserPreferredLocale } from "@/lib/repositories/profile/pro
 
 type LanguageSwitcherProps = {
   isAuthenticated: boolean;
-  variant?: "header" | "profile";
+  variant?: "header" | "header-light" | "profile";
 };
 
 export default function LanguageSwitcher({

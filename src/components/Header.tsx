@@ -10,6 +10,7 @@ import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import { getLocaleCookie, setLocaleCookie } from "@/i18n/localeCookie";
 import { shouldSynchronizeProfileLocale } from "@/i18n/profileLocaleSync";
 import { getPreferredLocaleForUser } from "@/lib/repositories/profile/profileLocale.repository";
+import { useAuth } from "@/components/AuthProvider";
 
 function cx(...cls: Array<string | false | null | undefined>) {
   return cls.filter(Boolean).join(" ");
@@ -20,12 +21,15 @@ export default function Header() {
   const footerTranslate = useTranslations("navigation.footer");
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<{ id: string; email?: string; user_metadata?: Record<string, unknown> } | null>(null);
+  const { user } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
   const isLoggedIn = Boolean(user);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const synchronizedProfileRef = useRef<string | null>(null);
-  const appShell = isAppShellPath(pathname);
+  const appShell = isAppShellPath(pathname) && Boolean(user);
+  const lightHeader = true;
 
   useEffect(() => {
     // Route changes must close the menu; this state sync is intentional.
@@ -35,10 +39,8 @@ export default function Header() {
 
   useEffect(() => {
     let cancelled = false;
-    const applyUser = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null | undefined) => {
-      if (cancelled) return;
-      setUser(user ? { id: user.id, email: user.email, user_metadata: user.user_metadata } : null);
-      if (!user) {
+    const applyLocale = async () => {
+      if (cancelled || !user) {
         synchronizedProfileRef.current = null;
         return;
       }
@@ -59,15 +61,11 @@ export default function Header() {
         // Authentication and navigation remain usable if preference loading fails.
       }
     };
-    void supabase.auth.getUser().then(({ data }) => applyUser(data.user));
-    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
-      void applyUser(session?.user);
-    });
+    void applyLocale();
     return () => {
       cancelled = true;
-      listener?.subscription?.unsubscribe();
     };
-  }, [router]);
+  }, [router, user]);
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -78,27 +76,39 @@ export default function Header() {
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [mobileMenuOpen]);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (!mobileMenuRef.current?.contains(event.target as Node) && !mobileMenuButtonRef.current?.contains(event.target as Node)) {
+        setMobileMenuOpen(false);
+        mobileMenuButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  }, [mobileMenuOpen]);
+
   return (
     <>
       <header
         className={cx(
           "sticky top-0 z-40 border-b backdrop-blur-xl",
-          appShell
+          lightHeader
             ? "border-slate-200/80 bg-white/92 shadow-[0_4px_18px_rgba(15,23,42,0.045)]"
             : "border-white/25 bg-[linear-gradient(100deg,#249fbd_0%,#35b8cb_58%,#55cbd8_100%)] shadow-[0_8px_22px_rgba(36,159,189,0.13)]",
         )}
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
-        <div className={cx("mx-auto flex h-14 w-full items-center justify-between px-4 sm:px-6", appShell ? "max-w-[1160px]" : "max-w-5xl")}>
+        <div className="mx-auto flex h-14 w-full max-w-[1160px] items-center justify-between px-4 sm:px-6">
 
           {/* LOGO */}
-          <Link href="/" className={cx("min-w-0 truncate text-lg font-extrabold", appShell ? "text-slate-950" : "text-white")}>
+          <Link href="/" className="min-w-0 truncate text-lg font-extrabold text-slate-950">
             🎁 HappyDate
           </Link>
 
           {/* DESKTOP NAV */}
           <nav
-            className={cx("hidden items-center text-sm md:flex", appShell ? "gap-1" : "gap-6 text-white")}
+            className="hidden items-center gap-1 text-sm md:flex"
             aria-label={translate("header.navigationLabel")}
           >
             {(appShell ? BOTTOM_NAV_ITEMS : HEADER_NAV_ITEMS).map((item) => (
@@ -106,10 +116,10 @@ export default function Header() {
                 key={item.href}
                 href={item.href}
                 className={cx(
-                  appShell ? "rounded-xl px-3 py-2 font-bold transition-colors" : "transition",
+                  "rounded-xl px-3 py-2 font-bold transition-colors",
                   appShell
                     ? ((item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)) ? "bg-cyan-50 text-[#19778f]" : "text-slate-600 hover:bg-slate-50 hover:text-[#19778f]")
-                    : pathname.startsWith(item.href) ? "font-semibold underline" : "opacity-90 hover:opacity-100"
+                    : (pathname.startsWith(item.href) ? "bg-cyan-50 text-[#19778f]" : "text-slate-600 hover:bg-slate-50 hover:text-[#19778f]")
                 )}
               >
                 {translate(`${appShell ? "bottom" : "header"}.${item.labelKey}` as never)}
@@ -120,23 +130,24 @@ export default function Header() {
 
           {/* RIGHT SIDE */}
           <div className="flex items-center gap-3">
-            <LanguageSwitcher isAuthenticated={isLoggedIn} />
+            <LanguageSwitcher isAuthenticated={isLoggedIn} variant="header-light" />
             {/* Login — тільки якщо не залогінений */}
             {!user && (
               <Link
                 href="/auth/login"
-                className={cx("hd-button min-h-9 px-3 text-sm font-bold", appShell ? "bg-slate-100 text-slate-700 hover:bg-slate-200" : "bg-white/18 text-white")}
+                className="hd-button hidden min-h-9 bg-slate-100 px-3 text-sm font-bold text-slate-700 hover:bg-slate-200 md:inline-flex"
               >
                 {translate("header.login")}
               </Link>
             )}
-            {!user && <Link href="/auth/register" className={cx("hd-button min-h-9 px-3 text-sm font-bold", appShell ? "bg-cyan-600 text-white hover:bg-cyan-700" : "bg-white text-[#19778f]")}>{translate("header.register")}</Link>}
+            {!user && <Link href="/auth/register" className="hd-button min-h-9 bg-cyan-600 px-3 text-sm font-bold text-white hover:bg-cyan-700">{translate("header.register")}</Link>}
             {user && <div className="relative"><button onClick={() => setProfileOpen((v) => !v)} className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-bold text-slate-700 hover:bg-slate-100" aria-expanded={profileOpen}><span className="grid h-8 w-8 place-items-center rounded-full bg-cyan-100 text-cyan-700">👤</span><span className="hidden max-w-32 truncate sm:inline">{String(user.user_metadata?.full_name || user.user_metadata?.name || user.email || translate("header.account"))}</span></button>{profileOpen && <div className="absolute right-0 top-11 z-50 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl"><Link className="block rounded-xl px-3 py-2 text-sm hover:bg-slate-50" href="/profile">{translate("header.profile")}</Link><Link className="block rounded-xl px-3 py-2 text-sm hover:bg-slate-50" href="/settings">{translate("header.settings")}</Link><button className="block w-full rounded-xl px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50" onClick={async () => { await supabase.auth.signOut(); setProfileOpen(false); }}>{translate("header.logout")}</button></div>}</div>}
 
             {/* HAMBURGER — мобільний доступ до тих самих посилань */}
             <button
+              ref={mobileMenuButtonRef}
               onClick={() => setMobileMenuOpen((v) => !v)}
-              className={cx("hd-icon-button hd-mobile-menu-button text-xl md:hidden", appShell ? "text-slate-700" : "text-white")}
+              className="hd-icon-button hd-mobile-menu-button text-xl text-slate-700 md:hidden"
               aria-label={translate(
                 mobileMenuOpen ? "header.closeMenu" : "header.openMenu",
               )}
@@ -152,9 +163,10 @@ export default function Header() {
         {mobileMenuOpen && (
           <div
             id="happydate-mobile-menu"
-            className="bg-white/96 shadow-lg backdrop-blur-xl sm:hidden"
+            ref={mobileMenuRef}
+            className="happydate-mobile-menu bg-white/96 shadow-lg backdrop-blur-xl sm:hidden"
           >
-            {(appShell ? [{ href: "/services", labelKey: "services" }, { href: "/about", labelKey: "about" }, { href: "/profile", labelKey: "profile" }, { href: "/settings", labelKey: "settings" }, { href: "/contact", labelKey: "contact" }] : HEADER_NAV_ITEMS).map((item) => (
+            {(appShell ? [{ href: "/services", labelKey: "services" }, { href: "/about", labelKey: "about" }, { href: "/profile", labelKey: "profile" }, { href: "/settings", labelKey: "settings" }, { href: "/contact", labelKey: "contact" }] : [{ href: "/services", labelKey: "services" }, { href: "/about", labelKey: "about" }, { href: "/auth/login", labelKey: "login" }, { href: "/contact", labelKey: "contact" }]).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

@@ -27,16 +27,17 @@ interface HomeDashboardProps {
   onPickGift: () => void;
   onGiftOutcome: (giftId: string, outcome: GiftOutcomeValue) => Promise<void>;
   onGiftFollowUp: (giftId: string, action: "snooze" | "dismiss") => Promise<void>;
+  onSaveGift: (title: string) => Promise<void>;
 }
 
-export default function HomeDashboard({ viewModel, reminder, inAppDeliveryCount, reminderBusy, reminderError, onRetry, onAskHappy: _onAskHappy, onCompleteReminder, onSnoozeReminder, onUndoReminder, onPickGift, onGiftOutcome, onGiftFollowUp }: HomeDashboardProps) {
+export default function HomeDashboard({ viewModel, reminder, inAppDeliveryCount, reminderBusy, reminderError, onRetry, onAskHappy: _onAskHappy, onCompleteReminder, onSnoozeReminder, onUndoReminder, onPickGift, onGiftOutcome, onGiftFollowUp, onSaveGift }: HomeDashboardProps) {
   const t = useTranslations("home");
   return (
     <div className="hd-screen overflow-x-hidden">
       <div className="mx-auto w-full max-w-[1160px] px-4 pb-[calc(32px+var(--hd-nav-height)+env(safe-area-inset-bottom))] pt-5 sm:px-6 md:pb-14 md:pt-8">
-        <section className="relative overflow-hidden rounded-[1.5rem] bg-[radial-gradient(circle_at_96%_0%,rgba(125,211,252,.28),transparent_32%),linear-gradient(135deg,#ffffff_0%,#eef9fd_100%)] p-4 shadow-[0_18px_50px_rgba(15,23,42,0.065)] sm:rounded-[2rem] sm:p-8">
+        <section className="relative overflow-hidden rounded-[1.35rem] border border-sky-100 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)] sm:p-5">
           <HomeGreeting greeting={viewModel.greeting} />
-          <WellbeingCheckIn locale={viewModel.locale} userName={viewModel.greeting.name} featuredEvent={viewModel.featuredEvent} />
+          <WellbeingCheckIn locale={viewModel.locale} userName={viewModel.greeting.name} featuredEvent={viewModel.featuredEvent} onPickGift={onPickGift} onSaveGift={onSaveGift} />
         </section>
 
         {inAppDeliveryCount > 0 && (

@@ -9,6 +9,7 @@ import { loadHome } from "@/lib/home/loadHome";
 import { buildHomeViewModel } from "@/lib/home/buildHomeViewModel";
 import type { HomeViewModel } from "@/lib/home/home.types";
 import { changeGiftOutcomeFollowUp, confirmPersonGiftOutcome, savePersonGiftOutcomeNote, undoPersonGiftOutcome } from "@/lib/gifts/gift.loaders";
+import { createPersonGiftIdea } from "@/lib/gifts/gift.loaders";
 import type { GiftOutcomeValue } from "@/lib/gifts/gift.types";
 import { isSupportedLocale } from "@/i18n/config";
 import { logOperationalError } from "@/lib/observability/safeLogger";
@@ -25,6 +26,7 @@ import {
 } from "@/lib/repositories/reminders";
 import { recordKnowledgeReviewInteraction } from "@/lib/repositories/knowledgeReviewInteractions.repository";
 import { useAuth } from "@/components/AuthProvider";
+import GuestHomePresentation from "@/components/GuestHome";
 
 const safeStorage = {
   getItem: (key: string): string | null => {
@@ -96,38 +98,8 @@ function CookieConsent() {
   );
 }
 
-function GuestHome() {
-  const t = useTranslations("home.guest");
-  const navigation = useTranslations("navigation.header");
-  return (
-    <div className="hd-screen overflow-x-hidden">
-      <div className="mx-auto w-full max-w-[760px] px-4 pb-8 pt-8 sm:px-6 sm:pt-12">
-        <section className="rounded-[1.5rem] border border-sky-100 bg-white p-6 shadow-[0_16px_40px_rgba(15,23,42,.06)] sm:rounded-[2rem] sm:p-10">
-          <p className="text-xs font-black uppercase tracking-[.16em] text-sky-600">HappyDate</p>
-          <h1 className="mt-3 max-w-[14ch] text-4xl font-black leading-[.98] tracking-[-.05em] text-slate-950 sm:text-5xl">{t("title")}</h1>
-          <p className="mt-4 max-w-[52ch] text-sm font-semibold leading-6 text-slate-600">{t("description")}</p>
-          <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-            <Link href="/auth/register" className="hd-button hd-button-primary min-h-11 justify-center">{t("register")}</Link>
-            <Link href="/auth/login" className="hd-button min-h-11 justify-center border border-slate-200 bg-white text-slate-700">{t("login")}</Link>
-          </div>
-        </section>
-        <section className="mt-5 rounded-[1.25rem] border border-dashed border-sky-200 bg-sky-50/70 p-5">
-          <h2 className="text-lg font-black text-slate-900">{t("previewTitle")}</h2>
-          <p className="mt-2 text-sm font-medium leading-6 text-slate-600">{t("previewDescription")}</p>
-          <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-sky-800">
-            {[t("people"), t("dates"), t("memories")].map((item) => <span key={item} className="rounded-xl border border-sky-100 bg-white px-3 py-2">{item}</span>)}
-          </div>
-        </section>
-        <nav className="mt-6 flex justify-center gap-4 text-sm font-bold text-sky-700" aria-label={navigation("navigationLabel")}>
-          <Link href="/services">{navigation("services")}</Link>
-          <Link href="/about">{navigation("about")}</Link>
-        </nav>
-      </div>
-    </div>
-  );
-}
-
 export default function HomePageClient() {
+  const { user, loading: authLoading } = useAuth();
   const localeValue = useLocale();
   const locale = isSupportedLocale(localeValue) ? localeValue : "pl";
   const homeT = useTranslations("home");
@@ -161,6 +133,7 @@ export default function HomePageClient() {
   }, []);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     let cancelled = false;
     // Reset the route snapshot before loading the newly requested locale/version.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -203,7 +176,7 @@ export default function HomePageClient() {
       });
 
     return () => { cancelled = true; };
-  }, [homeT, locale, relationT, reloadKey]);
+  }, [authLoading, homeT, locale, relationT, reloadKey, user]);
 
   const runReminderAction = useCallback(async (
     action: (id: string) => Promise<ReminderRecord>,
@@ -240,6 +213,13 @@ export default function HomePageClient() {
     setChatInitialPrompt(homeT("reminder.pickGiftPrompt", { name }));
     setChatOpen(true);
   }, [homeT, viewModel?.featuredEvent?.personName]);
+
+  const saveGift = useCallback(async (title: string) => {
+    const event = viewModel?.featuredEvent;
+    if (!event?.personId) return;
+    await createPersonGiftIdea(event.personId, title);
+    reload();
+  }, [reload, viewModel?.featuredEvent]);
 
   const giftFollowUp = useCallback(async (giftId: string, action: "snooze" | "dismiss") => {
     await changeGiftOutcomeFollowUp(giftId, action);
@@ -284,13 +264,15 @@ export default function HomePageClient() {
 
   return (
     <>
-      {!viewModel && !fatalError && <HomeSkeleton />}
+      {authLoading && <HomeSkeleton />}
+      {!authLoading && !user && <GuestHomePresentation />}
+      {!authLoading && user && !viewModel && !fatalError && <HomeSkeleton />}
       {fatalError && (
         <div className="mx-auto w-full max-w-[980px] px-4 py-6 sm:px-6">
           <HomeErrorState title={homeT("error.title")} description={homeT("error.description")} retry={homeT("error.retry")} onRetry={reload} />
         </div>
       )}
-      {viewModel && (viewModel.isAuthenticated ? <HomeDashboard viewModel={viewModel} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatInitialPrompt(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} /> : <GuestHome />)}
+      {viewModel && user && <HomeDashboard viewModel={viewModel} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatInitialPrompt(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} />}
       {giftOutcomeConfirmation && (
         <GiftOutcomeConfirmation
           message={homeT("recommendations.giftOutcomeSaved", { outcome: homeT(`recommendations.giftOutcomeValue.${giftOutcomeConfirmation.outcome}` as never) })}

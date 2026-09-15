@@ -102,7 +102,7 @@ export default function Header() {
         <div className="mx-auto flex h-14 w-full max-w-[1160px] items-center justify-between px-4 sm:px-6">
 
           {/* LOGO */}
-          <Link href="/" className="min-w-0 truncate text-lg font-extrabold text-slate-950">
+          <Link href="/" className="min-w-0 flex-1 truncate text-lg font-extrabold text-slate-950">
             🎁 HappyDate
           </Link>
 
@@ -129,18 +129,18 @@ export default function Header() {
           </nav>
 
           {/* RIGHT SIDE */}
-          <div className="flex items-center gap-3">
+          <div className="hd-public-header-actions flex shrink-0 items-center gap-3">
             <LanguageSwitcher isAuthenticated={isLoggedIn} variant="header-light" />
             {/* Login — тільки якщо не залогінений */}
             {!user && (
               <Link
                 href="/auth/login"
-                className="hd-button hidden min-h-9 bg-slate-100 px-3 text-sm font-bold text-slate-700 hover:bg-slate-200 md:inline-flex"
+                className="hd-button min-h-9 bg-slate-100 px-3 text-sm font-bold text-slate-700 hover:bg-slate-200"
               >
                 {translate("header.login")}
               </Link>
             )}
-            {!user && <Link href="/auth/register" className="hd-button min-h-9 bg-cyan-600 px-3 text-sm font-bold text-white hover:bg-cyan-700">{translate("header.register")}</Link>}
+            {!user && <Link href="/auth/register" className="hd-button min-h-9 whitespace-nowrap bg-cyan-600 px-3 text-sm font-bold text-white hover:bg-cyan-700">{translate("header.register")}</Link>}
             {user && <div className="relative"><button onClick={() => setProfileOpen((v) => !v)} className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-bold text-slate-700 hover:bg-slate-100" aria-expanded={profileOpen}><span className="grid h-8 w-8 place-items-center rounded-full bg-cyan-100 text-cyan-700">👤</span><span className="hidden max-w-32 truncate sm:inline">{String(user.user_metadata?.full_name || user.user_metadata?.name || user.email || translate("header.account"))}</span></button>{profileOpen && <div className="absolute right-0 top-11 z-50 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl"><Link className="block rounded-xl px-3 py-2 text-sm hover:bg-slate-50" href="/profile">{translate("header.profile")}</Link><Link className="block rounded-xl px-3 py-2 text-sm hover:bg-slate-50" href="/settings">{translate("header.settings")}</Link><button className="block w-full rounded-xl px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50" onClick={async () => { await supabase.auth.signOut(); setProfileOpen(false); }}>{translate("header.logout")}</button></div>}</div>}
 
             {/* HAMBURGER — мобільний доступ до тих самих посилань */}

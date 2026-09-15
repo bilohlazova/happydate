@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 
 import { changeApplicationLocale } from "@/i18n/changeApplicationLocale";
@@ -26,7 +27,9 @@ export default function LanguageSwitcher({
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; width: number } | null>(null);
   const [pendingLocale, setPendingLocale] = useState<AppLocale | null>(null);
   const [syncFailed, setSyncFailed] = useState(false);
   const activeOption = getLanguageOption(locale);
@@ -38,8 +41,25 @@ export default function LanguageSwitcher({
 
   useEffect(() => {
     if (!open) return;
+    const updateMenuPosition = () => {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const width = Math.min(190, Math.max(0, window.innerWidth - 16));
+      const left = Math.min(Math.max(8, rect.right - width), Math.max(8, window.innerWidth - width - 8));
+      const menuHeight = Math.min(menuRef.current?.scrollHeight ?? 220, window.innerHeight - 16);
+      const below = rect.bottom + 8;
+      const top = below + menuHeight <= window.innerHeight - 8
+        ? below
+        : Math.max(8, rect.top - menuHeight - 8);
+      setMenuPosition({ top, left, width });
+    };
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
     const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") closeAndFocus();
@@ -47,6 +67,8 @@ export default function LanguageSwitcher({
     document.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("keydown", onKeyDown);
     return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
       document.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
     };
@@ -68,6 +90,7 @@ export default function LanguageSwitcher({
     setSyncFailed(result.profileSyncFailed);
     setPendingLocale(null);
     setOpen(false);
+    triggerRef.current?.focus();
   };
 
   return (
@@ -98,8 +121,14 @@ export default function LanguageSwitcher({
         )}
       </button>
 
-      {open && (
-        <div className="language-switcher__menu" role="menu" aria-label={translate("selectorLabel")}>
+      {open && menuPosition && variant !== "profile" && createPortal(
+        <div
+          ref={menuRef}
+          className="language-switcher__menu"
+          role="menu"
+          aria-label={translate("selectorLabel")}
+          style={{ position: "fixed", top: menuPosition.top, left: menuPosition.left, width: menuPosition.width, right: "auto", zIndex: 1000, maxHeight: "calc(100dvh - 16px)", overflowY: "auto" }}
+        >
           {LANGUAGE_OPTIONS.map((option) => {
             const active = option.locale === locale;
             return (
@@ -116,6 +145,15 @@ export default function LanguageSwitcher({
                 <span aria-hidden="true">{active ? "✓" : ""}</span>
               </button>
             );
+          })}
+        </div>
+      , document.body)}
+
+      {open && variant === "profile" && (
+        <div ref={menuRef} className="language-switcher__menu" role="menu" aria-label={translate("selectorLabel")}>
+          {LANGUAGE_OPTIONS.map((option) => {
+            const active = option.locale === locale;
+            return <button key={option.locale} type="button" role="menuitemradio" aria-checked={active} className="language-switcher__option" onClick={() => void selectLocale(option.locale)} disabled={pendingLocale !== null}><span>{option.nativeName}</span><span aria-hidden="true">{active ? "✓" : ""}</span></button>;
           })}
         </div>
       )}

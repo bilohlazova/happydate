@@ -21,6 +21,9 @@ export function classifyAssistantResponseIntent(message: string): AssistantRespo
  * private facts, only facts already represented in the verified request.
  */
 export function buildAssistantResponsePlan(request: AssistantChatRequest): string {
+  if (request.context.giftContext) {
+    return "RESPONSE PLAN (SYSTEM INSTRUCTION)\nIntent: VERIFIED GIFT HANDOFF. Continue the gift-selection conversation for the server-verified recipient and event immediately; do not start a generic greeting or ask who the gift is for. Use verified relationship and useful preference memories without asking for them again. Check the current message and conversation for answers already supplied. Ask one missing detail at a time: approximate budget first, then relationship only if unknown, then useful preferences only if absent. Ask at most 2–3 clarifying questions in total before giving 3–5 distinct gift ideas; if context is already sufficient, recommend immediately. Explain each idea using known evidence, avoid previous gifts and verified negative preferences, and label uncertain prices and assumptions. Never invent personal facts or use gender as a shortcut for taste. If the user explicitly changes topic, follow that request instead.";
+  }
   const intent = classifyAssistantResponseIntent(request.message);
   const activePerson = request.context.activePerson;
   const hasActivePersonMemories = activePerson

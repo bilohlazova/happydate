@@ -169,9 +169,15 @@
     }
   },
   "wellbeing": {
+    "saveDeferred": "Okay 🙂 You can record the gift later if you like.",
+    "assistantHandoff": "Of course. I’ll help 🙂",
+    "assistantSubtitle": "Your HappyDate assistant",
+    "typingLabel": "Happy is typing",
+    "firstMessagePlaceholder": "Tell me in your own words…",
     "inputPlaceholder": "Message Happy…",
     "returningGreeting": "Welcome back, {name} 👋",
-    "birthdayIntro": "I’m glad to hear it 💙\n\nI’ve already looked at your upcoming events — {personName}’s birthday is in {daysRemaining, plural, one {# day} other {# days}}.",
+    "birthdayIntro": "I’m glad to hear it 💙\n\nI’ve already looked at your upcoming events — {personName} celebrates a birthday in {daysRemaining, plural, one {# day} other {# days}}.",
+    "birthdayReturningIntro": "I’ve already looked at what’s coming up — {personName} celebrates a birthday in {daysRemaining, plural, one {# day} other {# days}}.",
     "noEvent": "Everything is calm today 🙂 I’ll remind you when something important is coming up.",
     "birthdayLabel": "a birthday",
     "importantEventLabel": "an important event",

@@ -169,9 +169,15 @@
     }
   },
   "wellbeing": {
+    "saveDeferred": "Добре 🙂 Якщо захочеш, зможеш записати подарунок пізніше.",
+    "assistantHandoff": "Звісно. Допоможу 🙂",
+    "assistantSubtitle": "Твій асистент HappyDate",
+    "typingLabel": "Happy пише",
+    "firstMessagePlaceholder": "Розкажи своїми словами…",
     "inputPlaceholder": "Написати Happy…",
     "returningGreeting": "Привіт знову, {name} 👋",
-    "birthdayIntro": "Радий це чути 💙\n\nЯ вже переглянув твої найближчі події — через {daysRemaining, plural, one {# день} few {# дні} many {# днів} other {# днів}} день народження {personName}.",
+    "birthdayIntro": "Радий це чути 💙\n\nЯ вже переглянув твої найближчі події — через {daysRemaining, plural, one {# день} few {# дні} many {# днів} other {# днів}} {personName} святкує день народження.",
+    "birthdayReturningIntro": "Я вже переглянув, що в тебе попереду — через {daysRemaining, plural, one {# день} few {# дні} many {# днів} other {# днів}} {personName} святкує день народження.",
     "noEvent": "Сьогодні все спокійно 🙂 Я нагадаю, коли щось важливе наблизиться.",
     "birthdayLabel": "день народження",
     "importantEventLabel": "важлива подія",

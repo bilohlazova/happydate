@@ -169,9 +169,15 @@
     }
   },
   "wellbeing": {
+    "saveDeferred": "Dobrze 🙂 Jeśli zechcesz, możesz zapisać prezent później.",
+    "assistantHandoff": "Jasne. Pomogę 🙂",
+    "assistantSubtitle": "Twój asystent HappyDate",
+    "typingLabel": "Happy pisze",
+    "firstMessagePlaceholder": "Opowiedz własnymi słowami…",
     "inputPlaceholder": "Napisz do Happy…",
     "returningGreeting": "Witaj znowu, {name} 👋",
-    "birthdayIntro": "Cieszę się, że tak się czujesz 💙\n\nPrzejrzałem Twoje najbliższe wydarzenia — urodziny {personName} są za {daysRemaining, plural, one {# dzień} few {# dni} many {# dni} other {# dni}}.",
+    "birthdayIntro": "Cieszę się, że tak się czujesz 💙\n\nPrzejrzałem Twoje najbliższe wydarzenia — za {daysRemaining, plural, one {# dzień} few {# dni} many {# dni} other {# dni}} {personName} obchodzi urodziny.",
+    "birthdayReturningIntro": "Przejrzałem już, co przed Tobą — za {daysRemaining, plural, one {# dzień} few {# dni} many {# dni} other {# dni}} {personName} obchodzi urodziny.",
     "noEvent": "Dziś jest spokojnie 🙂 Przypomnę Ci, gdy zbliży się coś ważnego.",
     "birthdayLabel": "urodziny",
     "importantEventLabel": "ważne wydarzenie",

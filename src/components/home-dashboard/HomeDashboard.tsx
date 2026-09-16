@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 import type { HomeViewModel } from "@/lib/home/home.types";
-import HomeGreeting from "./HomeGreeting";
 import UpcomingEventsSection from "./UpcomingEventsSection";
 import HappyRecommendationsSection from "./HappyRecommendationsSection";
 import HomeErrorState from "./HomeErrorState";
@@ -33,8 +32,7 @@ export default function HomeDashboard({ viewModel, reminder: _reminder, inAppDel
   return (
     <div className="hd-screen overflow-x-hidden">
       <div className="mx-auto w-full max-w-[1160px] px-4 pb-[calc(32px+var(--hd-nav-height)+env(safe-area-inset-bottom))] pt-5 sm:px-6 md:pb-14 md:pt-8">
-        <section className="relative overflow-hidden rounded-[1.35rem] border border-sky-100 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)] sm:p-5">
-          <HomeGreeting greeting={viewModel.greeting} />
+        <section className="relative w-full max-w-[760px] overflow-hidden rounded-[1.35rem] border border-sky-100 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)] sm:p-5">
           <WellbeingCheckIn locale={viewModel.locale} userName={viewModel.greeting.name} featuredEvent={viewModel.featuredEvent} onPickGift={onPickGift} onSaveGift={onSaveGift} />
         </section>
 

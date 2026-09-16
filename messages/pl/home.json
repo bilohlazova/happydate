@@ -93,10 +93,10 @@
   },
   "upcoming": {
     "title": "Najbliżej",
-    "all": "Wszystkie",
-    "next": "Dalej",
+    "all": "Wszystkie wydarzenia",
+    "next": "Przed Tobą",
     "emptyTitle": "Na horyzoncie jest na razie spokojnie ✨",
-    "emptyDescription": "Gdy dodasz ważne daty, pojawią się tutaj."
+    "emptyDescription": "Nie masz jeszcze zaplanowanych wydarzeń."
   },
   "recommendations": {
     "title": "Happy rekomenduje",
@@ -167,5 +167,26 @@
       "title": "Zaskocz mnie",
       "subtitle": "HappyDate sam wybierze najlepszy sposób"
     }
+  },
+  "wellbeing": {
+    "inputPlaceholder": "Napisz do Happy…",
+    "birthdayIntro": "Cieszę się, że tak się czujesz 💙\n\nPrzejrzałem Twoje najbliższe wydarzenia — urodziny {personName} są za {daysRemaining, plural, one {# dzień} few {# dni} many {# dni} other {# dni}}.",
+    "noEvent": "Dziś jest spokojnie 🙂 Przypomnę Ci, gdy zbliży się coś ważnego.",
+    "birthdayLabel": "urodziny",
+    "importantEventLabel": "ważne wydarzenie",
+    "giftQuestion": "Czy wybrałeś już prezent?",
+    "alreadyChosen": "Tak, już wybrałem",
+    "notYet": "Jeszcze nie",
+    "saveQuestion": "Chcesz zapisać, co podarujesz?",
+    "saveExplanation": "Dzięki temu później zobaczysz historię prezentów dla tej osoby i unikniesz powtórek.",
+    "saveAction": "Tak, zapisz",
+    "laterAction": "Nie teraz",
+    "whatChosen": "Co dokładnie wybrałeś dla {personName}?",
+    "giftInputPlaceholder": "Na przykład książka",
+    "saveConfirmation": "Prezent zapisany 💙",
+    "suggestionQuestion": "Chcesz, żebym pomógł coś wybrać?",
+    "declineSuggestion": "Nie, poradzę sobie",
+    "openAssistant": "Tak, bo zupełnie nie wiem co 😅",
+    "dismissal": "Dobrze 🙂 Jeśli zmienisz zdanie — jestem obok."
   }
 }

@@ -93,10 +93,10 @@
   },
   "upcoming": {
     "title": "Coming up",
-    "all": "All",
-    "next": "Next",
+    "all": "All events",
+    "next": "Coming up",
     "emptyTitle": "The horizon is quiet for now ✨",
-    "emptyDescription": "When you add important dates, they will appear here."
+    "emptyDescription": "No upcoming events yet."
   },
   "recommendations": {
     "title": "Happy recommends",
@@ -167,5 +167,26 @@
       "title": "Surprise me",
       "subtitle": "HappyDate will choose the best way"
     }
+  },
+  "wellbeing": {
+    "inputPlaceholder": "Message Happy…",
+    "birthdayIntro": "I’m glad to hear it 💙\n\nI’ve already looked at your upcoming events — {personName}’s birthday is in {daysRemaining, plural, one {# day} other {# days}}.",
+    "noEvent": "Everything is calm today 🙂 I’ll remind you when something important is coming up.",
+    "birthdayLabel": "a birthday",
+    "importantEventLabel": "an important event",
+    "giftQuestion": "Have you chosen a gift yet?",
+    "alreadyChosen": "Yes, I’ve chosen one",
+    "notYet": "Not yet",
+    "saveQuestion": "Would you like to save what you’re giving?",
+    "saveExplanation": "That way, you can look back at this person’s gift history later and avoid repeating yourself.",
+    "saveAction": "Yes, save it",
+    "laterAction": "Not now",
+    "whatChosen": "What exactly did you choose for {personName}?",
+    "giftInputPlaceholder": "For example, a book",
+    "saveConfirmation": "Gift saved 💙",
+    "suggestionQuestion": "Would you like me to help you find something?",
+    "declineSuggestion": "No, I’ll manage",
+    "openAssistant": "Yes, because I have no idea what to choose 😅",
+    "dismissal": "Okay 🙂 If you change your mind — I’m here."
   }
 }

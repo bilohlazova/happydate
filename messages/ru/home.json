@@ -93,10 +93,10 @@
   },
   "upcoming": {
     "title": "Ближайшее",
-    "all": "Все",
-    "next": "Дальше",
+    "all": "Все события",
+    "next": "Впереди",
     "emptyTitle": "На горизонте пока спокойно ✨",
-    "emptyDescription": "Когда добавишь важные даты, они появятся здесь."
+    "emptyDescription": "Пока нет запланированных событий."
   },
   "recommendations": {
     "title": "Happy рекомендует",
@@ -167,5 +167,26 @@
       "title": "Удиви меня",
       "subtitle": "HappyDate сам выберет лучший способ"
     }
+  },
+  "wellbeing": {
+    "inputPlaceholder": "Написать Happy…",
+    "birthdayIntro": "Рад это слышать 💙\n\nЯ уже посмотрел ближайшие события — день рождения {personName} через {daysRemaining, plural, one {# день} few {# дня} many {# дней} other {# дней}}.",
+    "noEvent": "Сегодня всё спокойно 🙂 Я напомню, когда приблизится что-то важное.",
+    "birthdayLabel": "день рождения",
+    "importantEventLabel": "важное событие",
+    "giftQuestion": "Ты уже выбрал подарок?",
+    "alreadyChosen": "Да, уже выбрал",
+    "notYet": "Ещё нет",
+    "saveQuestion": "Хочешь сохранить, что именно ты даришь?",
+    "saveExplanation": "Так ты сможешь позже посмотреть историю подарков для этого человека и не повторяться.",
+    "saveAction": "Да, записать",
+    "laterAction": "Не сейчас",
+    "whatChosen": "Что именно ты выбрал для {personName}?",
+    "giftInputPlaceholder": "Например, книга",
+    "saveConfirmation": "Подарок сохранён 💙",
+    "suggestionQuestion": "Хочешь, я помогу что-нибудь подобрать?",
+    "declineSuggestion": "Нет, я справлюсь сам",
+    "openAssistant": "Да, потому что совсем не знаю что выбрать 😅",
+    "dismissal": "Хорошо 🙂 Если передумаешь — я рядом."
   }
 }

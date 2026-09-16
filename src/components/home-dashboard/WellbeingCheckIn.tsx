@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Send } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
@@ -9,7 +10,8 @@ import { wellbeingReply } from "@/lib/assistant/wellbeingConversation";
 
 type Mood = "good" | "neutral" | "low" | "skip" | "custom";
 type Line = { id: number; author: "happy" | "user"; text: string };
-type BirthdayStep = "ask" | "save" | "choose" | null;
+type ConversationStep = "wellbeing" | "birthday_intro" | "gift_status";
+type GiftStatusAction = "save_prompt" | "input" | "saved" | "suggestion" | "declined" | null;
 
 function personalReply(message: string, fallback: string) {
   const value = message.toLocaleLowerCase();
@@ -37,11 +39,11 @@ const COPY = {
     placeholder: "Розкажи своїми словами…",
     send: "Надіслати",
     plan: "Показати мій план",
-    goodReply: "Радію це чути. Нехай цей стан залишиться з тобою. Я переглянув важливі справи та підготував короткий фокус на найближчий час.",
+    goodReply: "Радий це чути 💙 Нехай цей стан залишиться з тобою. Я вже переглянув, що в тебе попереду.",
     neutralReply: "Розумію. Не кожен день має бути легким або особливим. Якщо хочеш, можеш трохи розповісти, що зараз найбільше займає твої думки.",
-    lowReply: "Мені шкода, що день непростий. Не потрібно пояснювати більше, ніж хочеш. Я поруч — а поки підготував короткий фокус на найближчі важливі справи.",
-    skipReply: "Розумію і поважаю твій вибір. Я переглянув твої справи та підготував короткий фокус на найближчий час.",
-    customReply: "Дякую, що поділився. Я поруч. А зараз я переглянув найближчі важливі справи, щоб тобі не доводилося тримати все в голові.",
+    lowReply: "Мені шкода, що день непростий. Не потрібно пояснювати більше, ніж хочеш. Я поруч.",
+    skipReply: "Розумію і поважаю твій вибір. Я вже переглянув, що в тебе попереду.",
+    customReply: "Дякую, що поділився. Я поруч. До речі, я вже переглянув, що в тебе попереду.",
     error: "Не вдалося зберегти відповідь. Спробуй ще раз.",
   },
   en: {
@@ -80,14 +82,14 @@ interface WellbeingCheckInProps {
 
 export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, onSaveGift }: WellbeingCheckInProps) {
   const copy = getCopy(locale);
+  const wellbeingT = useTranslations("home.wellbeing");
   const actions = ACTION_COPY[locale] ?? ACTION_COPY.uk;
   const [enabled, setEnabled] = useState<boolean | null>(null);
-  const [lines, setLines] = useState<Line[]>([]);
+  const [lines, setLines] = useState<Line[]>(() => [{ id: 0, author: "happy", text: copy.greeting }]);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
-  const [planReady, setPlanReady] = useState(false);
-  const [hasResponded, setHasResponded] = useState(false);
-  const [birthdayStep, setBirthdayStep] = useState<BirthdayStep>(null);
+  const [conversationStep, setConversationStep] = useState<ConversationStep>("wellbeing");
+  const [giftStatusAction, setGiftStatusAction] = useState<GiftStatusAction>(null);
   const [giftTitle, setGiftTitle] = useState("");
   const [savingGift, setSavingGift] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +115,7 @@ export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, on
 
   const addUserLine = (text: string) => setLines((current) => [...current, { id: nextId.current++, author: "user", text }]);
 
-  const typeHappyLine = (text: string, revealPlan = true) => {
+  const typeHappyLine = (text: string) => {
     const id = nextId.current++;
     setBusy(true);
     setLines((current) => [...current, { id, author: "happy", text: "" }]);
@@ -121,13 +123,12 @@ export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, on
     if (reduceMotion) {
       setLines((current) => current.map((line) => line.id === id ? { ...line, text } : line));
       setBusy(false);
-      setPlanReady(revealPlan);
       return;
     }
     [...text].forEach((_, index) => {
       const timeout = window.setTimeout(() => {
         setLines((current) => current.map((line) => line.id === id ? { ...line, text: text.slice(0, index + 1) } : line));
-        if (index === text.length - 1) { setBusy(false); setPlanReady(revealPlan); }
+        if (index === text.length - 1) { setBusy(false); }
       }, 13 * (index + 1));
       timers.current.push(timeout);
     });
@@ -145,7 +146,7 @@ export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, on
 
   const answer = async (mood: Mood, userText?: string) => {
     if (busy) return;
-    setError(null); setPlanReady(false); setHasResponded(true);
+    setError(null);
     const displayText = userText ?? (mood === "good" ? copy.good : mood === "neutral" ? copy.neutral : mood === "low" ? copy.low : copy.skip);
     addUserLine(displayText);
     if (mood !== "skip") {
@@ -157,12 +158,19 @@ export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, on
       if (insertError) { setBusy(false); setError(copy.error); return; }
       setBusy(false);
     }
-    const contextualReply = mood === "custom" ? wellbeingReply(userText ?? "", recentLowCheckins >= 2) : null;
-    const reply = contextualReply ?? (mood === "custom" ? personalReply(userText ?? "", copy.customReply) : locale === "pl" ? (mood === "good" ? "Miło to słyszeć 💙" : "Rozumiem. Jestem obok 💙") : locale === "en" ? (mood === "good" ? "I’m glad to hear it 💙" : "I understand. I’m here 💙") : locale === "de" ? (mood === "good" ? "Das freut mich 💙" : "Ich verstehe. Ich bin da 💙") : locale === "ru" ? (mood === "good" ? "Рад это слышать 💙" : "Понимаю. Я рядом 💙") : (mood === "good" ? "Рада це чути 💙" : "Розумію. Я поруч 💙"));
     const isBirthdayEvent = featuredEvent?.source === "birthday" || featuredEvent?.category === "birthday";
-    const eventMessage = featuredEvent ? ` ${featuredEvent.countdownLabel} ${isBirthdayEvent ? (locale === "uk" ? "день народження" : locale === "pl" ? "urodziny" : "a birthday") : (locale === "uk" ? "важлива подія" : locale === "pl" ? "ważne wydarzenie" : "an important event")} — ${featuredEvent.title}.` : (locale === "uk" ? " Схоже, найближчим часом у тебе немає важливих подій." : locale === "pl" ? " Wygląda na to, że w najbliższym czasie nie masz ważnych wydarzeń." : " It looks like you have no important events coming up soon.");
-    typeHappyLine(`${reply}${eventMessage}`, true);
-    if (isBirthdayEvent) setBirthdayStep("ask");
+    if (isBirthdayEvent && featuredEvent) {
+      const daysRemaining = featuredEvent.daysUntil;
+      typeHappyLine(wellbeingT("birthdayIntro", { daysRemaining, personName: featuredEvent.personName ?? featuredEvent.title }));
+      setConversationStep("birthday_intro");
+      const timeout = window.setTimeout(() => setConversationStep("gift_status"), 0);
+      timers.current.push(timeout);
+      return;
+    }
+    const contextualReply = mood === "custom" ? wellbeingReply(userText ?? "", recentLowCheckins >= 2) : null;
+    const reply = contextualReply ?? (mood === "custom" ? personalReply(userText ?? "", copy.customReply) : locale === "pl" ? (mood === "good" ? "Miło to słyszeć 💙" : "Rozumiem. Jestem obok 💙") : locale === "en" ? (mood === "good" ? "I’m glad to hear it 💙" : "I understand. I’m here 💙") : locale === "de" ? (mood === "good" ? "Das freut mich 💙" : "Ich verstehe. Ich bin da 💙") : locale === "ru" ? (mood === "good" ? "Рад это слышать 💙" : "Понимаю. Я рядом 💙") : (mood === "good" ? "Радий це чути 💙" : "Розумію. Я поруч 💙"));
+    const eventMessage = featuredEvent ? ` ${featuredEvent.countdownLabel} ${isBirthdayEvent ? wellbeingT("birthdayLabel") : wellbeingT("importantEventLabel")} — ${featuredEvent.title}.` : ` ${wellbeingT("noEvent")}`;
+    typeHappyLine(`${reply}${eventMessage}`);
   };
 
   const submitNote = () => {
@@ -182,26 +190,40 @@ export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, on
             <div className="mt-3 space-y-2" aria-live="polite">
               {lines.map((line) => <div key={line.id} className={line.author === "happy" ? "max-w-[88%] rounded-[1.1rem] rounded-tl-sm bg-slate-100/80 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700 sm:max-w-[72%]" : "ml-auto max-w-[80%] rounded-[1.1rem] rounded-tr-sm bg-sky-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-800 sm:max-w-[58%]"}>{line.text || <span className="inline-flex gap-1" aria-label="HappyDate друкує"><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-500" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-500 [animation-delay:150ms]" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-500 [animation-delay:300ms]" /></span>}</div>)}
             </div>
-            {!hasResponded && <>
+            {conversationStep === "wellbeing" && !lines.some((line) => line.author === "user") && <>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" disabled={busy} onClick={() => void answer("good")} className="min-h-10 rounded-xl bg-emerald-50 px-3 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50">{copy.good}</button>
                 <button type="button" disabled={busy} onClick={() => void answer("neutral")} className="min-h-10 rounded-xl bg-slate-100 px-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200 disabled:opacity-50">{copy.neutral}</button>
                 <button type="button" disabled={busy} onClick={() => void answer("low")} className="min-h-10 rounded-xl bg-amber-50 px-3 text-sm font-bold text-amber-900 transition hover:bg-amber-100 disabled:opacity-50">{copy.low}</button>
               </div>
               <button type="button" disabled={busy} onClick={() => void answer("skip")} className="mt-1 min-h-9 text-sm font-semibold text-slate-500 underline-offset-4 transition hover:text-slate-700 hover:underline disabled:opacity-50">{copy.skip}</button>
-              <div className="mt-2 flex max-w-md gap-2"><input value={note} onChange={(event) => setNote(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitNote(); }} disabled={busy} maxLength={1000} placeholder="Написати Happy…" className="min-h-10 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100 disabled:bg-slate-50" /><button type="button" onClick={submitNote} disabled={busy || !note.trim()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-600 text-white disabled:opacity-40" aria-label={copy.send}><Send size={16} /></button></div>
+              <div className="mt-2 flex max-w-md gap-2"><input value={note} onChange={(event) => setNote(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitNote(); }} disabled={busy} maxLength={1000} placeholder={wellbeingT("inputPlaceholder")} className="min-h-10 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100 disabled:bg-slate-50" /><button type="button" onClick={submitNote} disabled={busy || !note.trim()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-600 text-white disabled:opacity-40" aria-label={copy.send}><Send size={16} /></button></div>
             </>}
-            {hasResponded && planReady && <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+            {lines.some((line) => line.author === "user") && !busy && <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
               {featuredEvent && <Link href={featuredEvent.href} className="inline-flex min-h-9 items-center rounded-xl bg-sky-600 px-3.5 font-bold text-white transition hover:bg-sky-700">{actions.view}</Link>}
-              <button type="button" onClick={() => { setPlanReady(false); setBirthdayStep(null); }} className="font-semibold text-slate-500 underline-offset-4 hover:text-slate-700 hover:underline">{actions.later}</button>
+              <button type="button" onClick={() => setConversationStep("wellbeing")} className="font-semibold text-slate-500 underline-offset-4 hover:text-slate-700 hover:underline">{actions.later}</button>
               <Link href="/dashboard" className="font-bold text-sky-700 underline-offset-4 hover:underline">{actions.all}</Link>
             </div>}
-            {hasResponded && planReady && birthdayStep === "ask" && <div className="mt-4 max-w-md space-y-2">
-              <div className="max-w-[88%] rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700">Ти вже обрав подарунок?</div>
-              <div className="flex flex-wrap gap-2"><button type="button" onClick={() => setBirthdayStep("save")} className="min-h-9 rounded-xl bg-slate-100 px-3 text-sm font-bold text-slate-700">Так, уже обрав</button><button type="button" onClick={() => setBirthdayStep("choose")} className="min-h-9 rounded-xl bg-slate-100 px-3 text-sm font-bold text-slate-700">Ще ні</button></div>
+            {conversationStep === "gift_status" && giftStatusAction === null && !busy && <div className="mt-4 max-w-md space-y-2">
+              <div className="max-w-[88%] rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700">{wellbeingT("giftQuestion")}</div>
+              <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { addUserLine(wellbeingT("alreadyChosen")); setGiftStatusAction("save_prompt"); }} className="min-h-9 rounded-xl bg-slate-100 px-3 text-sm font-bold text-slate-700">{wellbeingT("alreadyChosen")}</button><button type="button" onClick={() => { addUserLine(wellbeingT("notYet")); setGiftStatusAction("suggestion"); }} className="min-h-9 rounded-xl bg-slate-100 px-3 text-sm font-bold text-slate-700">{wellbeingT("notYet")}</button></div>
             </div>}
-            {hasResponded && planReady && birthdayStep === "save" && <div className="mt-3 max-w-md space-y-2"><div className="max-w-[88%] rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700">Що саме ти обрав для {featuredEvent?.title}?</div><p className="text-xs leading-5 text-slate-500">Це буде збережено в історії подарунків цієї людини.</p><div className="flex gap-2"><input value={giftTitle} onChange={(event) => setGiftTitle(event.target.value)} placeholder="Наприклад, книга" maxLength={280} className="min-h-10 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-sky-400 focus:bg-white" /><button type="button" disabled={!giftTitle.trim() || !onSaveGift || savingGift} onClick={async () => { if (!onSaveGift) return; setSavingGift(true); try { await onSaveGift(giftTitle.trim()); setGiftTitle(""); setBirthdayStep(null); } finally { setSavingGift(false); } }} className="min-h-10 shrink-0 rounded-xl bg-sky-600 px-3 text-sm font-bold text-white disabled:opacity-50">Так, записати</button></div><button type="button" onClick={() => setBirthdayStep(null)} className="min-h-9 text-sm font-semibold text-slate-500">Не зараз</button></div>}
-            {hasResponded && planReady && birthdayStep === "choose" && <div className="mt-3 max-w-md space-y-2"><div className="max-w-[88%] rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700">Хочеш, я допоможу щось підібрати?</div><div className="flex flex-wrap gap-2"><button type="button" onClick={() => setBirthdayStep(null)} className="min-h-9 rounded-xl px-3 text-sm font-semibold text-slate-600">Ні, впораюсь сам</button><button type="button" onClick={onPickGift} disabled={!onPickGift} className="min-h-9 rounded-xl bg-sky-600 px-3 text-sm font-bold text-white disabled:opacity-50">Так, бо взагалі не знаю що 😅</button></div></div>}
+            {conversationStep === "gift_status" && giftStatusAction === "suggestion" && <div className="mt-4 max-w-md space-y-2">
+              <div className="max-w-[88%] rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700">{wellbeingT("suggestionQuestion")}</div>
+              <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { addUserLine(wellbeingT("declineSuggestion")); setGiftStatusAction("declined"); }} className="min-h-9 rounded-xl bg-slate-100 px-3 text-sm font-bold text-slate-700">{wellbeingT("declineSuggestion")}</button><button type="button" onClick={onPickGift} disabled={!onPickGift} className="min-h-9 rounded-xl bg-sky-600 px-3 text-sm font-bold text-white disabled:opacity-50">{wellbeingT("openAssistant")}</button></div>
+            </div>}
+            {conversationStep === "gift_status" && giftStatusAction === "declined" && <div className="mt-4 max-w-md space-y-2"><div className="max-w-[88%] rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700">{wellbeingT("dismissal")}</div></div>}
+            {conversationStep === "gift_status" && giftStatusAction === "save_prompt" && <div className="mt-4 max-w-md space-y-2">
+              <div className="max-w-[88%] rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700">{wellbeingT("saveQuestion")}</div>
+              <p className="max-w-md text-xs leading-5 text-slate-500">{wellbeingT("saveExplanation")}</p>
+              <div className="flex flex-wrap gap-2"><button type="button" onClick={() => setGiftStatusAction("input")} className="min-h-9 rounded-xl bg-sky-600 px-3 text-sm font-bold text-white">{wellbeingT("saveAction")}</button><button type="button" onClick={() => setGiftStatusAction(null)} className="min-h-9 rounded-xl bg-slate-100 px-3 text-sm font-bold text-slate-700">{wellbeingT("laterAction")}</button></div>
+            </div>}
+            {conversationStep === "gift_status" && giftStatusAction === "input" && <div className="mt-4 max-w-md space-y-2">
+              <div className="max-w-[88%] rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700">{wellbeingT("whatChosen", { personName: featuredEvent?.personName ?? featuredEvent?.title ?? "" })}</div>
+              <div className="flex gap-2"><input value={giftTitle} onChange={(event) => setGiftTitle(event.target.value)} placeholder={wellbeingT("giftInputPlaceholder")} maxLength={280} className="min-h-10 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-sky-400 focus:bg-white" /><button type="button" disabled={!giftTitle.trim() || !onSaveGift || savingGift} onClick={async () => { if (!onSaveGift) return; setSavingGift(true); try { await onSaveGift(giftTitle.trim()); setGiftTitle(""); setGiftStatusAction("saved"); } catch { setError(copy.error); } finally { setSavingGift(false); } }} className="min-h-10 shrink-0 rounded-xl bg-sky-600 px-3 text-sm font-bold text-white disabled:opacity-50">{wellbeingT("saveAction")}</button></div>
+              <button type="button" onClick={() => setGiftStatusAction(null)} className="min-h-9 text-sm font-semibold text-slate-500">{wellbeingT("laterAction")}</button>
+            </div>}
+            {conversationStep === "gift_status" && giftStatusAction === "saved" && !busy && <div className="mt-4 max-w-md space-y-2"><div className="max-w-[88%] rounded-2xl rounded-tl-sm bg-slate-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700">{wellbeingT("saveConfirmation")}</div></div>}
           </>}
           {error && <p role="alert" className="mt-2 text-sm font-medium text-rose-700">{error}</p>}
         </div>

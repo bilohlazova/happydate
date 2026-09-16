@@ -400,7 +400,7 @@ export function formatAssistantContext(context: AssistantChatRequest["context"])
     const lines = [`personId: ${gift.personId}`, `person: ${safeContextLine(gift.personName)}`, `event: ${gift.eventType} — ${gift.eventDate} (${gift.daysRemaining} days remaining)`];
     if (gift.relationship) lines.push(`relationship: ${safeContextLine(gift.relationship)}`);
     if (gift.birthday) lines.push(`birthday: ${gift.birthday}`);
-    if (gift.previousGifts.length) lines.push(`previous gifts: ${gift.previousGifts.map(safeContextLine).join("; ")}`);
+    if (gift.previousGifts.length) lines.push(`previous gifts (lifecycle is factual; idea means saved idea, selected means selected, purchased means purchased, given means given): ${gift.previousGifts.map(safeContextLine).join("; ")}`);
     sections.push(`GIFT RECOMMENDATION CONTEXT (SERVER VERIFIED FACTS)\n${lines.join("\n")}`);
   }
   return sections.length ? sections.join("\n\n") : null;

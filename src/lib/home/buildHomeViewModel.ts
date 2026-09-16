@@ -433,11 +433,10 @@ export function buildHomeViewModel(
     stats: { importantCount },
     assistantActions: { briefText: briefing.text, briefing },
     featuredEvent: featuredCard,
-    upcomingEvents: buildUpcoming(
-      featured ? events.filter((event) => event.id !== featured.id) : events,
-      locale,
-      t,
-    ),
+    // Keep the canonical nearest event visible in the compact list as well as
+    // separately available to Happy. `events` is already normalized, sorted,
+    // and de-duplicated by stable event identity.
+    upcomingEvents: buildUpcoming(events, locale, t),
     recommendations,
     isEmpty: data.people.length === 0 && data.events.length === 0 && data.memories.length === 0 && (data.pendingGiftOutcomes ?? []).length === 0,
     errors: data.errors,

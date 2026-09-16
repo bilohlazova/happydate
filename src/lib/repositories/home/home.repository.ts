@@ -13,12 +13,31 @@ import type {
   HomeProfile,
   HomeRepositoryData,
   HomeStoredEvent,
+  HomeGiftHistoryRecord,
 } from "@/lib/home/home.types";
 import { canonicalRelationKey } from "@/lib/people/canonicalRelation";
 
 export interface HomeRepositoryResult extends HomeRepositoryData {
   userId: string | null;
   knowledge: KnowledgeItem[];
+  giftHistory?: HomeGiftHistoryRecord[];
+}
+
+async function loadGiftHistory(client: SupabaseClient, userId: string): Promise<HomeGiftHistoryRecord[]> {
+  const { data, error } = await client
+    .from("gifts")
+    .select("id, person_id, event_id, title, lifecycle, occurred_on, created_at")
+    .eq("user_id", userId)
+    .not("person_id", "is", null)
+    .order("created_at", { ascending: false });
+  if (error) throw new HomeRepositoryError("gifts", error.message);
+  return (data ?? []).flatMap((gift) => (
+    typeof gift.id === "string" && typeof gift.person_id === "string" && typeof gift.title === "string"
+      && (gift.lifecycle === "idea" || gift.lifecycle === "selected" || gift.lifecycle === "purchased" || gift.lifecycle === "given")
+      && typeof gift.created_at === "string"
+      ? [{ id: gift.id, personId: gift.person_id, eventId: typeof gift.event_id === "string" ? gift.event_id : null, title: gift.title.trim(), lifecycle: gift.lifecycle, occurredOn: typeof gift.occurred_on === "string" ? gift.occurred_on : null, createdAt: gift.created_at }]
+      : []
+  ));
 }
 
 class HomeRepositoryError extends Error {
@@ -145,6 +164,7 @@ export async function getHomeRepositoryData(
   client: SupabaseClient = supabase,
   expectedUserId?: string,
   accessToken?: string,
+  options: { includeGiftHistory?: boolean } = {},
 ): Promise<HomeRepositoryResult> {
   const { data: authData, error: authError } = await client.auth.getUser(accessToken);
   const user = authData.user;
@@ -189,6 +209,15 @@ export async function getHomeRepositoryData(
   if (!giftsResult.ok) errors.push(errorFrom(giftsResult.reason, "gifts"));
   if (!reviewPreferencesResult.ok) errors.push(errorFrom(reviewPreferencesResult.reason, "settings"));
 
+  let giftHistory: HomeGiftHistoryRecord[] | undefined;
+  if (options.includeGiftHistory) {
+    try {
+      giftHistory = await loadGiftHistory(client, user.id);
+    } catch (reason) {
+      errors.push(errorFrom(reason, "gifts"));
+    }
+  }
+
   return {
     userId: user.id,
     isAuthenticated: true,
@@ -207,5 +236,6 @@ export async function getHomeRepositoryData(
       : { homeEnabled: false, voiceEnabled: false, timezone: "UTC" },
     knowledge: knowledgeResult.ok ? knowledgeResult.value.knowledge : [],
     errors,
+    ...(giftHistory ? { giftHistory } : {}),
   };
 }

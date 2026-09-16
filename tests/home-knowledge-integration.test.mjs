@@ -84,7 +84,7 @@ test("stored birthday and person birthday render as one event for the same occur
   }), "uk", t, new Date(2026, 7, 3));
 
   assert.equal(model.featuredEvent?.id, "birthday-dima");
-  assert.deepEqual(model.upcomingEvents.map((event) => event.id), []);
+  assert.deepEqual(model.upcomingEvents.map((event) => event.id), ["birthday-dima"]);
 });
 
 test("legacy unlinked birthday is deduplicated by person name and date", () => {
@@ -101,7 +101,7 @@ test("legacy unlinked birthday is deduplicated by person name and date", () => {
   }), "uk", t, new Date(2026, 7, 3));
 
   assert.equal(model.featuredEvent?.id, "birthday-dima");
-  assert.deepEqual(model.upcomingEvents.map((event) => event.id), []);
+  assert.deepEqual(model.upcomingEvents.map((event) => event.id), ["birthday-dima"]);
 });
 
 test("different people with birthdays on the same date remain separate", () => {
@@ -120,9 +120,9 @@ test("different people with birthdays on the same date remain separate", () => {
     }],
   }), "uk", t, new Date(2026, 7, 3));
 
-  const renderedIds = [model.featuredEvent?.id, ...model.upcomingEvents.map((event) => event.id)].filter(Boolean).sort();
+  const renderedIds = [...new Set([model.featuredEvent?.id, ...model.upcomingEvents.map((event) => event.id)].filter(Boolean))].sort();
   assert.deepEqual(renderedIds, ["birthday-denys", "birthday-dima"]);
-  assert.equal(model.upcomingEvents.some((event) => event.id === model.featuredEvent?.id), false);
+  assert.equal(model.upcomingEvents.filter((event) => event.id === model.featuredEvent?.id).length, 1);
 });
 
 test("multiple people, equal dates and event ordering stay deterministic", () => {
@@ -133,7 +133,7 @@ test("multiple people, equal dates and event ordering stay deterministic", () =>
     ],
   }), "pl", t, new Date(2026, 6, 17));
   assert.equal(model.featuredEvent?.title, "events.birthdayTitle:Alpha");
-  assert.deepEqual(model.upcomingEvents.map((event) => event.title), ["events.birthdayTitle:Beta"]);
+  assert.deepEqual(model.upcomingEvents.map((event) => event.title), ["events.birthdayTitle:Alpha", "events.birthdayTitle:Beta"]);
 });
 
 test("preference deduplication and missing-context recommendation remain unchanged", () => {

@@ -170,6 +170,7 @@
   },
   "wellbeing": {
     "inputPlaceholder": "Написати Happy…",
+    "returningGreeting": "Привіт знову, {name} 👋",
     "birthdayIntro": "Радий це чути 💙\n\nЯ вже переглянув твої найближчі події — через {daysRemaining, plural, one {# день} few {# дні} many {# днів} other {# днів}} день народження {personName}.",
     "noEvent": "Сьогодні все спокійно 🙂 Я нагадаю, коли щось важливе наблизиться.",
     "birthdayLabel": "день народження",

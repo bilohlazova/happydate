@@ -79,6 +79,17 @@ export interface HomeRepositoryData {
   errors: HomeDataError[];
 }
 
+/** Server-only gift projection; omitted from the client Home loader. */
+export interface HomeGiftHistoryRecord {
+  id: string;
+  personId: string;
+  eventId: string | null;
+  title: string;
+  lifecycle: "idea" | "selected" | "purchased" | "given";
+  occurredOn: string | null;
+  createdAt: string;
+}
+
 /** Canonical loader result. Knowledge stays in the data layer and never reaches React UI. */
 export interface HomeLoaderData extends HomeRepositoryData {
   brainInsights: Insight[];

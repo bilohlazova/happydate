@@ -156,12 +156,44 @@ test("Home cards show a confirmed event time and birthdays remain without one", 
     { id: "meeting", title: "Meeting", date: "2026-07-17", timeOfDay: "10:15", category: "work", notes: null },
   ] }), "pl", t, new Date(2026, 6, 17));
   assert.equal(timed.featuredEvent?.timeOfDay, "10:15");
-  assert.equal(timed.upcomingEvents.length, 0);
+  assert.equal(timed.upcomingEvents.length, 1);
+  assert.equal(timed.upcomingEvents[0].id, "meeting");
 
   const birthday = buildHomeViewModel(data({
     people: [{ id: "p1", name: "Ola", birthday: "1990-07-17", relationLabel: "Siostra" }],
   }), "pl", t, new Date(2026, 6, 17));
   assert.equal(birthday.featuredEvent?.timeOfDay, null);
+});
+
+test("upcoming list includes featured event first and keeps chronological maximum of three", () => {
+  const model = buildHomeViewModel(data({
+    people: [
+      { id: "mia", name: "Мія", birthday: "1990-09-20", relationLabel: "Friend" },
+      { id: "david", name: "Давід", birthday: "1990-10-04", relationLabel: "Friend" },
+      { id: "dad", name: "Тато", birthday: "1990-10-28", relationLabel: "Family" },
+      { id: "mom", name: "Мама", birthday: "1990-11-25", relationLabel: "Family" },
+    ],
+  }), "uk", t, new Date(2026, 8, 17));
+
+  assert.equal(model.featuredEvent?.personId, "mia");
+  assert.deepEqual(model.upcomingEvents.map((event) => event.personId), ["mia", "david", "dad"]);
+  assert.equal(new Set(model.upcomingEvents.map((event) => event.id)).size, 3);
+  assert.equal(model.upcomingEvents.length, 3);
+});
+
+test("upcoming list has no featured duplicate and remains normal without a featured event", () => {
+  const model = buildHomeViewModel(data({
+    events: [
+      { id: "one", title: "One", date: "2026-09-20", category: null, notes: null },
+      { id: "two", title: "Two", date: "2026-09-21", category: null, notes: null },
+    ],
+  }), "uk", t, new Date(2026, 8, 17));
+  assert.equal(model.featuredEvent?.id, "one");
+  assert.deepEqual(model.upcomingEvents.map((event) => event.id), ["one", "two"]);
+
+  const empty = buildHomeViewModel(data(), "uk", t, new Date(2026, 8, 17));
+  assert.equal(empty.featuredEvent, null);
+  assert.deepEqual(empty.upcomingEvents, []);
 });
 
 test("care question timing asks at most one question only inside preparation windows", () => {

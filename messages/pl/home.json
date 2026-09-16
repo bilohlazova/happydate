@@ -170,6 +170,7 @@
   },
   "wellbeing": {
     "inputPlaceholder": "Napisz do Happy…",
+    "returningGreeting": "Witaj znowu, {name} 👋",
     "birthdayIntro": "Cieszę się, że tak się czujesz 💙\n\nPrzejrzałem Twoje najbliższe wydarzenia — urodziny {personName} są za {daysRemaining, plural, one {# dzień} few {# dni} many {# dni} other {# dni}}.",
     "noEvent": "Dziś jest spokojnie 🙂 Przypomnę Ci, gdy zbliży się coś ważnego.",
     "birthdayLabel": "urodziny",

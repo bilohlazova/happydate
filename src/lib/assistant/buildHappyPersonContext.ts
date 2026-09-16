@@ -11,13 +11,15 @@ export function buildHappyPersonContext(data: HomeRepositoryResult, event: { id:
     ? brains.conversation.assistantPeople.find((item) => item.id === event.personId) ?? null
     : null;
   const memories = person ? brains.conversation.assistantMemories.filter((group) => group.personName === person.name) : [];
-  const previousGifts = data.pendingGiftOutcomes
-    .filter((gift) => !event?.personId || gift.personId === event.personId)
-    .map((gift) => ({ title: gift.title, personId: gift.personId }));
+  const previousGifts = data.giftHistory?.filter((gift) => gift.personId === event?.personId)
+    .map((gift) => `${gift.title} — ${gift.lifecycle}`)
+    ?? data.pendingGiftOutcomes
+      .filter((gift) => !event?.personId || gift.personId === event.personId)
+      .map((gift) => `${gift.title} — given`);
   if (!person || !event?.personId) return null;
   return {
     personId: person.id, personName: person.name, relationship: person.relation, birthday: person.birthday,
     eventId: event.id, eventType: event.source, eventDate: event.date, daysRemaining: event.daysUntil,
-    memories: memories.flatMap((group) => group.memories), previousGifts: previousGifts.map((gift) => gift.title),
+    memories: memories.flatMap((group) => group.memories), previousGifts,
   };
 }

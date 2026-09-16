@@ -170,6 +170,7 @@
   },
   "wellbeing": {
     "inputPlaceholder": "Message Happy…",
+    "returningGreeting": "Welcome back, {name} 👋",
     "birthdayIntro": "I’m glad to hear it 💙\n\nI’ve already looked at your upcoming events — {personName}’s birthday is in {daysRemaining, plural, one {# day} other {# days}}.",
     "noEvent": "Everything is calm today 🙂 I’ll remind you when something important is coming up.",
     "birthdayLabel": "a birthday",

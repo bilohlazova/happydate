@@ -7,6 +7,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import type { HomeFeaturedEvent } from "@/lib/home/home.types";
 import { wellbeingReply } from "@/lib/assistant/wellbeingConversation";
+import { isSameLocalCalendarDay } from "@/lib/wellbeing/sameDay";
 
 type Mood = "good" | "neutral" | "low" | "skip" | "custom";
 type Line = { id: number; author: "happy" | "user"; text: string };
@@ -80,12 +81,12 @@ interface WellbeingCheckInProps {
   onSaveGift?: (title: string) => Promise<void>;
 }
 
-export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, onSaveGift }: WellbeingCheckInProps) {
+export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPickGift, onSaveGift }: WellbeingCheckInProps) {
   const copy = getCopy(locale);
   const wellbeingT = useTranslations("home.wellbeing");
   const actions = ACTION_COPY[locale] ?? ACTION_COPY.uk;
   const [enabled, setEnabled] = useState<boolean | null>(null);
-  const [lines, setLines] = useState<Line[]>(() => [{ id: 0, author: "happy", text: copy.greeting }]);
+  const [lines, setLines] = useState<Line[]>([]);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [conversationStep, setConversationStep] = useState<ConversationStep>("wellbeing");
@@ -94,6 +95,9 @@ export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, on
   const [savingGift, setSavingGift] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recentLowCheckins, setRecentLowCheckins] = useState(0);
+  const [wellbeingHistoryLoading, setWellbeingHistoryLoading] = useState(true);
+  const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
+  const resumedRef = useRef(false);
   const timers = useRef<number[]>([]);
   const nextId = useRef(1);
 
@@ -102,13 +106,17 @@ export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, on
     const timerStore = timers.current;
     void (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !active) return setEnabled(false);
+      if (!user || !active) { setEnabled(false); setWellbeingHistoryLoading(false); return; }
       const { data } = await supabase.from("profiles").select("wellbeing_personalization_enabled").eq("id", user.id).maybeSingle();
       if (active) setEnabled(data?.wellbeing_personalization_enabled === true);
       if (data?.wellbeing_personalization_enabled) {
-        const { data: checkins } = await supabase.from("user_wellbeing_checkins").select("mood").eq("user_id", user.id).order("created_at", { ascending: false }).limit(6);
-        if (active) setRecentLowCheckins((checkins ?? []).filter((item) => item.mood === "low").length);
+        const { data: checkins } = await supabase.from("user_wellbeing_checkins").select("mood,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(6);
+        if (active) {
+          setRecentLowCheckins((checkins ?? []).filter((item) => item.mood === "low").length);
+          setHasCheckedInToday((checkins ?? []).some((item) => isSameLocalCalendarDay(item.created_at)));
+        }
       }
+      if (active) setWellbeingHistoryLoading(false);
     })();
     return () => { active = false; timerStore.forEach(window.clearTimeout); };
   }, []);
@@ -180,6 +188,26 @@ export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, on
     void answer("custom", value);
   };
 
+  useEffect(() => {
+    if (!enabled || wellbeingHistoryLoading || resumedRef.current) return;
+    resumedRef.current = true;
+    if (!hasCheckedInToday) {
+      setLines([{ id: nextId.current++, author: "happy", text: copy.greeting }]);
+      return;
+    }
+    const greeting = wellbeingT("returningGreeting", { name: userName?.trim() || "" });
+    if (featuredEvent?.source === "birthday" || featuredEvent?.category === "birthday") {
+      setLines([{ id: nextId.current++, author: "happy", text: greeting }]);
+      typeHappyLine(wellbeingT("birthdayIntro", { daysRemaining: featuredEvent.daysUntil, personName: featuredEvent.personName ?? featuredEvent.title ?? "" }));
+      setConversationStep("birthday_intro");
+      const timeout = window.setTimeout(() => setConversationStep("gift_status"), 0);
+      timers.current.push(timeout);
+      return;
+    }
+    const eventMessage = featuredEvent ? ` ${featuredEvent.countdownLabel} ${wellbeingT("importantEventLabel")} — ${featuredEvent.title}.` : ` ${wellbeingT("noEvent")}`;
+    setLines([{ id: nextId.current++, author: "happy", text: `${greeting}${eventMessage}` }]);
+  }, [copy.greeting, enabled, featuredEvent, hasCheckedInToday, wellbeingHistoryLoading, wellbeingT, userName]);
+
   return (
     <section className="mt-3 w-full max-w-2xl" aria-label="Персональна турбота HappyDate">
       <div className="min-w-0">
@@ -190,7 +218,7 @@ export default function WellbeingCheckIn({ locale, featuredEvent, onPickGift, on
             <div className="mt-3 space-y-2" aria-live="polite">
               {lines.map((line) => <div key={line.id} className={line.author === "happy" ? "max-w-[88%] rounded-[1.1rem] rounded-tl-sm bg-slate-100/80 px-3.5 py-2.5 text-[15px] leading-6 text-slate-700 sm:max-w-[72%]" : "ml-auto max-w-[80%] rounded-[1.1rem] rounded-tr-sm bg-sky-100 px-3.5 py-2.5 text-[15px] leading-6 text-slate-800 sm:max-w-[58%]"}>{line.text || <span className="inline-flex gap-1" aria-label="HappyDate друкує"><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-500" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-500 [animation-delay:150ms]" /><i className="h-1.5 w-1.5 animate-bounce rounded-full bg-sky-500 [animation-delay:300ms]" /></span>}</div>)}
             </div>
-            {conversationStep === "wellbeing" && !lines.some((line) => line.author === "user") && <>
+            {conversationStep === "wellbeing" && !wellbeingHistoryLoading && !hasCheckedInToday && !lines.some((line) => line.author === "user") && <>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" disabled={busy} onClick={() => void answer("good")} className="min-h-10 rounded-xl bg-emerald-50 px-3 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50">{copy.good}</button>
                 <button type="button" disabled={busy} onClick={() => void answer("neutral")} className="min-h-10 rounded-xl bg-slate-100 px-3 text-sm font-bold text-slate-700 transition hover:bg-slate-200 disabled:opacity-50">{copy.neutral}</button>

@@ -110,6 +110,7 @@ export async function POST(request: Request) {
             rlsSession.client,
             identity.userId,
             rlsSession.accessToken,
+            { includeGiftHistory: true },
           );
           const verifiedRequest = buildVerifiedAssistantRequest(clientRequest, homeData);
           const [serverGiftOutcomes, serverSavedGiftLinks, serverPets, serverSymbol, serverHappyConversations] = verifiedRequest.context.activePerson

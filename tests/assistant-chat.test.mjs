@@ -8,6 +8,7 @@ import {
   parseAssistantChatRequest,
 } from "../src/lib/assistant/chatContract.ts";
 import { createAssistantChatResponse } from "../src/lib/assistant/chatServer.ts";
+import { ASSISTANT_BEHAVIOR_MANIFEST } from "../src/lib/assistant/assistantBehaviorManifest.ts";
 import { buildConversationHistory } from "../src/lib/assistant/chatClient.ts";
 import { ASSISTANT_CHAT_CONFIG, ASSISTANT_RATE_LIMITS } from "../src/lib/assistant/chatConfig.ts";
 import {
@@ -356,7 +357,7 @@ test("streaming response reuses history and emits provider chunks", async () => 
     },
   );
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get("X-HappyDate-Assistant-Version"), "assistant-2026-09-07.1");
+  assert.equal(response.headers.get("X-HappyDate-Assistant-Version"), ASSISTANT_BEHAVIOR_MANIFEST.behaviorVersion);
   assert.equal(await response.text(), "Hello world");
   assert.equal(capturedMessages.at(-2).content, "Earlier");
   assert.equal(capturedMessages.at(-1).content, "Pomóż mi zaplanować dzień");

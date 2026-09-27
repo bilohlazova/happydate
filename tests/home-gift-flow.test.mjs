@@ -16,6 +16,13 @@ test("recommendation branch declines or hands off", () => {
   assert.equal(walk("suggestion", "assistant_handoff"), "assistant_handoff");
 });
 
+test("database-prepared gift bypasses status and only offers supplementary help", () => {
+  assert.equal(walk("prepared"), "prepared");
+  assert.equal(walk("prepared", "prepared_done"), "prepared_done");
+  assert.equal(walk("prepared", "supplementary_handoff"), "supplementary_handoff");
+  assert.equal(walk("prepared", "save_prompt"), "prepared");
+});
+
 test("terminal states absorb every subsequent transition, including status", () => {
   for (const terminal of ["saved", "declined", "done", "assistant_handoff"]) {
     for (const next of ["status", "save_prompt", "input", "saved", "suggestion", "declined", "done", "assistant_handoff"]) {
@@ -34,4 +41,11 @@ test("verified gift context keeps budget-only replies in the gift conversation",
   assert.match(plan, /budget first/);
   assert.match(plan, /2–3 clarifying questions/);
   assert.match(plan, /3–5 distinct gift ideas/);
+});
+
+test("supplementary mode cannot silently replace the selected gift", () => {
+  const request = { message: "ще ідеї", conversation: [], context: { giftContext: { personId: "mia", eventId: "birthday-mia:2026-09-20", mode: "supplementary", existingSelectedGift: { id: "g1", title: "LEGO", lifecycle: "selected" } } } };
+  const plan = buildAssistantResponsePlan(request);
+  assert.match(plan, /SUPPLEMENTARY/);
+  assert.match(plan, /Do not suggest replacing, editing, or overwriting/);
 });

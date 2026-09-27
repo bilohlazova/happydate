@@ -21,5 +21,7 @@ export function buildHappyPersonContext(data: HomeRepositoryResult, event: { id:
     personId: person.id, personName: person.name, relationship: person.relation, birthday: person.birthday,
     eventId: event.id, eventType: event.source, eventDate: event.date, daysRemaining: event.daysUntil,
     memories: memories.flatMap((group) => group.memories), previousGifts,
+    mode: "selection",
+    existingSelectedGift: null,
   };
 }

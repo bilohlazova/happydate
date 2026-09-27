@@ -9,7 +9,7 @@ import { loadHome } from "@/lib/home/loadHome";
 import { buildHomeViewModel } from "@/lib/home/buildHomeViewModel";
 import type { HomeViewModel } from "@/lib/home/home.types";
 import { changeGiftOutcomeFollowUp, confirmPersonGiftOutcome, savePersonGiftOutcomeNote, undoPersonGiftOutcome } from "@/lib/gifts/gift.loaders";
-import { createPersonGiftIdea } from "@/lib/gifts/gift.loaders";
+import { createSelectedPersonGift } from "@/lib/gifts/gift.loaders";
 import type { GiftOutcomeValue } from "@/lib/gifts/gift.types";
 import { isSupportedLocale } from "@/i18n/config";
 import { logOperationalError } from "@/lib/observability/safeLogger";
@@ -109,7 +109,7 @@ export default function HomePageClient() {
   const [reloadKey, setReloadKey] = useState(0);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInitialPrompt, setChatInitialPrompt] = useState<string | null>(null);
-  const [chatGiftRequest, setChatGiftRequest] = useState<{ personId: string; eventId: string } | null>(null);
+  const [chatGiftRequest, setChatGiftRequest] = useState<{ personId: string; eventId: string; mode?: "selection" | "supplementary" } | null>(null);
   const [reminder, setReminder] = useState<ReminderRecord | null>(null);
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminderError, setReminderError] = useState<string | null>(null);
@@ -208,19 +208,19 @@ export default function HomePageClient() {
     void runReminderAction((id) => undoReminderCompletion(id));
   }, [runReminderAction]);
 
-  const pickGift = useCallback(() => {
+  const pickGift = useCallback((mode: "selection" | "supplementary" = "selection") => {
     const event = viewModel?.featuredEvent;
     const name = event?.personName;
     if (!name) return;
-    setChatGiftRequest(event.personId ? { personId: event.personId, eventId: event.id } : null);
-    setChatInitialPrompt(homeT("reminder.pickGiftPrompt", { name }));
+    setChatGiftRequest(event.personId ? { personId: event.personId, eventId: event.giftContextId, mode } : null);
+    setChatInitialPrompt(homeT(mode === "supplementary" ? "wellbeing.supplementaryPrompt" : "reminder.pickGiftPrompt", { name }));
     setChatOpen(true);
   }, [homeT, viewModel?.featuredEvent]);
 
   const saveGift = useCallback(async (title: string) => {
     const event = viewModel?.featuredEvent;
     if (!event?.personId) return;
-    await createPersonGiftIdea(event.personId, title);
+    await createSelectedPersonGift(event.personId, title, event.giftContextId);
     reload();
   }, [reload, viewModel?.featuredEvent]);
 
@@ -275,7 +275,7 @@ export default function HomePageClient() {
           <HomeErrorState title={homeT("error.title")} description={homeT("error.description")} retry={homeT("error.retry")} onRetry={reload} />
         </div>
       )}
-      {viewModel && user && <HomeDashboard viewModel={viewModel} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} />}
+      {viewModel && user && <HomeDashboard viewModel={viewModel} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} onContinueHappyTask={() => { /* Task Runner will own this action. */ }} />}
       {giftOutcomeConfirmation && (
         <GiftOutcomeConfirmation
           message={homeT("recommendations.giftOutcomeSaved", { outcome: homeT(`recommendations.giftOutcomeValue.${giftOutcomeConfirmation.outcome}` as never) })}

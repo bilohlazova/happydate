@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabaseClient";
 import type { HomeFeaturedEvent } from "@/lib/home/home.types";
 import { wellbeingReply } from "@/lib/assistant/wellbeingConversation";
 import { isSameLocalCalendarDay } from "@/lib/wellbeing/sameDay";
+import { detectWellbeingPattern, isSupportMomentCoolingDown, type WellbeingCheckin } from "@/lib/wellbeing/supportPattern";
 
 type Mood = "good" | "neutral" | "low" | "skip" | "custom";
 type Line = { id: number; author: "happy" | "user"; text: string };
@@ -44,26 +45,26 @@ const COPY = {
     plan: "Показати мій план",
     goodReply: "Радий це чути 💙 Нехай цей стан залишиться з тобою. Я вже переглянув, що в тебе попереду.",
     neutralReply: "Розумію. Не кожен день має бути легким або особливим. Якщо хочеш, можеш трохи розповісти, що зараз найбільше займає твої думки.",
-    lowReply: "Мені шкода, що день непростий. Не потрібно пояснювати більше, ніж хочеш. Я поруч.",
+    lowReply: "Шкода це чути 💙 Сподіваюся, решта дня буде трохи легшою.",
     skipReply: "Розумію і поважаю твій вибір. Я вже переглянув, що в тебе попереду.",
     customReply: "Дякую, що поділився. Я поруч. До речі, я вже переглянув, що в тебе попереду.",
     error: "Не вдалося зберегти відповідь. Спробуй ще раз.",
   },
   en: {
     welcome: "Hello",
-    greeting: "How are you today?", privacy: "Enable personal care so HappyDate can privately remember your check-ins only to support you.", consent: "Enable care", good: "😊 I’m doing well", neutral: "😐 So-so", low: "💛 Today is hard", skip: "Skip", placeholder: "Tell me in your own words…", send: "Send", plan: "Show my plan", goodReply: "I’m glad to hear that. I reviewed your important dates and prepared a short focus for what is ahead.", neutralReply: "I understand. Not every day needs to feel easy or special. If you want, tell me what is taking up the most space in your thoughts right now.", lowReply: "I’m sorry today feels hard. You do not have to explain more than you want to. I’m here, and I prepared a short focus for your upcoming important dates.", skipReply: "I understand and respect your choice. I reviewed your dates and prepared a short focus for what is ahead.", customReply: "Thank you for sharing. I’ll keep this private for your personal support. I also prepared a short focus for what is ahead.", error: "We could not save your response. Please try again.",
+    greeting: "How are you today?", privacy: "Enable personal care so HappyDate can privately remember your check-ins only to support you.", consent: "Enable care", good: "😊 I’m doing well", neutral: "😐 So-so", low: "💛 Today is hard", skip: "Skip", placeholder: "Tell me in your own words…", send: "Send", plan: "Show my plan", goodReply: "I’m glad to hear that. I reviewed your important dates and prepared a short focus for what is ahead.", neutralReply: "I understand. Not every day needs to feel easy or special. If you want, tell me what is taking up the most space in your thoughts right now.", lowReply: "I’m sorry to hear that 💙 I hope the rest of your day feels a little easier.", skipReply: "I understand and respect your choice. I reviewed your dates and prepared a short focus for what is ahead.", customReply: "Thank you for sharing. I’ll keep this private for your personal support. I also prepared a short focus for what is ahead.", error: "We could not save your response. Please try again.",
   },
   pl: {
     welcome: "Cześć",
-    greeting: "Jak się dziś czujesz?", privacy: "Włącz osobistą troskę, aby HappyDate prywatnie zapamiętywał Twoje check-iny tylko po to, by Cię wspierać.", consent: "Włącz troskę", good: "😊 Wszystko dobrze", neutral: "😐 Tak sobie", low: "💛 Dziś jest ciężko", skip: "Pomiń", placeholder: "Opowiedz własnymi słowami…", send: "Wyślij", plan: "Pokaż mój plan", goodReply: "Cieszę się. Przejrzałem ważne sprawy i przygotowałem krótki plan tego, co przed Tobą.", neutralReply: "Rozumiem. Nie każdy dzień musi być łatwy ani wyjątkowy. Jeśli chcesz, powiedz, co teraz najbardziej zajmuje Twoje myśli.", lowReply: "Przykro mi, że dzień jest trudny. Nie musisz mówić więcej, niż chcesz. Jestem obok i przygotowałem krótki plan najbliższych ważnych spraw.", skipReply: "Rozumiem i szanuję Twój wybór. Przejrzałem Twoje sprawy i przygotowałem krótki plan.", customReply: "Dziękuję, że się tym podzieliłeś. Zachowam to prywatnie, aby lepiej Cię wspierać. Przygotowałem też krótki plan.", error: "Nie udało się zapisać odpowiedzi. Spróbuj ponownie.",
+    greeting: "Jak się dziś czujesz?", privacy: "Włącz osobistą troskę, aby HappyDate prywatnie zapamiętywał Twoje check-iny tylko po to, by Cię wspierać.", consent: "Włącz troskę", good: "😊 Wszystko dobrze", neutral: "😐 Tak sobie", low: "💛 Dziś jest ciężko", skip: "Pomiń", placeholder: "Opowiedz własnymi słowami…", send: "Wyślij", plan: "Pokaż mój plan", goodReply: "Cieszę się. Przejrzałem ważne sprawy i przygotowałem krótki plan tego, co przed Tobą.", neutralReply: "Rozumiem. Nie każdy dzień musi być łatwy ani wyjątkowy. Jeśli chcesz, powiedz, co teraz najbardziej zajmuje Twoje myśli.", lowReply: "Przykro mi to słyszeć 💙 Mam nadzieję, że reszta dnia będzie trochę lżejsza.", skipReply: "Rozumiem i szanuję Twój wybór. Przejrzałem Twoje sprawy i przygotowałem krótki plan.", customReply: "Dziękuję, że się tym podzieliłeś. Zachowam to prywatnie, aby lepiej Cię wspierać. Przygotowałem też krótki plan.", error: "Nie udało się zapisać odpowiedzi. Spróbuj ponownie.",
   },
   de: {
     welcome: "Hallo",
-    greeting: "Wie geht es dir heute?", privacy: "Aktiviere persönliche Begleitung, damit HappyDate deine Check-ins privat für deine Unterstützung speichern kann.", consent: "Begleitung aktivieren", good: "😊 Mir geht es gut", neutral: "😐 Geht so", low: "💛 Heute ist es schwer", skip: "Überspringen", placeholder: "Erzähl es mit deinen Worten…", send: "Senden", plan: "Meinen Plan zeigen", goodReply: "Das freut mich. Ich habe deine wichtigen Termine angesehen und einen kurzen Überblick vorbereitet.", neutralReply: "Verstehe. Nicht jeder Tag muss leicht oder besonders sein. Wenn du möchtest, erzähl mir, was dich gerade am meisten beschäftigt.", lowReply: "Es tut mir leid, dass der Tag schwer ist. Du musst nicht mehr erzählen, als du möchtest. Ich bin hier.", skipReply: "Ich verstehe und respektiere deine Entscheidung. Ich habe einen kurzen Überblick vorbereitet.", customReply: "Danke, dass du das teilst. Ich bin hier und habe außerdem einen kurzen Überblick vorbereitet.", error: "Deine Antwort konnte nicht gespeichert werden. Bitte versuche es erneut.",
+    greeting: "Wie geht es dir heute?", privacy: "Aktiviere persönliche Begleitung, damit HappyDate deine Check-ins privat für deine Unterstützung speichern kann.", consent: "Begleitung aktivieren", good: "😊 Mir geht es gut", neutral: "😐 Geht so", low: "💛 Heute ist es schwer", skip: "Überspringen", placeholder: "Erzähl es mit deinen Worten…", send: "Senden", plan: "Meinen Plan zeigen", goodReply: "Das freut mich. Ich habe deine wichtigen Termine angesehen und einen kurzen Überblick vorbereitet.", neutralReply: "Verstehe. Nicht jeder Tag muss leicht oder besonders sein. Wenn du möchtest, erzähl mir, was dich gerade am meisten beschäftigt.", lowReply: "Das tut mir leid 💙 Ich hoffe, der Rest des Tages wird etwas leichter.", skipReply: "Ich verstehe und respektiere deine Entscheidung. Ich habe einen kurzen Überblick vorbereitet.", customReply: "Danke, dass du das teilst. Ich bin hier und habe außerdem einen kurzen Überblick vorbereitet.", error: "Deine Antwort konnte nicht gespeichert werden. Bitte versuche es erneut.",
   },
   ru: {
     welcome: "Привет",
-    greeting: "Как ты сегодня?", privacy: "Включи персональную заботу, чтобы HappyDate мог приватно запоминать твои ответы только для поддержки.", consent: "Включить заботу", good: "😊 Всё хорошо", neutral: "😐 Так себе", low: "💛 Сегодня тяжело", skip: "Пропустить", placeholder: "Расскажи своими словами…", send: "Отправить", plan: "Показать мой план", goodReply: "Рад это слышать. Я посмотрел важные дела и подготовил короткий план.", neutralReply: "Понимаю. Не каждый день должен быть лёгким или особенным. Если хочешь, расскажи, что сейчас больше всего занимает твои мысли.", lowReply: "Мне жаль, что сегодня тяжело. Не нужно объяснять больше, чем хочется. Я рядом.", skipReply: "Понимаю и уважаю твой выбор. Я подготовил короткий план ближайших важных дел.", customReply: "Спасибо, что поделилась. Я рядом и подготовил короткий план ближайших важных дел.", error: "Не удалось сохранить ответ. Попробуй ещё раз.",
+    greeting: "Как ты сегодня?", privacy: "Включи персональную заботу, чтобы HappyDate мог приватно запоминать твои ответы только для поддержки.", consent: "Включить заботу", good: "😊 Всё хорошо", neutral: "😐 Так себе", low: "💛 Сегодня тяжело", skip: "Пропустить", placeholder: "Расскажи своими словами…", send: "Отправить", plan: "Показать мой план", goodReply: "Рад это слышать. Я посмотрел важные дела и подготовил короткий план.", neutralReply: "Понимаю. Не каждый день должен быть лёгким или особенным. Если хочешь, расскажи, что сейчас больше всего занимает твои мысли.", lowReply: "Мне жаль это слышать 💙 Надеюсь, остаток дня будет немного легче.", skipReply: "Понимаю и уважаю твой выбор. Я подготовил короткий план ближайших важных дел.", customReply: "Спасибо, что поделилась. Я рядом и подготовил короткий план ближайших важных дел.", error: "Не удалось сохранить ответ. Попробуй ещё раз.",
   },
 } as const;
 
@@ -83,7 +84,7 @@ interface WellbeingCheckInProps {
   locale: string;
   userName?: string | null;
   featuredEvent?: HomeFeaturedEvent | null;
-  onPickGift?: () => void;
+  onPickGift?: (mode?: "selection" | "supplementary") => void;
   onSaveGift?: (title: string) => Promise<void>;
 }
 
@@ -101,6 +102,7 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
   const [savingGift, setSavingGift] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recentLowCheckins, setRecentLowCheckins] = useState(0);
+  const [recentCheckins, setRecentCheckins] = useState<WellbeingCheckin[]>([]);
   const [wellbeingHistoryLoading, setWellbeingHistoryLoading] = useState(true);
   const [wellbeingHistoryResolved, setWellbeingHistoryResolved] = useState(false);
   const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
@@ -119,8 +121,9 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
       const { data } = await supabase.from("profiles").select("wellbeing_personalization_enabled").eq("id", user.id).maybeSingle();
       if (active) setEnabled(data?.wellbeing_personalization_enabled === true);
       if (data?.wellbeing_personalization_enabled) {
-        const { data: checkins } = await supabase.from("user_wellbeing_checkins").select("mood,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(6);
+        const { data: checkins } = await supabase.from("user_wellbeing_checkins").select("mood,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(14);
         if (active) {
+          setRecentCheckins(checkins ?? []);
           setRecentLowCheckins((checkins ?? []).filter((item) => item.mood === "low").length);
           setHasCheckedInToday((checkins ?? []).some((item) => isSameLocalCalendarDay(item.created_at)));
         }
@@ -131,10 +134,10 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
   }, []);
 
   const giftPromptKey = conversationStep === "gift_status"
-    ? ({ status: "giftQuestion", done: "saveDeferred", assistant_handoff: "assistantHandoff", save_prompt: "saveQuestion", input: "whatChosen", saved: "saveConfirmation", suggestion: "suggestionQuestion", declined: "dismissal" } as const)[giftStatusAction]
+    ? ({ status: "giftQuestion", prepared: "giftPrepared", prepared_done: "giftPreparedDone", supplementary_handoff: "supplementaryHandoff", done: "saveDeferred", assistant_handoff: "assistantHandoff", save_prompt: "saveQuestion", input: "whatChosen", saved: "saveConfirmation", suggestion: "suggestionQuestion", declined: "dismissal" } as const)[giftStatusAction]
     : null;
   const giftPrompt = conversationStep === "gift_status"
-    ? wellbeingT(giftPromptKey!, { personName: featuredEvent?.personName ?? featuredEvent?.title ?? "" })
+    ? wellbeingT(giftPromptKey!, { personName: featuredEvent?.personName ?? featuredEvent?.title ?? "", giftTitle: featuredEvent?.giftPreparation.title ?? "" })
     : null;
   // A stable, negative ID keeps the current prompt distinct from stored transcript lines.
   const promptId = -(lines.length + 1);
@@ -153,11 +156,11 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
   };
 
   useEffect(() => {
-    if (giftStatusAction !== "assistant_handoff" || !onPickGift || handoffOpenedRef.current) return;
+    if ((giftStatusAction !== "assistant_handoff" && giftStatusAction !== "supplementary_handoff") || !onPickGift || handoffOpenedRef.current) return;
     // The branch is already terminal. This pause only lets the user see the handoff.
     const timer = window.setTimeout(() => {
       handoffOpenedRef.current = true;
-      onPickGift();
+      onPickGift(giftStatusAction === "supplementary_handoff" ? "supplementary" : "selection");
     }, 600);
     return () => window.clearTimeout(timer);
   }, [giftStatusAction, onPickGift]);
@@ -172,6 +175,26 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
     setEnabled(true);
   };
 
+  const evaluateSupportEligibility = async (userId: string, checkins: WellbeingCheckin[]) => {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    if (!detectWellbeingPattern(checkins, timezone).needsSupport) return;
+    const since = new Date(Date.now() - 21 * 86_400_000).toISOString();
+    const { data: moments } = await supabase
+      .from("user_support_moments")
+      .select("created_at")
+      .eq("user_id", userId)
+      .eq("trigger_type", "recurring_low_wellbeing")
+      .gte("created_at", since)
+      .limit(1);
+    if (isSupportMomentCoolingDown(moments ?? [])) return;
+    await supabase.from("user_support_moments").insert({
+      user_id: userId,
+      trigger_type: "recurring_low_wellbeing",
+      status: "eligible",
+      schema_version: 1,
+    });
+  };
+
   const answer = async (mood: Mood, userText?: string) => {
     if (busy) return;
     setError(null);
@@ -181,23 +204,31 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
     if (mood !== "skip") {
       setBusy(true);
       const { data: { user } } = await supabase.auth.getUser();
+      const createdAt = new Date().toISOString();
       const { error: insertError } = user
-        ? await supabase.from("user_wellbeing_checkins").insert({ user_id: user.id, mood: mood === "neutral" ? "custom" : mood, note: mood === "custom" ? userText?.trim() || null : null })
+        ? await supabase.from("user_wellbeing_checkins").insert({ user_id: user.id, mood, note: mood === "custom" ? userText?.trim() || null : null, source: "home", schema_version: 1 })
         : { error: null };
       if (insertError) { setBusy(false); setError(copy.error); return; }
+      if (user) {
+        const nextCheckins = [{ mood, created_at: createdAt }, ...recentCheckins];
+        setRecentCheckins(nextCheckins);
+        setRecentLowCheckins(nextCheckins.filter((item) => item.mood === "low").length);
+        void evaluateSupportEligibility(user.id, nextCheckins);
+      }
       setBusy(false);
     }
     const isBirthdayEvent = featuredEvent?.source === "birthday" || featuredEvent?.category === "birthday";
+    const contextualReply = mood === "custom" ? wellbeingReply(userText ?? "", recentLowCheckins >= 2) : null;
+    const reply = contextualReply ?? (mood === "custom" ? personalReply(userText ?? "", copy.customReply) : mood === "good" ? copy.goodReply : mood === "neutral" ? copy.neutralReply : mood === "low" ? copy.lowReply : copy.skipReply);
     if (isBirthdayEvent && featuredEvent) {
       const daysRemaining = featuredEvent.daysUntil;
-      typeHappyLine(wellbeingT("birthdayIntro", { daysRemaining, personName: featuredEvent.personName ?? featuredEvent.title }));
+      typeHappyLine(`${reply}\n\n${wellbeingT("birthdayReturningIntro", { daysRemaining, personName: featuredEvent.personName ?? featuredEvent.title })}`);
       setConversationStep("birthday_intro");
+      if (featuredEvent.giftPreparation.hasSelectedGift) setGiftStatusAction("prepared");
       const timeout = window.setTimeout(() => setConversationStep("gift_status"), 0);
       timers.current.push(timeout);
       return;
     }
-    const contextualReply = mood === "custom" ? wellbeingReply(userText ?? "", recentLowCheckins >= 2) : null;
-    const reply = contextualReply ?? (mood === "custom" ? personalReply(userText ?? "", copy.customReply) : locale === "pl" ? (mood === "good" ? "Miło to słyszeć 💙" : "Rozumiem. Jestem obok 💙") : locale === "en" ? (mood === "good" ? "I’m glad to hear it 💙" : "I understand. I’m here 💙") : locale === "de" ? (mood === "good" ? "Das freut mich 💙" : "Ich verstehe. Ich bin da 💙") : locale === "ru" ? (mood === "good" ? "Рад это слышать 💙" : "Понимаю. Я рядом 💙") : (mood === "good" ? "Радий це чути 💙" : "Розумію. Я поруч 💙"));
     const eventMessage = featuredEvent ? ` ${featuredEvent.countdownLabel} ${isBirthdayEvent ? wellbeingT("birthdayLabel") : wellbeingT("importantEventLabel")} — ${featuredEvent.title}.` : ` ${wellbeingT("noEvent")}`;
     typeHappyLine(`${reply}${eventMessage}`);
   };
@@ -226,6 +257,7 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
         { id: nextId.current++, author: "happy", text: wellbeingT("birthdayReturningIntro", { daysRemaining: featuredEvent.daysUntil, personName: featuredEvent.personName ?? featuredEvent.title ?? "" }) },
       ]);
       setBusy(false);
+      if (featuredEvent.giftPreparation.hasSelectedGift) setGiftStatusAction("prepared");
       setConversationStep("gift_status");
       return;
     }
@@ -262,6 +294,9 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
             </div>}
             {ready && conversationStep === "gift_status" && giftStatusAction === "status" && !busy && <div className="mt-4 max-w-md space-y-2">
               <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { addUserLine(wellbeingT("alreadyChosen")); setGiftStatusAction("save_prompt"); }} className="min-h-9 rounded-full bg-slate-100 px-3 text-sm font-bold text-slate-700">{wellbeingT("alreadyChosen")}</button><button type="button" onClick={() => { addUserLine(wellbeingT("notYet")); setGiftStatusAction("suggestion"); }} className="min-h-9 rounded-full bg-slate-100 px-3 text-sm font-bold text-slate-700">{wellbeingT("notYet")}</button></div>
+            </div>}
+            {ready && conversationStep === "gift_status" && giftStatusAction === "prepared" && !busy && <div className="mt-4 max-w-md space-y-2">
+              <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { addUserLine(wellbeingT("supplementaryIdeas")); setGiftStatusAction("supplementary_handoff"); }} disabled={!onPickGift} className="min-h-9 rounded-full bg-sky-600 px-3 text-sm font-bold text-white disabled:opacity-50">{wellbeingT("supplementaryIdeas")}</button><button type="button" onClick={() => { addUserLine(wellbeingT("everythingReady")); setGiftStatusAction("prepared_done"); }} className="min-h-9 rounded-full bg-slate-100 px-3 text-sm font-bold text-slate-700">{wellbeingT("everythingReady")}</button></div>
             </div>}
             {ready && conversationStep === "gift_status" && giftStatusAction === "suggestion" && <div className="mt-4 max-w-md space-y-2">
               <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { addUserLine(wellbeingT("declineSuggestion")); setGiftStatusAction("declined"); }} className="min-h-9 rounded-full bg-slate-100 px-3 text-sm font-bold text-slate-700">{wellbeingT("declineSuggestion")}</button><button type="button" onClick={() => { addUserLine(wellbeingT("openAssistant")); setGiftStatusAction("assistant_handoff"); }} disabled={!onPickGift} className="min-h-9 rounded-full bg-sky-600 px-3 text-sm font-bold text-white disabled:opacity-50">{wellbeingT("openAssistant")}</button></div>

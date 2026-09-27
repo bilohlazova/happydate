@@ -48,9 +48,16 @@ export function buildVerifiedAssistantRequest(
       .slice(0, ASSISTANT_CHAT_LIMITS.events);
   const requestedGift = request.context.giftRequest;
   const storedGiftEvent = requestedGift ? data.events.find((event) => event.id === requestedGift.eventId && event.personId === requestedGift.personId) : null;
-  const birthdayPerson = requestedGift?.eventId.startsWith("birthday-") ? data.people.find((person) => `birthday-${person.id}` === requestedGift.eventId && person.id === requestedGift.personId) : null;
-  const giftEvent = storedGiftEvent ?? (birthdayPerson?.birthday ? { id: requestedGift!.eventId, category: "birthday", date: birthdayPerson.birthday, personId: birthdayPerson.id } : null);
-  const giftContext = giftEvent ? buildHappyPersonContext(data, { id: giftEvent.id, source: giftEvent.category === "birthday" ? "birthday" : "event", date: giftEvent.date.slice(0, 10), daysUntil: Math.max(0, Math.ceil((new Date(`${giftEvent.date.slice(0, 10)}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000)), personId: giftEvent.personId }) : null;
+  const birthdayPerson = requestedGift?.eventId.startsWith("birthday-") ? data.people.find((person) => requestedGift.eventId.startsWith(`birthday-${person.id}:`) && person.id === requestedGift.personId) : null;
+  const birthdayOccurrenceDate = requestedGift?.eventId.split(":").at(-1) ?? null;
+  const giftEvent = storedGiftEvent ?? (birthdayPerson?.birthday && birthdayOccurrenceDate && /^\d{4}-\d{2}-\d{2}$/.test(birthdayOccurrenceDate) ? { id: requestedGift!.eventId, category: "birthday", date: birthdayOccurrenceDate, personId: birthdayPerson.id } : null);
+  const baseGiftContext = giftEvent ? buildHappyPersonContext(data, { id: giftEvent.id, source: giftEvent.category === "birthday" ? "birthday" : "event", date: giftEvent.date.slice(0, 10), daysUntil: Math.max(0, Math.ceil((new Date(`${giftEvent.date.slice(0, 10)}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000)), personId: giftEvent.personId }) : null;
+  const selectedGift = requestedGift ? data.giftHistory?.find((gift) => gift.personId === requestedGift.personId && gift.eventId === requestedGift.eventId && (gift.lifecycle === "selected" || gift.lifecycle === "purchased")) : null;
+  const giftContext = baseGiftContext ? {
+    ...baseGiftContext,
+    mode: requestedGift?.mode === "supplementary" && selectedGift ? "supplementary" as const : "selection" as const,
+    existingSelectedGift: selectedGift ? { id: selectedGift.id, title: selectedGift.title, lifecycle: selectedGift.lifecycle as "selected" | "purchased" } : null,
+  } : null;
   return replaceAssistantContext(request, {
     currentDate: today,
     userName: resolveHomeUserName(data),

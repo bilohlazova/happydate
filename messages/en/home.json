@@ -1,4 +1,5 @@
 {
+  "happyTask": { "title": "Birthday for {name}", "progress": "{completed} of {total} complete", "continue": "Continue", "optional": "optional", "steps": { "analyze_context": "Review person context", "analyze_gifts": "Review previous gifts", "generate_gift_ideas": "Generate gift ideas", "choose_gift": "Choose a gift", "save_gift": "Save selected gift", "prepare_greeting": "Prepare greeting" } },
   "greeting": {
     "named": "Hi, {name}!",
     "fallback": "Hi!",
@@ -182,6 +183,12 @@
     "birthdayLabel": "a birthday",
     "importantEventLabel": "an important event",
     "giftQuestion": "Have you chosen a gift yet?",
+    "giftPrepared": "I can see that {personName}'s gift is already chosen — {giftTitle}. So this is under control 💙 If you like, we can think of a small extra.",
+    "giftPreparedDone": "Great, everything is ready here 💙",
+    "supplementaryIdeas": "✨ See extra ideas",
+    "everythingReady": "Everything is ready",
+    "supplementaryHandoff": "Of course. We’ll only consider a small addition without changing the main gift.",
+    "supplementaryPrompt": "Suggest a few small additions to the gift already selected for {name}.",
     "alreadyChosen": "Yes, I’ve chosen one",
     "notYet": "Not yet",
     "saveQuestion": "Would you like to save what you’re giving?",

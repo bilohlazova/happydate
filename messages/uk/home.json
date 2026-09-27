@@ -1,4 +1,5 @@
 {
+  "happyTask": { "title": "День народження {name}", "progress": "{completed} з {total} готово", "continue": "Продовжити", "optional": "необов’язково", "steps": { "analyze_context": "Переглянути інформацію про людину", "analyze_gifts": "Перевірити попередні подарунки", "generate_gift_ideas": "Підібрати ідеї подарунків", "choose_gift": "Обрати подарунок", "save_gift": "Зберегти обраний подарунок", "prepare_greeting": "Підготувати привітання" } },
   "greeting": {
     "named": "Привіт, {name}!",
     "fallback": "Привіт!",
@@ -182,6 +183,12 @@
     "birthdayLabel": "день народження",
     "importantEventLabel": "важлива подія",
     "giftQuestion": "Ти вже обрав подарунок?",
+    "giftPrepared": "Бачу, подарунок для {personName} вже вибраний — {giftTitle}. Тож із цим усе готово 💙 Якщо захочеш, можемо придумати щось невелике на додачу.",
+    "giftPreparedDone": "Чудово, тут усе готово 💙",
+    "supplementaryIdeas": "✨ Подивитися ідеї",
+    "everythingReady": "Все готово",
+    "supplementaryHandoff": "Звісно. Подумаємо лише про невелике доповнення, не змінюючи основний подарунок.",
+    "supplementaryPrompt": "Запропонуй кілька невеликих доповнень до вже вибраного подарунка для {name}.",
     "alreadyChosen": "Так, уже обрав",
     "notYet": "Ще ні",
     "saveQuestion": "Хочеш зберегти, що саме ти даруєш?",

@@ -22,6 +22,9 @@ export function classifyAssistantResponseIntent(message: string): AssistantRespo
  */
 export function buildAssistantResponsePlan(request: AssistantChatRequest): string {
   if (request.context.giftContext) {
+    if (request.context.giftContext.mode === "supplementary" && request.context.giftContext.existingSelectedGift) {
+      return "RESPONSE PLAN (SYSTEM INSTRUCTION)\nIntent: VERIFIED SUPPLEMENTARY GIFT IDEAS. The server confirms that the main gift is already selected. Do not suggest replacing, editing, or overwriting it unless the user explicitly asks. Offer 3–5 small complementary ideas such as an add-on, card, shared experience, packaging, or presentation detail. Use the verified recipient context and the existing gift as context.";
+    }
     return "RESPONSE PLAN (SYSTEM INSTRUCTION)\nIntent: VERIFIED GIFT HANDOFF. Continue the gift-selection conversation for the server-verified recipient and event immediately; do not start a generic greeting or ask who the gift is for. Use verified relationship and useful preference memories without asking for them again. Check the current message and conversation for answers already supplied. Ask one missing detail at a time: approximate budget first, then relationship only if unknown, then useful preferences only if absent. Ask at most 2–3 clarifying questions in total before giving 3–5 distinct gift ideas; if context is already sufficient, recommend immediately. Explain each idea using known evidence, avoid previous gifts and verified negative preferences, and label uncertain prices and assumptions. Never invent personal facts or use gender as a shortcut for taste. If the user explicitly changes topic, follow that request instead.";
   }
   const intent = classifyAssistantResponseIntent(request.message);

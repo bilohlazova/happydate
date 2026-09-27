@@ -103,6 +103,23 @@ test("a birthday with a confirmed birth year shows the age reached on that occur
   assert.equal(withoutYear.featuredEvent?.birthdayAge, null);
 });
 
+test("gift preparation is scoped to the exact person and event occurrence", () => {
+  const base = {
+    people: [{ id: "p1", name: "Ola", birthday: "1990-07-20", relationLabel: "Siostra" }],
+    giftHistory: [{ id: "g1", personId: "p1", eventId: "birthday-p1:2026-07-20", title: "Album", lifecycle: "selected", occurredOn: null, createdAt: "2026-07-01T00:00:00Z" }],
+  };
+  const prepared = buildHomeViewModel(data(base), "pl", t, new Date(2026, 6, 17));
+  assert.equal(prepared.featuredEvent?.giftPreparation.hasSelectedGift, true);
+  assert.equal(prepared.featuredEvent?.giftPreparation.title, "Album");
+
+  const nextYear = buildHomeViewModel(data(base), "pl", t, new Date(2027, 6, 17));
+  assert.equal(nextYear.featuredEvent?.giftContextId, "birthday-p1:2027-07-20");
+  assert.equal(nextYear.featuredEvent?.giftPreparation.hasSelectedGift, false);
+
+  const otherEvent = buildHomeViewModel(data({ ...base, events: [{ id: "00000000-0000-4000-8000-000000000001", title: "Anniversary", date: "2026-07-18", category: "anniversary", notes: null, personId: "p1" }] }), "pl", t, new Date(2026, 6, 17));
+  assert.equal(otherEvent.featuredEvent?.giftPreparation.hasSelectedGift, false);
+});
+
 test("profile name falls back to auth metadata and then email", () => {
   const metadata = buildHomeViewModel(data({ profile: { fullName: "" }, authMetadataName: "Anna Kowalska" }), "pl", t);
   assert.equal(metadata.greeting.name, "Anna");

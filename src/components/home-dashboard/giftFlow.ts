@@ -1,7 +1,10 @@
-export type GiftFlowState = "status" | "save_prompt" | "input" | "saved" | "suggestion" | "declined" | "done" | "assistant_handoff";
+export type GiftFlowState = "status" | "prepared" | "prepared_done" | "supplementary_handoff" | "save_prompt" | "input" | "saved" | "suggestion" | "declined" | "done" | "assistant_handoff";
 
 const transitions: Record<GiftFlowState, readonly GiftFlowState[]> = {
-  status: ["save_prompt", "suggestion"],
+  status: ["prepared", "save_prompt", "suggestion"],
+  prepared: ["prepared_done", "supplementary_handoff"],
+  prepared_done: [],
+  supplementary_handoff: [],
   save_prompt: ["input", "done"],
   input: ["saved", "done"],
   suggestion: ["declined", "assistant_handoff"],

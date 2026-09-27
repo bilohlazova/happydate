@@ -13,6 +13,7 @@ import type {
 import type { AppLocale } from "@/i18n/config";
 import { buildDailyBriefing } from "./buildDailyBriefing.ts";
 import { normalizeRelationValue } from "../people/canonicalRelation.ts";
+import { selectPrimaryHappyTask } from "../happy/task-ui/happyTaskCard.ts";
 
 const IMPORTANT_CATEGORIES = new Set(["birthday", "anniversary"]);
 
@@ -229,7 +230,7 @@ function birthdayAgeOnEvent(event: HomeEvent, people: HomePerson[]): number | nu
   return Number.isInteger(age) && age >= 0 && age <= 130 ? age : null;
 }
 
-function buildFeatured(event: HomeEvent | null, people: HomePerson[], memories: HomeMemory[], locale: AppLocale, t: HomeTranslate): HomeFeaturedEvent | null {
+function buildFeatured(event: HomeEvent | null, people: HomePerson[], memories: HomeMemory[], giftHistory: HomeRepositoryData["giftHistory"], locale: AppLocale, t: HomeTranslate): HomeFeaturedEvent | null {
   if (!event) return null;
   const classified = event.personId
     ? classifyMemories(personMemories(memories, event.personId))
@@ -239,6 +240,10 @@ function buildFeatured(event: HomeEvent | null, people: HomePerson[], memories: 
     classified.notes.length ? { id: "notes" as const, icon: "📝", label: t("metrics.notes", { count: classified.notes.length }), count: classified.notes.length, href: "/notes" } : null,
     classified.memories.length ? { id: "memories" as const, icon: "🖼️", label: t("metrics.memories", { count: classified.memories.length }), count: classified.memories.length, href: event.href } : null,
   ].filter((metric): metric is NonNullable<typeof metric> => Boolean(metric));
+  const giftContextId = event.source === "birthday" ? `${event.id}:${event.date}` : event.id;
+  const selectedGift = giftHistory?.find((gift) => gift.personId === event.personId
+    && gift.eventId === giftContextId
+    && (gift.lifecycle === "selected" || gift.lifecycle === "purchased")) ?? null;
 
   return {
     ...event,
@@ -250,6 +255,13 @@ function buildFeatured(event: HomeEvent | null, people: HomePerson[], memories: 
     metrics,
     ctaLabel: event.source === "birthday" ? t("featured.personCta") : t("featured.eventCta"),
     birthdayAge: birthdayAgeOnEvent(event, people),
+    giftContextId,
+    giftPreparation: {
+      hasSelectedGift: Boolean(selectedGift),
+      giftId: selectedGift?.id ?? null,
+      title: selectedGift?.title ?? null,
+      status: selectedGift?.lifecycle === "selected" || selectedGift?.lifecycle === "purchased" ? selectedGift.lifecycle : null,
+    },
   };
 }
 
@@ -386,7 +398,7 @@ export function buildHomeViewModel(
   const name = resolveHomeUserName(data);
   const events = normalizeEvents(data.people, data.events, now, relationT);
   const featured = selectFeatured(events);
-  const featuredCard = buildFeatured(featured, data.people, data.memories, locale, t);
+  const featuredCard = buildFeatured(featured, data.people, data.memories, data.giftHistory, locale, t);
   const pendingGiftOutcome = (data.pendingGiftOutcomes ?? []).flatMap((gift) => {
     const person = data.people.find((item) => item.id === gift.personId);
     return person ? [{ id: gift.id, title: gift.title, personName: person.name }] : [];
@@ -440,5 +452,6 @@ export function buildHomeViewModel(
     recommendations,
     isEmpty: data.people.length === 0 && data.events.length === 0 && data.memories.length === 0 && (data.pendingGiftOutcomes ?? []).length === 0,
     errors: data.errors,
+    happyTask: selectPrimaryHappyTask(data.happyTasks ?? [], now),
   };
 }

@@ -59,6 +59,8 @@ export type AssistantGiftContext = {
   daysRemaining: number;
   memories: AssistantMemoryGroupContext["memories"];
   previousGifts: string[];
+  mode: "selection" | "supplementary";
+  existingSelectedGift: { id: string; title: string; lifecycle: "selected" | "purchased" } | null;
 };
 
 export type AssistantPersonContext = {
@@ -99,7 +101,7 @@ export type AssistantChatRequest = {
     activePerson: AssistantPersonContext | null;
     personResolutionStatus: AssistantPersonResolutionStatus;
     giftContext?: AssistantGiftContext | null;
-    giftRequest?: { personId: string; eventId: string } | null;
+    giftRequest?: { personId: string; eventId: string; mode: "selection" | "supplementary" } | null;
   };
 };
 
@@ -154,6 +156,7 @@ export function parseAssistantChatRequest(value: unknown): ValidationResult {
   const giftRequest = contextValue.giftRequest;
   const giftRequestPersonId = isRecord(giftRequest) && typeof giftRequest.personId === "string" ? giftRequest.personId.trim() : null;
   const giftRequestEventId = isRecord(giftRequest) && typeof giftRequest.eventId === "string" ? giftRequest.eventId.trim() : null;
+  const giftRequestMode = isRecord(giftRequest) && giftRequest.mode === "supplementary" ? "supplementary" : "selection";
   const userName = optionalString(contextValue.userName, ASSISTANT_CHAT_LIMITS.userNameLength);
   if (userName === undefined) return { success: false, error: "invalid_context" };
 
@@ -288,7 +291,7 @@ export function parseAssistantChatRequest(value: unknown): ValidationResult {
         activePerson,
         personResolutionStatus,
         giftContext: giftRequestPersonId && giftRequestEventId ? null : null,
-        giftRequest: giftRequestPersonId && giftRequestEventId ? { personId: giftRequestPersonId, eventId: giftRequestEventId } : null,
+        giftRequest: giftRequestPersonId && giftRequestEventId ? { personId: giftRequestPersonId, eventId: giftRequestEventId, mode: giftRequestMode } : null,
       },
     },
   };
@@ -401,6 +404,8 @@ export function formatAssistantContext(context: AssistantChatRequest["context"])
     if (gift.relationship) lines.push(`relationship: ${safeContextLine(gift.relationship)}`);
     if (gift.birthday) lines.push(`birthday: ${gift.birthday}`);
     if (gift.previousGifts.length) lines.push(`previous gifts (lifecycle is factual; idea means saved idea, selected means selected, purchased means purchased, given means given): ${gift.previousGifts.map(safeContextLine).join("; ")}`);
+    lines.push(`mode: ${gift.mode}`);
+    if (gift.existingSelectedGift) lines.push(`existing selected gift: ${safeContextLine(gift.existingSelectedGift.title)} (${gift.existingSelectedGift.lifecycle})`);
     sections.push(`GIFT RECOMMENDATION CONTEXT (SERVER VERIFIED FACTS)\n${lines.join("\n")}`);
   }
   return sections.length ? sections.join("\n\n") : null;

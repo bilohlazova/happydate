@@ -8,11 +8,13 @@ import type {
   SavedGiftLink,
 } from "./gift.types.ts";
 import { normalizeGiftHttpsUrl } from "./giftLinkUrl.ts";
+import { canonicalGiftEventContext, persistedGiftEventIdentity } from "./giftEventContext.ts";
 
 interface GiftRow {
   id: string;
   person_id: string;
   event_id: string | null;
+  event_context_key: string | null;
   title: string;
   lifecycle: GiftLifecycle;
   occurred_on: string | null;
@@ -48,7 +50,7 @@ interface GiftLinkRow {
 }
 
 const GIFT_COLUMNS =
-  "id, person_id, event_id, title, lifecycle, occurred_on, created_at, final_source_link_id, final_link_url, final_link_title, final_price_amount, final_currency, final_decision_note, selection_finalized_at, recipient_reaction, recipient_reaction_note, recipient_reaction_confirmed_at, recipient_reaction_learning_enabled";
+  "id, person_id, event_id, event_context_key, title, lifecycle, occurred_on, created_at, final_source_link_id, final_link_url, final_link_title, final_price_amount, final_currency, final_decision_note, selection_finalized_at, recipient_reaction, recipient_reaction_note, recipient_reaction_confirmed_at, recipient_reaction_learning_enabled";
 const LINK_COLUMNS =
   "id, person_id, event_id, gift_id, url, title, merchant, image_url, price_amount, currency, is_preferred, decision_note, created_at, updated_at";
 
@@ -61,7 +63,7 @@ function mapGift(row: GiftRow): GiftRecord {
     id: row.id,
     lifecycle: row.lifecycle,
     personId: row.person_id,
-    eventId: row.event_id,
+    eventId: canonicalGiftEventContext(row.event_id, row.event_context_key),
     title: row.title,
     value: row.title,
     occurredOn: row.occurred_on,
@@ -126,9 +128,9 @@ async function findEquivalentActiveGift(
     .eq("person_id", input.personId)
     .eq("normalized_title", normalizedTitle.toLocaleLowerCase("und"))
     .neq("lifecycle", "given");
-  query = input.eventId
-    ? query.eq("event_id", input.eventId)
-    : query.is("event_id", null);
+  const identity = persistedGiftEventIdentity(input.eventId);
+  query = identity.eventId ? query.eq("event_id", identity.eventId) : query.is("event_id", null);
+  query = identity.eventContextKey ? query.eq("event_context_key", identity.eventContextKey) : query.is("event_context_key", null);
   const { data, error } = await query
     .order("created_at", { ascending: true })
     .limit(1)
@@ -159,10 +161,12 @@ export async function createCanonicalGift(
   const occurredOn = lifecycle === "given"
     ? input.occurredOn ?? new Date().toISOString().slice(0, 10)
     : input.occurredOn ?? null;
+  const identity = persistedGiftEventIdentity(input.eventId);
   const { data, error } = await supabase.from("gifts").insert({
     user_id: userId,
     person_id: input.personId,
-    event_id: input.eventId ?? null,
+    event_id: identity.eventId,
+    event_context_key: identity.eventContextKey,
     title,
     lifecycle,
     occurred_on: occurredOn,

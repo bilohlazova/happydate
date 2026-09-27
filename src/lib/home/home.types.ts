@@ -6,6 +6,7 @@ import type {
   AssistantPersonContext,
 } from "@/lib/assistant/chatContract";
 import type { DailyBriefing } from "./buildDailyBriefing";
+import type { HappyTaskCardModel, HappyTaskCardSource } from "../happy/task-ui/happyTaskCard";
 
 export type HomeEventSource = "event" | "birthday";
 
@@ -77,6 +78,8 @@ export interface HomeRepositoryData {
   pendingGiftOutcomes: HomePendingGiftOutcome[];
   knowledgeReviewPreferences: HomeKnowledgeReviewPreferences;
   errors: HomeDataError[];
+  giftHistory?: HomeGiftHistoryRecord[];
+  happyTasks?: HappyTaskCardSource[];
 }
 
 /** Server-only gift projection; omitted from the client Home loader. */
@@ -140,6 +143,13 @@ export interface HomeFeaturedEvent extends HomeEvent {
   ctaLabel: string;
   /** The age reached on this specific birthday occurrence; never inferred without a year. */
   birthdayAge: number | null;
+  giftContextId: string;
+  giftPreparation: {
+    hasSelectedGift: boolean;
+    giftId: string | null;
+    title: string | null;
+    status: "selected" | "purchased" | null;
+  };
 }
 
 export interface HomeUpcomingEvent extends HomeEvent {
@@ -176,6 +186,7 @@ export interface HomeViewModel {
   recommendations: HomeRecommendation[];
   isEmpty: boolean;
   errors: HomeDataError[];
+  happyTask: HappyTaskCardModel | null;
 }
 
 export type HomeTranslate = (

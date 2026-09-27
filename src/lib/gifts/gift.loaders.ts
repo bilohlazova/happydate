@@ -86,6 +86,19 @@ export async function createPersonGiftIdea(
   });
 }
 
+export async function createSelectedPersonGift(
+  personId: string,
+  title: string,
+  eventId: string,
+): Promise<void> {
+  await createGift(await requiredUserId(), {
+    personId,
+    eventId,
+    title,
+    lifecycle: "selected",
+  });
+}
+
 export async function loadGiftRecipientContext(
   personId: string,
   requestedEventId?: string | null,

@@ -39,7 +39,7 @@ export interface HappyDateAccountExport {
 
 export async function buildHappyDateAccountExport(): Promise<HappyDateAccountExport> {
   const user = await authenticatedUser();
-  const [profiles, survey, people, events, memories, gifts, giftLinks, reminders, reminderPreferences, plannerPreferences, reminderDeliveries, pushDevices, knowledgeChanges, knowledgeReviewInteractions, personSymbols, personHappyConversations] = await Promise.all([
+  const [profiles, survey, people, events, memories, gifts, giftLinks, reminders, reminderPreferences, plannerPreferences, reminderDeliveries, pushDevices, knowledgeChanges, knowledgeReviewInteractions, personSymbols, personHappyConversations, wellbeingCheckins, supportMoments] = await Promise.all([
     exportOwnedRows("profiles", user.id, "id, full_name, phone, preferences, avatar_url, preferred_locale, points, created_at, gift_outcome_learning_enabled", "id"),
     exportOwnedRows("user_survey", user.id, "user_id, likes, dislikes, dream, notes, is_completed, completed_at, reward_granted_at, special_date_event_ids, created_at, updated_at"),
     exportOwnedRows("people", user.id),
@@ -56,13 +56,15 @@ export async function buildHappyDateAccountExport(): Promise<HappyDateAccountExp
     exportOwnedRows("knowledge_review_interactions", user.id),
     exportOwnedRows("person_symbols", user.id),
     exportOwnedRows("person_happy_conversations", user.id),
+    exportOwnedRows("user_wellbeing_checkins", user.id),
+    exportOwnedRows("user_support_moments", user.id),
   ]);
   return {
     format: "happydate-account-export",
     version: 1,
     exportedAt: new Date().toISOString(),
     account: { id: user.id, email: user.email ?? null, createdAt: user.created_at ?? null },
-    data: { profiles, survey, people, events, memories, gifts, giftLinks, reminders, reminderPreferences, plannerPreferences, reminderDeliveries, pushDevices, knowledgeChanges, knowledgeReviewInteractions, personSymbols, personHappyConversations },
+    data: { profiles, survey, people, events, memories, gifts, giftLinks, reminders, reminderPreferences, plannerPreferences, reminderDeliveries, pushDevices, knowledgeChanges, knowledgeReviewInteractions, personSymbols, personHappyConversations, wellbeingCheckins, supportMoments },
   };
 }
 

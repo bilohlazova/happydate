@@ -25,7 +25,7 @@ interface ChatAssistantModalProps {
   onPersonMemoryUpdated?: (personId?: string) => void | Promise<void>;
   initialPrompt?: string | null;
   autoSubmitInitialPrompt?: boolean;
-  giftRequest?: { personId: string; eventId: string } | null;
+  giftRequest?: { personId: string; eventId: string; mode?: "selection" | "supplementary" } | null;
 }
 
 const ACTION_DEFINITIONS = [

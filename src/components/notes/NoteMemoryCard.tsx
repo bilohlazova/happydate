@@ -47,6 +47,18 @@ function getInitials(name: string): string {
 function hideFailedImage(event: SyntheticEvent<HTMLImageElement>) {
   event.currentTarget.parentElement?.setAttribute("hidden", "");
 }
+const semanticTagLabels: Record<string, Record<string, string>> = {
+  uk: { like: "Подобається", dislike: "Не подобається", important_fact: "Важливий факт" },
+  pl: { like: "Lubi", dislike: "Nie lubi", important_fact: "Ważny fakt" },
+  en: { like: "Likes", dislike: "Dislikes", important_fact: "Important fact" },
+  de: { like: "Mag", dislike: "Mag nicht", important_fact: "Wichtige Tatsache" },
+  ru: { like: "Нравится", dislike: "Не нравится", important_fact: "Важный факт" },
+};
+function displaySemanticTag(tag: string, locale: AppLocale): string | null {
+  const normalized = tag.trim().toLowerCase();
+  if (!normalized) return null;
+  return semanticTagLabels[locale]?.[normalized] ?? (normalized.includes("_") ? null : tag);
+}
 
 export default function NoteMemoryCard({
   memory,
@@ -209,9 +221,10 @@ export default function NoteMemoryCard({
 
         {tags.length > 0 && (
           <div className="hd-card-tags">
-            {tags.slice(0, 5).map((tag) => (
-              <span key={tag} className="hd-tag">{tag}</span>
-            ))}
+            {tags.slice(0, 5).flatMap((tag) => {
+              const label = displaySemanticTag(tag, locale);
+              return label ? [<span key={tag} className="hd-tag">{label}</span>] : [];
+            })}
           </div>
         )}
       </div>

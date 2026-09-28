@@ -5,6 +5,7 @@ import type { AppLocale } from "@/i18n/config";
 import {
   getNotesCardPresentation,
 } from "@/lib/memories/notesMemoryTypes";
+import { formatMemorySemanticLabel } from "@/lib/memories/memorySemanticPresentation";
 import { normalizeStoredMemoryType } from "@/lib/repositories/memory.types";
 import type {
   NotesMemoryPerson,
@@ -47,18 +48,6 @@ function getInitials(name: string): string {
 function hideFailedImage(event: SyntheticEvent<HTMLImageElement>) {
   event.currentTarget.parentElement?.setAttribute("hidden", "");
 }
-const semanticTagLabels: Record<string, Record<string, string>> = {
-  uk: { like: "Подобається", dislike: "Не подобається", important_fact: "Важливий факт" },
-  pl: { like: "Lubi", dislike: "Nie lubi", important_fact: "Ważny fakt" },
-  en: { like: "Likes", dislike: "Dislikes", important_fact: "Important fact" },
-  de: { like: "Mag", dislike: "Mag nicht", important_fact: "Wichtige Tatsache" },
-  ru: { like: "Нравится", dislike: "Не нравится", important_fact: "Важный факт" },
-};
-function displaySemanticTag(tag: string, locale: AppLocale): string | null {
-  const normalized = tag.trim().toLowerCase();
-  if (!normalized) return null;
-  return semanticTagLabels[locale]?.[normalized] ?? (normalized.includes("_") ? null : tag);
-}
 
 export default function NoteMemoryCard({
   memory,
@@ -78,7 +67,7 @@ export default function NoteMemoryCard({
   const locale = useLocale() as AppLocale;
   const presentation = getNotesCardPresentation({
     normalizedType: normalizeStoredMemoryType(memory.type),
-    title: memory.title,
+    title: formatMemorySemanticLabel(memory.title, locale),
     valueText: memory.value_text,
     contentText: memory.content_text,
     occurredOn: memory.occurred_on,
@@ -222,7 +211,7 @@ export default function NoteMemoryCard({
         {tags.length > 0 && (
           <div className="hd-card-tags">
             {tags.slice(0, 5).flatMap((tag) => {
-              const label = displaySemanticTag(tag, locale);
+              const label = formatMemorySemanticLabel(tag, locale);
               return label ? [<span key={tag} className="hd-tag">{label}</span>] : [];
             })}
           </div>

@@ -5,6 +5,7 @@ import type { HappyAgentContext } from "./happyAgentContext.types";
 import { listKnowledgeForOwnedPersonWithClient } from "@/lib/repositories/knowledgeRepository";
 import { buildPersonMemoryProfile, selectAuthoritativeContextForAi } from "@/lib/memory-engine/personMemoryProfile";
 import { selectKnowledgeContext } from "@/lib/knowledge/knowledgeLayer";
+import { getHappyTasksForEvent } from "../task-engine/happyEventTasks.server";
 
 export type HappyAgentContextInput = { client: SupabaseClient; userId: string; locale: string; timezone?: string; personId?: string; eventId?: string; taskId?: string; now?: Date };
 export type HappyAgentContextResult = { kind: "ok"; context: HappyAgentContext } | { kind: "not_found" | "data_unavailable"; resource?: "person" | "event" | "task" };
@@ -34,7 +35,7 @@ export async function buildHappyAgentContext(input: HappyAgentContextInput): Pro
   }
   const [giftQuery, taskQuery, ideaQuery, actionQuery] = await Promise.all([
     (person ? client.from("gifts").select("id,title,lifecycle,event_id,created_at").eq("user_id",userId).eq("person_id",person) : client.from("gifts").select("id,title,lifecycle,event_id,created_at").eq("user_id",userId)).order("created_at",{ascending:false}).limit(10),
-    (person ? client.from("happy_tasks").select("id,type,title,status,person_id,event_id,started_at").eq("user_id",userId).eq("person_id",person) : client.from("happy_tasks").select("id,type,title,status,person_id,event_id,started_at").eq("user_id",userId)).in("status",["active","waiting_user","paused"]).order("started_at",{ascending:false}).limit(10),
+    eventId ? getHappyTasksForEvent(client, userId, eventId) : (person ? client.from("happy_tasks").select("id,type,title,status,person_id,event_id,started_at").eq("user_id",userId).eq("person_id",person) : client.from("happy_tasks").select("id,type,title,status,person_id,event_id,started_at").eq("user_id",userId)).in("status",["active","waiting_user","paused"]).order("started_at",{ascending:false}).limit(10),
     (person ? client.from("happy_ideas").select("id,type,title,message,status,person_id,event_id,expires_at,created_at").eq("user_id",userId).eq("person_id",person) : client.from("happy_ideas").select("id,type,title,message,status,person_id,event_id,expires_at,created_at").eq("user_id",userId)).in("status",["new","shown","accepted"]).order("created_at",{ascending:false}).limit(10),
     client.from("happy_actions").select("id,type,status,task_id,step_id,executed_at,created_at").eq("user_id",userId).order("created_at",{ascending:false}).limit(10),
   ]);

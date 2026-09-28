@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import type { AppLocale } from "@/i18n/config";
 import MemoryEditorSheet from "@/components/notes/MemoryEditorSheet";
 import type { MemoryEditorSubmitInput } from "@/components/notes/MemoryEditorSheet";
 import NoteMemoryCard from "@/components/notes/NoteMemoryCard";
@@ -39,6 +40,7 @@ import {
 } from "@/lib/memories/notesMemoryTypes";
 import type { NotesRawType } from "@/lib/memories/notesMemoryTypes";
 import { buildMemoryThreads, type MemoryThread } from "@/lib/memories/memoryThreads";
+import { formatMemorySemanticLabel, formatMemorySemanticLabels } from "@/lib/memories/memorySemanticPresentation";
 
 // ─────────────────────────────────────────────
 // TYPES — match real Supabase memories schema
@@ -54,6 +56,7 @@ import { buildMemoryThreads, type MemoryThread } from "@/lib/memories/memoryThre
 
 export default function NotesPageContent() {
   const t = useTranslations("notes");
+  const locale = useLocale() as AppLocale;
   const [memories,       setMemories]       = useState<NotesMemoryRow[]>([]);
   const [people,         setPeople]         = useState<NotesMemoryPerson[]>([]);
   const [events,         setEvents]         = useState<NotesMemoryEvent[]>([]);
@@ -252,6 +255,7 @@ export default function NotesPageContent() {
     }
   }
   const topTags = Object.entries(tagFreq).sort((a,b) => b[1]-a[1]).slice(0, 3).map(([t]) => t);
+  const topTagLabels = formatMemorySemanticLabels(topTags, locale);
 
   // Count gift-related tags
   const giftKeywords = ["prezent","gift","podarunek","upominek"];
@@ -281,7 +285,7 @@ export default function NotesPageContent() {
   function memoryThreadTitle(thread: MemoryThread): string {
     if (thread.kind === "person") return t("threads.personTitle", { name: thread.personName });
     if (thread.kind === "gift") return t("threads.giftTitle");
-    return t("threads.topicTitle", { topic: thread.topic });
+    return t("threads.topicTitle", { topic: formatMemorySemanticLabel(thread.topic, locale) ?? "—" });
   }
 
   // ── Modal ──
@@ -1562,7 +1566,7 @@ export default function NotesPageContent() {
           <div className="hd-notes-content">
 
         {/* ── AI INSIGHTS — only when not searching, based on real data ── */}
-        {showAiSection && (topPerson || topTags.length > 0 || giftCount > 0) && (
+        {showAiSection && (topPerson || topTagLabels.length > 0 || giftCount > 0) && (
           <aside className="hd-ai-section">
             <div className="hd-ai-section-label">
               <span>✦</span> {t("insights.title")}
@@ -1574,10 +1578,10 @@ export default function NotesPageContent() {
                   {t("insights.topPerson", { count: personMemCounts[topPerson.id] })}
                 </div>
               )}
-              {topTags.length > 0 && (
+              {topTagLabels.length > 0 && (
                 <div className="hd-ai-row">
                   {t("insights.topics")}{" "}
-                  <strong>{topTags.join(" · ")}</strong>
+                  <strong>{topTagLabels.join(" · ")}</strong>
                 </div>
               )}
               {giftCount > 0 && (

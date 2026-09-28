@@ -3,11 +3,12 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 
 const { createHappyAgentResponse } = await import("../src/lib/happy/agent/happyAgentServer.ts");
-const context = { intent: "birthday_gift", user: { locale: "uk", timezone: "UTC" } };
+const knowledgeId = "11111111-1111-4111-8111-111111111111";
+const context = { intent: "birthday_gift", user: { locale: "uk", timezone: "UTC" }, knowledge: { likes: [{ id: knowledgeId, text: "Tea", importance: 5, kind: "preference", category: null, polarity: "likes", occurredOn: null }] } };
 
 test("Happy Agent maps only validated birthday proposals and never model-owned database fields", async () => {
-  const response = await createHappyAgentResponse({ intent: "birthday_gift", context, provider: async () => ({ message: "One direction", idea: { title: "Tea set", message: "Matches likes" } }) });
-  assert.deepEqual(response, { message: "One direction", proposedIdea: { type: "gift", title: "Tea set", message: "Matches likes" } });
+  const response = await createHappyAgentResponse({ intent: "birthday_gift", context, provider: async () => ({ message: "One direction", idea: { title: "Tea set", message: "Matches likes", reasonSources: [{ type: "knowledge", id: knowledgeId }] } }) });
+  assert.deepEqual(response, { message: "One direction", proposedIdea: { type: "gift", title: "Tea set", message: "Matches likes" }, ui: [{ type: "gift_recommendation", gift: { title: "Tea set", description: "Matches likes" }, reasons: [{ source: { type: "knowledge", id: knowledgeId }, sourceType: "preference", label: "Tea" }], actions: ["save", "dismiss", "more_like_this"] }] });
   await assert.rejects(() => createHappyAgentResponse({ intent: "birthday_gift", context, provider: async () => ({ message: "x", task: { id: "invented" } }) }));
   await assert.rejects(() => createHappyAgentResponse({ intent: "birthday_gift", context, provider: async () => ({}) }));
 });

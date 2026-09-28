@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { happyReasonSourceRefSchema } from "../ui/happyUIBlock.ts";
 
 const optionalUuid = z.string().uuid().optional();
 export const happyAgentRequestSchema = z.object({
@@ -13,7 +14,7 @@ export const happyAgentRequestSchema = z.object({
 
 export const happyAgentBirthdayModelResultSchema = z.object({
   message: z.string().trim().min(1).max(1_500).optional(),
-  idea: z.object({ title: z.string().trim().min(1).max(300), message: z.string().trim().min(1).max(1_500) }).strict().optional(),
+  idea: z.object({ title: z.string().trim().min(1).max(300), message: z.string().trim().min(1).max(1_500), reasonSources: z.array(happyReasonSourceRefSchema).min(1).max(3) }).strict().optional(),
 }).strict().refine((value) => Boolean(value.message || value.idea), "empty result");
 
 export const happyAgentGreetingModelResultSchema = z.object({

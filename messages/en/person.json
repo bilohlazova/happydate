@@ -23,6 +23,7 @@
     "timeline": "Timeline",
     "brain": "Happy noticed",
     "askHappy": "Ask Happy",
+    "happy": { "title": "Happy about {name}", "tasks": "{count, plural, =0 {No active tasks} one {# active task} other {# active tasks}}", "ideas": "{count, plural, =0 {No current ideas} one {# current idea} other {# current ideas}}", "ask": "Ask Happy about {name}" },
     "addNote": "Add note",
     "birthdayCountdown": "{days, plural, =0 {Birthday today} =1 {Birthday tomorrow} other {Birthday in # days}}",
     "pets": { "title": "Pets", "add": "Add pet", "edit": "Edit", "unlink": "Unlink", "unlinkConfirm": "Unlink {name} from this person? The pet profile will remain available to other linked people.", "close": "Close pet details", "name": "Name", "species": "Species", "breed": "Breed (optional)", "birthDate": "Birth date (optional)", "note": "Note (optional)", "save": "Save", "saving": "Saving…", "cancel": "Cancel", "error": "The pet could not be saved. Please try again." },

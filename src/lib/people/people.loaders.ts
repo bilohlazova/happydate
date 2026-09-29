@@ -14,6 +14,7 @@ import {
 } from "@/lib/repositories/personSymbolRepository";
 import { PROFILE_NOTE_SCHEMA } from "@/lib/memory-engine";
 import { getPersonHappyConversations } from "@/lib/repositories/personHappyConversationRepository";
+import { getPersonHappyStatus } from "@/lib/repositories/personHappyStatusRepository";
 import { buildPeoplePageViewModel, buildPersonProfileViewModel } from "./buildPeopleViewModels";
 import type { PeoplePageViewModel, PersonProfileViewModel } from "./peopleData.types";
 
@@ -47,7 +48,7 @@ export async function loadPersonProfile(
   const person = await getOwnedPersonById(userId, personId);
   if (!person) return buildPersonProfileViewModel({ person: null, knowledge: [], currentDate });
 
-  const [profile, knowledgeChanges, gifts, giftOutcomeLearningEnabled, pets, symbol, happyConversations] = await Promise.all([
+  const [profile, knowledgeChanges, gifts, giftOutcomeLearningEnabled, pets, symbol, happyConversations, happy] = await Promise.all([
     getKnowledgeForPerson({ personId, includeArchived: true }),
     listKnowledgeChangeHistoryForOwnedPerson({ userId, personId }),
     loadCanonicalGiftsForPerson(userId, personId),
@@ -55,8 +56,9 @@ export async function loadPersonProfile(
     getPetsForPerson(userId, personId),
     getPersonSymbol(userId, personId),
     getPersonHappyConversations(userId, personId),
+    getPersonHappyStatus(userId, personId),
   ]);
-  return buildPersonProfileViewModel({ person, knowledge: profile?.items ?? [], knowledgeChanges, gifts, pets, symbol, happyConversations, giftOutcomeLearningEnabled, currentDate });
+  return buildPersonProfileViewModel({ person, knowledge: profile?.items ?? [], knowledgeChanges, gifts, pets, symbol, happyConversations, happy, giftOutcomeLearningEnabled, currentDate });
 }
 
 export async function addPersonPet(input: { personId: string; name: string; species: string; breed?: string; birthDate?: string; note?: string }): Promise<void> {

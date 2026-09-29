@@ -13,7 +13,8 @@ import type {
 import type { AppLocale } from "@/i18n/config";
 import { buildDailyBriefing } from "./buildDailyBriefing.ts";
 import { normalizeRelationValue } from "../people/canonicalRelation.ts";
-import { selectPrimaryHappyTask } from "../happy/task-ui/happyTaskCard.ts";
+import { selectPrimaryHappyBlock } from "../happy/home/selectPrimaryHappyBlock.ts";
+import { buildHomePrimaryHappyPresentation } from "../happy/home/buildHomePrimaryHappyPresentation.ts";
 
 const IMPORTANT_CATEGORIES = new Set(["birthday", "anniversary"]);
 
@@ -436,6 +437,15 @@ export function buildHomeViewModel(
       : event.title,
     t,
   });
+  const primaryHappyBlock = selectPrimaryHappyBlock({
+    userId: data.userId,
+    now,
+    actions: data.happyActions ?? [],
+    tasks: data.happyTasks ?? [],
+    ideas: data.happyIdeas ?? [],
+    events: data.events,
+  });
+  const primaryHappyPresentation = buildHomePrimaryHappyPresentation(primaryHappyBlock, data, now, t);
 
   return {
     locale,
@@ -452,6 +462,8 @@ export function buildHomeViewModel(
     recommendations,
     isEmpty: data.people.length === 0 && data.events.length === 0 && data.memories.length === 0 && (data.pendingGiftOutcomes ?? []).length === 0,
     errors: data.errors,
-    happyTask: selectPrimaryHappyTask(data.happyTasks ?? [], now),
+    happyTask: primaryHappyBlock?.type === "task_progress" ? primaryHappyBlock.task : null,
+    primaryHappyBlock,
+    primaryHappyPresentation,
   };
 }

@@ -4,12 +4,13 @@ import { CalendarCheck2, CalendarDays, Gift, NotebookPen, Sparkles, Users } from
 import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import AssistantHome from "@/components/chat-assistant/AssistantHome";
 import ChatAssistantHeader from "@/components/chat-assistant/ChatAssistantHeader";
 import ChatComposer from "@/components/chat-assistant/ChatComposer";
 import ConversationView, { type ChatHappyLearningViewState } from "@/components/chat-assistant/ConversationView";
 import type { AssistantAction, ChatMessage } from "@/components/chat-assistant/types";
+import type { AssistantPersonContext } from "@/lib/assistant/chatContract";
 import { useAssistantHomeContext } from "@/hooks/useAssistantHomeContext";
 import { buildConversationHistory } from "@/lib/assistant/chatClient";
 import { classifyAiAvailabilityError } from "@/lib/assistant/aiAvailability";
@@ -26,6 +27,9 @@ interface ChatAssistantModalProps {
   initialPrompt?: string | null;
   autoSubmitInitialPrompt?: boolean;
   giftRequest?: { personId: string; eventId: string; mode?: "selection" | "supplementary" } | null;
+  initialPersonId?: string | null;
+  /** Optional persisted profile target; the API independently verifies ownership. */
+  initialPerson?: AssistantPersonContext | null;
 }
 
 const ACTION_DEFINITIONS = [
@@ -59,7 +63,7 @@ const INITIAL_HAPPY_LEARNING_STATE: ChatHappyLearningState = {
   detectionStatus: "idle",
 };
 
-export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdated, initialPrompt = null, autoSubmitInitialPrompt = false, giftRequest = null }: ChatAssistantModalProps) {
+export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdated, initialPrompt = null, autoSubmitInitialPrompt = false, giftRequest = null, initialPersonId = null, initialPerson = null }: ChatAssistantModalProps) {
   const t = useTranslations("assistant");
   const locale = useLocale();
   const router = useRouter();
@@ -86,6 +90,15 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   const messageIdRef = useRef(0);
   const localeRef = useRef(locale);
   const submittedInitialPromptRef = useRef<string | null>(null);
+  const scopedInitialPerson = initialPersonId && initialPerson?.id === initialPersonId ? initialPerson : null;
+  const isProfileScoped = scopedInitialPerson !== null;
+  // A person profile can be outside the bounded Home assistant list. Keep its
+  // persisted target available locally; the server replaces it with owner-verified data.
+  const availablePeople = useMemo(() => (
+    scopedInitialPerson && !homeContext.people.some((person) => person.id === scopedInitialPerson.id)
+      ? [scopedInitialPerson, ...homeContext.people]
+      : homeContext.people
+  ), [homeContext.people, scopedInitialPerson]);
 
   const actions: AssistantAction[] = ACTION_DEFINITIONS.map((definition) => ({
     id: definition.id,
@@ -164,6 +177,17 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   }, [autoSubmitInitialPrompt, initialPrompt, messages.length, open]);
 
   useEffect(() => {
+    if (!open || !initialPersonId || homeContext.loading) return;
+    // The profile supplies a persisted target and the authenticated Home projection
+    // supplies the general list. The server independently re-verifies ownership.
+    if (!availablePeople.some((person) => person.id === initialPersonId)) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPersonContext((current) => current.activePersonId === initialPersonId && current.resolutionStatus === "resolved"
+      ? current
+      : { activePersonId: initialPersonId, resolutionStatus: "resolved" });
+  }, [availablePeople, homeContext.loading, initialPersonId, open]);
+
+  useEffect(() => {
     if (!open) submittedInitialPromptRef.current = null;
   }, [open]);
 
@@ -213,7 +237,9 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
     cancelActiveResponse();
     setMessages([]);
     setValue("");
-    setPersonContext(INITIAL_PERSON_CONTEXT);
+    setPersonContext(initialPersonId && availablePeople.some((person) => person.id === initialPersonId)
+      ? { activePersonId: initialPersonId, resolutionStatus: "resolved" }
+      : INITIAL_PERSON_CONTEXT);
     setHappyLearning(INITIAL_HAPPY_LEARNING_STATE);
     setGiftLinkStates({});
     setGiftLinkTargets({});
@@ -241,9 +267,14 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   }
 
   function updatePersonContextFromUserMessage(content: string): ChatPersonContext {
+    if (isProfileScoped && initialPersonId) {
+      const scoped = { activePersonId: initialPersonId, resolutionStatus: "resolved" as const };
+      setPersonContext(scoped);
+      return scoped;
+    }
     const resolution = resolveChatPerson({
       userMessage: content,
-      people: homeContext.people,
+      people: availablePeople,
       currentPersonId: personContext.activePersonId,
     });
     const next: ChatPersonContext = {
@@ -373,10 +404,11 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
                 }
               : null,
             events: homeContext.isAuthenticated ? homeContext.events : [],
-            people: homeContext.isAuthenticated ? homeContext.people : [],
+            people: homeContext.isAuthenticated ? availablePeople : [],
             memories: homeContext.isAuthenticated ? homeContext.memories : [],
             activePersonId: homeContext.isAuthenticated ? requestPersonContext.activePersonId : null,
             personResolutionStatus: homeContext.isAuthenticated ? requestPersonContext.resolutionStatus : "none",
+            personScope: homeContext.isAuthenticated && isProfileScoped ? "profile" : null,
             giftRequest,
           },
         }),
@@ -508,7 +540,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   }
 
   async function saveAssistantGiftLink(messageId: string, personId: string, url: string) {
-    const ownedPerson = homeContext.people.find((person) => person.id === personId);
+    const ownedPerson = availablePeople.find((person) => person.id === personId);
     if (!ownedPerson) return;
     const stateKey = `${messageId}:${url}`;
     setGiftLinkStates((current) => ({ ...current, [stateKey]: "saving" }));
@@ -591,7 +623,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
       }
     : null;
   const activePerson = personContext.activePersonId
-    ? homeContext.people.find((person) => person.id === personContext.activePersonId) ?? null
+    ? availablePeople.find((person) => person.id === personContext.activePersonId) ?? null
     : null;
 
   return (
@@ -695,7 +727,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
             onRetry={retryMessage}
             onDismissHappyLearningCandidate={dismissHappyLearningCandidate}
             onSaveHappyLearningCandidate={saveHappyLearningCandidate}
-            giftLinkPeople={Object.fromEntries(homeContext.people.map((person) => [person.id, person.name]))}
+            giftLinkPeople={Object.fromEntries(availablePeople.map((person) => [person.id, person.name]))}
             giftLinkStates={giftLinkStates}
             giftLinkTargets={giftLinkTargets}
             giftLinkOpenLabel={t("giftLinks.open")}

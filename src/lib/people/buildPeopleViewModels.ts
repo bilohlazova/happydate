@@ -7,6 +7,7 @@ import type { PetRow } from "../repositories/petRepository.ts";
 import type { PersonSymbolRow } from "../repositories/personSymbolRepository.ts";
 import type { PersonHappyConversationRow } from "../repositories/personHappyConversationRepository.ts";
 import type { GiftRecord } from "../gifts/gift.types.ts";
+import type { PersonHappyStatus } from "../repositories/personHappyStatusRepository.ts";
 import type { KnowledgeChangeHistoryRow } from "../repositories/knowledgeRepository.ts";
 import { buildGiftOutcomeLearningSignals } from "../gift-intelligence/giftOutcomeLearningSignals.ts";
 import { projectGiftOutcomeAiContext } from "../gift-intelligence/giftOutcomeAiContextPreview.ts";
@@ -364,6 +365,7 @@ export function buildPersonProfileViewModel({
   pets = [],
   symbol = null,
   happyConversations = [],
+  happy = { activeTaskCount: 0, currentIdeaCount: 0 },
   giftOutcomeLearningEnabled = true,
   currentDate = new Date(),
   isAuthenticated = true,
@@ -375,12 +377,13 @@ export function buildPersonProfileViewModel({
   pets?: PetRow[];
   symbol?: PersonSymbolRow | null;
   happyConversations?: PersonHappyConversationRow[];
+  happy?: PersonHappyStatus;
   giftOutcomeLearningEnabled?: boolean;
   currentDate?: Date;
   isAuthenticated?: boolean;
 }): PersonProfileViewModel {
   if (!person) return {
-    memoryProfile: null, isAuthenticated, found: false, hero: null, pets: [], symbol: null, likes: [], dislikes: [], interests: [], giftIdeas: [], giftHistory: [], importantFacts: [], notes: [], memories: [], relationshipObservations: [], happyConversations: [], archivedKnowledge: [], knowledgeConflicts: [], knowledgeReview: null, timeline: [], brainInsights: [], confirmedGiftOutcomes: [], giftOutcomeAiPreview: [], giftOutcomeLearningEnabled: false, health: null,
+    memoryProfile: null, isAuthenticated, found: false, hero: null, pets: [], symbol: null, likes: [], dislikes: [], interests: [], giftIdeas: [], giftHistory: [], importantFacts: [], notes: [], memories: [], relationshipObservations: [], happyConversations: [], archivedKnowledge: [], knowledgeConflicts: [], knowledgeReview: null, timeline: [], brainInsights: [], confirmedGiftOutcomes: [], giftOutcomeAiPreview: [], giftOutcomeLearningEnabled: false, happy: { activeTaskCount: 0, currentIdeaCount: 0 }, health: null,
     actions: { addMemoryUrl: null, addGiftIdeaUrl: null, addImportantInformationUrl: null, canAskHappy: false },
   };
   const visible = activeVisible(knowledge).filter((item) => item.personId === person.id);
@@ -445,6 +448,7 @@ export function buildPersonProfileViewModel({
     confirmedGiftOutcomes: outcomeAudit,
     giftOutcomeAiPreview: projectGiftOutcomeAiContext(outcomeAudit.filter((item) => item.aiEligible).map((item) => ({ giftTitle: item.giftTitle, outcome: item.outcome, note: item.note, category: item.category, categorySignal: item.learningSignal === "history_only" ? "insufficient" : item.learningSignal }))),
     giftOutcomeLearningEnabled,
+    happy,
     health: personHealth(person, visible, computed, gifts),
     actions: { addMemoryUrl, addGiftIdeaUrl: null, addImportantInformationUrl: null, canAskHappy: true },
   };

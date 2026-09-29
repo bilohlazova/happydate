@@ -149,7 +149,7 @@ export function PersonProfileContent({
             onTouchStart={(event) => { touchStart.current = event.touches[0]?.clientX ?? null; }}
             onTouchEnd={(event) => { const start = touchStart.current; const end = event.changedTouches[0]?.clientX; touchStart.current = null; if (start == null || end == null || Math.abs(end - start) < 55) return; const next = end < start ? activeIndex + 1 : activeIndex - 1; if (next >= 0 && next < views.length) navigateAlbum(views[next]); }}
           >
-            {activeView === "profile" && <div className="grid gap-4 lg:grid-cols-[1.3fr_.7fr]"><ProfileHero model={viewModel} onAsk={() => setAssistantOpen(true)} onEdit={() => setPersonActionsMode("edit")} onDelete={() => setPersonActionsMode("delete")} t={t} /><div className="flex flex-col gap-4"><PetsSection personId={hero.id} pets={viewModel.pets} onChanged={onProfileChanged} />{viewModel.symbol && <PersonSymbolSection personId={hero.id} personName={hero.name} symbol={viewModel.symbol} onChanged={onProfileChanged} />}</div></div>}
+            {activeView === "profile" && <div className="grid gap-4 lg:grid-cols-[1.3fr_.7fr]"><div className="flex flex-col gap-4"><ProfileHero model={viewModel} onAsk={() => setAssistantOpen(true)} onEdit={() => setPersonActionsMode("edit")} onDelete={() => setPersonActionsMode("delete")} t={t} /><HappyPersonSection personName={hero.name} happy={viewModel.happy} onAsk={() => setAssistantOpen(true)} t={t} /></div><div className="flex flex-col gap-4"><PetsSection personId={hero.id} pets={viewModel.pets} onChanged={onProfileChanged} />{viewModel.symbol && <PersonSymbolSection personId={hero.id} personName={hero.name} symbol={viewModel.symbol} onChanged={onProfileChanged} />}</div></div>}
             {activeView === "about" && <div className="grid gap-4 lg:grid-cols-[1.35fr_.65fr]"><AboutPersonSection personId={hero.id} personName={hero.name} likes={viewModel.likes} dislikes={viewModel.dislikes} interests={viewModel.interests} importantFacts={viewModel.importantFacts} onChanged={onProfileChanged} t={t} /><div className="flex flex-col gap-4"><BrainSection items={viewModel.brainInsights} t={t} /><KnowledgeReviewSection personId={hero.id} review={viewModel.knowledgeReview} onChanged={onProfileChanged} t={t} /></div></div>}
             {activeView === "notes" && <PersonNotesSection personId={hero.id} personName={hero.name} notes={viewModel.notes} onChanged={onProfileChanged} />}
             {activeView === "gifts" && <PersonGiftManager personId={hero.id} personName={hero.name} onChanged={onProfileChanged} />}
@@ -158,7 +158,19 @@ export function PersonProfileContent({
         </div>
       </main>
 
-      <ChatAssistantModal open={assistantOpen} onClose={() => setAssistantOpen(false)} onPersonMemoryUpdated={onProfileChanged} />
+      <ChatAssistantModal
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        onPersonMemoryUpdated={onProfileChanged}
+        initialPersonId={hero.id}
+        initialPerson={{
+          id: hero.id,
+          name: hero.name,
+          relation: hero.relationLabel,
+          birthday: hero.birthday,
+          gender: hero.gender === "female" || hero.gender === "male" || hero.gender === "other" ? hero.gender : null,
+        }}
+      />
       <PersonActionsSheet
         person={personActionsMode ? {
           id: hero.id,
@@ -589,6 +601,21 @@ function learningSignalTone(signal: ConfirmedGiftOutcomeViewModel["learningSigna
   if (signal === "conflicted") return "bg-amber-100 text-amber-800";
   if (signal === "history_only") return "bg-slate-200 text-slate-600";
   return "bg-sky-100 text-sky-800";
+}
+
+function HappyPersonSection({ personName, happy, onAsk, t }: {
+  personName: string;
+  happy: PersonProfileViewModel["happy"];
+  onAsk: () => void;
+  t: Translator;
+}) {
+  return (
+    <section className="rounded-[1.4rem] border border-violet-100 bg-violet-50/60 p-4 shadow-sm sm:p-5" aria-label={t("profileUi.happy.title", { name: personName })}>
+      <div className="flex items-center gap-2 text-violet-800"><Bot className="h-4 w-4" aria-hidden="true" /><h2 className="text-sm font-extrabold">{t("profileUi.happy.title", { name: personName })}</h2></div>
+      <div className="mt-3 space-y-1 text-sm font-semibold text-slate-700"><p>{t("profileUi.happy.tasks", { count: happy.activeTaskCount })}</p><p>{t("profileUi.happy.ideas", { count: happy.currentIdeaCount })}</p></div>
+      <button type="button" onClick={onAsk} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-violet-600 px-3 text-sm font-extrabold text-white shadow-sm transition active:scale-[0.98]"><Bot className="h-4 w-4" aria-hidden="true" />{t("profileUi.happy.ask", { name: personName })}</button>
+    </section>
+  );
 }
 
 function ProfileHero({

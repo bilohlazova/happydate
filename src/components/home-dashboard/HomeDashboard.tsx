@@ -9,7 +9,7 @@ import HomeEmptyState from "./HomeEmptyState";
 import WellbeingCheckIn from "./WellbeingCheckIn";
 import type { ReminderRecord } from "@/lib/repositories/reminders";
 import type { GiftOutcomeValue } from "@/lib/gifts/gift.types";
-import HappyTaskCard from "@/components/happy/HappyTaskCard";
+import HomePrimaryHappyBlock from "@/components/happy/HomePrimaryHappyBlock";
 
 interface HomeDashboardProps {
   viewModel: HomeViewModel;
@@ -27,9 +27,10 @@ interface HomeDashboardProps {
   onGiftFollowUp: (giftId: string, action: "snooze" | "dismiss") => Promise<void>;
   onSaveGift: (title: string) => Promise<void>;
   onContinueHappyTask: (taskId: string) => void;
+  onRespondHappyIdea: (ideaId: string, response: "accept" | "dismiss") => Promise<void>;
 }
 
-export default function HomeDashboard({ viewModel, reminder: _reminder, inAppDeliveryCount, reminderBusy: _reminderBusy, reminderError: _reminderError, onRetry, onAskHappy: _onAskHappy, onCompleteReminder: _onCompleteReminder, onSnoozeReminder: _onSnoozeReminder, onUndoReminder: _onUndoReminder, onPickGift, onGiftOutcome, onGiftFollowUp, onSaveGift, onContinueHappyTask }: HomeDashboardProps) {
+export default function HomeDashboard({ viewModel, reminder: _reminder, inAppDeliveryCount, reminderBusy: _reminderBusy, reminderError: _reminderError, onRetry, onAskHappy: _onAskHappy, onCompleteReminder: _onCompleteReminder, onSnoozeReminder: _onSnoozeReminder, onUndoReminder: _onUndoReminder, onPickGift, onGiftOutcome, onGiftFollowUp, onSaveGift, onContinueHappyTask, onRespondHappyIdea }: HomeDashboardProps) {
   const t = useTranslations("home");
   return (
     <div className="hd-screen overflow-x-hidden">
@@ -37,7 +38,7 @@ export default function HomeDashboard({ viewModel, reminder: _reminder, inAppDel
         <section className="relative w-full max-w-[760px] overflow-hidden rounded-[1.35rem] border border-sky-100 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)] sm:p-5">
           <WellbeingCheckIn locale={viewModel.locale} userName={viewModel.greeting.name} featuredEvent={viewModel.featuredEvent} onPickGift={onPickGift} onSaveGift={onSaveGift} />
         </section>
-        {viewModel.happyTask && <HappyTaskCard task={viewModel.happyTask} onContinue={onContinueHappyTask} labels={{ title: (name) => t("happyTask.title", { name }), countdown: (days) => days === 0 ? t("countdown.today") : days === 1 ? t("countdown.tomorrow") : t("countdown.days", { count: days }), progress: (completed, total) => t("happyTask.progress", { completed, total }), continue: t("happyTask.continue"), optional: t("happyTask.optional"), steps: { analyze_context: t("happyTask.steps.analyze_context"), analyze_gifts: t("happyTask.steps.analyze_gifts"), generate_gift_ideas: t("happyTask.steps.generate_gift_ideas"), choose_gift: t("happyTask.steps.choose_gift"), save_gift: t("happyTask.steps.save_gift"), prepare_greeting: t("happyTask.steps.prepare_greeting") } }} />}
+        {viewModel.primaryHappyBlock && viewModel.primaryHappyPresentation && <HomePrimaryHappyBlock block={viewModel.primaryHappyBlock} presentation={viewModel.primaryHappyPresentation} onContinueTask={onContinueHappyTask} onRespondIdea={onRespondHappyIdea} />}
 
         {inAppDeliveryCount > 0 && (
           <div className="mt-5 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-950" role="status">

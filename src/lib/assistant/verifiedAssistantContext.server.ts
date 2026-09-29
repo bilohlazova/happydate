@@ -7,6 +7,8 @@ import { logOrchestrationEvent } from "@/lib/observability/safeLogger";
 import { ASSISTANT_BEHAVIOR_MANIFEST } from "./assistantBehaviorManifest";
 import { assistantLocalDate } from "./assistantLocalDate";
 import { buildHappyPersonContext } from "./buildHappyPersonContext";
+import { buildAssistantPeopleContext } from "./peopleContext";
+import { buildAssistantMemoryContextFromSemanticMemory } from "./assistantSemanticMemoryAdapter";
 
 
 /**
@@ -28,9 +30,27 @@ export function buildVerifiedAssistantRequest(
   );
   const timezone = data.knowledgeReviewPreferences.timezone ?? "UTC";
   const today = assistantLocalDate(currentDate, timezone);
+  const requestedPersonId = request.context.personScope === "profile" && request.context.personResolutionStatus === "resolved"
+    ? request.context.activePerson?.id ?? null
+    : null;
+  // A profile CTA may target a person outside the bounded Home conversation list.
+  // Resolve only against the authenticated, RLS-backed owner projection.
+  const scopedPeople = requestedPersonId
+    ? buildAssistantPeopleContext(data.people.filter((person) => person.id === requestedPersonId))
+    : [];
+  const isPersonScoped = scopedPeople.length === 1;
+  const people = isPersonScoped ? scopedPeople : brains.conversation.assistantPeople;
+  const memories = isPersonScoped
+    ? buildAssistantMemoryContextFromSemanticMemory({
+        people,
+        semanticMemory: brains.memory.semanticMemory,
+        sourceKnowledge: brains.memory.safeKnowledge,
+      })
+    : brains.conversation.assistantMemories;
   const events = data.errors.some((error) => error.section === "events")
     ? []
     : data.events
+      .filter((event) => !isPersonScoped || event.personId === requestedPersonId)
       .map((event) => ({
         id: event.id,
         title: event.title.trim(),
@@ -62,8 +82,8 @@ export function buildVerifiedAssistantRequest(
     currentDate: today,
     userName: resolveHomeUserName(data),
     events,
-    people: brains.conversation.assistantPeople,
-    memories: brains.conversation.assistantMemories,
+    people,
+    memories,
     giftContext,
   });
 }

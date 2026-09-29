@@ -8,6 +8,26 @@ import type {
 import type { DailyBriefing } from "./buildDailyBriefing";
 import type { HappyTaskCardModel, HappyTaskCardSource } from "../happy/task-ui/happyTaskCard";
 
+export interface HomeHappyAction {
+  id: string;
+  userId: string;
+  type: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface HomeHappyIdea {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  status: string;
+  personId: string | null;
+  eventId: string | null;
+  createdAt: string;
+}
+
 export type HomeEventSource = "event" | "birthday";
 
 export interface HomeProfile {
@@ -68,6 +88,8 @@ export interface HomeDataError {
 }
 
 export interface HomeRepositoryData {
+  /** Authenticated owner propagated from the repository, never from UI input. */
+  userId?: string | null;
   isAuthenticated: boolean;
   profile: HomeProfile | null;
   authMetadataName: string | null;
@@ -80,6 +102,8 @@ export interface HomeRepositoryData {
   errors: HomeDataError[];
   giftHistory?: HomeGiftHistoryRecord[];
   happyTasks?: HappyTaskCardSource[];
+  happyActions?: HomeHappyAction[];
+  happyIdeas?: HomeHappyIdea[];
 }
 
 /** Server-only gift projection; omitted from the client Home loader. */
@@ -187,6 +211,8 @@ export interface HomeViewModel {
   isEmpty: boolean;
   errors: HomeDataError[];
   happyTask: HappyTaskCardModel | null;
+  primaryHappyBlock: import("../happy/home/primaryHappyBlock.types").HomePrimaryHappyBlock | null;
+  primaryHappyPresentation: import("../happy/home/buildHomePrimaryHappyPresentation").HomePrimaryHappyPresentation | null;
 }
 
 export type HomeTranslate = (

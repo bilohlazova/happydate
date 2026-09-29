@@ -224,6 +224,12 @@ export default function HomePageClient() {
     reload();
   }, [reload, viewModel?.featuredEvent]);
 
+  const respondHappyIdea = useCallback(async (ideaId: string, response: "accept" | "dismiss") => {
+    const result = await fetch(`/api/happy/ideas/${encodeURIComponent(ideaId)}/${response}`, { method: "POST" });
+    if (!result.ok) throw new Error("Happy idea response failed");
+    reload();
+  }, [reload]);
+
   const giftFollowUp = useCallback(async (giftId: string, action: "snooze" | "dismiss") => {
     await changeGiftOutcomeFollowUp(giftId, action);
     reload();
@@ -275,7 +281,7 @@ export default function HomePageClient() {
           <HomeErrorState title={homeT("error.title")} description={homeT("error.description")} retry={homeT("error.retry")} onRetry={reload} />
         </div>
       )}
-      {viewModel && user && <HomeDashboard viewModel={viewModel} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} onContinueHappyTask={() => { /* Task Runner will own this action. */ }} />}
+      {viewModel && user && <HomeDashboard viewModel={viewModel} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} onContinueHappyTask={() => { /* Task Runner will own this action. */ }} onRespondHappyIdea={respondHappyIdea} />}
       {giftOutcomeConfirmation && (
         <GiftOutcomeConfirmation
           message={homeT("recommendations.giftOutcomeSaved", { outcome: homeT(`recommendations.giftOutcomeValue.${giftOutcomeConfirmation.outcome}` as never) })}

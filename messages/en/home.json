@@ -1,5 +1,6 @@
 {
   "happyTask": { "title": "Birthday for {name}", "progress": "{completed} of {total} complete", "continue": "Continue", "optional": "optional", "steps": { "analyze_context": "Review person context", "analyze_gifts": "Review previous gifts", "generate_gift_ideas": "Generate gift ideas", "choose_gift": "Choose a gift", "save_gift": "Save selected gift", "prepare_greeting": "Prepare greeting" } },
+  "primaryHappy": { "eyebrow": "Happy", "generalTitle": "A suggestion from Happy", "idea": { "accept": "Accept", "dismiss": "Dismiss", "error": "The suggestion could not be updated. Please try again." }, "status": { "giftUnresolved": "A gift has not been chosen yet.", "prepareGreeting": "The gift is ready — it is time to prepare a greeting.", "taskWaiting": "Happy is waiting for your choice.", "idea": "There is a useful suggestion for you." }, "context": { "preference": "I remember: {value}" }, "actions": { "startGiftPlanning": "Start preparing", "giftHelp": "Find a gift", "prepareGreeting": "Prepare a greeting", "continue": "Continue", "reviewIdea": "Review suggestion" }, "approval": { "title": "Approval needed", "unavailable": "Approval for this action will be available soon.", "actions": { "save_gift": "Save gift", "save_memory": "Save memory", "create_reminder": "Create reminder" } } },
   "greeting": {
     "named": "Hi, {name}!",
     "fallback": "Hi!",

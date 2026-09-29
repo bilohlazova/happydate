@@ -148,6 +148,10 @@ export interface PersonProfileViewModel {
   confirmedGiftOutcomes: ConfirmedGiftOutcomeViewModel[];
   giftOutcomeAiPreview: import("@/lib/gift-intelligence/giftOutcomeAiContextPreview").GiftOutcomeAiContextPreviewItem[];
   giftOutcomeLearningEnabled: boolean;
+  happy: {
+    activeTaskCount: number;
+    currentIdeaCount: number;
+  };
   health: PersonHealthViewModel | null;
   actions: {
     addMemoryUrl: string | null;

@@ -14,15 +14,33 @@ import type {
   HomeRepositoryData,
   HomeStoredEvent,
   HomeGiftHistoryRecord,
+  HomeHappyAction,
+  HomeHappyIdea,
 } from "@/lib/home/home.types";
 import { canonicalRelationKey } from "@/lib/people/canonicalRelation";
 import { canonicalGiftEventContext } from "@/lib/gifts/giftEventContext";
 import type { HappyTaskCardSource } from "@/lib/happy/task-ui/happyTaskCard";
 
 async function loadHappyTasks(client: SupabaseClient, userId: string): Promise<HappyTaskCardSource[]> {
-  const { data, error } = await client.from("happy_tasks").select("id,type,status,person_id,event_id,context_snapshot,people!happy_tasks_person_id_fkey(name),events!happy_tasks_event_id_fkey(date),happy_task_steps(id,position,type,status,requires_approval)").eq("user_id", userId).in("status", ["active", "waiting_user", "paused"]);
+  const { data, error } = await client.from("happy_tasks").select("id,user_id,type,status,person_id,event_id,context_snapshot,people!happy_tasks_person_id_fkey(name),events!happy_tasks_event_id_fkey(date),happy_task_steps(id,position,type,status,requires_approval)").eq("user_id", userId).in("status", ["active", "waiting_user", "paused"]).order("created_at", { ascending: true }).limit(10);
   if (error) throw new HomeRepositoryError("settings", error.message);
-  return (data ?? []).map((task) => ({ id: task.id, type: task.type, status: task.status, personId: task.person_id, eventId: task.event_id, contextSnapshot: task.context_snapshot, personName: (task.people as { name?: string } | null)?.name ?? null, eventDate: (task.events as { date?: string } | null)?.date ?? null, steps: (task.happy_task_steps ?? []).map((step) => ({ id: step.id, position: step.position, type: step.type, status: step.status, requiresApproval: step.requires_approval })) }));
+  return (data ?? []).map((task) => ({ id: task.id, userId: task.user_id, type: task.type, status: task.status, personId: task.person_id, eventId: task.event_id, contextSnapshot: task.context_snapshot, personName: (task.people as { name?: string } | null)?.name ?? null, eventDate: (task.events as { date?: string } | null)?.date ?? null, steps: (task.happy_task_steps ?? []).map((step) => ({ id: step.id, position: step.position, type: step.type, status: step.status, requiresApproval: step.requires_approval })) }));
+}
+
+async function loadHappyActions(client: SupabaseClient, userId: string): Promise<HomeHappyAction[]> {
+  const { data, error } = await client.from("happy_actions").select("id,user_id,type,status,created_at").eq("user_id", userId).eq("status", "pending").order("created_at", { ascending: true }).limit(5);
+  if (error) throw new HomeRepositoryError("settings", error.message);
+  return (data ?? []).flatMap((action) => typeof action.id === "string" && typeof action.user_id === "string" && typeof action.type === "string" && typeof action.status === "string" && typeof action.created_at === "string"
+    ? [{ id: action.id, userId: action.user_id, type: action.type, status: action.status, createdAt: action.created_at }]
+    : []);
+}
+
+async function loadHappyIdeas(client: SupabaseClient, userId: string): Promise<HomeHappyIdea[]> {
+  const { data, error } = await client.from("happy_ideas").select("id,user_id,type,title,message,status,person_id,event_id,created_at").eq("user_id", userId).in("status", ["new", "shown"]).order("created_at", { ascending: true }).limit(10);
+  if (error) throw new HomeRepositoryError("settings", error.message);
+  return (data ?? []).flatMap((idea) => typeof idea.id === "string" && typeof idea.user_id === "string" && typeof idea.type === "string" && typeof idea.title === "string" && typeof idea.message === "string" && typeof idea.status === "string" && typeof idea.created_at === "string"
+    ? [{ id: idea.id, userId: idea.user_id, type: idea.type, title: idea.title, message: idea.message, status: idea.status, personId: typeof idea.person_id === "string" ? idea.person_id : null, eventId: typeof idea.event_id === "string" ? idea.event_id : null, createdAt: idea.created_at }]
+    : []);
 }
 
 export interface HomeRepositoryResult extends HomeRepositoryData {
@@ -200,7 +218,7 @@ export async function getHomeRepositoryData(
     throw new Error("[home.repository] Authenticated owner mismatch");
   }
 
-  const [profileResult, peopleResult, eventsResult, knowledgeResult, giftsResult, reviewPreferencesResult, happyTasksResult] = await Promise.all([
+  const [profileResult, peopleResult, eventsResult, knowledgeResult, giftsResult, reviewPreferencesResult, happyTasksResult, happyActionsResult, happyIdeasResult] = await Promise.all([
     loadProfile(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadPeople(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadEvents(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
@@ -208,6 +226,8 @@ export async function getHomeRepositoryData(
     loadPendingGiftOutcomes(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadKnowledgeReviewPreferences(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadHappyTasks(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
+    loadHappyActions(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
+    loadHappyIdeas(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
   ]);
 
   const errors: HomeDataError[] = [];
@@ -218,6 +238,8 @@ export async function getHomeRepositoryData(
   if (!giftsResult.ok) errors.push(errorFrom(giftsResult.reason, "gifts"));
   if (!reviewPreferencesResult.ok) errors.push(errorFrom(reviewPreferencesResult.reason, "settings"));
   if (!happyTasksResult.ok) errors.push(errorFrom(happyTasksResult.reason, "settings"));
+  if (!happyActionsResult.ok) errors.push(errorFrom(happyActionsResult.reason, "settings"));
+  if (!happyIdeasResult.ok) errors.push(errorFrom(happyIdeasResult.reason, "settings"));
 
   let giftHistory: HomeGiftHistoryRecord[] | undefined;
   if (options.includeGiftHistory) {
@@ -247,6 +269,8 @@ export async function getHomeRepositoryData(
     knowledge: knowledgeResult.ok ? knowledgeResult.value.knowledge : [],
     errors,
     happyTasks: happyTasksResult.ok ? happyTasksResult.value : [],
+    happyActions: happyActionsResult.ok ? happyActionsResult.value : [],
+    happyIdeas: happyIdeasResult.ok ? happyIdeasResult.value : [],
     ...(giftHistory ? { giftHistory } : {}),
   };
 }

@@ -1,6 +1,6 @@
 import { getHappyTaskTemplate, type BirthdayPreparationStepType } from "../task-engine/happyTaskTemplate.ts";
 
-export type HappyTaskCardSource = { id: string; type: string; status: string; personId: string | null; eventId: string | null; contextSnapshot: unknown; personName: string | null; eventDate: string | null; steps: Array<{ id: string; position: number; type: string; status: string; requiresApproval: boolean }> };
+export type HappyTaskCardSource = { id: string; userId: string; type: string; status: string; personId: string | null; eventId: string | null; contextSnapshot: unknown; personName: string | null; eventDate: string | null; steps: Array<{ id: string; position: number; type: string; status: string; requiresApproval: boolean }> };
 export type HappyTaskCardModel = { id: string; type: "birthday_preparation"; title: string; person: { id: string; name: string }; event: { id: string; date: string; daysUntil: number }; status: "active" | "waiting_user" | "paused"; progress: { completed: number; total: number }; steps: Array<{ id: string; type: BirthdayPreparationStepType; state: "completed" | "current" | "upcoming"; requiresApproval: boolean; waitsForUser: boolean; optional: boolean }> };
 
 function daysUntil(date: string, now: Date): number | null {

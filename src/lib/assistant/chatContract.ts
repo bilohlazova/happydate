@@ -100,6 +100,8 @@ export type AssistantChatRequest = {
     memories: AssistantMemoryGroupContext[];
     activePerson: AssistantPersonContext | null;
     personResolutionStatus: AssistantPersonResolutionStatus;
+    /** A profile CTA requests a server-verified, person-only projection. */
+    personScope?: "profile" | null;
     giftContext?: AssistantGiftContext | null;
     giftRequest?: { personId: string; eventId: string; mode: "selection" | "supplementary" } | null;
   };
@@ -238,6 +240,7 @@ export function parseAssistantChatRequest(value: unknown): ValidationResult {
       || contextValue.personResolutionStatus === "none"
       ? contextValue.personResolutionStatus
       : "none";
+  const personScope = contextValue.personScope === "profile" ? "profile" : null;
   const activePerson = activePersonId
     ? people.find((person) => person.id === activePersonId) ?? null
     : null;
@@ -288,8 +291,9 @@ export function parseAssistantChatRequest(value: unknown): ValidationResult {
         events,
         people,
         memories,
-        activePerson,
-        personResolutionStatus,
+      activePerson,
+      personResolutionStatus,
+      personScope,
         giftContext: giftRequestPersonId && giftRequestEventId ? null : null,
         giftRequest: giftRequestPersonId && giftRequestEventId ? { personId: giftRequestPersonId, eventId: giftRequestEventId, mode: giftRequestMode } : null,
       },

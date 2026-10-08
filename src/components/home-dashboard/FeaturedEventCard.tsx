@@ -29,7 +29,7 @@ function birthdayAgeLabel(age: number, locale: string): string {
   if (locale === "pl") return `Kończy ${age} ${age === 1 ? "rok" : age % 10 >= 2 && age % 10 <= 4 && !(age % 100 >= 12 && age % 100 <= 14) ? "lata" : "lat"}`;
   if (locale === "de") return `Wird ${age} ${age === 1 ? "Jahr" : "Jahre"} alt`;
   if (locale === "ru") return `Исполняется ${age} ${age % 10 === 1 && age % 100 !== 11 ? "год" : age % 10 >= 2 && age % 10 <= 4 && !(age % 100 >= 12 && age % 100 <= 14) ? "года" : "лет"}`;
-  return `Turning ${age}`;
+  return `Will turn ${age}`;
 }
 
 export default function FeaturedEventCard({

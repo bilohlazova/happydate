@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pencil, Trash2, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { logOperationalError } from "@/lib/observability/safeLogger";
+import { birthdayAgeLabels } from "@/lib/birthday/birthdayAgeLabels";
 
 import PersonCard from "@/components/people/PersonCard";
 import { ActivePeopleFilters } from "@/components/people/ActivePeopleFilters";
@@ -500,6 +501,7 @@ export type EditablePerson = Pick<
   | "relation_key"
   | "relation_category"
   | "birthday"
+  | "birth_year"
   | "gender"
 >;
 
@@ -518,6 +520,8 @@ export function PersonActionsSheet({
 }) {
   const formT = useTranslations("personForm");
   const peopleT = useTranslations("people");
+  const locale = useLocale();
+  const ageLabels = birthdayAgeLabels(locale);
   const [mode, setMode] = useState<"actions" | "edit" | "delete">("actions");
   const [name, setName] = useState("");
   const [relationship, setRelationship] = useState("");
@@ -525,6 +529,7 @@ export function PersonActionsSheet({
   const [relationCategory, setRelationCategory] =
     useState<RelationCategory | null>(null);
   const [birthday, setBirthday] = useState("");
+  const [birthYear, setBirthYear] = useState("");
   const [gender, setGender] = useState<PersonGender>("unspecified");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -545,6 +550,7 @@ export function PersonActionsSheet({
         person.relation_category
     );
     setBirthday(person.birthday ?? "");
+    setBirthYear(person.birth_year ? String(person.birth_year) : "");
     setGender(person.gender ?? "unspecified");
     setSaving(false);
     setError(null);
@@ -573,6 +579,7 @@ export function PersonActionsSheet({
         relationKey,
         relationCategory: getRelationCategoryForKey(relationKey) ?? relationCategory,
         birthday: birthday || undefined,
+        birthYear: birthYear ? Number(birthYear) : undefined,
         gender,
       });
 
@@ -693,6 +700,9 @@ export function PersonActionsSheet({
                 onChange={(event) => setBirthday(event.target.value)}
                 className={MobileUI.input}
               />
+            </Field>
+            <Field label={ageLabels.birthYear} htmlFor="edit-birth-year">
+              <input id="edit-birth-year" type="number" min="1" max={new Date().getFullYear()} value={birthYear} onChange={(event) => setBirthYear(event.target.value)} className={MobileUI.input} />
             </Field>
             {error && (
               <p className="rounded-[0.8rem] bg-rose-50 px-3 py-2 text-xs font-bold text-rose-600">

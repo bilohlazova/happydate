@@ -4,6 +4,7 @@ export type EventPreparationEvent = {
   date: string;
   category: string | null;
   personId: string | null;
+  personBirthYear?: number | null;
 };
 
 export type EventPreparationGift = {

@@ -15,6 +15,7 @@ import { buildDailyBriefing } from "./buildDailyBriefing.ts";
 import { normalizeRelationValue } from "../people/canonicalRelation.ts";
 import { selectPrimaryHappyBlock } from "../happy/home/selectPrimaryHappyBlock.ts";
 import { buildHomePrimaryHappyPresentation } from "../happy/home/buildHomePrimaryHappyPresentation.ts";
+import { resolveBirthdayTurningAge } from "../birthday/birthdayAge.ts";
 
 const IMPORTANT_CATEGORIES = new Set(["birthday", "anniversary"]);
 
@@ -222,13 +223,10 @@ function classifyMemories(memories: HomeMemory[]) {
 
 function birthdayAgeOnEvent(event: HomeEvent, people: HomePerson[]): number | null {
   if (event.source !== "birthday" || !event.personId) return null;
-  const birthday = people.find((person) => person.id === event.personId)?.birthday ?? null;
-  const birthYear = birthday && /^(\d{4})-\d{2}-\d{2}$/.exec(birthday)?.[1];
-  const eventYear = /^(\d{4})-\d{2}-\d{2}$/.exec(event.date)?.[1];
-  if (!birthYear || !eventYear) return null;
-  const age = Number(eventYear) - Number(birthYear);
-  // Reject malformed/future years and implausible values instead of exposing a false age.
-  return Number.isInteger(age) && age >= 0 && age <= 130 ? age : null;
+  const person = people.find((candidate) => candidate.id === event.personId);
+  const legacyBirthYear = Number(/^([0-9]{4})-/.exec(person?.birthday ?? "")?.[1]);
+  const birthYear = person?.birthYear ?? (Number.isInteger(legacyBirthYear) ? legacyBirthYear : null);
+  return resolveBirthdayTurningAge({ birthYear, birthdayOccurrence: event.date });
 }
 
 function buildFeatured(event: HomeEvent | null, people: HomePerson[], memories: HomeMemory[], giftHistory: HomeRepositoryData["giftHistory"], locale: AppLocale, t: HomeTranslate): HomeFeaturedEvent | null {

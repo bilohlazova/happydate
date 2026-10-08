@@ -35,12 +35,19 @@ export async function loadEventPreparationPage(eventId: string): Promise<EventPr
     return { found: false, event: null, preparation: null };
   }
 
+  let personBirthYear: number | null = null;
+  if (typeof data.person_id === "string") {
+    const { data: person, error: personError } = await supabase.from("people").select("birth_year").eq("id", data.person_id).eq("user_id", userId).maybeSingle();
+    if (personError) throw new Error(`[eventPreparation] Person load failed: ${personError.message}`);
+    personBirthYear = Number.isInteger(person?.birth_year) ? (person?.birth_year ?? null) : null;
+  }
   const event: EventPreparationEvent = {
     id: data.id,
     title: data.title,
     date: data.date,
     category: typeof data.category === "string" ? data.category : null,
     personId: typeof data.person_id === "string" ? data.person_id : null,
+    personBirthYear,
   };
   if (event.category?.trim().toLocaleLowerCase() !== "birthday" || !event.personId) {
     return { found: true, event, preparation: buildBirthdayPreparationViewModel({ event, gifts: [], tasks: [] }) };

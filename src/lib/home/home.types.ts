@@ -38,6 +38,7 @@ export interface HomePerson {
   id: string;
   name: string;
   birthday: string | null;
+  birthYear: number | null;
   relationLabel: string | null;
   relationKey: import("@/lib/repositories/person.types").PersonRelationKey | null;
   gender: "female" | "male" | "other" | "unspecified" | null;
@@ -166,6 +167,7 @@ export interface HomeFeaturedEvent extends HomeEvent {
   metrics: HomeEventMetric[];
   ctaLabel: string;
   /** The age reached on this specific birthday occurrence; never inferred without a year. */
+  /** Age reached on the displayed birthday occurrence. */
   birthdayAge: number | null;
   giftContextId: string;
   giftPreparation: {

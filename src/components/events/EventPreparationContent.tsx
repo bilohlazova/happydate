@@ -8,6 +8,7 @@ import { ArrowLeft, CalendarDays, CheckCircle2, CircleAlert, LoaderCircle, Spark
 import type { EventPreparationPageViewModel } from "@/lib/events/eventPreparation.loader";
 import { eventPreparationLabels } from "@/lib/events/eventPreparationLabels";
 import { supabase } from "@/lib/supabaseClient";
+import { resolveBirthdayTurningAge } from "@/lib/birthday/birthdayAge";
 
 type Preparation = NonNullable<EventPreparationPageViewModel["preparation"]>;
 
@@ -60,6 +61,9 @@ export function EventPreparationContent({
   if (!viewModel?.found || !viewModel.event) return <EventMessage label={t.notFound} />;
 
   const { event, preparation } = viewModel;
+  const turningAge = event.category?.toLowerCase() === "birthday"
+    ? resolveBirthdayTurningAge({ birthYear: event.personBirthYear, birthdayOccurrence: event.date })
+    : null;
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6">
       <div className="mx-auto w-full max-w-2xl">
@@ -73,6 +77,7 @@ export function EventPreparationContent({
             <div>
               <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">{event.title}</h1>
               <p className="mt-1 text-sm font-medium text-slate-500">{formatDate(event.date, locale)}</p>
+              {turningAge !== null && <p className="mt-1 text-sm font-bold text-violet-700">{t.turningAge(turningAge)}</p>}
             </div>
           </div>
         </section>

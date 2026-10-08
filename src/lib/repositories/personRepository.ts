@@ -14,6 +14,13 @@ import type {
   PersonRow,
 } from "./person.types";
 
+function assertValidBirthYear(value: number | undefined): void {
+  if (value === undefined) return;
+  if (!Number.isInteger(value) || value < 1 || value > new Date().getFullYear()) {
+    throw new Error("[personRepository] invalid birth year");
+  }
+}
+
 export const PERSON_SELECT = [
   "id",
   "user_id",
@@ -23,6 +30,7 @@ export const PERSON_SELECT = [
   "relation_key",
   "relation_category",
   "birthday",
+  "birth_year",
   "notes",
   "phone",
   "email",
@@ -40,6 +48,7 @@ export interface CreatePersonInput {
   relationKey?: PersonRelationKey | null;
   relationCategory?: PersonRelationCategory | null;
   birthday?: string;
+  birthYear?: number;
   phone?: string;
   email?: string;
   externalContactId?: string;
@@ -55,6 +64,7 @@ export interface UpdatePersonInput {
   relationKey?: PersonRelationKey | null;
   relationCategory?: PersonRelationCategory | null;
   birthday?: string;
+  birthYear?: number;
   gender?: PersonGender;
 }
 
@@ -135,6 +145,7 @@ export async function getOwnedPersonById(
 export async function createPerson(
   input: CreatePersonInput
 ): Promise<PersonRow> {
+  assertValidBirthYear(input.birthYear);
   const { data, error } = await supabase
     .from("people")
     .insert({
@@ -145,6 +156,7 @@ export async function createPerson(
       relation_key: input.relationKey ?? null,
       relation_category: input.relationCategory ?? null,
       birthday: input.birthday ?? null,
+      ...(input.birthYear === undefined ? {} : { birth_year: input.birthYear }),
       phone: input.phone ?? null,
       email: input.email ?? null,
       external_contact_id: input.externalContactId ?? null,
@@ -167,6 +179,7 @@ export async function createPerson(
 export async function updatePerson(
   input: UpdatePersonInput
 ): Promise<PersonRow> {
+  assertValidBirthYear(input.birthYear);
   const { data, error } = await supabase
     .from("people")
     .update({
@@ -176,6 +189,7 @@ export async function updatePerson(
       relation_key: input.relationKey ?? null,
       relation_category: input.relationCategory ?? null,
       birthday: input.birthday ?? null,
+      ...(input.birthYear === undefined ? {} : { birth_year: input.birthYear }),
       gender: input.gender ?? "unspecified",
     })
     .eq("id", input.personId)

@@ -44,6 +44,9 @@ export interface PersonRow {
 
   birthday: string | null;
 
+  /** Confirmed calendar year only; ages are always derived. */
+  birth_year?: number | null;
+
   notes: string | null;
 
   phone: string | null;

@@ -529,7 +529,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   }
 
   async function saveAssistantGiftLink(messageId: string, personId: string, url: string) {
-    const ownedPerson = availablePeople.find((person) => person.id === personId);
+    const ownedPerson = homeContext.people.find((person) => person.id === personId);
     if (!ownedPerson) return;
     const stateKey = `${messageId}:${url}`;
     setGiftLinkStates((current) => ({ ...current, [stateKey]: "saving" }));

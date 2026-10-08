@@ -39,9 +39,9 @@ export function buildVerifiedAssistantRequest(
   const scopedPeople = requestedPersonId
     ? buildAssistantPeopleContext(data.people.filter((person) => person.id === requestedPersonId))
     : [];
-  const isPersonScoped = scopedPeople.length === 1;
-  const people = isPersonScoped ? scopedPeople : brains.conversation.assistantPeople;
-  const memories = isPersonScoped
+  const isExplicitScope = scope.type !== "global";
+  const people = isExplicitScope ? scopedPeople : brains.conversation.assistantPeople;
+  const memories = isExplicitScope
     ? buildAssistantMemoryContextFromSemanticMemory({
         people,
         semanticMemory: brains.memory.semanticMemory,
@@ -52,7 +52,7 @@ export function buildVerifiedAssistantRequest(
   const events = data.errors.some((error) => error.section === "events")
     ? []
     : data.events
-      .filter((event) => scopedEventId ? event.id === scopedEventId : !isPersonScoped || event.personId === requestedPersonId)
+      .filter((event) => scopedEventId ? event.id === scopedEventId : isExplicitScope ? event.personId === requestedPersonId : true)
       .map((event) => ({
         id: event.id,
         title: event.title.trim(),
@@ -68,7 +68,9 @@ export function buildVerifiedAssistantRequest(
         || (first.timeOfDay ?? "99:99").localeCompare(second.timeOfDay ?? "99:99")
         || first.title.localeCompare(second.title))
       .slice(0, ASSISTANT_CHAT_LIMITS.events);
-  const requestedGift = request.context.giftRequest;
+  // Gift chooser is a separate existing global flow; it cannot widen an explicit
+  // person/event/task conversation with unrelated client-selected context.
+  const requestedGift = isExplicitScope ? null : request.context.giftRequest;
   const storedGiftEvent = requestedGift ? data.events.find((event) => event.id === requestedGift.eventId && event.personId === requestedGift.personId) : null;
   const birthdayPerson = requestedGift?.eventId.startsWith("birthday-") ? data.people.find((person) => requestedGift.eventId.startsWith(`birthday-${person.id}:`) && person.id === requestedGift.personId) : null;
   const birthdayOccurrenceDate = requestedGift?.eventId.split(":").at(-1) ?? null;
@@ -94,6 +96,7 @@ export function buildVerifiedAssistantRequest(
     events,
     people,
     memories,
+    taskContext: scope.type === "task" ? { type: scope.taskType } : null,
     giftContext,
   });
 }

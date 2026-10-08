@@ -85,7 +85,7 @@ async function loadProfile(client: SupabaseClient, userId: string): Promise<Home
 async function loadPeople(client: SupabaseClient, userId: string): Promise<HomePerson[]> {
   const { data, error } = await client
     .from("people")
-    .select("id, name, birthday, relationship, relation_label, relation_key, gender")
+    .select("id, name, birthday, birth_year, relationship, relation_label, relation_key, gender")
     .eq("user_id", userId)
     .order("name", { ascending: true });
   if (error) throw new HomeRepositoryError("people", error.message);
@@ -93,6 +93,7 @@ async function loadPeople(client: SupabaseClient, userId: string): Promise<HomeP
     id: person.id,
     name: person.name,
     birthday: person.birthday ?? null,
+    birthYear: Number.isInteger(person.birth_year) ? person.birth_year : null,
     relationLabel: person.relation_label ?? person.relationship ?? null,
     relationKey: canonicalRelationKey(
       person.relation_key,

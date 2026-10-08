@@ -11,6 +11,7 @@ export type VerifiedAssistantProjection = {
   events: AssistantEventContext[];
   people: AssistantPersonContext[];
   memories: AssistantMemoryGroupContext[];
+  taskContext?: { type: string } | null;
   giftContext?: AssistantChatRequest["context"]["giftContext"];
 };
 
@@ -38,6 +39,7 @@ export function replaceAssistantContext(
       events: verified.events,
       people: verified.people,
       memories: verified.memories,
+      taskContext: verified.taskContext ?? null,
       activePerson,
       personResolutionStatus: activePerson
         ? "resolved"

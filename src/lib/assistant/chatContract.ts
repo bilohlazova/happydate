@@ -3,6 +3,7 @@ import type { AssistantGiftOutcomeContext } from "./giftOutcomeContext.server.ts
 import type { AssistantSavedGiftLinkContext } from "./savedGiftLinkContext.server.ts";
 import type { AssistantPetContext } from "./petContext.server.ts";
 import { projectGiftOutcomeAiContext } from "../gift-intelligence/giftOutcomeAiContextPreview.ts";
+import { chatScopeInputSchema, type ChatScopeInput } from "./chatScope.contract.ts";
 
 export const ASSISTANT_CHAT_LIMITS = {
   messageLength: ASSISTANT_CHAT_CONFIG.maxMessageLength,
@@ -87,6 +88,7 @@ export type AssistantChatRequest = {
   message: string;
   locale: AssistantChatLocale;
   conversation: AssistantConversationItem[];
+  scope: ChatScopeInput;
   context: {
     currentDate: string | null;
     userName: string | null;
@@ -100,8 +102,6 @@ export type AssistantChatRequest = {
     memories: AssistantMemoryGroupContext[];
     activePerson: AssistantPersonContext | null;
     personResolutionStatus: AssistantPersonResolutionStatus;
-    /** A profile CTA requests a server-verified, person-only projection. */
-    personScope?: "profile" | null;
     giftContext?: AssistantGiftContext | null;
     giftRequest?: { personId: string; eventId: string; mode: "selection" | "supplementary" } | null;
   };
@@ -135,6 +135,12 @@ export function parseAssistantChatRequest(value: unknown): ValidationResult {
     && ASSISTANT_LOCALES.includes(value.locale as AssistantChatLocale)
       ? value.locale as AssistantChatLocale
       : "pl";
+  // Omitting scope is the one backwards-compatible legacy shape: global only.
+  // Resource scopes must always use the strict canonical contract.
+  const parsedScope = value.scope === undefined
+    ? { success: true as const, data: { type: "global" } as ChatScopeInput }
+    : chatScopeInputSchema.safeParse(value.scope);
+  if (!parsedScope.success) return { success: false, error: "invalid_scope" };
 
   if (!Array.isArray(value.conversation) || value.conversation.length > ASSISTANT_CHAT_LIMITS.conversationItems) {
     return { success: false, error: "invalid_conversation" };
@@ -240,7 +246,6 @@ export function parseAssistantChatRequest(value: unknown): ValidationResult {
       || contextValue.personResolutionStatus === "none"
       ? contextValue.personResolutionStatus
       : "none";
-  const personScope = contextValue.personScope === "profile" ? "profile" : null;
   const activePerson = activePersonId
     ? people.find((person) => person.id === activePersonId) ?? null
     : null;
@@ -284,6 +289,7 @@ export function parseAssistantChatRequest(value: unknown): ValidationResult {
       message,
       locale,
       conversation,
+      scope: parsedScope.data,
       context: {
         currentDate: null,
         userName,
@@ -293,7 +299,6 @@ export function parseAssistantChatRequest(value: unknown): ValidationResult {
         memories,
       activePerson,
       personResolutionStatus,
-      personScope,
         giftContext: giftRequestPersonId && giftRequestEventId ? null : null,
         giftRequest: giftRequestPersonId && giftRequestEventId ? { personId: giftRequestPersonId, eventId: giftRequestEventId, mode: giftRequestMode } : null,
       },

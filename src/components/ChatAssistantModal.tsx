@@ -10,7 +10,7 @@ import ChatAssistantHeader from "@/components/chat-assistant/ChatAssistantHeader
 import ChatComposer from "@/components/chat-assistant/ChatComposer";
 import ConversationView, { type ChatHappyLearningViewState } from "@/components/chat-assistant/ConversationView";
 import type { AssistantAction, ChatMessage } from "@/components/chat-assistant/types";
-import type { AssistantPersonContext } from "@/lib/assistant/chatContract";
+import type { ChatScopeInput } from "@/lib/assistant/chatScope.contract";
 import { useAssistantHomeContext } from "@/hooks/useAssistantHomeContext";
 import { buildConversationHistory } from "@/lib/assistant/chatClient";
 import { classifyAiAvailabilityError } from "@/lib/assistant/aiAvailability";
@@ -27,9 +27,7 @@ interface ChatAssistantModalProps {
   initialPrompt?: string | null;
   autoSubmitInitialPrompt?: boolean;
   giftRequest?: { personId: string; eventId: string; mode?: "selection" | "supplementary" } | null;
-  initialPersonId?: string | null;
-  /** Optional persisted profile target; the API independently verifies ownership. */
-  initialPerson?: AssistantPersonContext | null;
+  scope?: ChatScopeInput;
 }
 
 const ACTION_DEFINITIONS = [
@@ -63,7 +61,7 @@ const INITIAL_HAPPY_LEARNING_STATE: ChatHappyLearningState = {
   detectionStatus: "idle",
 };
 
-export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdated, initialPrompt = null, autoSubmitInitialPrompt = false, giftRequest = null, initialPersonId = null, initialPerson = null }: ChatAssistantModalProps) {
+export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdated, initialPrompt = null, autoSubmitInitialPrompt = false, giftRequest = null, scope = { type: "global" } }: ChatAssistantModalProps) {
   const t = useTranslations("assistant");
   const locale = useLocale();
   const router = useRouter();
@@ -90,15 +88,9 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   const messageIdRef = useRef(0);
   const localeRef = useRef(locale);
   const submittedInitialPromptRef = useRef<string | null>(null);
-  const scopedInitialPerson = initialPersonId && initialPerson?.id === initialPersonId ? initialPerson : null;
-  const isProfileScoped = scopedInitialPerson !== null;
-  // A person profile can be outside the bounded Home assistant list. Keep its
-  // persisted target available locally; the server replaces it with owner-verified data.
-  const availablePeople = useMemo(() => (
-    scopedInitialPerson && !homeContext.people.some((person) => person.id === scopedInitialPerson.id)
-      ? [scopedInitialPerson, ...homeContext.people]
-      : homeContext.people
-  ), [homeContext.people, scopedInitialPerson]);
+  const scopedPersonId = scope.type === "person" ? scope.personId : null;
+  const isPersonScoped = scope.type === "person";
+  const availablePeople = useMemo(() => homeContext.people, [homeContext.people]);
 
   const actions: AssistantAction[] = ACTION_DEFINITIONS.map((definition) => ({
     id: definition.id,
@@ -177,15 +169,12 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   }, [autoSubmitInitialPrompt, initialPrompt, messages.length, open]);
 
   useEffect(() => {
-    if (!open || !initialPersonId || homeContext.loading) return;
-    // The profile supplies a persisted target and the authenticated Home projection
-    // supplies the general list. The server independently re-verifies ownership.
-    if (!availablePeople.some((person) => person.id === initialPersonId)) return;
+    if (!open || !scopedPersonId || homeContext.loading) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPersonContext((current) => current.activePersonId === initialPersonId && current.resolutionStatus === "resolved"
+    setPersonContext((current) => current.activePersonId === scopedPersonId && current.resolutionStatus === "resolved"
       ? current
-      : { activePersonId: initialPersonId, resolutionStatus: "resolved" });
-  }, [availablePeople, homeContext.loading, initialPersonId, open]);
+      : { activePersonId: scopedPersonId, resolutionStatus: "resolved" });
+  }, [homeContext.loading, open, scopedPersonId]);
 
   useEffect(() => {
     if (!open) submittedInitialPromptRef.current = null;
@@ -237,8 +226,8 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
     cancelActiveResponse();
     setMessages([]);
     setValue("");
-    setPersonContext(initialPersonId && availablePeople.some((person) => person.id === initialPersonId)
-      ? { activePersonId: initialPersonId, resolutionStatus: "resolved" }
+    setPersonContext(scopedPersonId
+      ? { activePersonId: scopedPersonId, resolutionStatus: "resolved" }
       : INITIAL_PERSON_CONTEXT);
     setHappyLearning(INITIAL_HAPPY_LEARNING_STATE);
     setGiftLinkStates({});
@@ -267,8 +256,8 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   }
 
   function updatePersonContextFromUserMessage(content: string): ChatPersonContext {
-    if (isProfileScoped && initialPersonId) {
-      const scoped = { activePersonId: initialPersonId, resolutionStatus: "resolved" as const };
+    if (isPersonScoped && scopedPersonId) {
+      const scoped = { activePersonId: scopedPersonId, resolutionStatus: "resolved" as const };
       setPersonContext(scoped);
       return scoped;
     }
@@ -394,6 +383,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
           message: content,
           locale,
           conversation,
+          scope,
           context: {
             userName: homeContext.isAuthenticated ? homeContext.userName : null,
             insight: homeContext.isAuthenticated && homeContext.insight
@@ -408,7 +398,6 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
             memories: homeContext.isAuthenticated ? homeContext.memories : [],
             activePersonId: homeContext.isAuthenticated ? requestPersonContext.activePersonId : null,
             personResolutionStatus: homeContext.isAuthenticated ? requestPersonContext.resolutionStatus : "none",
-            personScope: homeContext.isAuthenticated && isProfileScoped ? "profile" : null,
             giftRequest,
           },
         }),

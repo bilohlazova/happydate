@@ -9,6 +9,7 @@ import { assistantLocalDate } from "./assistantLocalDate";
 import { buildHappyPersonContext } from "./buildHappyPersonContext";
 import { buildAssistantPeopleContext } from "./peopleContext";
 import { buildAssistantMemoryContextFromSemanticMemory } from "./assistantSemanticMemoryAdapter";
+import type { VerifiedChatScope } from "./chatScope";
 
 
 /**
@@ -19,6 +20,7 @@ import { buildAssistantMemoryContextFromSemanticMemory } from "./assistantSemant
 export function buildVerifiedAssistantRequest(
   request: AssistantChatRequest,
   data: HomeRepositoryResult,
+  scope: VerifiedChatScope,
   currentDate = new Date(),
 ): AssistantChatRequest {
   const brains = orchestrateHomeBrains(data, { currentDate });
@@ -30,11 +32,10 @@ export function buildVerifiedAssistantRequest(
   );
   const timezone = data.knowledgeReviewPreferences.timezone ?? "UTC";
   const today = assistantLocalDate(currentDate, timezone);
-  const requestedPersonId = request.context.personScope === "profile" && request.context.personResolutionStatus === "resolved"
-    ? request.context.activePerson?.id ?? null
+  const requestedPersonId = scope.type === "person" || scope.type === "event" || scope.type === "task"
+    ? scope.personId
     : null;
-  // A profile CTA may target a person outside the bounded Home conversation list.
-  // Resolve only against the authenticated, RLS-backed owner projection.
+  // An explicit owned scope always wins over the bounded global conversation list.
   const scopedPeople = requestedPersonId
     ? buildAssistantPeopleContext(data.people.filter((person) => person.id === requestedPersonId))
     : [];
@@ -47,10 +48,11 @@ export function buildVerifiedAssistantRequest(
         sourceKnowledge: brains.memory.safeKnowledge,
       })
     : brains.conversation.assistantMemories;
+  const scopedEventId = scope.type === "event" || scope.type === "task" ? scope.eventId : null;
   const events = data.errors.some((error) => error.section === "events")
     ? []
     : data.events
-      .filter((event) => !isPersonScoped || event.personId === requestedPersonId)
+      .filter((event) => scopedEventId ? event.id === scopedEventId : !isPersonScoped || event.personId === requestedPersonId)
       .map((event) => ({
         id: event.id,
         title: event.title.trim(),
@@ -78,7 +80,15 @@ export function buildVerifiedAssistantRequest(
     mode: requestedGift?.mode === "supplementary" && selectedGift ? "supplementary" as const : "selection" as const,
     existingSelectedGift: selectedGift ? { id: selectedGift.id, title: selectedGift.title, lifecycle: selectedGift.lifecycle as "selected" | "purchased" } : null,
   } : null;
-  return replaceAssistantContext(request, {
+  const scopedRequest: AssistantChatRequest = {
+    ...request,
+    context: {
+      ...request.context,
+      activePerson: requestedPersonId ? people.find((person) => person.id === requestedPersonId) ?? null : null,
+      personResolutionStatus: requestedPersonId ? "resolved" : request.context.personResolutionStatus,
+    },
+  };
+  return replaceAssistantContext(scopedRequest, {
     currentDate: today,
     userName: resolveHomeUserName(data),
     events,

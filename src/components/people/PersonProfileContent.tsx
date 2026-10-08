@@ -162,14 +162,7 @@ export function PersonProfileContent({
         open={assistantOpen}
         onClose={() => setAssistantOpen(false)}
         onPersonMemoryUpdated={onProfileChanged}
-        initialPersonId={hero.id}
-        initialPerson={{
-          id: hero.id,
-          name: hero.name,
-          relation: hero.relationLabel,
-          birthday: hero.birthday,
-          gender: hero.gender === "female" || hero.gender === "male" || hero.gender === "other" ? hero.gender : null,
-        }}
+        scope={{ type: "person", personId: hero.id }}
       />
       <PersonActionsSheet
         person={personActionsMode ? {

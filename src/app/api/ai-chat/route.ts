@@ -16,6 +16,7 @@ import { createConfiguredAiBudget, type AiTokenUsage } from "@/lib/assistant/aiB
 import { loadAssistantPersonSymbol } from "@/lib/assistant/personSymbolContext.server";
 import { buildPersonMemoryProfile, formatPersonMemoryProfileForAssistant } from "@/lib/memory-engine";
 import { loadPersonHappyConversationHistory, savePersonHappyConversation } from "@/lib/assistant/happyConversationHistory.server";
+import { ChatScopeNotFoundError, resolveVerifiedChatScope } from "@/lib/assistant/chatScope";
 
 export const runtime = "nodejs";
 
@@ -44,6 +45,21 @@ export async function POST(request: Request) {
   }
 
   const identity = await getAssistantRequestIdentity(request);
+  if (parsed.data.scope.type !== "global" && (identity.kind !== "authenticated" || !identity.userId)) {
+    return Response.json({ error: "unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
+  }
+  let verifiedScope: Awaited<ReturnType<typeof resolveVerifiedChatScope>> | null = null;
+  if (identity.kind === "authenticated" && identity.userId) {
+    try {
+      const rlsSession = createAssistantRlsClient(request);
+      if (!rlsSession) return Response.json({ error: "unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
+      verifiedScope = await resolveVerifiedChatScope({ client: rlsSession.client, userId: identity.userId, scope: parsed.data.scope });
+    } catch (error) {
+      if (error instanceof ChatScopeNotFoundError) return Response.json({ error: "not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+      logOperationalWarning("assistant-chat", "scope-resolution-failed", { category: error instanceof Error ? error.name : "unknown" });
+      return Response.json({ error: "service_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    }
+  }
   const rateLimiter = createConfiguredAssistantRateLimiter();
   const budget = createConfiguredAiBudget();
   const apiKey = process.env.OPENAI_API_KEY?.trim();
@@ -112,7 +128,7 @@ export async function POST(request: Request) {
             rlsSession.accessToken,
             { includeGiftHistory: true },
           );
-          const verifiedRequest = buildVerifiedAssistantRequest(clientRequest, homeData);
+          const verifiedRequest = buildVerifiedAssistantRequest(clientRequest, homeData, verifiedScope ?? { type: "global", userId: "guest" });
           const [serverGiftOutcomes, serverSavedGiftLinks, serverPets, serverSymbol, serverHappyConversations] = verifiedRequest.context.activePerson
             && verifiedRequest.context.personResolutionStatus === "resolved"
               ? await Promise.all([

@@ -150,7 +150,7 @@ function normalizeEvents(
         ? localizedRelationLabel(peopleById.get(event.personId), relationT)
         : null,
       isImportant: category ? IMPORTANT_CATEGORIES.has(category) : false,
-      href: "/dashboard",
+      href: `/events/${encodeURIComponent(event.id)}`,
       daysUntil: remaining,
     }];
   });

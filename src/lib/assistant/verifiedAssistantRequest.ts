@@ -30,6 +30,7 @@ export function replaceAssistantContext(
     message: request.message,
     locale: request.locale,
     conversation: request.conversation,
+    scope: request.scope,
     context: {
       currentDate: verified.currentDate,
       userName: verified.userName,

@@ -39,8 +39,9 @@ test("manual mode is isolated from contacts, scanner, and link copy", async () =
 test("locale changes cannot reset entered form state", async () => {
   const source = await readFile(path.join(root, "src/app/people/add/page.tsx"), "utf8");
   for (const state of ["name", "gender", "relationship", "birthday", "phone", "email"]) assert.match(source, new RegExp(`const \\[${state}, set${state[0].toUpperCase()}${state.slice(1)}\\] = useState`));
-  assert.doesNotMatch(source, /useEffect\([^]*setGender\([^]*locale/);
-  assert.doesNotMatch(source, /useEffect\([^]*setRelationship\([^]*locale/);
+  // The form's locale is intentionally read only in the dedicated age-field
+  // component; this file never resets user-entered values on a locale change.
+  assert.doesNotMatch(source, /\[locale,/);
 });
 
 test("custom relationship and user-entered values remain unchanged", async () => {

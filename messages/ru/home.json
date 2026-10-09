@@ -35,7 +35,8 @@
     "days": "через {count} дней"
   },
   "events": {
-    "birthdayTitle": "День рождения: {name}"
+    "birthdayTitle": "День рождения: {name}",
+    "turningAge": "Исполнится {age, plural, one {# год} few {# года} many {# лет} other {# года}}"
   },
   "categories": {
     "birthday": "День рождения",
@@ -180,6 +181,7 @@
     "returningGreeting": "С возвращением, {name} 👋",
     "birthdayIntro": "Рад это слышать 💙\n\nЯ уже посмотрел ближайшие события — {personName} отмечает день рождения через {daysRemaining, plural, one {# день} few {# дня} many {# дней} other {# дней}}.",
     "birthdayReturningIntro": "Я уже посмотрел, что тебя ждёт — {personName} отмечает день рождения через {daysRemaining, plural, one {# день} few {# дня} many {# дней} other {# дней}}.",
+    "birthdayReturningIntroWithAge": "Я уже посмотрел, что тебя ждёт — {personName} отмечает день рождения через {daysRemaining, plural, one {# день} few {# дня} many {# дней} other {# дней}}. Исполнится {turningAge, plural, one {# год} few {# года} many {# лет} other {# года}}.",
     "noEvent": "Сегодня всё спокойно 🙂 Я напомню, когда приблизится что-то важное.",
     "birthdayLabel": "день рождения",
     "importantEventLabel": "важное событие",

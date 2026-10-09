@@ -35,7 +35,8 @@
     "days": "in {count} days"
   },
   "events": {
-    "birthdayTitle": "Birthday: {name}"
+    "birthdayTitle": "Birthday: {name}",
+    "turningAge": "Will turn {age}"
   },
   "categories": {
     "birthday": "Birthday",
@@ -180,6 +181,7 @@
     "returningGreeting": "Welcome back, {name} 👋",
     "birthdayIntro": "I’m glad to hear it 💙\n\nI’ve already looked at your upcoming events — {personName} celebrates a birthday in {daysRemaining, plural, one {# day} other {# days}}.",
     "birthdayReturningIntro": "I’ve already looked at what’s coming up — {personName} celebrates a birthday in {daysRemaining, plural, one {# day} other {# days}}.",
+    "birthdayReturningIntroWithAge": "I’ve already looked at what’s coming up — {personName} celebrates a birthday in {daysRemaining, plural, one {# day} other {# days}}. They will turn {turningAge}.",
     "noEvent": "Everything is calm today 🙂 I’ll remind you when something important is coming up.",
     "birthdayLabel": "a birthday",
     "importantEventLabel": "an important event",

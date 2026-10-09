@@ -12,6 +12,7 @@ import type { KnowledgeChangeHistoryRow } from "../repositories/knowledgeReposit
 import { buildGiftOutcomeLearningSignals } from "../gift-intelligence/giftOutcomeLearningSignals.ts";
 import { projectGiftOutcomeAiContext } from "../gift-intelligence/giftOutcomeAiContextPreview.ts";
 import { canonicalRelationKey } from "./canonicalRelation.ts";
+import { birthYearFromFullBirthday, resolveBirthdayTurningAge, resolveNextBirthdayOccurrence } from "../birthday/birthdayAge.ts";
 import { buildPersonMemoryProfile, isProfileNote, knowledgeEpistemicType, noticeRelationshipConnections } from "../memory-engine/index.ts";
 import type {
   PeoplePageViewModel,
@@ -66,22 +67,18 @@ function relationKey(person: PersonRow) {
   return canonicalRelationKey(person.relation_key, relationLabel(person));
 }
 
-function localDate(value: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-  const date = match
-    ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
-    : new Date(value);
-  return Number.isFinite(date.getTime()) ? date : null;
+function daysUntilBirthday(value: string | null, now: Date): number | null {
+  const next = resolveNextBirthdayOccurrence(value, now);
+  if (!next) return null;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((next.getTime() - today.getTime()) / 86_400_000);
 }
 
-function daysUntilBirthday(value: string | null, now: Date): number | null {
-  if (!value) return null;
-  const birthday = localDate(value);
-  if (!birthday) return null;
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  let next = new Date(today.getFullYear(), birthday.getMonth(), birthday.getDate());
-  if (next < today) next = new Date(today.getFullYear() + 1, birthday.getMonth(), birthday.getDate());
-  return Math.round((next.getTime() - today.getTime()) / 86_400_000);
+function birthdayTurningAge(person: PersonRow, now: Date): number | null {
+  return resolveBirthdayTurningAge({
+    birthYear: birthYearFromFullBirthday(person.birthday) ?? person.birth_year ?? null,
+    birthdayOccurrence: resolveNextBirthdayOccurrence(person.birthday, now),
+  }, now);
 }
 
 function activeVisible(items: readonly KnowledgeItem[]): KnowledgeItem[] {
@@ -319,6 +316,7 @@ export function buildPeoplePageViewModel({
       gender: person.gender,
       birthday: person.birthday,
       daysUntilBirthday: daysUntilBirthday(person.birthday, currentDate),
+      turningAge: birthdayTurningAge(person, currentDate),
       createdAt: person.created_at,
       tags,
       knowledgeItemCount: personItems.length,
@@ -417,6 +415,7 @@ export function buildPersonProfileViewModel({
       gender: person.gender,
       birthday: person.birthday,
       daysUntilBirthday: daysUntilBirthday(person.birthday, currentDate),
+      turningAge: birthdayTurningAge(person, currentDate),
       note: person.notes,
     },
     pets,

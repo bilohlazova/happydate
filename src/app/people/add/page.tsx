@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Camera,
@@ -33,8 +33,8 @@ import {
 } from "@/components/people/peopleRelations";
 import { MobileUI } from "@/lib/theme/mobile";
 import { logOperationalError } from "@/lib/observability/safeLogger";
-import { inferBirthYearFromCurrentAge } from "@/lib/birthday/birthdayAge";
-import { birthdayAgeLabels } from "@/lib/birthday/birthdayAgeLabels";
+import { BirthdayAgeFields } from "@/components/people/BirthdayAgeFields";
+import { birthYearFromFullBirthday } from "@/lib/birthday/birthdayAge";
 
 type AddMode = "contacts" | "manual" | "card" | "link";
 type ContactStep = "intro" | "confirm" | "success";
@@ -125,8 +125,6 @@ export default function AddPersonPage() {
     useState<RelationCategory | null>(null);
   const [birthday, setBirthday] = useState("");
   const [birthYear, setBirthYear] = useState("");
-  const [currentAge, setCurrentAge] = useState("");
-  const locale = useLocale();
   const [gender, setGender] = useState<PersonGender>("unspecified");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -214,6 +212,12 @@ export default function AddPersonPage() {
   const missingRelationCount = contactsToImport.filter(
     (contact) => !contact.relationship
   ).length;
+
+  function setBirthdayAndCanonicalYear(value: string) {
+    setBirthday(value);
+    const year = birthYearFromFullBirthday(value);
+    setBirthYear(year === null ? "" : String(year));
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -415,7 +419,7 @@ export default function AddPersonPage() {
       setRelationKey(nextRelationKey);
       setRelationCategory(getRelationCategoryForKey(nextRelationKey));
     }
-    if (parsed.birthday) setBirthday(parsed.birthday);
+    if (parsed.birthday) setBirthdayAndCanonicalYear(parsed.birthday);
     if (parsed.phone) setPhone(parsed.phone);
     if (parsed.email) setEmail(parsed.email);
     if (parsed.externalContactId)
@@ -501,7 +505,6 @@ export default function AddPersonPage() {
             relationKey={relationKey}
             birthday={birthday}
             birthYear={birthYear}
-            currentAge={currentAge}
             gender={gender}
             sourceText={sourceText}
             cardImageUrl={cardImageUrl}
@@ -515,10 +518,8 @@ export default function AddPersonPage() {
               setRelationCategory(category);
             }}
             onRelationKeyChange={setRelationKey}
-            onBirthdayChange={setBirthday}
+            onBirthdayChange={setBirthdayAndCanonicalYear}
             onBirthYearChange={setBirthYear}
-            onCurrentAgeChange={setCurrentAge}
-            ageLabels={birthdayAgeLabels(locale)}
             onGenderChange={(value) => {
               setGender(value);
 
@@ -797,7 +798,6 @@ function SinglePersonFlow({
   relationKey,
   birthday,
   birthYear,
-  currentAge,
   gender,
   sourceText,
   cardImageUrl,
@@ -810,8 +810,6 @@ function SinglePersonFlow({
   onRelationKeyChange,
   onBirthdayChange,
   onBirthYearChange,
-  onCurrentAgeChange,
-  ageLabels,
   onGenderChange,
   onSourceTextChange,
   onParseSource,
@@ -826,7 +824,6 @@ function SinglePersonFlow({
   relationKey: PersonRelationKey | null;
   birthday: string;
   birthYear: string;
-  currentAge: string;
   gender: PersonGender;
   sourceText: string;
   cardImageUrl: string | null;
@@ -842,8 +839,6 @@ function SinglePersonFlow({
   onRelationKeyChange: (value: PersonRelationKey | null) => void;
   onBirthdayChange: (value: string) => void;
   onBirthYearChange: (value: string) => void;
-  onCurrentAgeChange: (value: string) => void;
-  ageLabels: ReturnType<typeof birthdayAgeLabels>;
   onGenderChange: (value: PersonGender) => void;
   onSourceTextChange: (value: string) => void;
   onParseSource: () => void;
@@ -852,7 +847,6 @@ function SinglePersonFlow({
   localized: boolean;
 }) {
   const t = useTranslations("personForm");
-  const inference = currentAge.trim() ? inferBirthYearFromCurrentAge({ currentAge: Number(currentAge), birthday: birthday || null }) : null;
   return (
     <section className="add-person-card add-person-form-card rounded-[1rem] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.055)] ring-1 ring-slate-100 sm:p-5">
       <div className="mb-3 flex items-center gap-2">
@@ -954,17 +948,7 @@ function SinglePersonFlow({
             aria-label={t("accessibility.birthdayInput")}
           />
         </Field>
-        <Field label={ageLabels.birthYear} htmlFor="birth-year">
-          <input id="birth-year" type="number" min="1" max={new Date().getFullYear()} value={birthYear} onChange={(event) => onBirthYearChange(event.target.value)} className={MobileUI.input} />
-        </Field>
-        {!birthYear && <>
-          <p className="text-xs font-semibold text-slate-500">{ageLabels.unknown}</p>
-          <Field label={ageLabels.currentAge} htmlFor="current-age">
-            <input id="current-age" type="number" min="0" max="130" value={currentAge} onChange={(event) => onCurrentAgeChange(event.target.value)} className={MobileUI.input} />
-          </Field>
-          {inference?.kind === "exact" && <div className="rounded-xl bg-sky-50 p-3 text-sm font-semibold text-sky-800"><p>{ageLabels.possible}: {inference.birthYear}</p><div className="mt-2 flex gap-2"><button type="button" onClick={() => onBirthYearChange(String(inference.birthYear))} className="rounded-lg bg-sky-600 px-3 py-1.5 text-white">{ageLabels.add(inference.birthYear)}</button><button type="button" onClick={() => onCurrentAgeChange("")} className="rounded-lg bg-white px-3 py-1.5 text-slate-700">{ageLabels.notNow}</button></div></div>}
-          {inference?.kind === "ambiguous" && <p className="text-xs font-semibold text-slate-500">{ageLabels.needsDate}</p>}
-        </>}
+        <BirthdayAgeFields birthday={birthday} birthYear={birthYear} onBirthYearChange={onBirthYearChange} />
 
         {status && (
           <p className="rounded-[0.8rem] bg-sky-50 px-3 py-2 text-xs font-bold leading-5 text-sky-700">

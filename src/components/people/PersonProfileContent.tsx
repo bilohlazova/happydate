@@ -665,6 +665,12 @@ function ProfileHero({
                 {t("profileUi.birthdayCountdown", { days: hero.daysUntilBirthday })}
               </span>
             )}
+            {hero.turningAge !== null && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[0.7rem] font-extrabold text-rose-600">
+                <CalendarDays className="h-3.5 w-3.5" />
+                {t("profileUi.turningAge", { age: hero.turningAge })}
+              </span>
+            )}
             {healthLabel && (
               <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 text-[0.7rem] font-extrabold text-sky-700">
                 <Sparkles className="h-3.5 w-3.5" /> {healthLabel}

@@ -1,4 +1,5 @@
 {
+  "ageIntelligence": {"current":"Current age","turning":"Will turn","help":"Calculate year from age","age":"Age","exact":"Possible birth year: {year}","ambiguous":"Possible years: {first} or {second}. Enter the birthday day and month for an exact calculation.","conflict":"The profile says {existing}, but the entered age suggests {candidate}. Change the year?","match":"Birth year confirmed: {year}","invalid":"Check the age and birthday date.","unavailable":"A birthday date is needed for the calculation.","loading":"Loading calendar settings…","failed":"Could not load the calendar. You can enter the year manually.","turningLine":"Will turn {age}"},
   "title": { "add": "Add manually", "edit": "Edit person" },
   "subtitle": {
     "add": "Enter the important person's basic details.",

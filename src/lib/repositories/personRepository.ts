@@ -13,12 +13,25 @@ import type {
   PersonRelationKey,
   PersonRow,
 } from "./person.types";
+import { birthYearFromFullBirthday } from "../birthday/birthdayAge";
 
 function assertValidBirthYear(value: number | undefined): void {
   if (value === undefined) return;
   if (!Number.isInteger(value) || value < 1 || value > new Date().getFullYear()) {
     throw new Error("[personRepository] invalid birth year");
   }
+}
+
+/** A full persisted birthday is authoritative for its calendar year. */
+function canonicalBirthYear(birthday: string | undefined, birthYear: number | undefined): number | undefined {
+  return birthYearFromFullBirthday(birthday) ?? birthYear;
+}
+
+function normalizeBirthdayYear(person: PersonRow): PersonRow {
+  const birthdayYear = birthYearFromFullBirthday(person.birthday);
+  return birthdayYear === null || person.birth_year === birthdayYear
+    ? person
+    : { ...person, birth_year: birthdayYear };
 }
 
 export const PERSON_SELECT = [
@@ -88,7 +101,7 @@ export async function getPeople(
     );
   }
 
-  return data ?? [];
+  return (data ?? []).map(normalizeBirthdayYear);
 }
 
 /**
@@ -110,7 +123,7 @@ export async function getPersonById(
     );
   }
 
-  return data;
+  return data ? normalizeBirthdayYear(data) : null;
 }
 
 /**
@@ -135,7 +148,7 @@ export async function getOwnedPersonById(
     );
   }
 
-  return data;
+  return data ? normalizeBirthdayYear(data) : null;
 }
 
 /**
@@ -145,7 +158,8 @@ export async function getOwnedPersonById(
 export async function createPerson(
   input: CreatePersonInput
 ): Promise<PersonRow> {
-  assertValidBirthYear(input.birthYear);
+  const birthYear = canonicalBirthYear(input.birthday, input.birthYear);
+  assertValidBirthYear(birthYear);
   const { data, error } = await supabase
     .from("people")
     .insert({
@@ -156,7 +170,7 @@ export async function createPerson(
       relation_key: input.relationKey ?? null,
       relation_category: input.relationCategory ?? null,
       birthday: input.birthday ?? null,
-      ...(input.birthYear === undefined ? {} : { birth_year: input.birthYear }),
+      ...(birthYear === undefined ? {} : { birth_year: birthYear }),
       phone: input.phone ?? null,
       email: input.email ?? null,
       external_contact_id: input.externalContactId ?? null,
@@ -179,7 +193,8 @@ export async function createPerson(
 export async function updatePerson(
   input: UpdatePersonInput
 ): Promise<PersonRow> {
-  assertValidBirthYear(input.birthYear);
+  const birthYear = canonicalBirthYear(input.birthday, input.birthYear);
+  assertValidBirthYear(birthYear);
   const { data, error } = await supabase
     .from("people")
     .update({
@@ -189,7 +204,7 @@ export async function updatePerson(
       relation_key: input.relationKey ?? null,
       relation_category: input.relationCategory ?? null,
       birthday: input.birthday ?? null,
-      ...(input.birthYear === undefined ? {} : { birth_year: input.birthYear }),
+      ...(birthYear === undefined ? {} : { birth_year: birthYear }),
       gender: input.gender ?? "unspecified",
     })
     .eq("id", input.personId)

@@ -8,20 +8,28 @@ const task = (status, steps = []) => ({ id: `task-${status}`, type: "birthday_pr
 const model = (gifts = [], tasks = [], currentEvent = event) => buildBirthdayPreparationViewModel({ event: currentEvent, gifts, tasks });
 
 test("birthday event exposes only durable gift, greeting and plan state", () => {
-  assert.deepEqual(model(), { gift: "missing", greeting: "missing", plan: "none", canStartPreparation: true });
-  assert.deepEqual(model([{ personId: "person-a", eventId: "event-a", lifecycle: "selected" }]), { gift: "ready", greeting: "missing", plan: "none", canStartPreparation: true });
+  assert.deepEqual(model(), { gift: "missing", greeting: "missing", plan: "none", canStartPreparation: true, urgency: "normal" });
+  assert.deepEqual(model([{ personId: "person-a", eventId: "event-a", lifecycle: "selected" }]), { gift: "ready", greeting: "missing", plan: "none", canStartPreparation: true, urgency: "normal" });
   assert.equal(model([], [task("active")]).plan, "active");
   assert.equal(model([], [task("waiting_user")]).plan, "waiting_user");
   assert.equal(model([], [task("paused")]).plan, "paused");
-  assert.deepEqual(model([], [task("completed", [{ type: "prepare_greeting", status: "completed" }])]), { gift: "missing", greeting: "ready", plan: "completed", canStartPreparation: false });
+  assert.deepEqual(model([], [task("completed", [{ type: "prepare_greeting", status: "completed" }])]), { gift: "missing", greeting: "ready", plan: "completed", canStartPreparation: false, urgency: "normal" });
 });
 
-test("only a matching selected/purchased gift and matching greeting step count", () => {
+test("only a matching selected/purchased/given gift and matching greeting step count", () => {
   assert.equal(model([{ personId: "person-a", eventId: "event-a", lifecycle: "purchased" }]).gift, "ready");
+  assert.equal(model([{ personId: "person-a", eventId: "event-a", lifecycle: "given" }]).gift, "ready");
   assert.equal(model([{ personId: "person-b", eventId: "event-a", lifecycle: "selected" }]).gift, "missing");
   assert.equal(model([{ personId: "person-a", eventId: "event-b", lifecycle: "selected" }]).gift, "missing");
   assert.equal(model([], [task("active", [{ type: "prepare_greeting", status: "active" }])]).greeting, "missing");
   assert.equal(model([], [task("active", [{ type: "prepare_greeting", status: "completed" }])]).greeting, "ready");
+});
+
+test("Event uses the shared D0-D3 urgency contract without changing durable birthday data", () => {
+  const nearEvent = { ...event, date: "2026-10-11", daysUntil: 3 };
+  assert.equal(model([], [], nearEvent).urgency, "critical");
+  assert.equal(model([{ personId: "person-a", eventId: "event-a", lifecycle: "selected" }], [], nearEvent).urgency, "normal");
+  assert.equal(model([], [], { ...nearEvent, daysUntil: 4 }).urgency, "normal");
 });
 
 test("non-birthday events never receive the birthday preparation UI", () => {

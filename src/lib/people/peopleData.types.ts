@@ -122,6 +122,7 @@ export interface PersonProfileViewModel {
     gender: import("@/lib/repositories/person.types").PersonGender;
     birthday: string | null;
     daysUntilBirthday: number | null;
+    turningAge: number | null;
     note: string | null;
   } | null;
   pets: import("@/lib/repositories/petRepository").PetRow[];

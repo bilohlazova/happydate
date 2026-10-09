@@ -17,6 +17,15 @@ export function validBirthYear(value: unknown, now = new Date()): value is numbe
   return typeof value === "number" && Number.isInteger(value) && value > 0 && value <= now.getFullYear();
 }
 
+/** A persisted `people.birthday` is a complete calendar date. Its year is
+ * therefore confirmed data, never an inference hint. */
+export function birthYearFromFullBirthday(birthday: string | null | undefined): number | null {
+  const match = typeof birthday === "string" && /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthday);
+  if (!match || !parseLocalDate(birthday)) return null;
+  const year = Number(match[1]);
+  return Number.isInteger(year) && year > 0 ? year : null;
+}
+
 /** Uses the same local-calendar Date construction as birthday occurrences.
  * Feb 29 consequently follows the app's existing rollover behavior. */
 export function resolveNextBirthdayOccurrence(birthday: string | null | undefined, now = new Date()): Date | null {

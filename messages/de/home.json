@@ -35,7 +35,8 @@
     "days": "in {count} Tagen"
   },
   "events": {
-    "birthdayTitle": "Geburtstag: {name}"
+    "birthdayTitle": "Geburtstag: {name}",
+    "turningAge": "Wird {age, plural, one {# Jahr} other {# Jahre}} alt"
   },
   "categories": {
     "birthday": "Geburtstag",
@@ -180,6 +181,7 @@
     "returningGreeting": "Willkommen zurück, {name} 👋",
     "birthdayIntro": "Das freut mich 💙\n\nIch habe deine nächsten Termine schon angesehen — {personName} hat in {daysRemaining, plural, one {# Tag} other {# Tagen}} Geburtstag.",
     "birthdayReturningIntro": "Ich habe schon angesehen, was vor dir liegt — {personName} hat in {daysRemaining, plural, one {# Tag} other {# Tagen}} Geburtstag.",
+    "birthdayReturningIntroWithAge": "Ich habe schon angesehen, was vor dir liegt — {personName} hat in {daysRemaining, plural, one {# Tag} other {# Tagen}} Geburtstag. {personName} wird {turningAge, plural, one {# Jahr} other {# Jahre}} alt.",
     "noEvent": "Heute ist alles ruhig 🙂 Ich erinnere dich, wenn etwas Wichtiges näher rückt.",
     "birthdayLabel": "Geburtstag",
     "importantEventLabel": "wichtiger Termin",

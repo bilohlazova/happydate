@@ -20,12 +20,13 @@ export default function HomePrimaryHappyBlock({ block, presentation, onContinueT
   };
   const primary = presentation.primaryAction;
   return (
-    <section className="mt-5 w-full max-w-[760px] rounded-[1.35rem] border border-violet-100 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)] sm:p-5" aria-label={presentation.title}>
+    <section className={`mt-5 w-full max-w-[760px] rounded-[1.35rem] border bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)] sm:p-5 ${presentation.urgency === "critical" ? "border-rose-200" : "border-violet-100"}`} aria-label={presentation.title}>
       <p className="text-sm font-semibold text-violet-700">✦ {presentation.eyebrow}</p>
       <div className="mt-3 border-t border-violet-100 pt-3">
         <p className="text-base font-semibold text-slate-900">{presentation.title}</p>
         {presentation.timing && <p className="mt-1 text-sm text-slate-500">{presentation.timing}</p>}
-        <p className="mt-3 text-sm font-medium leading-6 text-slate-800">{presentation.statusText}</p>
+        {presentation.turningAgeLabel && <p className="mt-1 text-sm font-semibold text-violet-700">{presentation.turningAgeLabel}</p>}
+        <p className={`mt-3 text-sm font-medium leading-6 ${presentation.urgency === "critical" ? "font-bold text-rose-800" : "text-slate-800"}`} role={presentation.urgency === "critical" ? "status" : undefined}>{presentation.urgency === "critical" && <span aria-hidden="true">⚠ </span>}{presentation.statusText}</p>
         {presentation.context && <p className="mt-2 text-sm leading-6 text-slate-600" data-provenance-source={`${presentation.context.source.type}:${presentation.context.source.id}`}>{presentation.context.text}</p>}
       </div>
       {primary?.kind === "continue_task" && block.type === "task_progress" && <button type="button" className="hd-button mt-4 min-h-10 bg-violet-600 px-4 text-sm text-white" onClick={() => onContinueTask(block.task.id)}>{primary.label}</button>}

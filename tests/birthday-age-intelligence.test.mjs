@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import {
   inferBirthYearFromCurrentAge,
   inferBirthYearFromTurningAge,
+  birthYearFromFullBirthday,
   resolveBirthdayTurningAge,
   resolveNextBirthdayOccurrence,
 } from "../src/lib/birthday/birthdayAge.ts";
@@ -19,6 +20,13 @@ test("current age before, after, and on the birthday resolves from the local occ
 test("turning age uses the actual occurrence year", () => {
   assert.equal(resolveBirthdayTurningAge({ birthYear: 2006, birthdayOccurrence: "2026-10-11" }, before), 20);
   assert.deepEqual(inferBirthYearFromTurningAge({ turningAge: 20, birthdayOccurrence: "2027-10-11", now: new Date(2026, 9, 12) }), { kind: "exact", birthYear: 2007 });
+});
+
+test("a complete birthday date is the confirmed source for its canonical birth year", () => {
+  assert.equal(birthYearFromFullBirthday("1951-10-28"), 1951);
+  assert.equal(birthYearFromFullBirthday("1951-02-29"), null);
+  assert.equal(birthYearFromFullBirthday("10-28"), null);
+  assert.equal(resolveBirthdayTurningAge({ birthYear: birthYearFromFullBirthday("1951-10-28"), birthdayOccurrence: "2026-10-28" }, before), 75);
 });
 
 test("unknown birthday leaves two possible birth years rather than inventing one", () => {

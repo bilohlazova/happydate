@@ -1,4 +1,5 @@
 {
+  "ageIntelligence": {"current":"Aktuelles Alter","turning":"Wird","help":"Jahr aus dem Alter berechnen","age":"Alter","exact":"Mögliches Geburtsjahr: {year}","ambiguous":"Mögliche Jahre: {first} oder {second}. Für eine genaue Berechnung Tag und Monat eingeben.","conflict":"Im Profil steht {existing}, das eingegebene Alter ergibt jedoch {candidate}. Jahr ändern?","match":"Geburtsjahr bestätigt: {year}","invalid":"Alter und Geburtsdatum prüfen.","unavailable":"Für die Berechnung wird das Geburtstagsdatum benötigt.","loading":"Kalendereinstellungen werden geladen…","failed":"Kalender konnte nicht geladen werden. Das Jahr kann manuell eingegeben werden.","turningLine":"Wird {age, plural, one {# Jahr} other {# Jahre}} alt"},
   "title": { "add": "Manuell hinzufügen", "edit": "Person bearbeiten" },
   "subtitle": {
     "add": "Gib die grundlegenden Daten einer wichtigen Person ein.",

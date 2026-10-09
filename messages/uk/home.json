@@ -35,7 +35,8 @@
     "days": "через {count} днів"
   },
   "events": {
-    "birthdayTitle": "День народження: {name}"
+    "birthdayTitle": "День народження: {name}",
+    "turningAge": "Виповниться {age, plural, one {# рік} few {# роки} many {# років} other {# року}}"
   },
   "categories": {
     "birthday": "День народження",
@@ -180,6 +181,7 @@
     "returningGreeting": "Привіт знову, {name} 👋",
     "birthdayIntro": "Радий це чути 💙\n\nЯ вже переглянув твої найближчі події — через {daysRemaining, plural, one {# день} few {# дні} many {# днів} other {# днів}} {personName} святкує день народження.",
     "birthdayReturningIntro": "Я вже переглянув, що в тебе попереду — через {daysRemaining, plural, one {# день} few {# дні} many {# днів} other {# днів}} {personName} святкує день народження.",
+    "birthdayReturningIntroWithAge": "Я вже переглянув, що в тебе попереду — через {daysRemaining, plural, one {# день} few {# дні} many {# днів} other {# днів}} {personName} святкує день народження. Виповниться {turningAge, plural, one {# рік} few {# роки} many {# років} other {# року}}.",
     "noEvent": "Сьогодні все спокійно 🙂 Я нагадаю, коли щось важливе наблизиться.",
     "birthdayLabel": "день народження",
     "importantEventLabel": "важлива подія",

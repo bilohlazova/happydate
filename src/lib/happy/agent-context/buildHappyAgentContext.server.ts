@@ -6,21 +6,21 @@ import { listKnowledgeForOwnedPersonWithClient } from "@/lib/repositories/knowle
 import { buildPersonMemoryProfile, selectAuthoritativeContextForAi } from "@/lib/memory-engine/personMemoryProfile";
 import { selectKnowledgeContext } from "@/lib/knowledge/knowledgeLayer";
 import { getHappyTasksForEvent } from "../task-engine/happyEventTasks.server";
-import { resolveBirthdayTurningAge } from "@/lib/birthday/birthdayAge";
+import { birthYearFromFullBirthday, resolveBirthdayTurningAge } from "@/lib/birthday/birthdayAge";
 
 export type HappyAgentContextInput = { client: SupabaseClient; userId: string; locale: string; timezone?: string; personId?: string; eventId?: string; taskId?: string; now?: Date };
 export type HappyAgentContextResult = { kind: "ok"; context: HappyAgentContext } | { kind: "not_found" | "data_unavailable"; resource?: "person" | "event" | "task" };
 const validZone = (value?: string) => { try { if (value) Intl.DateTimeFormat("en", { timeZone: value }); return value ?? "UTC"; } catch { return "UTC"; } };
 async function ownedBirthYear(client: SupabaseClient, userId: string, personId: string): Promise<number | null | undefined> {
-  const { data, error } = await client.from("people").select("birth_year").eq("id", personId).eq("user_id", userId).maybeSingle();
+  const { data, error } = await client.from("people").select("birthday,birth_year").eq("id", personId).eq("user_id", userId).maybeSingle();
   if (error || !data) return undefined;
-  return Number.isInteger(data.birth_year) ? data.birth_year : null;
+  return birthYearFromFullBirthday(data.birthday) ?? (Number.isInteger(data.birth_year) ? data.birth_year : null);
 }
 
 export async function buildHappyAgentContext(input: HappyAgentContextInput): Promise<HappyAgentContextResult> {
   const { client, userId, personId, eventId, taskId } = input;
   const context = emptyContext({ id: userId, locale: input.locale, timezone: validZone(input.timezone) });
-  if (personId) { const { data, error } = await client.from("people").select("id,name,relationship,relation_label,birthday,birth_year,gender").eq("id", personId).eq("user_id", userId).maybeSingle(); if (error) return { kind: "data_unavailable" }; if (!data) return { kind: "not_found", resource: "person" }; const p = data as { id:string; name:string; relationship:string|null; relation_label:string|null; birthday:string|null; birth_year:number|null; gender:string|null }; context.person = { id:p.id, name:p.name, relationship:p.relation_label ?? p.relationship, birthday:p.birthday, birthYear:Number.isInteger(p.birth_year) ? p.birth_year : null, gender:p.gender === "female" || p.gender === "male" || p.gender === "other" ? p.gender : null }; }
+  if (personId) { const { data, error } = await client.from("people").select("id,name,relationship,relation_label,birthday,birth_year,gender").eq("id", personId).eq("user_id", userId).maybeSingle(); if (error) return { kind: "data_unavailable" }; if (!data) return { kind: "not_found", resource: "person" }; const p = data as { id:string; name:string; relationship:string|null; relation_label:string|null; birthday:string|null; birth_year:number|null; gender:string|null }; context.person = { id:p.id, name:p.name, relationship:p.relation_label ?? p.relationship, birthday:p.birthday, birthYear:birthYearFromFullBirthday(p.birthday) ?? (Number.isInteger(p.birth_year) ? p.birth_year : null), gender:p.gender === "female" || p.gender === "male" || p.gender === "other" ? p.gender : null }; }
   if (eventId) { const { data, error } = await client.from("events").select("id,category,date,person_id").eq("id", eventId).eq("user_id", userId).maybeSingle(); if (error) return { kind:"data_unavailable" }; if (!data) return { kind:"not_found", resource:"event" }; const e=data as {id:string;category:string|null;date:string;person_id:string|null}; let turningAge:null|number=null; if (e.category === "birthday" && e.person_id) { const birthYear = context.person?.id === e.person_id ? context.person.birthYear : await ownedBirthYear(client,userId,e.person_id); if (birthYear === undefined) return {kind:"data_unavailable"}; turningAge=resolveBirthdayTurningAge({birthYear,birthdayOccurrence:e.date},input.now); } context.event={id:e.id,type:e.category ?? "event",date:e.date,daysUntil:daysUntil(e.date,input.now ?? new Date()),turningAge}; }
   if (taskId) { const { data,error }=await client.from("happy_tasks").select("id").eq("id",taskId).eq("user_id",userId).maybeSingle(); if(error)return {kind:"data_unavailable"}; if(!data)return {kind:"not_found",resource:"task"}; }
   const person = context.person?.id;

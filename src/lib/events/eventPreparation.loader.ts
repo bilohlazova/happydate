@@ -5,6 +5,9 @@ import {
   type EventPreparationGift,
   type EventPreparationTask,
 } from "./eventPreparation";
+import { birthdayCalendarDaysUntil } from "../birthday/birthdayPresentation.ts";
+import { birthYearFromFullBirthday } from "../birthday/birthdayAge.ts";
+import { getReminderPreferences } from "../repositories/reminders/reminderPreferences.repository";
 
 export type EventPreparationPageViewModel = {
   found: boolean;
@@ -36,10 +39,11 @@ export async function loadEventPreparationPage(eventId: string): Promise<EventPr
   }
 
   let personBirthYear: number | null = null;
+  const preferences = await getReminderPreferences();
   if (typeof data.person_id === "string") {
-    const { data: person, error: personError } = await supabase.from("people").select("birth_year").eq("id", data.person_id).eq("user_id", userId).maybeSingle();
+    const { data: person, error: personError } = await supabase.from("people").select("birthday,birth_year").eq("id", data.person_id).eq("user_id", userId).maybeSingle();
     if (personError) throw new Error(`[eventPreparation] Person load failed: ${personError.message}`);
-    personBirthYear = Number.isInteger(person?.birth_year) ? (person?.birth_year ?? null) : null;
+    personBirthYear = birthYearFromFullBirthday(person?.birthday) ?? (Number.isInteger(person?.birth_year) ? (person?.birth_year ?? null) : null);
   }
   const event: EventPreparationEvent = {
     id: data.id,
@@ -48,6 +52,7 @@ export async function loadEventPreparationPage(eventId: string): Promise<EventPr
     category: typeof data.category === "string" ? data.category : null,
     personId: typeof data.person_id === "string" ? data.person_id : null,
     personBirthYear,
+    daysUntil: birthdayCalendarDaysUntil(data.date, new Date(), preferences.timezone),
   };
   if (event.category?.trim().toLocaleLowerCase() !== "birthday" || !event.personId) {
     return { found: true, event, preparation: buildBirthdayPreparationViewModel({ event, gifts: [], tasks: [] }) };
@@ -60,7 +65,7 @@ export async function loadEventPreparationPage(eventId: string): Promise<EventPr
       .eq("user_id", userId)
       .eq("person_id", event.personId)
       .eq("event_id", event.id)
-      .in("lifecycle", ["selected", "purchased"]),
+      .in("lifecycle", ["selected", "purchased", "given"]),
     supabase
       .from("happy_tasks")
       .select("id,type,status,person_id,event_id,started_at,happy_task_steps(type,status)")

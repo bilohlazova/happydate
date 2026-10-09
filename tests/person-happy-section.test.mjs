@@ -43,40 +43,38 @@ test("view model exposes zero-safe compact Happy counts instead of database rows
 test("profile card renders the compact counts and binds its CTA to the persisted profile id", async () => {
   const profile = await source("src/components/people/PersonProfileContent.tsx");
   assert.match(profile, /<HappyPersonSection personName=\{hero\.name\} happy=\{viewModel\.happy\}/);
-  assert.match(profile, /initialPersonId=\{hero\.id\}/);
-  assert.match(profile, /initialPerson=\{\{/);
+  assert.match(profile, /scope=\{\{ type: "person", personId: hero\.id \}\}/);
   assert.match(profile, /t\("profileUi\.happy\.tasks", \{ count: happy\.activeTaskCount \}\)/);
   assert.match(profile, /t\("profileUi\.happy\.ideas", \{ count: happy\.currentIdeaCount \}\)/);
   assert.match(profile, /t\("profileUi\.happy\.ask", \{ name: personName \}\)/);
   assert.doesNotMatch(profile, /resolveChatPerson/);
   const modal = await source("src/components/ChatAssistantModal.tsx");
-  assert.match(modal, /if \(isProfileScoped && initialPersonId\) \{/);
-  assert.match(modal, /personScope: homeContext\.isAuthenticated && isProfileScoped \? "profile" : null/);
+  assert.match(modal, /scope\?: ChatScopeInput/);
+  assert.match(modal, /scope = \{ type: "global" \}/);
 });
 
 test("profile-scoped chat preserves only the verified current person and excludes unrelated people/events", async () => {
   const server = await source("src/lib/assistant/verifiedAssistantContext.server.ts");
-  assert.match(server, /requestedPersonId = request\.context\.personScope === "profile" && request\.context\.personResolutionStatus === "resolved"/);
+  assert.match(server, /requestedPersonId = scope\.type === "person" \|\| scope\.type === "event" \|\| scope\.type === "task"/);
   assert.match(server, /data\.people\.filter\(\(person\) => person\.id === requestedPersonId\)/);
-  assert.match(server, /isPersonScoped \? scopedPeople : brains\.conversation\.assistantPeople/);
-  assert.match(server, /const memories = isPersonScoped\s*\? buildAssistantMemoryContextFromSemanticMemory/s);
-  assert.match(server, /\.filter\(\(event\) => !isPersonScoped \|\| event\.personId === requestedPersonId\)/);
+  assert.match(server, /isExplicitScope \? scopedPeople : brains\.conversation\.assistantPeople/);
+  assert.match(server, /const memories = isExplicitScope\s*\? buildAssistantMemoryContextFromSemanticMemory/s);
+  assert.match(server, /scopedEventId \? event\.id === scopedEventId : isExplicitScope \? event\.personId === requestedPersonId/);
 });
 
 test("a foreign or nonexistent requested profile id never becomes an active server context", async () => {
   const server = await source("src/lib/assistant/verifiedAssistantRequest.ts");
   const api = await source("src/app/api/ai-chat/route.ts");
-  assert.match(server, /verified\.people\.find\(\(\{ id \}\) => id === requestedPersonId\) \?\? null/);
+  assert.match(server, /const activePerson = requestedPersonId\s*\? verified\.people\.find/s);
   assert.match(api, /createAssistantRlsClient/);
   assert.doesNotMatch(api, /SUPABASE_SERVICE_ROLE_KEY|service_role/);
 });
 
 test("general Home chat remains backward compatible without an initial profile target", async () => {
   const modal = await source("src/components/ChatAssistantModal.tsx");
-  assert.match(modal, /initialPersonId\?: string \| null;/);
-  assert.match(modal, /initialPerson\?: AssistantPersonContext \| null;/);
-  assert.match(modal, /initialPersonId = null, initialPerson = null/);
-  assert.match(modal, /resolveChatPerson\(\{/);
+  assert.match(modal, /scope\?: ChatScopeInput/);
+  assert.match(modal, /scope = \{ type: "global" \}/);
+  assert.doesNotMatch(modal, /initialPersonId|personScope/);
 });
 
 test("all locales provide zero, singular/plural, and CTA copy for the Happy section", async () => {

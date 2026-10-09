@@ -9,7 +9,7 @@ const other = "00000000-0000-4000-8000-000000000003";
 const event = "00000000-0000-4000-8000-000000000004";
 const base = {
   isAuthenticated: true, userId: owner, profile: null, authMetadataName: null, email: null, errors: [], pendingGiftOutcomes: [], knowledgeReviewPreferences: { homeEnabled: true, voiceEnabled: true },
-  people: [{ id: person, name: "Mia", birthday: null, relationLabel: null, relationKey: null, gender: null }],
+  people: [{ id: person, name: "Mia", birthday: "1990-10-07", birthYear: null, relationLabel: null, relationKey: null, gender: null }],
   events: [{ id: event, title: "Mia birthday", date: "2026-10-07", category: "birthday", notes: null, personId: person }],
   memories: [],
 };
@@ -20,6 +20,7 @@ const translate = (locale = "en") => (key, values = {}) => {
     "countdown.tomorrow": { uk: "завтра", pl: "jutro", en: "tomorrow", de: "morgen", ru: "завтра" },
     "countdown.days": { uk: `через ${values.count} днів`, pl: `za ${values.count} dni`, en: `in ${values.count} days`, de: `in ${values.count} Tagen`, ru: `через ${values.count} дней` },
     "events.birthdayTitle": { uk: `День народження: ${values.name}`, pl: `Urodziny: ${values.name}`, en: `Birthday: ${values.name}`, de: `Geburtstag: ${values.name}`, ru: `День рождения: ${values.name}` },
+    "events.turningAge": { uk: `Виповниться ${values.age} років`, pl: `Skończy ${values.age} lat`, en: `Will turn ${values.age}`, de: `Wird ${values.age} Jahre alt`, ru: `Исполнится ${values.age} лет` },
     "happyTask.title": { uk: `День народження ${values.name}`, pl: `Urodziny: ${values.name}`, en: `Birthday for ${values.name}`, de: `Geburtstag von ${values.name}`, ru: `День рождения ${values.name}` },
     "happyTask.progress": { uk: `${values.completed} з ${values.total} готово`, pl: `${values.completed} z ${values.total} gotowe`, en: `${values.completed} of ${values.total} complete`, de: `${values.completed} von ${values.total} fertig`, ru: `${values.completed} из ${values.total} готово` },
     "primaryHappy.eyebrow": { uk: "Happy", pl: "Happy", en: "Happy", de: "Happy", ru: "Happy" },
@@ -46,6 +47,7 @@ test("birthday gift-help presentation uses event title, localized relative date,
   const presentation = buildHomePrimaryHappyPresentation(idea(), base, new Date("2026-10-01T12:00:00Z"), translate("uk"));
   assert.equal(presentation?.title, "День народження: Mia");
   assert.equal(presentation?.timing, "через 6 днів");
+  assert.equal(presentation?.turningAgeLabel, "Виповниться 36 років");
   assert.equal(presentation?.statusText, "Подарунок ще не обраний.");
   assert.deepEqual(presentation?.primaryAction, { kind: "accept_idea", label: "Підібрати подарунок" });
   assert.equal(presentation?.secondaryAction?.kind, "dismiss_idea");
@@ -79,6 +81,8 @@ test("all supported locales carry the primary presentation labels and localize r
     assert.ok(messages.primaryHappy?.actions?.giftHelp);
     assert.ok(messages.primaryHappy?.actions?.prepareGreeting);
     assert.ok(messages.primaryHappy?.context?.preference);
+    assert.ok(messages.events?.turningAge);
+    assert.ok(messages.wellbeing?.birthdayReturningIntroWithAge);
     assert.notEqual(buildHomePrimaryHappyPresentation(idea(), base, new Date("2026-10-01T12:00:00Z"), translate(locale))?.timing, "countdown.days");
   }
 });
@@ -91,4 +95,5 @@ test("presentation preserves the single-card Home placement and has no AI/provid
   assert.ok(dashboard.indexOf("<WellbeingCheckIn") < dashboard.indexOf("<HomePrimaryHappyBlock"));
   assert.ok(dashboard.indexOf("<HomePrimaryHappyBlock") < dashboard.indexOf("<UpcomingEventsSection"));
   assert.doesNotMatch(`${card}\n${adapter}`, /openai|provider|supabase|service_role/i);
+  assert.match(card, /presentation\.turningAgeLabel/);
 });

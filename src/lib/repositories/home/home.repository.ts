@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { birthYearFromFullBirthday } from "@/lib/birthday/birthdayAge";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { listKnowledgeWithClient } from "@/lib/repositories/knowledgeRepository";
 import { projectKnowledgeForHome } from "@/lib/knowledge";
@@ -93,7 +94,7 @@ async function loadPeople(client: SupabaseClient, userId: string): Promise<HomeP
     id: person.id,
     name: person.name,
     birthday: person.birthday ?? null,
-    birthYear: Number.isInteger(person.birth_year) ? person.birth_year : null,
+    birthYear: birthYearFromFullBirthday(person.birthday) ?? (Number.isInteger(person.birth_year) ? person.birth_year : null),
     relationLabel: person.relation_label ?? person.relationship ?? null,
     relationKey: canonicalRelationKey(
       person.relation_key,

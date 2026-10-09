@@ -6,7 +6,6 @@ import ReminderActions from "./ReminderActions";
 
 interface FeaturedEventCardProps {
   event: HomeFeaturedEvent;
-  locale: string;
   preferencesLabel: string;
   giftContextLabel: string;
   reminder: ReminderRecord | null;
@@ -19,22 +18,8 @@ interface FeaturedEventCardProps {
   onPickGift: () => void;
 }
 
-function birthdayAgeLabel(age: number, locale: string): string {
-  if (locale === "uk") {
-    const lastTwo = age % 100;
-    const last = age % 10;
-    const word = lastTwo >= 11 && lastTwo <= 14 ? "років" : last === 1 ? "рік" : last >= 2 && last <= 4 ? "роки" : "років";
-    return `Виповнюється ${age} ${word}`;
-  }
-  if (locale === "pl") return `Kończy ${age} ${age === 1 ? "rok" : age % 10 >= 2 && age % 10 <= 4 && !(age % 100 >= 12 && age % 100 <= 14) ? "lata" : "lat"}`;
-  if (locale === "de") return `Wird ${age} ${age === 1 ? "Jahr" : "Jahre"} alt`;
-  if (locale === "ru") return `Исполняется ${age} ${age % 10 === 1 && age % 100 !== 11 ? "год" : age % 10 >= 2 && age % 10 <= 4 && !(age % 100 >= 12 && age % 100 <= 14) ? "года" : "лет"}`;
-  return `Will turn ${age}`;
-}
-
 export default function FeaturedEventCard({
   event,
-  locale,
   preferencesLabel,
   giftContextLabel,
   reminder,
@@ -47,7 +32,7 @@ export default function FeaturedEventCard({
   onPickGift,
 }: FeaturedEventCardProps) {
   return (
-    <section className="overflow-hidden rounded-[1.35rem] border border-amber-200/70 bg-[linear-gradient(120deg,#fffdf8_0%,#fffaf0_100%)] p-4 shadow-[0_12px_34px_rgba(146,82,19,0.07)] sm:p-5">
+    <section className={`overflow-hidden rounded-[1.35rem] border p-4 shadow-[0_12px_34px_rgba(146,82,19,0.07)] sm:p-5 ${event.birthdayUrgency === "critical" ? "border-rose-200 bg-rose-50" : "border-amber-200/70 bg-[linear-gradient(120deg,#fffdf8_0%,#fffaf0_100%)]"}`} aria-label={event.birthdayUrgency === "critical" ? `${event.title}. ${giftContextLabel}` : undefined}>
       <div className="grid gap-4 md:grid-cols-[72px_minmax(0,1fr)_auto] md:items-center">
         <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl bg-white text-amber-700 shadow-sm ring-1 ring-amber-100">
           <span className="text-xl" aria-hidden="true">{event.source === "birthday" ? "🎂" : "📅"}</span>
@@ -57,11 +42,12 @@ export default function FeaturedEventCard({
           <p className={`text-[11px] font-extrabold uppercase tracking-[0.12em] ${event.isImportant ? "text-amber-700" : "text-sky-700"}`}>{event.label}</p>
           <h2 className="mt-1.5 text-xl font-bold leading-tight tracking-[-0.02em] text-slate-950 sm:text-[1.35rem]">{event.title}</h2>
           {event.relationLabel && <p className="mt-1 text-sm font-bold text-slate-500">{event.relationLabel}</p>}
-          {event.birthdayAge !== null && (
+          {event.birthdayAgeLabel && (
             <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-white/80 px-3 py-1.5 text-sm font-bold text-amber-900">
-              <span aria-hidden="true">🎈</span>{birthdayAgeLabel(event.birthdayAge, locale)}
+              <span aria-hidden="true">🎈</span>{event.birthdayAgeLabel}
             </div>
           )}
+          {event.birthdayUrgency === "critical" && <p role="status" className="mt-3 flex items-center gap-2 text-sm font-bold text-rose-800"><span aria-hidden="true">⚠</span>{giftContextLabel}</p>}
           <p className="mt-3 text-sm font-medium capitalize text-slate-600">{event.dateLabel}{event.timeOfDay ? ` · ${event.timeOfDay}` : ""}{event.durationMinutes ? ` · ${event.durationMinutes} min` : ""} · {event.countdownLabel}</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row md:w-48 md:flex-col">

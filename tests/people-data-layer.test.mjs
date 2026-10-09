@@ -67,6 +67,22 @@ test("profile projection separates likes, dislikes, interests and important fact
   assert.deepEqual(model.importantFacts.map((item) => item.value), ["Ma kota"]);
 });
 
+test("profile exposes the canonical age for the next birthday occurrence and omits it without a confirmed year", () => {
+  const dated = buildPersonProfileViewModel({
+    person: person({ birthday: "1951-10-28", birth_year: null }),
+    knowledge: [],
+    currentDate: new Date(2026, 9, 8),
+  });
+  assert.equal(dated.hero?.turningAge, 75);
+
+  const unknown = buildPersonProfileViewModel({
+    person: person({ birthday: null, birth_year: null }),
+    knowledge: [],
+    currentDate: new Date(2026, 9, 8),
+  });
+  assert.equal(unknown.hero?.turningAge, null);
+});
+
 test("profile projection carries confirmed source evidence without changing user values", () => {
   const model = buildPersonProfileViewModel({
     person: person(),

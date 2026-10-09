@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Send } from "lucide-react";
 import Link from "next/link";
@@ -91,6 +91,12 @@ interface WellbeingCheckInProps {
 export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPickGift, onSaveGift }: WellbeingCheckInProps) {
   const copy = getCopy(locale);
   const wellbeingT = useTranslations("home.wellbeing");
+  const birthdayIntro = useCallback((event: HomeFeaturedEvent) => {
+    const values = { daysRemaining: event.daysUntil, personName: event.personName ?? event.title ?? "" };
+    return event.birthdayAge === null
+      ? wellbeingT("birthdayReturningIntro", values)
+      : wellbeingT("birthdayReturningIntroWithAge", { ...values, turningAge: event.birthdayAge });
+  }, [wellbeingT]);
   const actions = ACTION_COPY[locale] ?? ACTION_COPY.uk;
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
@@ -221,8 +227,7 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
     const contextualReply = mood === "custom" ? wellbeingReply(userText ?? "", recentLowCheckins >= 2) : null;
     const reply = contextualReply ?? (mood === "custom" ? personalReply(userText ?? "", copy.customReply) : mood === "good" ? copy.goodReply : mood === "neutral" ? copy.neutralReply : mood === "low" ? copy.lowReply : copy.skipReply);
     if (isBirthdayEvent && featuredEvent) {
-      const daysRemaining = featuredEvent.daysUntil;
-      typeHappyLine(`${reply}\n\n${wellbeingT("birthdayReturningIntro", { daysRemaining, personName: featuredEvent.personName ?? featuredEvent.title })}`);
+      typeHappyLine(`${reply}\n\n${birthdayIntro(featuredEvent)}`);
       setConversationStep("birthday_intro");
       if (featuredEvent.giftPreparation.hasSelectedGift) setGiftStatusAction("prepared");
       const timeout = window.setTimeout(() => setConversationStep("gift_status"), 0);
@@ -254,7 +259,7 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
       // Returning context is initialized together; gift controls must not wait on typing timers.
       setLines([
         { id: nextId.current++, author: "happy", text: greeting },
-        { id: nextId.current++, author: "happy", text: wellbeingT("birthdayReturningIntro", { daysRemaining: featuredEvent.daysUntil, personName: featuredEvent.personName ?? featuredEvent.title ?? "" }) },
+        { id: nextId.current++, author: "happy", text: birthdayIntro(featuredEvent) },
       ]);
       setBusy(false);
       if (featuredEvent.giftPreparation.hasSelectedGift) setGiftStatusAction("prepared");
@@ -263,7 +268,7 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
     }
     const eventMessage = featuredEvent ? ` ${featuredEvent.countdownLabel} ${wellbeingT("importantEventLabel")} — ${featuredEvent.title}.` : ` ${wellbeingT("noEvent")}`;
     setLines([{ id: nextId.current++, author: "happy", text: `${greeting}${eventMessage}` }]);
-  }, [copy.greeting, copy.welcome, enabled, featuredEvent, hasCheckedInToday, wellbeingHistoryLoading, wellbeingHistoryResolved, wellbeingT, userName]);
+  }, [birthdayIntro, copy.greeting, copy.welcome, enabled, featuredEvent, hasCheckedInToday, wellbeingHistoryLoading, wellbeingHistoryResolved, wellbeingT, userName]);
 
   return (
     <section className="w-full max-w-[700px]" aria-label="Персональна турбота HappyDate">

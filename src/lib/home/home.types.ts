@@ -169,12 +169,15 @@ export interface HomeFeaturedEvent extends HomeEvent {
   /** The age reached on this specific birthday occurrence; never inferred without a year. */
   /** Age reached on the displayed birthday occurrence. */
   birthdayAge: number | null;
+  /** Localized presentation copy built from the canonical birthday occurrence. */
+  birthdayAgeLabel: string | null;
+  birthdayUrgency: "normal" | "critical";
   giftContextId: string;
   giftPreparation: {
     hasSelectedGift: boolean;
     giftId: string | null;
     title: string | null;
-    status: "selected" | "purchased" | null;
+    status: "selected" | "purchased" | "given" | null;
   };
 }
 
@@ -184,6 +187,8 @@ export interface HomeUpcomingEvent extends HomeEvent {
   dateLabel: string;
   countdownLabel: string;
   categoryLabel: string | null;
+  /** Localized presentation copy; null for non-birthday or unknown-year events. */
+  birthdayAgeLabel: string | null;
 }
 
 export interface HomeRecommendation {

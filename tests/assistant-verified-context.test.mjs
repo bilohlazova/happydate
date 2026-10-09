@@ -60,6 +60,7 @@ test("guest requests keep conversation but receive no private context", () => {
     events: [],
     people: [],
     memories: [],
+    taskContext: null,
     activePerson: null,
     personResolutionStatus: "none",
   });

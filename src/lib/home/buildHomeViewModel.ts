@@ -15,7 +15,8 @@ import { buildDailyBriefing } from "./buildDailyBriefing.ts";
 import { normalizeRelationValue } from "../people/canonicalRelation.ts";
 import { selectPrimaryHappyBlock } from "../happy/home/selectPrimaryHappyBlock.ts";
 import { buildHomePrimaryHappyPresentation } from "../happy/home/buildHomePrimaryHappyPresentation.ts";
-import { resolveBirthdayTurningAge } from "../birthday/birthdayAge.ts";
+import { birthYearFromFullBirthday, resolveBirthdayTurningAge } from "../birthday/birthdayAge.ts";
+import { hasMatchingBirthdayGift, resolveBirthdayUrgency } from "../birthday/birthdayPresentation.ts";
 
 const IMPORTANT_CATEGORIES = new Set(["birthday", "anniversary"]);
 
@@ -224,8 +225,7 @@ function classifyMemories(memories: HomeMemory[]) {
 function birthdayAgeOnEvent(event: HomeEvent, people: HomePerson[]): number | null {
   if (event.source !== "birthday" || !event.personId) return null;
   const person = people.find((candidate) => candidate.id === event.personId);
-  const legacyBirthYear = Number(/^([0-9]{4})-/.exec(person?.birthday ?? "")?.[1]);
-  const birthYear = person?.birthYear ?? (Number.isInteger(legacyBirthYear) ? legacyBirthYear : null);
+  const birthYear = birthYearFromFullBirthday(person?.birthday) ?? person?.birthYear ?? null;
   return resolveBirthdayTurningAge({ birthYear, birthdayOccurrence: event.date });
 }
 
@@ -242,8 +242,10 @@ function buildFeatured(event: HomeEvent | null, people: HomePerson[], memories: 
   const giftContextId = event.source === "birthday" ? `${event.id}:${event.date}` : event.id;
   const selectedGift = giftHistory?.find((gift) => gift.personId === event.personId
     && gift.eventId === giftContextId
-    && (gift.lifecycle === "selected" || gift.lifecycle === "purchased")) ?? null;
+    && (gift.lifecycle === "selected" || gift.lifecycle === "purchased" || gift.lifecycle === "given")) ?? null;
+  const giftReady = hasMatchingBirthdayGift((giftHistory ?? []).map((gift) => ({ personId: gift.personId, eventId: gift.eventId, lifecycle: gift.lifecycle })), event.personId, giftContextId);
 
+  const birthdayAge = birthdayAgeOnEvent(event, people);
   return {
     ...event,
     label: event.isImportant ? t("featured.importantLabel") : t("featured.nextLabel"),
@@ -253,13 +255,17 @@ function buildFeatured(event: HomeEvent | null, people: HomePerson[], memories: 
     preferences: classified.preferences.slice(0, 2),
     metrics,
     ctaLabel: event.source === "birthday" ? t("featured.personCta") : t("featured.eventCta"),
-    birthdayAge: birthdayAgeOnEvent(event, people),
+    birthdayAge,
+    birthdayAgeLabel: birthdayAge === null ? null : t("events.turningAge", { age: birthdayAge }),
+    birthdayUrgency: event.source === "birthday"
+      ? resolveBirthdayUrgency({ occurrence: event.date, daysUntil: event.daysUntil, giftReady })
+      : "normal",
     giftContextId,
     giftPreparation: {
       hasSelectedGift: Boolean(selectedGift),
       giftId: selectedGift?.id ?? null,
       title: selectedGift?.title ?? null,
-      status: selectedGift?.lifecycle === "selected" || selectedGift?.lifecycle === "purchased" ? selectedGift.lifecycle : null,
+      status: selectedGift?.lifecycle === "selected" || selectedGift?.lifecycle === "purchased" || selectedGift?.lifecycle === "given" ? selectedGift.lifecycle : null,
     },
   };
 }
@@ -276,7 +282,7 @@ function categoryLabel(event: HomeEvent, t: HomeTranslate): string | null {
   return supported[event.category] ?? t("categories.other");
 }
 
-function buildUpcoming(events: HomeEvent[], locale: AppLocale, t: HomeTranslate): HomeUpcomingEvent[] {
+function buildUpcoming(events: HomeEvent[], people: HomePerson[], locale: AppLocale, t: HomeTranslate): HomeUpcomingEvent[] {
   return events.slice(0, 3).map((event) => ({
     ...event,
     title: event.source === "birthday" ? t("events.birthdayTitle", { name: event.title }) : event.title,
@@ -285,6 +291,10 @@ function buildUpcoming(events: HomeEvent[], locale: AppLocale, t: HomeTranslate)
     dateLabel: formatDate(locale, event.date, { weekday: "long", day: "numeric", month: "long" }),
     countdownLabel: formatCountdown(t, event.daysUntil),
     categoryLabel: categoryLabel(event, t),
+    birthdayAgeLabel: (() => {
+      const birthdayAge = birthdayAgeOnEvent(event, people);
+      return birthdayAge === null ? null : t("events.turningAge", { age: birthdayAge });
+    })(),
   }));
 }
 
@@ -456,7 +466,7 @@ export function buildHomeViewModel(
     // Keep the canonical nearest event visible in the compact list as well as
     // separately available to Happy. `events` is already normalized, sorted,
     // and de-duplicated by stable event identity.
-    upcomingEvents: buildUpcoming(events, locale, t),
+    upcomingEvents: buildUpcoming(events, data.people, locale, t),
     recommendations,
     isEmpty: data.people.length === 0 && data.events.length === 0 && data.memories.length === 0 && (data.pendingGiftOutcomes ?? []).length === 0,
     errors: data.errors,

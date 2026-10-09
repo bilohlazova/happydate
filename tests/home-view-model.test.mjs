@@ -6,7 +6,7 @@ import { briefingTextForMode } from "../src/lib/home/buildDailyBriefing.ts";
 const messages = {
   "greeting.named": "Cześć, {name}!", "greeting.fallback": "Cześć!", "greeting.subtitle": "Dziś",
   "countdown.today": "dzisiaj", "countdown.tomorrow": "jutro", "countdown.days": "za {count} dni",
-  "events.birthdayTitle": "Urodziny: {name}", "featured.importantLabel": "Ważna", "featured.nextLabel": "Następna",
+  "events.birthdayTitle": "Urodziny: {name}", "events.turningAge": "Will turn {age}", "featured.importantLabel": "Ważna", "featured.nextLabel": "Następna",
   "featured.personCta": "Profil", "featured.eventCta": "Kalendarz",
   "metrics.savedGifts": "{count} gifts", "metrics.notes": "{count} notes", "metrics.memories": "{count} memories",
   "categories.birthday": "Birthday", "categories.anniversary": "Anniversary", "categories.work": "Work", "categories.personal": "Personal",
@@ -96,14 +96,40 @@ test("a birthday with a confirmed birth year shows the age reached on that occur
     people: [{ id: "p1", name: "Ola", birthday: "1990-07-20", relationLabel: "Siostra" }],
   }), "pl", t, new Date(2026, 6, 17));
   assert.equal(model.featuredEvent?.birthdayAge, 36);
+  assert.equal(model.featuredEvent?.birthdayAgeLabel, "Will turn 36");
+  assert.equal(model.upcomingEvents[0]?.birthdayAgeLabel, "Will turn 36");
 
   const withoutYear = buildHomeViewModel(data({
     people: [{ id: "p2", name: "Maja", birthday: "07-20", relationLabel: "Siostra" }],
   }), "pl", t, new Date(2026, 6, 17));
   assert.equal(withoutYear.featuredEvent?.birthdayAge, null);
+  assert.equal(withoutYear.featuredEvent?.birthdayAgeLabel, null);
+  assert.equal(withoutYear.upcomingEvents[0]?.birthdayAgeLabel, null);
 });
 
-test("gift preparation is scoped to the exact person and event occurrence", () => {
+test("birthday age is occurrence-based across New Year, coexists with urgency, and never appears on regular events", () => {
+  const birthday = buildHomeViewModel(data({
+    people: [{ id: "p1", name: "Ola", birthday: "1990-01-02", relationLabel: "Siostra" }],
+  }), "pl", t, new Date(2026, 11, 30));
+  assert.equal(birthday.featuredEvent?.birthdayAge, 37);
+  assert.equal(birthday.upcomingEvents[0]?.birthdayAgeLabel, "Will turn 37");
+
+  const urgent = buildHomeViewModel(data({
+    people: [{ id: "p2", name: "Maja", birthday: "2006-10-11", relationLabel: "Siostra" }],
+  }), "pl", t, new Date(2026, 9, 8));
+  assert.equal(urgent.featuredEvent?.birthdayUrgency, "critical");
+  assert.equal(urgent.featuredEvent?.birthdayAgeLabel, "Will turn 20");
+
+  const regular = buildHomeViewModel(data({
+    people: [{ id: "p3", name: "Zosia", birthday: "1990-01-02", relationLabel: "Siostra" }],
+    events: [{ id: "e1", title: "Meeting", date: "2026-12-31", category: "work", notes: null, personId: "p3" }],
+  }), "pl", t, new Date(2026, 11, 30));
+  const regularEvent = regular.upcomingEvents.find((event) => event.id === "e1");
+  assert.equal(regularEvent?.source, "event");
+  assert.equal(regularEvent?.birthdayAgeLabel, null);
+});
+
+test("gift preparation and birthday urgency are scoped to the exact person and occurrence", () => {
   const base = {
     people: [{ id: "p1", name: "Ola", birthday: "1990-07-20", relationLabel: "Siostra" }],
     giftHistory: [{ id: "g1", personId: "p1", eventId: "birthday-p1:2026-07-20", title: "Album", lifecycle: "selected", occurredOn: null, createdAt: "2026-07-01T00:00:00Z" }],
@@ -111,6 +137,18 @@ test("gift preparation is scoped to the exact person and event occurrence", () =
   const prepared = buildHomeViewModel(data(base), "pl", t, new Date(2026, 6, 17));
   assert.equal(prepared.featuredEvent?.giftPreparation.hasSelectedGift, true);
   assert.equal(prepared.featuredEvent?.giftPreparation.title, "Album");
+  assert.equal(prepared.featuredEvent?.birthdayUrgency, "normal");
+
+  const unresolved = buildHomeViewModel(data({ people: base.people }), "pl", t, new Date(2026, 6, 17));
+  assert.equal(unresolved.featuredEvent?.birthdayAge, 36);
+  assert.equal(unresolved.featuredEvent?.birthdayUrgency, "critical");
+
+  const given = buildHomeViewModel(data({
+    ...base,
+    giftHistory: [{ ...base.giftHistory[0], lifecycle: "given" }],
+  }), "pl", t, new Date(2026, 6, 17));
+  assert.equal(given.featuredEvent?.giftPreparation.hasSelectedGift, true);
+  assert.equal(given.featuredEvent?.birthdayUrgency, "normal");
 
   const nextYear = buildHomeViewModel(data(base), "pl", t, new Date(2027, 6, 17));
   assert.equal(nextYear.featuredEvent?.giftContextId, "birthday-p1:2027-07-20");

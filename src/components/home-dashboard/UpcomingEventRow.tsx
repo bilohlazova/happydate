@@ -11,7 +11,7 @@ export default function UpcomingEventRow({ event }: { event: HomeUpcomingEvent }
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-bold text-slate-800 sm:text-[15px]">{event.title}</span>
-          <span className="mt-0.5 block truncate text-[11px] font-medium capitalize text-slate-500">{event.categoryLabel ?? event.dateLabel}{event.countdownLabel ? ` · ${event.countdownLabel}` : ""}</span>
+          <span className="mt-0.5 block truncate text-[11px] font-medium capitalize text-slate-500">{event.categoryLabel ?? event.dateLabel}{event.countdownLabel ? ` · ${event.countdownLabel}` : ""}{event.birthdayAgeLabel ? ` · ${event.birthdayAgeLabel}` : ""}</span>
         </span>
         {event.categoryLabel && <span className="hidden max-w-28 truncate rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-extrabold text-slate-600 sm:block">{event.categoryLabel}</span>}
         <ChevronRight size={17} className="shrink-0 text-slate-400" aria-hidden="true" />

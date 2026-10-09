@@ -1,4 +1,5 @@
 {
+  "ageIntelligence": {"current":"Obecny wiek","turning":"Skończy","help":"Oblicz rok na podstawie wieku","age":"Wiek","exact":"Możliwy rok urodzenia: {year}","ambiguous":"Możliwe lata: {first} lub {second}. Podaj dzień i miesiąc, aby obliczyć dokładnie.","conflict":"Profil podaje {existing}, ale wpisany wiek wskazuje rok {candidate}. Zmienić rok?","match":"Rok urodzenia potwierdzony: {year}","invalid":"Sprawdź wiek i datę urodzin.","unavailable":"Do obliczenia potrzebna jest data urodzin.","loading":"Ładowanie ustawień kalendarza…","failed":"Nie udało się załadować kalendarza. Rok można wpisać ręcznie.","turningLine":"Skończy {age, plural, one {# rok} few {# lata} many {# lat} other {# roku}}"},
   "title": { "add": "Dodaj ręcznie", "edit": "Edytuj osobę" },
   "subtitle": {
     "add": "Wpisz podstawowe dane ważnej osoby.",

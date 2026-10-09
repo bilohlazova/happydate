@@ -19,10 +19,14 @@ test("repository exposes repeatable lint, typecheck, and verification commands",
   assert.match(packageJson.scripts.verify, /npm test/);
 });
 
-test("ESLint uses the native Next.js flat configurations", async () => {
-  const config = await readFile(new URL("eslint.config.mjs", ROOT), "utf8");
-  assert.match(config, /eslint-config-next\/core-web-vitals/);
-  assert.match(config, /eslint-config-next\/typescript/);
+test("ESLint uses a dependency-audited TypeScript and React Hooks flat configuration", async () => {
+  const [config, packageJson] = await Promise.all([
+    readFile(new URL("eslint.config.mjs", ROOT), "utf8"),
+    readFile(new URL("package.json", ROOT), "utf8").then(JSON.parse),
+  ]);
+  assert.match(config, /typescript-eslint/);
+  assert.match(config, /eslint-plugin-react-hooks/);
+  assert.match(config, /@next\/next\/no-img-element/);
+  assert.equal(packageJson.devDependencies["eslint-config-next"], undefined);
   assert.doesNotMatch(config, /FlatCompat/);
-  assert.doesNotMatch(config, /"react-hooks\/(set-state-in-effect|refs|preserve-manual-memoization)"\s*:\s*"warn"/);
 });

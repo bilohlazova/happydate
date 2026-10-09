@@ -11,7 +11,7 @@ export type VerifiedAssistantProjection = {
   events: AssistantEventContext[];
   people: AssistantPersonContext[];
   memories: AssistantMemoryGroupContext[];
-  taskContext?: { type: string } | null;
+  taskContext?: { type: string; avoidGiftThemes: string[] } | null;
   giftContext?: AssistantChatRequest["context"]["giftContext"];
 };
 

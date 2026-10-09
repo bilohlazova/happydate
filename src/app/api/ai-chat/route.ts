@@ -17,6 +17,7 @@ import { loadAssistantPersonSymbol } from "@/lib/assistant/personSymbolContext.s
 import { buildPersonMemoryProfile, formatPersonMemoryProfileForAssistant } from "@/lib/memory-engine";
 import { loadPersonHappyConversationHistory, savePersonHappyConversation } from "@/lib/assistant/happyConversationHistory.server";
 import { ChatScopeNotFoundError, resolveVerifiedChatScope } from "@/lib/assistant/chatScope";
+import { getActiveTaskDecisions } from "@/lib/happy/taskDecisions.server";
 
 export const runtime = "nodejs";
 
@@ -128,7 +129,11 @@ export async function POST(request: Request) {
             rlsSession.accessToken,
             { includeGiftHistory: true },
           );
-          const verifiedRequest = buildVerifiedAssistantRequest(clientRequest, homeData, verifiedScope ?? { type: "global", userId: "guest" });
+          const taskDecisions = verifiedScope?.type === "task"
+            ? await getActiveTaskDecisions(rlsSession.client, { userId: identity.userId, taskId: verifiedScope.taskId })
+            : null;
+          if (verifiedScope?.type === "task" && !taskDecisions) throw new Error("task decisions unavailable");
+          const verifiedRequest = buildVerifiedAssistantRequest(clientRequest, homeData, verifiedScope ?? { type: "global", userId: "guest" }, taskDecisions);
           const [serverGiftOutcomes, serverSavedGiftLinks, serverPets, serverSymbol, serverHappyConversations] = verifiedRequest.context.activePerson
             && verifiedRequest.context.personResolutionStatus === "resolved"
               ? await Promise.all([

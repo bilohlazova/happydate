@@ -27,6 +27,7 @@ import {
 import { recordKnowledgeReviewInteraction } from "@/lib/repositories/knowledgeReviewInteractions.repository";
 import { useAuth } from "@/components/AuthProvider";
 import GuestHomePresentation from "@/components/GuestHome";
+import type { ChatScopeInput } from "@/lib/assistant/chatScope";
 
 const safeStorage = {
   getItem: (key: string): string | null => {
@@ -110,6 +111,7 @@ export default function HomePageClient() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInitialPrompt, setChatInitialPrompt] = useState<string | null>(null);
   const [chatGiftRequest, setChatGiftRequest] = useState<{ personId: string; eventId: string; mode?: "selection" | "supplementary" } | null>(null);
+  const [chatScope, setChatScope] = useState<ChatScopeInput>({ type: "global" });
   const [reminder, setReminder] = useState<ReminderRecord | null>(null);
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminderError, setReminderError] = useState<string | null>(null);
@@ -230,6 +232,26 @@ export default function HomePageClient() {
     reload();
   }, [reload]);
 
+  const respondHappyAction = useCallback(async (actionId: string, response: "approve" | "reject") => {
+    const result = await fetch(`/api/happy/actions/${encodeURIComponent(actionId)}/${response}`, { method: "POST" });
+    // A concurrent or already-terminal action is stale client state. Reload
+    // authoritative Home data without presenting it as a successful mutation.
+    if (result.status === 409) {
+      reload();
+      throw new Error("Happy action is no longer pending");
+    }
+    if (!result.ok) throw new Error("Happy action response failed");
+    reload();
+  }, [reload]);
+
+  const continueHappyTask = useCallback(async (taskId: string) => {
+    const result = await fetch(`/api/happy/tasks/${encodeURIComponent(taskId)}/continue`, { method: "POST" });
+    if (!result.ok) throw new Error("Happy task continuation failed");
+    const body = await result.json() as { kind?: string };
+    reload();
+    if (body.kind === "generated") { setChatScope({ type: "task", taskId }); setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }
+  }, [reload]);
+
   const giftFollowUp = useCallback(async (giftId: string, action: "snooze" | "dismiss") => {
     await changeGiftOutcomeFollowUp(giftId, action);
     reload();
@@ -281,7 +303,7 @@ export default function HomePageClient() {
           <HomeErrorState title={homeT("error.title")} description={homeT("error.description")} retry={homeT("error.retry")} onRetry={reload} />
         </div>
       )}
-      {viewModel && user && <HomeDashboard viewModel={viewModel} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} onContinueHappyTask={() => { /* Task Runner will own this action. */ }} onRespondHappyIdea={respondHappyIdea} />}
+      {viewModel && user && <HomeDashboard viewModel={viewModel} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatScope({ type: "global" }); setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} onContinueHappyTask={continueHappyTask} onRespondHappyIdea={respondHappyIdea} onRespondHappyAction={respondHappyAction} />}
       {giftOutcomeConfirmation && (
         <GiftOutcomeConfirmation
           message={homeT("recommendations.giftOutcomeSaved", { outcome: homeT(`recommendations.giftOutcomeValue.${giftOutcomeConfirmation.outcome}` as never) })}
@@ -301,6 +323,7 @@ export default function HomePageClient() {
         initialPrompt={chatInitialPrompt}
         autoSubmitInitialPrompt={Boolean(chatInitialPrompt)}
         giftRequest={chatGiftRequest}
+            scope={chatScope}
       />
     </>
   );

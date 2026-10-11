@@ -22,7 +22,7 @@ export function selectHappyAgentContextForIntent(context: HappyAgentContext, int
   const projected: HappyAgentIntentContext = { intent, user: { locale: context.user.locale, timezone: context.user.timezone } };
   if (context.person) projected.person = { ...context.person };
   if (context.event) projected.event = { ...context.event };
-  if (context.taskDecisions?.avoidGiftThemes.length) {
+  if (intent === "birthday_gift" && context.taskDecisions?.avoidGiftThemes.length) {
     projected.taskDecisions = { avoidGiftThemes: [...context.taskDecisions.avoidGiftThemes] };
   }
 

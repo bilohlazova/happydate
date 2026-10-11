@@ -4,19 +4,31 @@ import { useState } from "react";
 import type { HomePrimaryHappyPresentation } from "@/lib/happy/home/buildHomePrimaryHappyPresentation";
 import type { HomePrimaryHappyBlock as HomePrimaryHappyBlockModel } from "@/lib/happy/home/primaryHappyBlock.types";
 
-export default function HomePrimaryHappyBlock({ block, presentation, onContinueTask, onRespondIdea }: {
+export default function HomePrimaryHappyBlock({ block, presentation, onContinueTask, onRespondIdea, onRespondAction }: {
   block: HomePrimaryHappyBlockModel;
   presentation: HomePrimaryHappyPresentation;
-  onContinueTask: (taskId: string) => void;
+  onContinueTask: (taskId: string) => Promise<void>;
   onRespondIdea: (ideaId: string, response: "accept" | "dismiss") => Promise<void>;
+  onRespondAction: (actionId: string, response: "approve" | "reject") => Promise<void>;
 }) {
-  const [busy, setBusy] = useState<"accept" | "dismiss" | null>(null);
+  const [busy, setBusy] = useState<"accept" | "dismiss" | "approve" | "reject" | null>(null);
   const [failed, setFailed] = useState(false);
   const respond = async (response: "accept" | "dismiss") => {
     if (block.type !== "idea" || busy) return;
     setBusy(response);
     setFailed(false);
     try { await onRespondIdea(block.idea.id, response); } catch { setFailed(true); } finally { setBusy(null); }
+  };
+  const respondAction = async (response: "approve" | "reject") => {
+    if (block.type !== "approval" || busy) return;
+    setBusy(response);
+    setFailed(false);
+    try { await onRespondAction(block.action.id, response); } catch { setFailed(true); } finally { setBusy(null); }
+  };
+  const continueTask = async () => {
+    if (block.type !== "task_progress" || busy) return;
+    setBusy("approve"); setFailed(false);
+    try { await onContinueTask(block.task.id); } catch { setFailed(true); } finally { setBusy(null); }
   };
   const primary = presentation.primaryAction;
   return (
@@ -29,8 +41,9 @@ export default function HomePrimaryHappyBlock({ block, presentation, onContinueT
         <p className={`mt-3 text-sm font-medium leading-6 ${presentation.urgency === "critical" ? "font-bold text-rose-800" : "text-slate-800"}`} role={presentation.urgency === "critical" ? "status" : undefined}>{presentation.urgency === "critical" && <span aria-hidden="true">⚠ </span>}{presentation.statusText}</p>
         {presentation.context && <p className="mt-2 text-sm leading-6 text-slate-600" data-provenance-source={`${presentation.context.source.type}:${presentation.context.source.id}`}>{presentation.context.text}</p>}
       </div>
-      {primary?.kind === "continue_task" && block.type === "task_progress" && <button type="button" className="hd-button mt-4 min-h-10 bg-violet-600 px-4 text-sm text-white" onClick={() => onContinueTask(block.task.id)}>{primary.label}</button>}
+      {primary?.kind === "continue_task" && block.type === "task_progress" && <button type="button" className="hd-button mt-4 min-h-10 bg-violet-600 px-4 text-sm text-white disabled:opacity-60" disabled={busy !== null} onClick={() => void continueTask()}>{busy === "approve" ? "…" : primary.label}</button>}
       {primary?.kind === "accept_idea" && block.type === "idea" && <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" className="hd-button min-h-10 bg-violet-600 px-4 text-sm text-white disabled:opacity-60" disabled={busy !== null} onClick={() => void respond("accept")}>{busy === "accept" ? "…" : primary.label}</button>{presentation.secondaryAction && <button type="button" className="min-h-10 px-2 text-sm text-slate-600 underline underline-offset-4 disabled:opacity-60" disabled={busy !== null} onClick={() => void respond("dismiss")}>{busy === "dismiss" ? "…" : presentation.secondaryAction.label}</button>}</div>}
+      {primary?.kind === "approve_action" && block.type === "approval" && <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" className="hd-button min-h-10 bg-violet-600 px-4 text-sm text-white disabled:opacity-60" disabled={busy !== null} onClick={() => void respondAction("approve")}>{busy === "approve" ? "…" : primary.label}</button>{presentation.secondaryAction?.kind === "reject_action" && <button type="button" className="min-h-10 px-2 text-sm text-slate-600 underline underline-offset-4 disabled:opacity-60" disabled={busy !== null} onClick={() => void respondAction("reject")}>{busy === "reject" ? "…" : presentation.secondaryAction.label}</button>}</div>}
       {failed && presentation.errorText && <p className="mt-3 text-sm text-rose-700" role="alert">{presentation.errorText}</p>}
     </section>
   );

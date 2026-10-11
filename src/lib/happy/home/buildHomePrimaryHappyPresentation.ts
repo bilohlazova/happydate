@@ -13,8 +13,8 @@ export type HomePrimaryHappyPresentation = {
   turningAgeLabel: string | null;
   statusText: string;
   context: { text: string; source: HappyReasonSourceRef } | null;
-  primaryAction: { kind: "accept_idea" | "continue_task"; label: string } | null;
-  secondaryAction: { kind: "dismiss_idea"; label: string } | null;
+  primaryAction: { kind: "accept_idea" | "continue_task" | "approve_action"; label: string } | null;
+  secondaryAction: { kind: "dismiss_idea" | "reject_action"; label: string } | null;
   errorText: string;
   urgency: BirthdayUrgency;
 };
@@ -70,9 +70,15 @@ export function buildHomePrimaryHappyPresentation(block: HomePrimaryHappyBlock |
     turningAgeLabel: null,
     statusText: t(`primaryHappy.approval.actions.${block.action.type}`),
     context: null,
-    primaryAction: null,
-    secondaryAction: null,
-    errorText: "",
+    // Only the V1 executor allowlist is executable. Other approval-required
+    // tool types remain informative until their executor exists.
+    primaryAction: block.action.type === "save_gift" || block.action.type === "save_memory"
+      ? { kind: "approve_action", label: t("primaryHappy.idea.accept") }
+      : null,
+    secondaryAction: block.action.type === "save_gift" || block.action.type === "save_memory"
+      ? { kind: "reject_action", label: t("primaryHappy.idea.dismiss") }
+      : null,
+    errorText: t("primaryHappy.idea.error"),
     urgency: "normal",
   };
 

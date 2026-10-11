@@ -73,6 +73,15 @@ export async function addTaskDecision(input: { userId: string; taskId: string; d
   const displayValue = input.decision.value.trim().replace(/\s+/g, " ");
   const normalizedValue = normalizeTaskDecisionValue(displayValue);
   if (!normalizedValue) return { kind: "invalid_task" };
+  const { data: existing, error: existingError } = await client
+    .from("happy_task_decisions")
+    .select("status")
+    .eq("user_id", input.userId)
+    .eq("task_id", input.taskId)
+    .eq("kind", input.decision.kind)
+    .eq("normalized_value", normalizedValue)
+    .maybeSingle();
+  if (existingError) return { kind: "unavailable" };
   const { data, error } = await client
     .from("happy_task_decisions")
     .upsert({
@@ -87,7 +96,9 @@ export async function addTaskDecision(input: { userId: string; taskId: string; d
     .maybeSingle();
   if (error || !data) return { kind: "unavailable" };
   const decision = mapDecision(data as DecisionRow);
-  return decision ? { kind: "ok", decision, idempotent: false } : { kind: "unavailable" };
+  return decision
+    ? { kind: "ok", decision, idempotent: existing?.status === "active" }
+    : { kind: "unavailable" };
 }
 
 export async function revokeTaskDecision(input: { userId: string; taskId: string; decision: BirthdayTaskDecision }): Promise<TaskDecisionResult> {

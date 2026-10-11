@@ -36,6 +36,7 @@ const translate = (locale = "en") => (key, values = {}) => {
     "primaryHappy.actions.continue": { uk: "Продовжити", pl: "Kontynuuj", en: "Continue", de: "Fortsetzen", ru: "Продолжить" },
     "primaryHappy.actions.reviewIdea": { uk: "Переглянути пропозицію", pl: "Zobacz propozycję", en: "Review suggestion", de: "Vorschlag ansehen", ru: "Посмотреть предложение" },
     "primaryHappy.idea.dismiss": { uk: "Відхилити", pl: "Odrzuć", en: "Dismiss", de: "Ablehnen", ru: "Отклонить" },
+    "primaryHappy.idea.accept": { uk: "Прийняти", pl: "Zaakceptuj", en: "Accept", de: "Annehmen", ru: "Принять" },
     "primaryHappy.idea.error": { uk: "Помилка", pl: "Błąd", en: "Error", de: "Fehler", ru: "Ошибка" },
     "primaryHappy.approval.title": { uk: "Потрібне підтвердження", pl: "Wymagane potwierdzenie", en: "Approval needed", de: "Bestätigung erforderlich", ru: "Нужно подтверждение" },
     "primaryHappy.approval.actions.save_gift": { uk: "Зберегти подарунок", pl: "Zapisz prezent", en: "Save gift", de: "Geschenk speichern", ru: "Сохранить подарок" },
@@ -73,6 +74,15 @@ test("semantic CTA mappings, task summary, and no raw semantic or task implement
   assert.equal(presentation?.primaryAction?.label, "Continue");
   assert.equal(presentation?.statusText, "Happy is waiting for your choice.");
   assert.doesNotMatch(JSON.stringify(presentation), /gift_help|prepare_greeting|waiting_user|templateVersion|step_id/i);
+});
+
+test("approval presentation exposes only supported V1 action controls", () => {
+  const supported = { type: "approval", action: { id: "00000000-0000-4000-8000-000000000011", userId: owner, type: "save_gift", status: "pending", createdAt: "2026-10-01T00:00:00.000Z" }, block: { type: "approval", actionId: "00000000-0000-4000-8000-000000000011", actionType: "save_gift", summary: "save_gift", actions: ["approve", "reject"] } };
+  const unsupported = { ...supported, action: { ...supported.action, type: "create_reminder" } };
+  const current = buildHomePrimaryHappyPresentation(supported, base, new Date("2026-10-01T12:00:00Z"), translate("en"));
+  assert.deepEqual(current?.primaryAction, { kind: "approve_action", label: "Accept" });
+  assert.deepEqual(current?.secondaryAction, { kind: "reject_action", label: "Dismiss" });
+  assert.equal(buildHomePrimaryHappyPresentation(unsupported, base, new Date("2026-10-01T12:00:00Z"), translate("en"))?.primaryAction, null);
 });
 
 test("all supported locales carry the primary presentation labels and localize relative dates", async () => {

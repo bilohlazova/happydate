@@ -29,9 +29,11 @@ interface HomeDashboardProps {
   onContinueHappyTask: (taskId: string) => Promise<void>;
   onRespondHappyIdea: (ideaId: string, response: "accept" | "dismiss") => Promise<void>;
   onRespondHappyAction: (actionId: string, response: "approve" | "reject") => Promise<void>;
+  onSelectOccasionPerson?: (occurrenceKey: string, personId: string) => Promise<void>;
+  onRequestRescue?: (occurrenceKey: string) => Promise<readonly { category: string; title: string; description: string; whyItFits?: string }[]>;
 }
 
-export default function HomeDashboard({ viewModel, reminder: _reminder, inAppDeliveryCount, reminderBusy: _reminderBusy, reminderError: _reminderError, onRetry, onAskHappy: _onAskHappy, onCompleteReminder: _onCompleteReminder, onSnoozeReminder: _onSnoozeReminder, onUndoReminder: _onUndoReminder, onPickGift, onGiftOutcome, onGiftFollowUp, onSaveGift, onContinueHappyTask, onRespondHappyIdea, onRespondHappyAction }: HomeDashboardProps) {
+export default function HomeDashboard({ viewModel, reminder: _reminder, inAppDeliveryCount, reminderBusy: _reminderBusy, reminderError: _reminderError, onRetry, onAskHappy: _onAskHappy, onCompleteReminder: _onCompleteReminder, onSnoozeReminder: _onSnoozeReminder, onUndoReminder: _onUndoReminder, onPickGift, onGiftOutcome, onGiftFollowUp, onSaveGift, onContinueHappyTask, onRespondHappyIdea, onRespondHappyAction, onSelectOccasionPerson, onRequestRescue }: HomeDashboardProps) {
   const t = useTranslations("home");
   return (
     <div className="hd-screen overflow-x-hidden">
@@ -39,7 +41,7 @@ export default function HomeDashboard({ viewModel, reminder: _reminder, inAppDel
         <section className="relative w-full max-w-[760px] overflow-hidden rounded-[1.35rem] border border-sky-100 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)] sm:p-5">
           <WellbeingCheckIn locale={viewModel.locale} userName={viewModel.greeting.name} featuredEvent={viewModel.featuredEvent} onPickGift={onPickGift} onSaveGift={onSaveGift} />
         </section>
-        {viewModel.primaryHappyBlock && viewModel.primaryHappyPresentation && <HomePrimaryHappyBlock block={viewModel.primaryHappyBlock} presentation={viewModel.primaryHappyPresentation} onContinueTask={onContinueHappyTask} onRespondIdea={onRespondHappyIdea} onRespondAction={onRespondHappyAction} />}
+        {viewModel.primaryHappyBlock && viewModel.primaryHappyPresentation && <HomePrimaryHappyBlock block={viewModel.primaryHappyBlock} presentation={viewModel.primaryHappyPresentation} onContinueTask={onContinueHappyTask} onRespondIdea={onRespondHappyIdea} onRespondAction={onRespondHappyAction} onSelectOccasionPerson={onSelectOccasionPerson} onRequestRescue={onRequestRescue} />}
 
         {inAppDeliveryCount > 0 && (
           <div className="mt-5 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-950" role="status">

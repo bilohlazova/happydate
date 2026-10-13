@@ -21,6 +21,22 @@ import type {
 import { canonicalRelationKey } from "@/lib/people/canonicalRelation";
 import { canonicalGiftEventContext } from "@/lib/gifts/giftEventContext";
 import type { HappyTaskCardSource } from "@/lib/happy/task-ui/happyTaskCard";
+import type { ProactivityMode } from "../../../../supabase/functions/happy-proactive/proactivity-policy.ts";
+import { getOccasionDefinition } from "@/lib/occasions/occasionRegistry";
+import { getUserOccasionsForLocalDay } from "@/lib/occasions/occasionResolver";
+import { getSelectedOccasionPerson } from "@/lib/occasions/occasionPeople.repository";
+import { resolveRelevantPeopleFromProjection } from "@/lib/occasions/occasionPeopleResolver";
+import { toOccasionSignal, toRescueSignal } from "@/lib/happy/signals/happySignalAdapters";
+import type { OccasionPersonProjection } from "@/lib/occasions/occasionPeople.types";
+import type { OccasionSignal, RescueSignal } from "@/lib/happy/signals/happySignal.types";
+import { getOccasionPreparationForUser } from "@/lib/occasions/occasionPreparation.server";
+import { resolveOccasionRescueEligibility } from "@/lib/occasions/occasionRescue";
+
+async function loadProactivityMode(client: SupabaseClient, userId: string): Promise<ProactivityMode> {
+  const { data, error } = await client.from("happy_proactivity_preferences").select("mode").eq("user_id", userId).maybeSingle();
+  if (error) return "balanced";
+  return data?.mode === "minimal" || data?.mode === "active" ? data.mode : "balanced";
+}
 
 async function loadHappyTasks(client: SupabaseClient, userId: string): Promise<HappyTaskCardSource[]> {
   const { data, error } = await client.from("happy_tasks").select("id,user_id,type,status,person_id,event_id,context_snapshot,people!happy_tasks_person_id_fkey(name),events!happy_tasks_event_id_fkey(date),happy_task_steps(id,position,type,status,requires_approval)").eq("user_id", userId).in("status", ["active", "waiting_user", "paused"]).order("created_at", { ascending: true }).limit(10);
@@ -29,10 +45,10 @@ async function loadHappyTasks(client: SupabaseClient, userId: string): Promise<H
 }
 
 async function loadHappyActions(client: SupabaseClient, userId: string): Promise<HomeHappyAction[]> {
-  const { data, error } = await client.from("happy_actions").select("id,user_id,type,status,created_at").eq("user_id", userId).eq("status", "pending").order("created_at", { ascending: true }).limit(5);
+  const { data, error } = await client.from("happy_actions").select("id,user_id,type,status,payload,created_at").eq("user_id", userId).eq("status", "pending").order("created_at", { ascending: true }).limit(5);
   if (error) throw new HomeRepositoryError("settings", error.message);
   return (data ?? []).flatMap((action) => typeof action.id === "string" && typeof action.user_id === "string" && typeof action.type === "string" && typeof action.status === "string" && typeof action.created_at === "string"
-    ? [{ id: action.id, userId: action.user_id, type: action.type, status: action.status, createdAt: action.created_at }]
+    ? [{ id: action.id, userId: action.user_id, type: action.type, status: action.status, createdAt: action.created_at, summary: action.type === "save_memory" && action.payload && typeof action.payload === "object" && typeof (action.payload as { content?: unknown }).content === "string" ? (action.payload as { content: string }).content.trim() : null }]
     : []);
 }
 
@@ -42,6 +58,53 @@ async function loadHappyIdeas(client: SupabaseClient, userId: string): Promise<H
   return (data ?? []).flatMap((idea) => typeof idea.id === "string" && typeof idea.user_id === "string" && typeof idea.type === "string" && typeof idea.title === "string" && typeof idea.message === "string" && typeof idea.status === "string" && typeof idea.created_at === "string"
     ? [{ id: idea.id, userId: idea.user_id, type: idea.type, title: idea.title, message: idea.message, status: idea.status, personId: typeof idea.person_id === "string" ? idea.person_id : null, eventId: typeof idea.event_id === "string" ? idea.event_id : null, createdAt: idea.created_at }]
     : []);
+}
+
+async function loadHappyOccasionSignals(
+  client: SupabaseClient,
+  userId: string,
+  people: readonly HomePerson[],
+  now: Date,
+): Promise<{ occasions: OccasionSignal[]; rescues: RescueSignal[] }> {
+  const occurrences = await getUserOccasionsForLocalDay({ client, userId, now });
+  const projections: OccasionPersonProjection[] = people.map((person) => ({
+    id: person.id,
+    userId,
+    name: person.name,
+    relationKey: person.relationKey,
+    gender: person.gender === "unspecified" ? null : person.gender,
+  }));
+  const signals: OccasionSignal[] = [];
+  const rescues: RescueSignal[] = [];
+  for (const occurrence of occurrences) {
+    const definition = getOccasionDefinition(occurrence.occasionKey);
+    if (!definition) continue;
+    const selectedPersonId = await getSelectedOccasionPerson({ client, userId, occurrenceKey: occurrence.occurrenceKey });
+    const peopleResolution = selectedPersonId
+      ? { kind: "resolved" as const, occasionKey: occurrence.occasionKey, occurrenceKey: occurrence.occurrenceKey, personId: selectedPersonId }
+      : resolveRelevantPeopleFromProjection({ definition, occurrenceKey: occurrence.occurrenceKey, people: projections });
+    const preparation = peopleResolution.kind === "resolved"
+      ? await getOccasionPreparationForUser({ client, userId, occurrenceKey: occurrence.occurrenceKey, now })
+      : null;
+    const readiness = preparation?.kind === "resolved" ? preparation.readiness : undefined;
+    const rescue = resolveOccasionRescueEligibility({
+      occurrenceKey: occurrence.occurrenceKey,
+      personId: peopleResolution.kind === "resolved" ? peopleResolution.personId : null,
+      recipientResolution: peopleResolution.kind === "resolved" ? "resolved" : peopleResolution.kind,
+      phase: occurrence.phase,
+      readiness,
+    });
+    if (rescue.kind === "eligible" && peopleResolution.kind === "resolved" && (occurrence.phase === "urgent" || occurrence.phase === "today")) {
+      const signal = toRescueSignal({ rescueKey: rescue.rescueKey, occasionKey: occurrence.occasionKey, occurrenceKey: occurrence.occurrenceKey, personId: peopleResolution.personId, phase: occurrence.phase, missing: rescue.missing, daysUntil: occurrence.daysUntil });
+      if (signal) rescues.push(signal);
+      // One factual situation produces either the more actionable Rescue or
+      // its passive Occasion signal, never both.
+      continue;
+    }
+    const signal = toOccasionSignal({ occurrence, people: peopleResolution, readiness });
+    if (signal) signals.push(signal);
+  }
+  return { occasions: signals, rescues };
 }
 
 export interface HomeRepositoryResult extends HomeRepositoryData {
@@ -88,7 +151,8 @@ async function loadPeople(client: SupabaseClient, userId: string): Promise<HomeP
     .from("people")
     .select("id, name, birthday, birth_year, relationship, relation_label, relation_key, gender")
     .eq("user_id", userId)
-    .order("name", { ascending: true });
+    .order("name", { ascending: true })
+    .limit(100);
   if (error) throw new HomeRepositoryError("people", error.message);
   return (data ?? []).map((person) => ({
     id: person.id,
@@ -192,7 +256,7 @@ export async function getHomeRepositoryData(
   client: SupabaseClient = supabase,
   expectedUserId?: string,
   accessToken?: string,
-  options: { includeGiftHistory?: boolean } = {},
+  options: { includeGiftHistory?: boolean; now?: Date } = {},
 ): Promise<HomeRepositoryResult> {
   const { data: authData, error: authError } = await client.auth.getUser(accessToken);
   const user = authData.user;
@@ -220,7 +284,7 @@ export async function getHomeRepositoryData(
     throw new Error("[home.repository] Authenticated owner mismatch");
   }
 
-  const [profileResult, peopleResult, eventsResult, knowledgeResult, giftsResult, reviewPreferencesResult, happyTasksResult, happyActionsResult, happyIdeasResult] = await Promise.all([
+  const [profileResult, peopleResult, eventsResult, knowledgeResult, giftsResult, reviewPreferencesResult, happyTasksResult, happyActionsResult, happyIdeasResult, proactivityModeResult] = await Promise.all([
     loadProfile(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadPeople(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadEvents(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
@@ -230,6 +294,7 @@ export async function getHomeRepositoryData(
     loadHappyTasks(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadHappyActions(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
     loadHappyIdeas(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
+    loadProactivityMode(client, user.id).then((value) => ({ ok: true as const, value })).catch((reason) => ({ ok: false as const, reason })),
   ]);
 
   const errors: HomeDataError[] = [];
@@ -242,6 +307,18 @@ export async function getHomeRepositoryData(
   if (!happyTasksResult.ok) errors.push(errorFrom(happyTasksResult.reason, "settings"));
   if (!happyActionsResult.ok) errors.push(errorFrom(happyActionsResult.reason, "settings"));
   if (!happyIdeasResult.ok) errors.push(errorFrom(happyIdeasResult.reason, "settings"));
+
+  let happyOccasionSignals: OccasionSignal[] = [];
+  let happyRescueSignals: RescueSignal[] = [];
+  if (peopleResult.ok) {
+    try {
+      const loaded = await loadHappyOccasionSignals(client, user.id, peopleResult.value, options.now ?? new Date());
+      happyOccasionSignals = loaded.occasions;
+      happyRescueSignals = loaded.rescues;
+    } catch (reason) {
+      errors.push(errorFrom(reason, "settings"));
+    }
+  }
 
   let giftHistory: HomeGiftHistoryRecord[] | undefined;
   if (options.includeGiftHistory) {
@@ -273,6 +350,9 @@ export async function getHomeRepositoryData(
     happyTasks: happyTasksResult.ok ? happyTasksResult.value : [],
     happyActions: happyActionsResult.ok ? happyActionsResult.value : [],
     happyIdeas: happyIdeasResult.ok ? happyIdeasResult.value : [],
+    happyOccasionSignals,
+    happyRescueSignals,
+    proactivityMode: proactivityModeResult.ok ? proactivityModeResult.value : "balanced",
     ...(giftHistory ? { giftHistory } : {}),
   };
 }

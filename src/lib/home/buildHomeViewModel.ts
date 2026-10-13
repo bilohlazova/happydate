@@ -451,7 +451,10 @@ export function buildHomeViewModel(
     actions: data.happyActions ?? [],
     tasks: data.happyTasks ?? [],
     ideas: data.happyIdeas ?? [],
+    occasionSignals: data.happyOccasionSignals ?? [],
+    rescueSignals: data.happyRescueSignals ?? [],
     events: data.events,
+    proactivityMode: data.proactivityMode,
   });
   const primaryHappyPresentation = buildHomePrimaryHappyPresentation(primaryHappyBlock, data, now, t);
 

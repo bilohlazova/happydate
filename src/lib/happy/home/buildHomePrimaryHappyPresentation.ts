@@ -4,6 +4,7 @@ import type { HomeRepositoryData, HomeTranslate } from "../../home/home.types.ts
 import type { HomePrimaryHappyBlock } from "./primaryHappyBlock.types.ts";
 import { hasMatchingBirthdayGift, resolveBirthdayUrgency, type BirthdayUrgency } from "../../birthday/birthdayPresentation.ts";
 import { birthYearFromFullBirthday, resolveBirthdayTurningAge } from "../../birthday/birthdayAge.ts";
+import type { OccasionPersonCandidate } from "../../occasions/occasionPeople.types.ts";
 
 export type HomePrimaryHappyPresentation = {
   kind: HomePrimaryHappyBlock["type"];
@@ -13,10 +14,12 @@ export type HomePrimaryHappyPresentation = {
   turningAgeLabel: string | null;
   statusText: string;
   context: { text: string; source: HappyReasonSourceRef } | null;
-  primaryAction: { kind: "accept_idea" | "continue_task" | "approve_action"; label: string } | null;
+  primaryAction: { kind: "accept_idea" | "continue_task" | "approve_action" | "show_rescue"; label: string } | null;
   secondaryAction: { kind: "dismiss_idea" | "reject_action"; label: string } | null;
   errorText: string;
   urgency: BirthdayUrgency;
+  visualTreatment?: "standard" | "compact" | "high_attention" | "selection";
+  occasionCandidates?: readonly OccasionPersonCandidate[];
 };
 
 function countdown(days: number | null, t: HomeTranslate): string | null {
@@ -68,7 +71,7 @@ export function buildHomePrimaryHappyPresentation(block: HomePrimaryHappyBlock |
     title: t("primaryHappy.approval.title"),
     timing: null,
     turningAgeLabel: null,
-    statusText: t(`primaryHappy.approval.actions.${block.action.type}`),
+    statusText: block.action.summary || t(`primaryHappy.approval.actions.${block.action.type}`),
     context: null,
     // Only the V1 executor allowlist is executable. Other approval-required
     // tool types remain informative until their executor exists.
@@ -81,6 +84,55 @@ export function buildHomePrimaryHappyPresentation(block: HomePrimaryHappyBlock |
     errorText: t("primaryHappy.idea.error"),
     urgency: "normal",
   };
+
+  if (block.type === "occasion") {
+    const signal = block.signal;
+    const person = signal.personId ? data.people.find((item) => item.id === signal.personId) ?? null : null;
+    const occasionName = t(`primaryHappy.occasion.${signal.occasionKey}`);
+    const selection = signal.recipientResolution === "selection_required";
+    const visualTreatment = selection
+      ? "selection"
+      : signal.phase === "planning" || signal.phase === "preparing"
+        ? "compact"
+        : "high_attention";
+    const statusKey = selection ? "selectionRequired" : signal.readiness?.kind === "ready" ? "ready" : signal.phase;
+    return {
+      kind: "occasion",
+      eyebrow: t("primaryHappy.eyebrow"),
+      title: selection
+        ? t("primaryHappy.occasion.selectionTitle", { occasion: occasionName })
+        : t("primaryHappy.occasion.title", { occasion: occasionName, name: person?.name ?? occasionName }),
+      timing: countdown(signal.daysUntil, t),
+      turningAgeLabel: null,
+      statusText: t(`primaryHappy.occasion.${statusKey}`),
+      context: null,
+      primaryAction: null,
+      secondaryAction: null,
+      errorText: t("primaryHappy.idea.error"),
+      urgency: "normal",
+      visualTreatment,
+      occasionCandidates: signal.candidates,
+    };
+  }
+
+  if (block.type === "rescue") {
+    const person = data.people.find((item) => item.id === block.signal.personId) ?? null;
+    const occasionName = t(`primaryHappy.occasion.${block.signal.occasionKey}`);
+    return {
+      kind: "rescue",
+      eyebrow: t("primaryHappy.eyebrow"),
+      title: t("primaryHappy.rescue.title", { occasion: occasionName, name: person?.name ?? occasionName }),
+      timing: countdown(block.signal.daysUntil, t),
+      turningAgeLabel: null,
+      statusText: t("primaryHappy.rescue.status"),
+      context: null,
+      primaryAction: { kind: "show_rescue", label: t("primaryHappy.rescue.cta") },
+      secondaryAction: null,
+      errorText: t("primaryHappy.rescue.error"),
+      urgency: "normal",
+      visualTreatment: "high_attention",
+    };
+  }
 
   const event = block.idea.eventId ? data.events.find((item) => item.id === block.idea.eventId) ?? null : null;
   const person = block.idea.personId ? data.people.find((item) => item.id === block.idea.personId) ?? null : null;

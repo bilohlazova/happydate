@@ -5,6 +5,7 @@ export const PROACTIVE_MAX_CANDIDATES = 100;
 export type ProactiveLocale = "uk" | "pl" | "en" | "de" | "ru";
 export type BirthdayIdeaRule = "start_gift_planning" | "gift_help" | "prepare_greeting";
 export type ProactiveIdeaStatus = "new" | "shown" | "accepted" | "dismissed" | "expired";
+import { evaluateProactiveEligibility, normalizeProactivityMode, type ProactivityMode, type ProactiveSignal } from "./proactivity-policy.ts";
 
 export type BirthdayCandidate = {
   eventId: string;
@@ -17,6 +18,8 @@ export type BirthdayCandidate = {
   hasPreparedGift: boolean;
   hasGreetingPrepared: boolean;
   existingIdeaStatuses: Partial<Record<BirthdayIdeaRule, ProactiveIdeaStatus>>;
+  mode?: ProactivityMode;
+  quietSignals?: Partial<Record<ProactiveSignal, boolean>>;
 };
 
 // Eligibility is intentionally independent from locale and persistence. It is
@@ -71,6 +74,10 @@ export function decideBirthdayProactive(candidate: BirthdayEligibilityCandidate,
     return { kind: "skip", reason: "invalidTarget" };
   }
   const ideaRules: BirthdayIdeaRule[] = [];
+  // Edge invocations always provide the persisted mode. The active fallback
+  // keeps this pure adapter backwards-compatible for callers that predate
+  // Block 44; missing durable settings are normalized to balanced at the edge.
+  const mode = candidate.mode ? normalizeProactivityMode(candidate.mode) : "active";
   let skippedActiveTask = false;
   let skippedGreetingPrepared = false;
   let existingIdeas = 0;
@@ -79,7 +86,8 @@ export function decideBirthdayProactive(candidate: BirthdayEligibilityCandidate,
       existingIdeas += 1;
       return;
     }
-    ideaRules.push(rule);
+    const policy = evaluateProactiveEligibility({ mode, signal: rule, quiet: Boolean(candidate.quietSignals?.[rule]) });
+    if (policy.eligible) ideaRules.push(rule);
   };
 
   if (candidate.hasPreparedGift) {
@@ -97,7 +105,8 @@ export function decideBirthdayProactive(candidate: BirthdayEligibilityCandidate,
   return {
     kind: "process",
     ideaRules,
-    notifyGiftMissing: !candidate.hasPreparedGift && daysUntil <= PROACTIVE_NOTIFICATION_DAYS,
+    notifyGiftMissing: !candidate.hasPreparedGift && daysUntil <= PROACTIVE_NOTIFICATION_DAYS
+      && evaluateProactiveEligibility({ mode, signal: "gift_missing", quiet: Boolean(candidate.quietSignals?.gift_missing) }).eligible,
     skippedActiveTask,
     skippedGreetingPrepared,
     existingIdeas,

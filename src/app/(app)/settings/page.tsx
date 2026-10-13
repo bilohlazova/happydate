@@ -13,8 +13,9 @@ export default function SettingsPage() {
   const localeKey = isSupportedLocale(localeValue) ? localeValue : "pl";
   const copy = settingsUi[localeKey];
   const account = settingsAccountLabels[localeKey];
+  const proactivityLabel = ({ uk: "Проактивність", pl: "Proaktywność", en: "Proactivity", de: "Proaktivität", ru: "Проактивность" } as const)[localeKey];
   const groups = [
-    [copy.groups[0], [[Bell, copy.rows[0], "/settings/notifications"], [Sparkles, copy.rows[1], "/settings/personalization"], [Shield, settingsPlanLabels[localeKey], "/settings/plan", copy.values.free]]],
+    [copy.groups[0], [[Bell, copy.rows[0], "/settings/notifications"], [Sparkles, copy.rows[1], "/settings/personalization"], [Sparkles, proactivityLabel, "/settings/proactivity"], [Globe2, ({ uk: "Локальні події", pl: "Lokalne okazje", en: "Local occasions", de: "Lokale Anlässe", ru: "Местные события" } as const)[localeKey], "/settings/occasions"], [Shield, settingsPlanLabels[localeKey], "/settings/plan", copy.values.free]]],
     [copy.groups[1], [[User, copy.rows[2], "/profile"], [Mail, copy.rows[3], "/settings/email"], [KeyRound, copy.rows[4], "/settings/password"]]],
     [copy.groups[2], [[Shield, copy.rows[5], "/settings/privacy"], [LockKeyhole, copy.rows[6], "/settings/security"], [LockKeyhole, copy.rows[7], "/settings/sessions"]]],
     [copy.groups[3], [[Database, copy.rows[8], "/settings/data"]]],

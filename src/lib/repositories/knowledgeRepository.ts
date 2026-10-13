@@ -254,6 +254,17 @@ export async function listKnowledgeWithClient(
   return mapLegacyMemoriesToKnowledge(rows);
 }
 
+/** Canonical owner-scoped duplicate check for server proposal boundaries. */
+export async function hasActiveKnowledgeValueWithClient(
+  client: SupabaseClient,
+  input: { userId: string; personId: string; value: string },
+): Promise<boolean> {
+  const rows = await listKnowledgeRowsWithClient(client, { userId: input.userId, includeArchived: false });
+  const normalized = input.value.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+  return rows.some((row) => row.person_id === input.personId
+    && String(row.value_text ?? row.content_text ?? "").replace(/\s+/g, " ").trim().toLocaleLowerCase() === normalized);
+}
+
 /** Raw owner export retained behind the canonical Knowledge persistence boundary. */
 export async function exportOwnedKnowledgeRows(userId: string): Promise<MemoryRow[]> {
   const authenticatedUserId = await requireKnowledgeUserId();

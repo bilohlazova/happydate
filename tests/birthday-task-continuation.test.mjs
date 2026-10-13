@@ -24,9 +24,17 @@ test("generation is claimed once and choose_gift remains a durable user boundary
 });
 test("continuation route derives all authority server-side and UI uses only task identity",async()=>{
  const route=await readFile(new URL("../src/app/api/happy/tasks/[id]/continue/route.ts",import.meta.url),"utf8");
+ const application=await readFile(new URL("../src/lib/happy/task-engine/continueBirthdayTaskApplication.server.ts",import.meta.url),"utf8");
  const runner=await readFile(new URL("../src/lib/happy/task-engine/continueBirthdayTask.server.ts",import.meta.url),"utf8");
  const home=await readFile(new URL("../src/components/HomePageClient.tsx",import.meta.url),"utf8");
- assert.match(route,/await request\.text\(\)/); assert.match(route,/getAssistantRequestIdentity/); assert.doesNotMatch(route,/request\.json|personId|eventId|templateVersion/);
+ assert.match(route,/createOpenAiHappyAgentProvider/); assert.match(route,/createBirthdayTaskContinuationHandler/); assert.doesNotMatch(route,/TEST|process\.env|request\.json|personId|eventId|templateVersion/);
+ assert.match(application,/await request\.text\(\)/); assert.match(application,/getAssistantRequestIdentity/); assert.doesNotMatch(application,/request\.json|personId|eventId|templateVersion/);
  assert.match(runner,/eq\("user_id",userId\)/); assert.match(runner,/eq\("status",from\)/); assert.match(runner,/AbortSignal\.timeout/); assert.match(runner,/happy_task_steps/); assert.doesNotMatch(runner,/from\("gifts"\)\.(insert|update)|happy_actions.*insert/);
  assert.match(home,/\/api\/happy\/tasks\/\$\{encodeURIComponent\(taskId\)\}\/continue/); assert.match(home,/\{ type: "task", taskId \}/);
+});
+test("completion handoff is atomic and rejects a stale task",async()=>{
+ const migration=await readFile(new URL("../supabase/migrations/20261011120418_birthday_task_continuation_hardening.sql",import.meta.url),"utf8");
+ const runner=await readFile(new URL("../src/lib/happy/task-engine/continueBirthdayTask.server.ts",import.meta.url),"utf8");
+ assert.match(migration,/complete_birthday_gift_generation_v1/); assert.match(migration,/security definer/); assert.match(migration,/set search_path = ''/); assert.match(migration,/revoke all on function public\.complete_birthday_gift_generation_v1.*from public, anon, authenticated/i);
+ assert.match(runner,/complete_birthday_gift_generation_v1/);
 });

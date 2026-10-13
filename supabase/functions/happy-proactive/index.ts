@@ -8,6 +8,7 @@ import {
   runBirthdayProactive,
   type BirthdayCandidate,
 } from "./proactive-rules.ts";
+import { normalizeProactivityMode, proactiveQuietKey, type ProactiveSignal } from "./proactivity-policy.ts";
 
 type EventRow = {
   id: string;
@@ -22,6 +23,8 @@ type StepRow = { task_id: string; type: string; status: string };
 type GiftRow = { user_id: string; person_id: string; event_id: string | null; lifecycle: string };
 type IdeaRow = { user_id: string; proactive_key: string | null; status: string };
 type ProfileRow = { id: string; preferred_locale: string | null };
+type PreferenceRow = { user_id: string; mode: string | null };
+type QuietRow = { user_id: string; quiet_key: string; disposition: string };
 
 function firstPerson(value: EventRow["people"]): { id: string; user_id: string } | null {
   return Array.isArray(value) ? value[0] ?? null : value;
@@ -72,14 +75,16 @@ const happyProactive = {
     }
 
     const userIds = [...new Set(events.map((event) => event.user_id))];
-    const [{ data: rawTasks, error: taskError }, { data: rawGifts, error: giftError }, { data: rawProfiles, error: profileError }] = await Promise.all([
+    const [{ data: rawTasks, error: taskError }, { data: rawGifts, error: giftError }, { data: rawProfiles, error: profileError }, { data: rawPreferences, error: preferenceError }] = await Promise.all([
       admin.from("happy_tasks").select("id,user_id,person_id,event_id,status").eq("type", "birthday_preparation").in("event_id", eventIds),
       admin.from("gifts").select("user_id,person_id,event_id,lifecycle").in("event_id", eventIds).in("lifecycle", ["selected", "purchased"]),
       admin.from("profiles").select("id,preferred_locale").in("id", userIds),
+      admin.from("happy_proactivity_preferences").select("user_id,mode").in("user_id", userIds),
     ]);
     if (taskError) throw taskError;
     if (giftError) throw giftError;
     if (profileError) throw profileError;
+    if (preferenceError) throw preferenceError;
 
     const tasks = (rawTasks ?? []) as TaskRow[];
     const activeTasks = new Set(tasks
@@ -100,6 +105,7 @@ const happyProactive = {
       .filter((gift) => gift.event_id)
       .map((gift) => keyFor(gift.user_id, gift.person_id, gift.event_id!)));
     const profileLocales = new Map(((rawProfiles ?? []) as ProfileRow[]).map((profile) => [profile.id, profile.preferred_locale]));
+    const userModes = new Map(((rawPreferences ?? []) as PreferenceRow[]).map((row) => [row.user_id, normalizeProactivityMode(row.mode)]));
     const proactiveKeys = events.flatMap((event) => [
       proactiveIdeaKey("start_gift_planning", { eventId: event.id, occurrenceDate: event.date }),
       proactiveIdeaKey("gift_help", { eventId: event.id, occurrenceDate: event.date }),
@@ -113,6 +119,14 @@ const happyProactive = {
     const ideaStatuses = new Map(((rawIdeas ?? []) as IdeaRow[])
       .filter((idea) => idea.proactive_key)
       .map((idea) => [idea.proactive_key!, idea.status]));
+    const quietKeys = events.flatMap((event) => (["start_gift_planning", "gift_help", "prepare_greeting", "gift_missing"] as ProactiveSignal[])
+      .map((signal) => proactiveQuietKey({ userId: event.user_id, eventId: event.id, occurrenceDate: event.date, signal })));
+    const { data: rawQuiet, error: quietError } = await admin
+      .from("happy_proactive_quiet")
+      .select("user_id,quiet_key,disposition")
+      .in("quiet_key", quietKeys);
+    if (quietError) throw quietError;
+    const quietByUser = new Set(((rawQuiet ?? []) as QuietRow[]).map((row) => `${row.user_id}:${row.quiet_key}`));
 
     const candidates: BirthdayCandidate[] = events.map((event) => {
       const person = firstPerson(event.people);
@@ -136,6 +150,13 @@ const happyProactive = {
           ...(ideaStatuses.has(startGiftPlanningKey) ? { start_gift_planning: ideaStatuses.get(startGiftPlanningKey) as BirthdayCandidate["existingIdeaStatuses"]["start_gift_planning"] } : {}),
           ...(ideaStatuses.has(giftHelpKey) ? { gift_help: ideaStatuses.get(giftHelpKey) as BirthdayCandidate["existingIdeaStatuses"]["gift_help"] } : {}),
           ...(ideaStatuses.has(prepareGreetingKey) ? { prepare_greeting: ideaStatuses.get(prepareGreetingKey) as BirthdayCandidate["existingIdeaStatuses"]["prepare_greeting"] } : {}),
+        },
+        mode: userModes.get(event.user_id) ?? "balanced",
+        quietSignals: {
+          start_gift_planning: quietByUser.has(`${event.user_id}:${proactiveQuietKey({ userId: event.user_id, eventId: event.id, occurrenceDate: event.date, signal: "start_gift_planning" })}`),
+          gift_help: quietByUser.has(`${event.user_id}:${proactiveQuietKey({ userId: event.user_id, eventId: event.id, occurrenceDate: event.date, signal: "gift_help" })}`),
+          prepare_greeting: quietByUser.has(`${event.user_id}:${proactiveQuietKey({ userId: event.user_id, eventId: event.id, occurrenceDate: event.date, signal: "prepare_greeting" })}`),
+          gift_missing: quietByUser.has(`${event.user_id}:${proactiveQuietKey({ userId: event.user_id, eventId: event.id, occurrenceDate: event.date, signal: "gift_missing" })}`),
         },
       };
     });

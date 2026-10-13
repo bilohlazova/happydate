@@ -11,7 +11,7 @@ test("Home approval UI invokes only the authoritative action routes and sends no
   const dashboard = await read("src/components/home-dashboard/HomeDashboard.tsx");
   assert.match(client, /\/api\/happy\/actions\/\$\{encodeURIComponent\(actionId\)\}\/\$\{response\}/);
   assert.match(client, /\{ method: "POST" \}/);
-  assert.doesNotMatch(client.slice(client.indexOf("const respondHappyAction"), client.indexOf("const giftFollowUp")), /body:|payload|userId|personId|eventId|taskId/);
+  assert.doesNotMatch(client.slice(client.indexOf("const respondHappyAction"), client.indexOf("const continueHappyTask")), /body:|payload|userId|personId|eventId|taskId/);
   assert.match(card, /onRespondAction\(block\.action\.id, response\)/);
   assert.match(card, /if \(block\.type !== "approval" \|\| busy\) return/);
   assert.match(card, /disabled=\{busy !== null\}/);
@@ -20,7 +20,7 @@ test("Home approval UI invokes only the authoritative action routes and sends no
 
 test("Home reloads authoritative state after success and treats a 409 as stale rather than optimistic success", async () => {
   const client = await read("src/components/HomePageClient.tsx");
-  const actionHandler = client.slice(client.indexOf("const respondHappyAction"), client.indexOf("const giftFollowUp"));
+  const actionHandler = client.slice(client.indexOf("const respondHappyAction"), client.indexOf("const continueHappyTask"));
   assert.match(actionHandler, /if \(result\.status === 409\)/);
   assert.match(actionHandler, /reload\(\);/);
   assert.match(actionHandler, /throw new Error/);

@@ -4,8 +4,9 @@ export type DurableBirthdayStep = { id: string; position: number; type: string; 
 export type BirthdayContinuationDecision =
   | { kind: "deterministic"; step: "analyze_context" | "analyze_gifts" }
   | { kind: "generate_gift_ideas"; step: "generate_gift_ideas" }
+  | { kind: "generate_greeting"; step: "prepare_greeting" }
   | { kind: "waiting_user"; step: "choose_gift" }
-  | { kind: "already_running"; step: "generate_gift_ideas" }
+  | { kind: "already_running"; step: "generate_gift_ideas" | "prepare_greeting" }
   | { kind: "paused" } | { kind: "terminal" } | { kind: "invalid_state"; reason: string };
 
 const terminal = new Set(["completed", "cancelled", "failed"]);
@@ -24,10 +25,11 @@ export function resolveBirthdayTaskContinuation(input: { type: string; status: s
   if (!current) return { kind: "terminal" };
   if (steps.some((step, index) => index < current.position - 1 && step.status !== "completed")) return { kind: "invalid_state", reason: "non_contiguous_steps" };
   if (current.type === "choose_gift" && current.status === "waiting_user" && input.status === "waiting_user") return { kind: "waiting_user", step: "choose_gift" };
-  if (current.type === "generate_gift_ideas" && current.status === "active") return { kind: "already_running", step: "generate_gift_ideas" };
+  if ((current.type === "generate_gift_ideas" || current.type === "prepare_greeting") && current.status === "active") return { kind: "already_running", step: current.type };
   if (current.status !== "pending") return { kind: "invalid_state", reason: "invalid_step_status" };
   if (current.type === "analyze_context" || current.type === "analyze_gifts") return { kind: "deterministic", step: current.type };
   if (current.type === "generate_gift_ideas") return { kind: "generate_gift_ideas", step: current.type };
   if (current.type === "choose_gift") return { kind: "waiting_user", step: "choose_gift" };
+  if (current.type === "prepare_greeting") return { kind: "generate_greeting", step: current.type };
   return { kind: "invalid_state", reason: "future_boundary" };
 }

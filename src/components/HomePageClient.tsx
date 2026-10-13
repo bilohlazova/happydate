@@ -26,6 +26,7 @@ import {
 } from "@/lib/repositories/reminders";
 import { recordKnowledgeReviewInteraction } from "@/lib/repositories/knowledgeReviewInteractions.repository";
 import { useAuth } from "@/components/AuthProvider";
+import { supabase } from "@/lib/supabaseClient";
 import GuestHomePresentation from "@/components/GuestHome";
 import type { ChatScopeInput } from "@/lib/assistant/chatScope";
 
@@ -252,6 +253,27 @@ export default function HomePageClient() {
     if (body.kind === "generated") { setChatScope({ type: "task", taskId }); setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }
   }, [reload]);
 
+  const selectOccasionPerson = useCallback(async (occurrenceKey: string, personId: string) => {
+    const result = await fetch(`/api/happy/occasions/${encodeURIComponent(occurrenceKey)}/person`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ personId }),
+    });
+    if (!result.ok) throw new Error("Occasion person selection failed");
+    reload();
+  }, [reload]);
+
+  const requestOccasionRescue = useCallback(async (occurrenceKey: string) => {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) throw new Error("Missing authenticated session");
+    const result = await fetch(`/api/happy/occasions/${encodeURIComponent(occurrenceKey)}/rescue`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: "{}" });
+    if (!result.ok) throw new Error("Occasion rescue unavailable");
+    const body = await result.json() as { suggestions?: unknown };
+    if (!Array.isArray(body.suggestions)) throw new Error("Occasion rescue unavailable");
+    return body.suggestions.filter((item): item is { category: string; title: string; description: string; whyItFits?: string } => !!item && typeof item === "object" && typeof (item as { category?: unknown }).category === "string" && typeof (item as { title?: unknown }).title === "string" && typeof (item as { description?: unknown }).description === "string" && ((item as { whyItFits?: unknown }).whyItFits === undefined || typeof (item as { whyItFits?: unknown }).whyItFits === "string"));
+  }, []);
+
   const giftFollowUp = useCallback(async (giftId: string, action: "snooze" | "dismiss") => {
     await changeGiftOutcomeFollowUp(giftId, action);
     reload();
@@ -303,7 +325,7 @@ export default function HomePageClient() {
           <HomeErrorState title={homeT("error.title")} description={homeT("error.description")} retry={homeT("error.retry")} onRetry={reload} />
         </div>
       )}
-      {viewModel && user && <HomeDashboard viewModel={viewModel} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatScope({ type: "global" }); setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} onContinueHappyTask={continueHappyTask} onRespondHappyIdea={respondHappyIdea} onRespondHappyAction={respondHappyAction} />}
+      {viewModel && user && <HomeDashboard viewModel={viewModel} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatScope({ type: "global" }); setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} onContinueHappyTask={continueHappyTask} onRespondHappyIdea={respondHappyIdea} onRespondHappyAction={respondHappyAction} onSelectOccasionPerson={selectOccasionPerson} onRequestRescue={requestOccasionRescue} />}
       {giftOutcomeConfirmation && (
         <GiftOutcomeConfirmation
           message={homeT("recommendations.giftOutcomeSaved", { outcome: homeT(`recommendations.giftOutcomeValue.${giftOutcomeConfirmation.outcome}` as never) })}

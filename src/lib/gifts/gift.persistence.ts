@@ -143,13 +143,38 @@ async function findEquivalentActiveGift(
 }
 
 export async function listCanonicalGifts(userId: string): Promise<GiftRecord[]> {
-  const { data, error } = await supabase
+  return listCanonicalGiftsWithClient(supabase, userId);
+}
+
+export async function listCanonicalGiftsWithClient(
+  client: SupabaseClient,
+  userId: string,
+): Promise<GiftRecord[]> {
+  const { data, error } = await client
     .from("gifts")
     .select(GIFT_COLUMNS)
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .returns<GiftRow[]>();
   if (error) throw failure("listCanonicalGifts", error.message);
+  return (data ?? []).map(mapGift);
+}
+
+/** Exact owner/context read for synthetic Occasion Gift identities. */
+export async function listCanonicalGiftsForContextWithClient(
+  client: SupabaseClient,
+  input: { userId: string; personId: string; contextKey: string },
+): Promise<GiftRecord[]> {
+  const { data, error } = await client
+    .from("gifts")
+    .select(GIFT_COLUMNS)
+    .eq("user_id", input.userId)
+    .eq("person_id", input.personId)
+    .eq("event_context_key", input.contextKey)
+    .order("created_at", { ascending: false })
+    .limit(20)
+    .returns<GiftRow[]>();
+  if (error) throw failure("listCanonicalGiftsForContext", error.message);
   return (data ?? []).map(mapGift);
 }
 

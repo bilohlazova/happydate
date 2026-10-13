@@ -7,6 +7,7 @@ import type {
 } from "@/lib/assistant/chatContract";
 import type { DailyBriefing } from "./buildDailyBriefing";
 import type { HappyTaskCardModel, HappyTaskCardSource } from "../happy/task-ui/happyTaskCard";
+import type { OccasionSignal } from "../happy/signals/happySignal.types";
 
 export interface HomeHappyAction {
   id: string;
@@ -14,6 +15,8 @@ export interface HomeHappyAction {
   type: string;
   status: string;
   createdAt: string;
+  /** Safe, server-persisted proposal summary for approval presentation. */
+  summary?: string | null;
 }
 
 export interface HomeHappyIdea {
@@ -105,6 +108,9 @@ export interface HomeRepositoryData {
   happyTasks?: HappyTaskCardSource[];
   happyActions?: HomeHappyAction[];
   happyIdeas?: HomeHappyIdea[];
+  happyOccasionSignals?: OccasionSignal[];
+  happyRescueSignals?: import("../happy/signals/happySignal.types.ts").RescueSignal[];
+  proactivityMode?: import("../../../supabase/functions/happy-proactive/proactivity-policy.ts").ProactivityMode;
 }
 
 /** Server-only gift projection; omitted from the client Home loader. */

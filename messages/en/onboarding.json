@@ -7,13 +7,16 @@
   "add": "Add",
   "edit": "Edit",
   "remove": "Remove",
+  "saving": "Saving…",
+  "saveError": "We couldn’t save the questionnaire. Please try again.",
   "welcome": {
     "known": "{name}, it’s lovely to meet you! 💙",
     "unknown": "It’s lovely to meet you! 💙",
     "body": "We’d like to get to know you a little better so HappyDate can help you find thoughtful gifts, remember what matters and create special moments",
     "rewardTitle": "🎁 100 points for getting acquainted",
     "rewardBody": "Complete this short questionnaire to receive your first 100 HappyDate points",
-    "start": "Start getting acquainted"
+    "start": "Start getting acquainted",
+    "later": "Come back later"
   },
   "birthday": {
     "title": "When is your special day? 🎂",
@@ -48,7 +51,7 @@
     "summary": "Your answers",
     "empty": "You chose not to add anything yet",
     "reward": "+100 HappyDate points",
-    "pending": "Demo mode: the reward has not been credited yet",
+    "pending": "The reward is credited only after successful server completion",
     "finish": "Finish preview",
     "editStep": "Change"
   },

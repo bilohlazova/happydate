@@ -53,6 +53,9 @@ export default function OnboardingPreviewPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("welcome");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const [pointsAwarded, setPointsAwarded] = useState<number | null>(null);
   const [profileName, setProfileName] = useState("");
   const [birthday, setBirthday] = useState("");
   const [birthdayError, setBirthdayError] = useState(false);
@@ -76,7 +79,14 @@ export default function OnboardingPreviewPage() {
         router.replace("/auth/login?redirectTo=/onboarding-preview");
         return;
       }
-      const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", auth.user.id).maybeSingle();
+      const [{ data: profile }, { data: survey }] = await Promise.all([
+        supabase.from("profiles").select("full_name").eq("id", auth.user.id).maybeSingle(),
+        supabase.from("user_survey").select("is_completed").eq("user_id", auth.user.id).maybeSingle(),
+      ]);
+      if (survey?.is_completed) {
+        router.replace("/");
+        return;
+      }
       if (active) {
         setProfileName(typeof profile?.full_name === "string" ? profile.full_name.trim() : "");
         setLoading(false);
@@ -112,6 +122,28 @@ export default function OnboardingPreviewPage() {
     setDreams((current) => editingDreamId ? current.map((item) => item.id === editingDreamId ? { ...item, value: draft } : item) : [...current, { id: `dream-${Date.now()}`, value: draft }]);
     setDreamDraft("");
     setEditingDreamId(null);
+  };
+  const submitOnboarding = async () => {
+    if (saving) return;
+    setSaving(true);
+    setSaveError(false);
+    const { data, error } = await supabase.rpc("save_my_onboarding_survey", {
+      p_likes: [...likes, ...likeCustom.map((item) => item.value)],
+      p_dislikes: [...dislikes, ...dislikeCustom.map((item) => item.value)],
+      p_dream: dreams.map((item) => item.value).join("\n"),
+      p_notes: "",
+      // The preview does not edit legacy calendar events; the RPC preserves them.
+      p_special_dates: null,
+    });
+    if (error) {
+      setSaveError(true);
+      setSaving(false);
+      return;
+    }
+    const awarded = Array.isArray(data) && typeof data[0]?.points_awarded === "number" ? data[0].points_awarded : 0;
+    setPointsAwarded(awarded);
+    setSaving(false);
+    setStep("complete");
   };
   const summaryCount = likes.length + dislikes.length + likeCustom.length + dislikeCustom.length + dreams.length + (birthday ? 1 : 0);
 
@@ -171,14 +203,16 @@ export default function OnboardingPreviewPage() {
             <h1 id="onboarding-title" className="text-2xl font-black leading-tight text-slate-950 sm:text-3xl">{t("complete.title")}</h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">{t("complete.body")}</p>
             <div className="mt-5 rounded-2xl bg-slate-50 p-4"><h2 className="font-bold text-slate-900">{t("complete.summary")}</h2><p className="mt-1 text-sm text-slate-600">{summaryCount ? `${summaryCount}` : t("complete.empty")}</p><div className="mt-3 flex flex-wrap gap-2">{steps.slice(1, -1).map((item, index) => <button key={item} type="button" onClick={() => setStep(item)} className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-cyan-700 ring-1 ring-slate-200">{t("complete.editStep")} {index + 2}</button>)}</div></div>
-            <div className="mt-4 rounded-2xl bg-cyan-50 p-4"><p className="font-black text-cyan-950">{t("complete.reward")}</p><p className="mt-1 text-sm text-cyan-800">{t("complete.pending")}</p></div>
+            <div className="mt-4 rounded-2xl bg-cyan-50 p-4"><p className="font-black text-cyan-950">{t("complete.reward")}</p><p className="mt-1 text-sm text-cyan-800">{pointsAwarded === null ? t("complete.pending") : `+${pointsAwarded}`}</p></div>
+            {saveError && <p className="mt-3 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-800" role="alert">{t("saveError")}</p>}
           </>}
+          {saveError && step !== "complete" && <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-800" role="alert">{t("saveError")}</p>}
           <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
             {currentIndex > 0 ? <button type="button" onClick={back} className={`${MobileUI.button} border border-slate-200 bg-white text-slate-700 hover:bg-slate-50`}>{t("back")}</button> : <span />}
-            {step === "welcome" && <button type="button" onClick={next} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700`}>{t("welcome.start")}</button>}
+            {step === "welcome" && <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => router.replace("/")} className={`${MobileUI.button} border border-slate-200 bg-white text-slate-700`}>{t("welcome.later")}</button><button type="button" onClick={next} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700`}>{t("welcome.start")}</button></div>}
             {step === "birthday" && <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => { setBirthday(""); next(); }} className={`${MobileUI.button} border border-slate-200 bg-white text-slate-700`}>{t("birthday.skip")}</button><button type="button" onClick={() => { if (birthday && !validDate(birthday)) { setBirthdayError(true); return; } next(); }} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700`}>{t("continue")}</button></div>}
             {(step === "likes" || step === "dislikes") && <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={next} className={`${MobileUI.button} border border-slate-200 bg-white text-slate-700`}>{t("skip")}</button><button type="button" onClick={next} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700`}>{t("continue")}</button></div>}
-            {step === "dreams" && <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={next} className={`${MobileUI.button} border border-slate-200 bg-white text-slate-700`}>{t("skip")}</button><button type="button" onClick={next} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700`}>{t("continue")}</button></div>}
+            {step === "dreams" && <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={submitOnboarding} className={`${MobileUI.button} border border-slate-200 bg-white text-slate-700`} disabled={saving}>{t("skip")}</button><button type="button" onClick={submitOnboarding} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700 disabled:opacity-60`} disabled={saving}>{saving ? t("saving") : t("continue")}</button></div>}
             {step === "complete" && <button type="button" onClick={() => router.replace("/profile")} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700`}>{t("complete.finish")}</button>}
           </div>
         </section>

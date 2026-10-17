@@ -37,6 +37,7 @@ const allowedPathRoots = new Set([
   "services",
   "settings",
   "survey",
+  "onboarding-preview",
 ]);
 
 function cleanInternalPath(value: string | null | undefined, fallback: string): string {

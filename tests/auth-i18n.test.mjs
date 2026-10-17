@@ -80,7 +80,7 @@ test("Auth routes and redirects remain unchanged and unprefixed", async () => {
   ];
   const sources = await Promise.all(files.map((file) => readFile(path.join(root, file), "utf8")));
   const combined = sources.join("\n");
-  for (const route of ["/auth/login", "/auth/register", "/auth/reset", "/auth/callback", "/auth/update-password", "/profile", "/dashboard"]) {
+  for (const route of ["/auth/login", "/auth/register", "/auth/reset", "/auth/callback", "/auth/update-password", "/onboarding-preview"]) {
     assert.match(combined, new RegExp(route.replaceAll("/", "\\/")));
   }
   assert.doesNotMatch(combined, /\/(pl|uk|en|ru|de)\/auth/);
@@ -90,6 +90,17 @@ test("registration links to the existing localized legal pages", async () => {
   const source = await readFile(path.join(root, "src/components/auth/AuthLegalLinks.tsx"), "utf8");
   assert.match(source, /href="\/regulamin"/);
   assert.match(source, /href="\/privacy"/);
+});
+
+test("auth sends incomplete accounts to onboarding and completed accounts home", async () => {
+  const [login, register] = await Promise.all([
+    readFile(path.join(root, "src/app/auth/login/LoginPageContent.tsx"), "utf8"),
+    readFile(path.join(root, "src/app/auth/register/RegisterPageContent.tsx"), "utf8"),
+  ]);
+  for (const source of [login, register]) {
+    assert.match(source, /from\("user_survey"\)/);
+    assert.match(source, /survey\?\.is_completed \? "\/" : "\/onboarding-preview"/);
+  }
 });
 
 test("user email, names, and password values remain untranslated", async () => {

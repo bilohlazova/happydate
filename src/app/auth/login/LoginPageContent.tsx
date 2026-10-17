@@ -29,7 +29,8 @@ export default function LoginPage() {
     const user = data.user;
     if (!user) return;
 
-    const redirectTo = safePostAuthPath(params.get("redirectTo"), "/profile");
+    const { data: survey } = await supabase.from("user_survey").select("is_completed").eq("user_id", user.id).maybeSingle();
+    const redirectTo = safePostAuthPath(params.get("redirectTo"), survey?.is_completed ? "/" : "/onboarding-preview");
     router.replace(redirectTo);
   };
 

@@ -7,13 +7,16 @@
   "add": "Hinzufügen",
   "edit": "Bearbeiten",
   "remove": "Entfernen",
+  "saving": "Wird gespeichert…",
+  "saveError": "Die Umfrage konnte nicht gespeichert werden. Bitte versuche es erneut.",
   "welcome": {
     "known": "{name}, schön, dich kennenzulernen! 💙",
     "unknown": "Schön, dich kennenzulernen! 💙",
     "body": "Wir möchten dich etwas besser kennenlernen, damit HappyDate passende Geschenke findet, Wichtiges erinnert und besondere Momente schafft",
     "rewardTitle": "🎁 100 Punkte fürs Kennenlernen",
     "rewardBody": "Fülle die kurze Umfrage aus und erhalte deine ersten 100 HappyDate-Punkte",
-    "start": "Kennenlernen beginnen"
+    "start": "Kennenlernen beginnen",
+    "later": "Später fortsetzen"
   },
   "birthday": {
     "title": "Wann ist dein besonderer Tag? 🎂",
@@ -48,7 +51,7 @@
     "summary": "Deine Antworten",
     "empty": "Du hast bisher nichts hinzugefügt",
     "reward": "+100 HappyDate-Punkte",
-    "pending": "Demo-Modus: Die Belohnung wurde noch nicht gutgeschrieben",
+    "pending": "Die Belohnung wird erst nach erfolgreichem Serverabschluss gutgeschrieben",
     "finish": "Vorschau beenden",
     "editStep": "Ändern"
   },

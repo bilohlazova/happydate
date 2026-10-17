@@ -4,12 +4,12 @@ import test from "node:test";
 
 const source = await readFile(new URL("../src/app/onboarding-preview/page.tsx", import.meta.url), "utf8");
 
-test("onboarding preview is a local-only interactive flow", () => {
+test("onboarding preview uses the guarded completion RPC", () => {
   assert.match(source, /setStep/);
   assert.match(source, /aria-pressed/);
   assert.match(source, /onboarding-birthday/);
   assert.match(source, /setDreams/);
-  assert.doesNotMatch(source, /\.rpc\(/);
+  assert.match(source, /\.rpc\("save_my_onboarding_survey"/);
   assert.doesNotMatch(source, /\.insert\(/);
   assert.doesNotMatch(source, /\.update\(/);
   assert.doesNotMatch(source, /\.upsert\(/);

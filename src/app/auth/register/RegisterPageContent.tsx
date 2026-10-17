@@ -42,7 +42,8 @@ export default function RegisterPage() {
       { onConflict: "id", ignoreDuplicates: !canonicalName }
     );
 
-    const redirectTo = safePostAuthPath(params.get("redirectTo"), "/profile");
+    const { data: survey } = await supabase.from("user_survey").select("is_completed").eq("user_id", user.id).maybeSingle();
+    const redirectTo = safePostAuthPath(params.get("redirectTo"), survey?.is_completed ? "/" : "/onboarding-preview");
     router.replace(redirectTo);
   };
 
@@ -93,7 +94,7 @@ export default function RegisterPage() {
     // Після підтвердження листа повернемося на /auth/callback,
     // який встановить сесію; потім useEffect збереже профіль і виконає safe redirect.
     const appUrl = webAuthOrigin();
-    const next = safePostAuthPath(params.get("redirectTo"), "/profile");
+    const next = safePostAuthPath(params.get("redirectTo"), "/onboarding-preview");
     const callbackQuery = `next=${encodeURIComponent(next)}`;
     const emailRedirectTo = Capacitor.isNativePlatform()
       ? nativeAuthRedirect("/auth/callback", callbackQuery)

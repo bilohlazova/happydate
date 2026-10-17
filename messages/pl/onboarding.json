@@ -7,13 +7,16 @@
   "add": "Dodaj",
   "edit": "Edytuj",
   "remove": "Usuń",
+  "saving": "Zapisywanie…",
+  "saveError": "Nie udało się zapisać ankiety. Spróbuj ponownie.",
   "welcome": {
     "known": "{name}, miło Cię poznać! 💙",
     "unknown": "Miło Cię poznać! 💙",
     "body": "Chcemy lepiej Cię poznać, aby HappyDate pomagał znajdować miłe prezenty, pamiętać o ważnych chwilach i tworzyć wyjątkowe momenty",
     "rewardTitle": "🎁 100 punktów za poznanie się",
     "rewardBody": "Ukończ krótką ankietę i odbierz swoje pierwsze 100 punktów HappyDate",
-    "start": "Zacznij poznanie"
+    "start": "Zacznij poznanie",
+    "later": "Wróć później"
   },
   "birthday": {
     "title": "Kiedy jest Twój wyjątkowy dzień? 🎂",
@@ -48,7 +51,7 @@
     "summary": "Twoje odpowiedzi",
     "empty": "Na razie nic nie dodano",
     "reward": "+100 punktów HappyDate",
-    "pending": "Tryb demonstracyjny: nagroda nie została jeszcze przyznana",
+    "pending": "Nagroda zostanie przyznana po pomyślnym zakończeniu na serwerze",
     "finish": "Zakończ podgląd",
     "editStep": "Zmień"
   },

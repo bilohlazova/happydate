@@ -1,6 +1,28 @@
 export const NATIVE_URL_SCHEME = "com.happydate.app";
 export const PRODUCTION_WEB_ORIGIN = "https://happydate.vercel.app";
 
+/**
+ * Resolve the web origin used by Supabase auth callbacks at runtime.
+ *
+ * Preview deployments must callback to the deployment that initiated auth,
+ * while server rendering has no window. The allowlist keeps arbitrary hosts
+ * from becoming callback origins; Supabase still enforces its URL allowlist.
+ */
+export function webAuthOrigin(): string {
+  if (typeof window !== "undefined") {
+    const origin = window.location.origin;
+    const hostname = window.location.hostname;
+    const isVercelPreview = hostname.endsWith(".vercel.app");
+    const isLocalDevelopment = hostname === "localhost" || hostname === "127.0.0.1";
+
+    if (origin === PRODUCTION_WEB_ORIGIN || isVercelPreview || isLocalDevelopment) {
+      return origin;
+    }
+  }
+
+  return process.env.NEXT_PUBLIC_APP_URL?.trim() || PRODUCTION_WEB_ORIGIN;
+}
+
 const allowedPathRoots = new Set([
   "about",
   "auth",

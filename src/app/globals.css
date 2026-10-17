@@ -545,13 +545,24 @@ body[data-authenticated="false"] .hd-main { padding-bottom: 0; }
 }
 
 @media (max-width: 639px) {
+  .hd-brand-link { max-width: 9.5rem; overflow: hidden; text-overflow: ellipsis; font-size: 1rem; }
   .hd-public-header-actions { gap: 4px; }
+  .hd-auth-desktop-link { display: none; }
   .hd-public-header-actions .hd-button { padding-inline: 6px; font-size: 12px; }
   .hd-public-header-actions .hd-mobile-menu-button { flex: 0 0 44px; }
 }
 
 @media (max-width: 374px) {
+  .hd-brand-link { max-width: 8.5rem; font-size: .95rem; }
   .hd-public-header-actions .hd-button { padding-inline: 4px; font-size: 11px; }
+}
+
+@media (max-width: 639px) {
+  .auth-care-page { padding: calc(.75rem + env(safe-area-inset-top)) .75rem calc(1rem + env(safe-area-inset-bottom)) !important; }
+  .auth-care-card { padding: 1rem !important; border-radius: 22px !important; }
+  .auth-care-card h1 { font-size: clamp(1.65rem, 8vw, 2rem) !important; }
+  .auth-care-card .auth-care-promise { margin-bottom: 13px; padding: 8px 10px; font-size: 10px; }
+  .auth-care-form { gap: .7rem !important; }
 }
 
 @media (max-width: 639px) {

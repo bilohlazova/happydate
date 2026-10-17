@@ -9,7 +9,7 @@ import { MobileUI } from "@/lib/theme/mobile";
 import { useTranslations } from "next-intl";
 import { mapAuthError } from "@/lib/auth/mapAuthError";
 import { Capacitor } from "@capacitor/core";
-import { nativeAuthRedirect, safePostAuthPath } from "@/lib/navigation/safeDeepLink";
+import { nativeAuthRedirect, safePostAuthPath, webAuthOrigin } from "@/lib/navigation/safeDeepLink";
 import { AuthLegalLinks } from "@/components/auth/AuthLegalLinks";
 
 export default function RegisterPage() {
@@ -87,7 +87,7 @@ export default function RegisterPage() {
 
     // Після підтвердження листа повернемося на /auth/callback,
     // який встановить сесію; потім useEffect збереже профіль і виконає safe redirect.
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const appUrl = webAuthOrigin();
     const next = safePostAuthPath(params.get("redirectTo"), "/profile");
     const callbackQuery = `next=${encodeURIComponent(next)}`;
     const emailRedirectTo = Capacitor.isNativePlatform()

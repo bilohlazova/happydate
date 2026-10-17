@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useTranslations } from "next-intl";
 import { mapAuthError } from "@/lib/auth/mapAuthError";
 import { Capacitor } from "@capacitor/core";
-import { nativeAuthRedirect } from "@/lib/navigation/safeDeepLink";
+import { nativeAuthRedirect, webAuthOrigin } from "@/lib/navigation/safeDeepLink";
 import { MobileUI } from "@/lib/theme/mobile";
 import { AuthLegalLinks } from "@/components/auth/AuthLegalLinks";
 
@@ -24,7 +24,7 @@ export default function ResetPasswordPage() {
     setMsg(null);
     setErr(null);
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const appUrl = webAuthOrigin();
     // Po kliknięciu w mailu użytkownik trafi na formularz ustawienia nowego hasła
     const redirectTo = Capacitor.isNativePlatform()
       ? nativeAuthRedirect("/auth/update-password")

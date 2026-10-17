@@ -99,7 +99,7 @@ test("auth sends incomplete accounts to onboarding and completed accounts home",
   ]);
   for (const source of [login, register]) {
     assert.match(source, /from\("user_survey"\)/);
-    assert.match(source, /survey\?\.is_completed \? "\/" : "\/onboarding-preview"/);
+    assert.match(source, /survey\?\.is_completed && survey\?\.reward_granted_at \? "\/" : "\/onboarding-preview"/);
   }
 });
 

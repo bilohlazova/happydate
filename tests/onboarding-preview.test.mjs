@@ -18,5 +18,5 @@ test("onboarding preview uses the guarded completion RPC", () => {
 test("preview keeps the existing survey route separate", async () => {
   const survey = await readFile(new URL("../src/app/survey/page.tsx", import.meta.url), "utf8");
   assert.match(survey, /save_my_onboarding_survey/);
-  assert.match(source, /\/profile/);
+  assert.match(source, /router\.replace\("\/"\)/);
 });

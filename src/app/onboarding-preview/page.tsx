@@ -81,9 +81,9 @@ export default function OnboardingPreviewPage() {
       }
       const [{ data: profile }, { data: survey }] = await Promise.all([
         supabase.from("profiles").select("full_name").eq("id", auth.user.id).maybeSingle(),
-        supabase.from("user_survey").select("is_completed").eq("user_id", auth.user.id).maybeSingle(),
+        supabase.from("user_survey").select("is_completed, reward_granted_at").eq("user_id", auth.user.id).maybeSingle(),
       ]);
-      if (survey?.is_completed) {
+      if (survey?.is_completed && survey?.reward_granted_at) {
         router.replace("/");
         return;
       }
@@ -213,7 +213,7 @@ export default function OnboardingPreviewPage() {
             {step === "birthday" && <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => { setBirthday(""); next(); }} className={`${MobileUI.button} border border-slate-200 bg-white text-slate-700`}>{t("birthday.skip")}</button><button type="button" onClick={() => { if (birthday && !validDate(birthday)) { setBirthdayError(true); return; } next(); }} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700`}>{t("continue")}</button></div>}
             {(step === "likes" || step === "dislikes") && <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={next} className={`${MobileUI.button} border border-slate-200 bg-white text-slate-700`}>{t("skip")}</button><button type="button" onClick={next} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700`}>{t("continue")}</button></div>}
             {step === "dreams" && <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={submitOnboarding} className={`${MobileUI.button} border border-slate-200 bg-white text-slate-700`} disabled={saving}>{t("skip")}</button><button type="button" onClick={submitOnboarding} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700 disabled:opacity-60`} disabled={saving}>{saving ? t("saving") : t("continue")}</button></div>}
-            {step === "complete" && <button type="button" onClick={() => router.replace("/profile")} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700`}>{t("complete.finish")}</button>}
+            {step === "complete" && <button type="button" onClick={() => router.replace("/")} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700`}>{t("complete.finish")}</button>}
           </div>
         </section>
       </div>

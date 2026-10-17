@@ -3,18 +3,17 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { MobileUI } from "@/lib/theme/mobile";
 import { useTranslations } from "next-intl";
 import { mapAuthError } from "@/lib/auth/mapAuthError";
 import { Capacitor } from "@capacitor/core";
-import { nativeAuthRedirect, safePostAuthPath, webAuthOrigin } from "@/lib/navigation/safeDeepLink";
+import { nativeAuthRedirect, webAuthOrigin } from "@/lib/navigation/safeDeepLink";
 import { AuthLegalLinks } from "@/components/auth/AuthLegalLinks";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const params = useSearchParams();
   const translate = useTranslations("auth");
 
   const [firstName, setFirstName] = useState("");
@@ -42,8 +41,8 @@ export default function RegisterPage() {
       { onConflict: "id", ignoreDuplicates: !canonicalName }
     );
 
-    const { data: survey } = await supabase.from("user_survey").select("is_completed").eq("user_id", user.id).maybeSingle();
-    const redirectTo = safePostAuthPath(params.get("redirectTo"), survey?.is_completed ? "/" : "/onboarding-preview");
+    const { data: survey } = await supabase.from("user_survey").select("is_completed, reward_granted_at").eq("user_id", user.id).maybeSingle();
+    const redirectTo = survey?.is_completed && survey?.reward_granted_at ? "/" : "/onboarding-preview";
     router.replace(redirectTo);
   };
 
@@ -94,7 +93,7 @@ export default function RegisterPage() {
     // Після підтвердження листа повернемося на /auth/callback,
     // який встановить сесію; потім useEffect збереже профіль і виконає safe redirect.
     const appUrl = webAuthOrigin();
-    const next = safePostAuthPath(params.get("redirectTo"), "/onboarding-preview");
+    const next = "/onboarding-preview";
     const callbackQuery = `next=${encodeURIComponent(next)}`;
     const emailRedirectTo = Capacitor.isNativePlatform()
       ? nativeAuthRedirect("/auth/callback", callbackQuery)

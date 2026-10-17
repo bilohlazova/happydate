@@ -17,7 +17,8 @@ export default function RegisterPage() {
   const params = useSearchParams();
   const translate = useTranslations("auth");
 
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
@@ -35,7 +36,7 @@ export default function RegisterPage() {
 
     // `profiles` is the canonical source for the optional display name.
     // Keep an existing profile untouched when the field is left blank.
-    const canonicalName = fullName.trim();
+    const canonicalName = `${firstName.trim()} ${lastName.trim()}`.trim();
     await supabase.from("profiles").upsert(
       canonicalName ? { id: user.id, full_name: canonicalName } : { id: user.id },
       { onConflict: "id", ignoreDuplicates: !canonicalName }
@@ -62,6 +63,10 @@ export default function RegisterPage() {
   // Проста валідація
   const validate = () => {
     setErrorMsg(null);
+    if (!firstName.trim() || !lastName.trim()) {
+      setErrorMsg(translate("validation.nameRequired"));
+      return false;
+    }
     if (!email.match(/^\S+@\S+\.\S+$/)) {
       setErrorMsg(translate("validation.emailInvalid"));
       return false;
@@ -120,16 +125,13 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className={`auth-care-page ${MobileUI.screen} flex items-center justify-center px-4 py-6`}>
-      <div className={`auth-care-card ${MobileUI.card} w-full max-w-[430px] p-5`}>
-        <div className="auth-care-brand" aria-hidden="true"><span>♥</span> HappyDate</div>
+    <main className={`auth-care-page ${MobileUI.screen} flex items-center justify-center px-3 py-5 sm:px-4 sm:py-8`}>
+      <div className={`auth-care-card ${MobileUI.card} w-full max-w-[560px] p-5 sm:p-7`}>
         <p className="auth-care-eyebrow">{translate("brand.eyebrow")}</p>
-        <h1 className="mb-1 text-[2rem] font-black leading-tight text-sky-600">{translate("register.title")}</h1>
-        <p className="mb-5 text-sm font-semibold leading-5 text-gray-500">
+        <h1 className="mb-1 text-[1.75rem] font-black leading-tight text-slate-900 sm:text-[2rem]">{translate("register.title")}</h1>
+        <p className="mb-5 text-sm leading-5 text-slate-500">
           {translate("register.subtitle")}
         </p>
-
-        <div className="auth-care-promise"><span aria-hidden="true">🔒</span>{translate("register.promise")}</div>
 
         {errorMsg && (
           <div className="mb-4 rounded-[0.95rem] border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
@@ -142,21 +144,38 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <form onSubmit={handleRegister} className="auth-care-form space-y-4" aria-label={translate("accessibility.registerForm")}>
-          <div>
-            <label className="mb-1.5 block text-sm font-bold text-gray-700" htmlFor="auth-register-name">{translate("register.nameOptional")}</label>
+        <form onSubmit={handleRegister} className="auth-care-form space-y-3.5" aria-label={translate("accessibility.registerForm")}>
+          <div className="grid gap-3.5 sm:grid-cols-2">
+            <div>
+            <label className="mb-1.5 block text-sm font-bold text-slate-700" htmlFor="auth-register-first-name">{translate("register.firstName")} *</label>
             <input
-              id="auth-register-name"
+              id="auth-register-first-name"
               type="text"
-              placeholder={translate("register.namePlaceholder")}
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              placeholder={translate("register.firstNamePlaceholder")}
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
               className={MobileUI.input}
+              autoComplete="given-name"
+              required
             />
+          </div>
+            <div>
+            <label className="mb-1.5 block text-sm font-bold text-slate-700" htmlFor="auth-register-last-name">{translate("register.lastName")} *</label>
+            <input
+              id="auth-register-last-name"
+              type="text"
+              placeholder={translate("register.lastNamePlaceholder")}
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className={MobileUI.input}
+              autoComplete="family-name"
+              required
+            />
+          </div>
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-bold text-gray-700" htmlFor="auth-register-email">{translate("common.email")}</label>
+            <label className="mb-1.5 block text-sm font-bold text-slate-700" htmlFor="auth-register-email">{translate("common.email")} *</label>
             <input
               id="auth-register-email"
               type="email"
@@ -170,7 +189,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-bold text-gray-700" htmlFor="auth-register-password">{translate("common.password")}</label>
+            <label className="mb-1.5 block text-sm font-bold text-slate-700" htmlFor="auth-register-password">{translate("common.password")} *</label>
             <div className="relative">
               <input
                 id="auth-register-password"
@@ -195,7 +214,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-bold text-gray-700" htmlFor="auth-register-confirm">{translate("common.confirmPassword")}</label>
+            <label className="mb-1.5 block text-sm font-bold text-slate-700" htmlFor="auth-register-confirm">{translate("common.confirmPassword")} *</label>
             <input
               id="auth-register-confirm"
               type={showPwd ? "text" : "password"}
@@ -208,6 +227,8 @@ export default function RegisterPage() {
               minLength={8}
             />
           </div>
+
+          <AuthLegalLinks consent />
 
           <button
             type="submit"
@@ -225,7 +246,6 @@ export default function RegisterPage() {
           </a>
         </div>
 
-        <AuthLegalLinks />
       </div>
     </main>
   );

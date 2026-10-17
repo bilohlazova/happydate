@@ -92,14 +92,16 @@ test("registration links to the existing localized legal pages", async () => {
   assert.match(source, /href="\/privacy"/);
 });
 
-test("user email, name, and password values remain untranslated", async () => {
+test("user email, names, and password values remain untranslated", async () => {
   const [login, register] = await Promise.all([
     readFile(path.join(root, "src/app/auth/login/LoginPageContent.tsx"), "utf8"),
     readFile(path.join(root, "src/app/auth/register/RegisterPageContent.tsx"), "utf8"),
   ]);
   assert.match(login, /value=\{email\}/);
   assert.match(login, /value=\{password\}/);
-  assert.match(register, /value=\{fullName\}/);
+  assert.match(register, /value=\{firstName\}/);
+  assert.match(register, /value=\{lastName\}/);
+  assert.match(register, /const canonicalName = `\$\{firstName\.trim\(\)\} \$\{lastName\.trim\(\)\}`/);
   assert.doesNotMatch(register, /data: \{ full_name: fullName \}/);
   assert.doesNotMatch(register, /email\?\.split\("@"\)/);
 });
@@ -135,7 +137,7 @@ test("Auth dictionaries have no empty values or accidental Polish copies", async
     return result;
   };
   const polish = flatten(await authMessages("pl"));
-  const allowed = new Set(["register.namePlaceholder"]);
+  const allowed = new Set(["register.namePlaceholder", "register.firstNamePlaceholder", "register.lastNamePlaceholder"]);
   for (const locale of ["uk", "en", "ru", "de"]) {
     const values = flatten(await authMessages(locale));
     assert.deepEqual(Object.keys(values).sort(), Object.keys(polish).sort());

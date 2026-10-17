@@ -23,6 +23,7 @@
     "body": "Chcemy również pamiętać o Twoich urodzinach",
     "label": "Data urodzenia",
     "placeholder": "Wybierz datę",
+    "openPicker": "Otwórz kalendarz",
     "invalid": "Wybierz prawidłową datę",
     "skip": "Pomiń na razie"
   },

@@ -23,6 +23,7 @@
     "body": "Wir möchten auch deinen Geburtstag im Blick behalten",
     "label": "Geburtsdatum",
     "placeholder": "Datum auswählen",
+    "openPicker": "Kalender öffnen",
     "invalid": "Wähle ein gültiges Datum",
     "skip": "Vorerst überspringen"
   },

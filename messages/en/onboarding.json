@@ -23,6 +23,7 @@
     "body": "We’d love to remember your birthday too",
     "label": "Date of birth",
     "placeholder": "Choose a date",
+    "openPicker": "Open calendar",
     "invalid": "Choose a valid date",
     "skip": "Skip for now"
   },

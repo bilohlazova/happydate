@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { CalendarDays } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { MobileUI } from "@/lib/theme/mobile";
 
@@ -18,6 +19,21 @@ function validDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00`);
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function parseBirthdayInput(value: string): string | null {
+  const normalized = value.trim();
+  if (validDate(normalized)) return normalized;
+  const match = normalized.match(/^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})$/);
+  if (!match) return null;
+  const [, day, month, year] = match;
+  const candidate = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  return validDate(candidate) ? candidate : null;
+}
+
+function formatBirthdayInput(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return match ? `${match[3]}.${match[2]}.${match[1]}` : value;
 }
 
 function TagList({
@@ -58,7 +74,9 @@ export default function OnboardingPreviewPage() {
   const [pointsAwarded, setPointsAwarded] = useState<number | null>(null);
   const [profileName, setProfileName] = useState("");
   const [birthday, setBirthday] = useState("");
+  const [birthdayText, setBirthdayText] = useState("");
   const [birthdayError, setBirthdayError] = useState(false);
+  const birthdayPickerRef = useRef<HTMLInputElement>(null);
   const [likes, setLikes] = useState<string[]>([]);
   const [dislikes, setDislikes] = useState<string[]>([]);
   const [likeCustom, setLikeCustom] = useState<CustomValue[]>([]);
@@ -169,8 +187,61 @@ export default function OnboardingPreviewPage() {
             <h1 id="onboarding-title" className="text-2xl font-black leading-tight text-slate-950 sm:text-3xl">{t("birthday.title")}</h1>
             <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">{t("birthday.body")}</p>
             <label className="mt-6 block text-sm font-bold text-slate-700" htmlFor="onboarding-birthday">{t("birthday.label")}</label>
-            <input id="onboarding-birthday" type="date" value={birthday} onChange={(event) => { setBirthday(event.target.value); setBirthdayError(false); }} className={`${MobileUI.input} mt-1.5`} aria-invalid={birthdayError} />
-            {birthdayError && <p className="mt-2 text-sm font-semibold text-rose-700" role="alert">{t("birthday.invalid")}</p>}
+            <div className="relative mt-1.5">
+              <input
+                id="onboarding-birthday"
+                type="text"
+                inputMode="numeric"
+                autoComplete="bday"
+                value={birthdayText}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setBirthdayText(value);
+                  const parsed = parseBirthdayInput(value);
+                  setBirthday(parsed ?? "");
+                  setBirthdayError(false);
+                }}
+                onBlur={() => {
+                  const parsed = parseBirthdayInput(birthdayText);
+                  if (parsed) {
+                    setBirthday(parsed);
+                    setBirthdayText(formatBirthdayInput(parsed));
+                  }
+                }}
+                placeholder={t("birthday.placeholder")}
+                className={`${MobileUI.input} pr-14`}
+                aria-invalid={birthdayError}
+                aria-describedby={birthdayError ? "onboarding-birthday-error" : undefined}
+              />
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-xl text-slate-600 transition hover:bg-cyan-50 hover:text-cyan-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-600"
+                aria-label={t("birthday.openPicker")}
+                onClick={() => {
+                  const picker = birthdayPickerRef.current;
+                  if (!picker) return;
+                  if (typeof picker.showPicker === "function") picker.showPicker();
+                  else picker.click();
+                }}
+              >
+                <CalendarDays className="h-5 w-5" aria-hidden="true" />
+              </button>
+              <input
+                ref={birthdayPickerRef}
+                type="date"
+                tabIndex={-1}
+                aria-hidden="true"
+                value={birthday}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setBirthday(value);
+                  setBirthdayText(formatBirthdayInput(value));
+                  setBirthdayError(false);
+                }}
+                className="pointer-events-none absolute right-3 top-1/2 h-1 w-1 opacity-0"
+              />
+            </div>
+            {birthdayError && <p id="onboarding-birthday-error" className="mt-2 text-sm font-semibold text-rose-700" role="alert">{t("birthday.invalid")}</p>}
           </>}
           {(step === "likes" || step === "dislikes") && (() => {
             const kind = step === "likes" ? "likes" : "dislikes";
@@ -210,7 +281,7 @@ export default function OnboardingPreviewPage() {
           <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
             {currentIndex > 0 ? <button type="button" onClick={back} className={`${MobileUI.button} border border-slate-200 bg-white text-slate-700 hover:bg-slate-50`}>{t("back")}</button> : <span />}
             {step === "welcome" && <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => router.replace("/")} className={`${MobileUI.button} border border-slate-200 bg-white text-slate-700`}>{t("welcome.later")}</button><button type="button" onClick={next} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700`}>{t("welcome.start")}</button></div>}
-            {step === "birthday" && <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => { setBirthday(""); next(); }} className={`${MobileUI.button} border border-slate-200 bg-white text-slate-700`}>{t("birthday.skip")}</button><button type="button" onClick={() => { if (birthday && !validDate(birthday)) { setBirthdayError(true); return; } next(); }} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700`}>{t("continue")}</button></div>}
+            {step === "birthday" && <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => { setBirthday(""); setBirthdayText(""); setBirthdayError(false); next(); }} className={`${MobileUI.button} border border-slate-200 bg-white text-slate-700`}>{t("birthday.skip")}</button><button type="button" onClick={() => { const parsed = parseBirthdayInput(birthdayText); if (birthdayText.trim() && !parsed) { setBirthdayError(true); return; } setBirthday(parsed ?? ""); if (parsed) setBirthdayText(formatBirthdayInput(parsed)); next(); }} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700`}>{t("continue")}</button></div>}
             {(step === "likes" || step === "dislikes") && <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={next} className={`${MobileUI.button} border border-slate-200 bg-white text-slate-700`}>{t("skip")}</button><button type="button" onClick={next} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700`}>{t("continue")}</button></div>}
             {step === "dreams" && <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={submitOnboarding} className={`${MobileUI.button} border border-slate-200 bg-white text-slate-700`} disabled={saving}>{t("skip")}</button><button type="button" onClick={submitOnboarding} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700 disabled:opacity-60`} disabled={saving}>{saving ? t("saving") : t("continue")}</button></div>}
             {step === "complete" && <button type="button" onClick={() => router.replace("/")} className={`${MobileUI.button} bg-cyan-600 text-white hover:bg-cyan-700`}>{t("complete.finish")}</button>}

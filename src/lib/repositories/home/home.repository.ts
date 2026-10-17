@@ -31,6 +31,7 @@ import type { OccasionPersonProjection } from "@/lib/occasions/occasionPeople.ty
 import type { OccasionSignal, RescueSignal } from "@/lib/happy/signals/happySignal.types";
 import { getOccasionPreparationForUser } from "@/lib/occasions/occasionPreparation.server";
 import { resolveOccasionRescueEligibility } from "@/lib/occasions/occasionRescue";
+import { buildOccasionQuietKey, occasionCheckpointForPhase } from "../../../../supabase/functions/happy-proactive/proactivity-policy";
 
 async function loadProactivityMode(client: SupabaseClient, userId: string): Promise<ProactivityMode> {
   const { data, error } = await client.from("happy_proactivity_preferences").select("mode").eq("user_id", userId).maybeSingle();
@@ -53,10 +54,10 @@ async function loadHappyActions(client: SupabaseClient, userId: string): Promise
 }
 
 async function loadHappyIdeas(client: SupabaseClient, userId: string): Promise<HomeHappyIdea[]> {
-  const { data, error } = await client.from("happy_ideas").select("id,user_id,type,title,message,status,person_id,event_id,created_at").eq("user_id", userId).in("status", ["new", "shown"]).order("created_at", { ascending: true }).limit(10);
+  const { data, error } = await client.from("happy_ideas").select("id,user_id,type,title,message,status,person_id,event_id,proactive_key,created_at").eq("user_id", userId).in("status", ["new", "shown"]).order("created_at", { ascending: true }).limit(10);
   if (error) throw new HomeRepositoryError("settings", error.message);
   return (data ?? []).flatMap((idea) => typeof idea.id === "string" && typeof idea.user_id === "string" && typeof idea.type === "string" && typeof idea.title === "string" && typeof idea.message === "string" && typeof idea.status === "string" && typeof idea.created_at === "string"
-    ? [{ id: idea.id, userId: idea.user_id, type: idea.type, title: idea.title, message: idea.message, status: idea.status, personId: typeof idea.person_id === "string" ? idea.person_id : null, eventId: typeof idea.event_id === "string" ? idea.event_id : null, createdAt: idea.created_at }]
+    ? [{ id: idea.id, userId: idea.user_id, type: idea.type, title: idea.title, message: idea.message, status: idea.status, personId: typeof idea.person_id === "string" ? idea.person_id : null, eventId: typeof idea.event_id === "string" ? idea.event_id : null, proactiveKey: typeof idea.proactive_key === "string" ? idea.proactive_key : null, createdAt: idea.created_at }]
     : []);
 }
 
@@ -67,6 +68,15 @@ async function loadHappyOccasionSignals(
   now: Date,
 ): Promise<{ occasions: OccasionSignal[]; rescues: RescueSignal[] }> {
   const occurrences = await getUserOccasionsForLocalDay({ client, userId, now });
+  const quietKeys = occurrences.flatMap((occurrence) => {
+    const checkpoint = occasionCheckpointForPhase(occurrence.phase);
+    return checkpoint ? [buildOccasionQuietKey({ occurrenceKey: occurrence.occurrenceKey, personId: null, checkpoint })] : [];
+  });
+  const { data: quietRows, error: quietError } = quietKeys.length > 0
+    ? await client.from("happy_proactive_quiet").select("quiet_key").eq("user_id", userId).in("quiet_key", quietKeys)
+    : { data: [], error: null };
+  if (quietError) throw new HomeRepositoryError("settings", quietError.message);
+  const quietSet = new Set((quietRows ?? []).flatMap((row) => typeof row.quiet_key === "string" ? [row.quiet_key] : []));
   const projections: OccasionPersonProjection[] = people.map((person) => ({
     id: person.id,
     userId,
@@ -87,6 +97,19 @@ async function loadHappyOccasionSignals(
       ? await getOccasionPreparationForUser({ client, userId, occurrenceKey: occurrence.occurrenceKey, now })
       : null;
     const readiness = preparation?.kind === "resolved" ? preparation.readiness : undefined;
+    const checkpoint = occasionCheckpointForPhase(occurrence.phase);
+    const personQuietKey = checkpoint && peopleResolution.kind === "resolved"
+      ? buildOccasionQuietKey({ occurrenceKey: occurrence.occurrenceKey, personId: peopleResolution.personId, checkpoint })
+      : null;
+    const selectionQuietKey = checkpoint && peopleResolution.kind === "selection_required"
+      ? buildOccasionQuietKey({ occurrenceKey: occurrence.occurrenceKey, personId: null, checkpoint })
+      : null;
+    let isQuiet = selectionQuietKey ? quietSet.has(selectionQuietKey) : false;
+    if (personQuietKey && !isQuiet) {
+      const { data: personQuiet } = await client.from("happy_proactive_quiet").select("quiet_key").eq("user_id", userId).eq("quiet_key", personQuietKey).maybeSingle();
+      isQuiet = Boolean(personQuiet?.quiet_key);
+    }
+    if (isQuiet) continue;
     const rescue = resolveOccasionRescueEligibility({
       occurrenceKey: occurrence.occurrenceKey,
       personId: peopleResolution.kind === "resolved" ? peopleResolution.personId : null,

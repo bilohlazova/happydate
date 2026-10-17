@@ -111,7 +111,7 @@ test("user occasion resolution reads explicit country and trusted reminder timez
     },
   };
   const result = await getUserOccasionsForLocalDay({ client, userId: "user-a", now: new Date("2026-09-29T22:30:00.000Z") });
-  assert.deepEqual(calls.sort(), ["happy_occasion_preferences", "reminder_preferences"]);
+  assert.deepEqual(calls.sort(), ["happy_occasion_preferences", "happy_occasion_timing_preferences", "reminder_preferences"]);
   assert.equal(result[0]?.phase, "today");
   assert.equal(result[0]?.occurrenceKey, "occasion:pl_boys_day:2026");
 });

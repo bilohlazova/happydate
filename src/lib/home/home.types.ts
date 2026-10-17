@@ -29,6 +29,8 @@ export interface HomeHappyIdea {
   personId: string | null;
   eventId: string | null;
   createdAt: string;
+  /** Semantic server key only; never synthesized by the browser. */
+  proactiveKey?: string | null;
 }
 
 export type HomeEventSource = "event" | "birthday";

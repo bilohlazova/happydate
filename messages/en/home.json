@@ -55,14 +55,16 @@
       "urgent": "This occasion is coming soon.",
       "today": "This occasion is today.",
       "selectionRequired": "Choose the person this occasion is for.",
-      "ready": "Everything is under control."
+      "ready": "Everything is under control.",
+      "later": "Later"
     },
     "rescue": {
       "title": "{occasion} for {name}",
       "status": "There is still time — here is a quick plan.",
       "cta": "Show quick options",
       "error": "Quick options could not be generated. Please try again."
-    }
+    },
+    "postEvent": { "question": "How did it go?", "wentWell": "Everything went well", "neededMoreTime": "I needed more time", "didNotHappen": "It didn't happen", "leadTimePrompt": "Want me to remind you {days} days earlier next time?", "acceptEarlier": "Yes, remind me earlier", "keepCurrent": "Keep current timing" }
   },
   "greeting": {
     "named": "Hi, {name}!",

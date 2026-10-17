@@ -55,14 +55,16 @@
       "urgent": "To już niedługo.",
       "today": "To wydarzenie jest dzisiaj.",
       "selectionRequired": "Wybierz osobę, której dotyczy wydarzenie.",
-      "ready": "Wszystko jest pod kontrolą."
+      "ready": "Wszystko jest pod kontrolą.",
+      "later": "Później"
     },
     "rescue": {
       "title": "{occasion} dla {name}",
       "status": "Jest jeszcze czas — oto szybki plan.",
       "cta": "Pokaż szybkie opcje",
       "error": "Nie udało się przygotować szybkich opcji. Spróbuj ponownie."
-    }
+    },
+    "postEvent": { "question": "Jak poszło?", "wentWell": "Wszystko poszło dobrze", "neededMoreTime": "Potrzebowałem więcej czasu", "didNotHappen": "To się nie wydarzyło", "leadTimePrompt": "Przypominać {days} dni wcześniej następnym razem?", "acceptEarlier": "Tak, przypominaj wcześniej", "keepCurrent": "Zostaw obecny termin" }
   },
   "greeting": {
     "named": "Cześć, {name}!",

@@ -7,6 +7,7 @@ const root = process.cwd();
 const migrationPath = path.join(root, "supabase/migrations/20260803190256_reminder_preferences_and_delivery_outbox.sql");
 const activationMigrationPath = path.join(root, "supabase/migrations/20260803190836_activate_reminder_cron_and_in_app_delivery.sql");
 const knowledgeReviewMigrationPath = path.join(root, "supabase/migrations/20260810174656_add_knowledge_review_channel_preferences.sql");
+const proactiveTimezoneGrantMigrationPath = path.join(root, "supabase/migrations/20261016175030_grant_happy_proactive_reminder_timezone_read.sql");
 
 test("preferences enforce timezone, quiet hours, repeat cadence and owner RLS", async () => {
   const sql = await readFile(migrationPath, "utf8");
@@ -14,6 +15,13 @@ test("preferences enforce timezone, quiet hours, repeat cadence and owner RLS", 
   assert.match(sql, /repeat_interval_minutes in \(60, 180, 360, 720, 1440\)/i);
   assert.match(sql, /validate_reminder_preferences_timezone/i);
   assert.match(sql, /reminder_preferences_update_own[\s\S]*?with check/i);
+});
+
+test("trusted proactive timezone reads use a SELECT-only service-role grant", async () => {
+  const sql = await readFile(proactiveTimezoneGrantMigrationPath, "utf8");
+  assert.match(sql, /grant select on table public\.reminder_preferences to service_role/i);
+  assert.doesNotMatch(sql, /grant\s+(?:insert|update|delete|all)[^;]*reminder_preferences[^;]*service_role/i);
+  assert.doesNotMatch(sql, /\bto\s+(?:anon|authenticated|public)\b/i);
 });
 
 test("delivery outbox is idempotent, user-readable and service-written", async () => {

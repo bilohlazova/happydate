@@ -1,4 +1,5 @@
 import type { GiftLifecycle } from "../gifts/gift.types.ts";
+import { resolveOccasionReadiness as resolveSharedOccasionReadiness } from "../../../supabase/functions/happy-proactive/occasion-domain.ts";
 
 export type OccasionGiftPreparationFacts = {
   readonly lifecycle: GiftLifecycle | null;
@@ -54,10 +55,9 @@ export function resolveOccasionPreparationReadiness(input: {
   policy?: OccasionPreparationPolicy;
 }): OccasionReadiness {
   const policy = input.policy ?? PL_BOYS_DAY_PREPARATION_POLICY;
-  const missing: ("gift" | "greeting" | "preparation")[] = [];
-  if (policy.requiresGift && !input.gift.satisfiesGiftRequirement) missing.push("gift");
-  if (policy.requiresGreeting && input.greeting.status !== "prepared") missing.push("greeting");
-  if (policy.requiresPreparation && input.preparation.status !== "completed") missing.push("preparation");
-  if (missing.length === 0) return { kind: "ready" };
-  return { kind: input.preparation.status === "in_progress" ? "in_progress" : "needs_action", missing };
+  return resolveSharedOccasionReadiness({
+    giftReady: !policy.requiresGift || input.gift.satisfiesGiftRequirement,
+    greetingReady: !policy.requiresGreeting || input.greeting.status === "prepared",
+    preparationStatus: !policy.requiresPreparation ? "completed" : input.preparation.status,
+  });
 }

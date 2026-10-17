@@ -11,6 +11,7 @@ import { getLocaleCookie, setLocaleCookie } from "@/i18n/localeCookie";
 import { shouldSynchronizeProfileLocale } from "@/i18n/profileLocaleSync";
 import { getPreferredLocaleForUser } from "@/lib/repositories/profile/profileLocale.repository";
 import { useAuth } from "@/components/AuthProvider";
+import NotificationInbox from "@/components/notifications/NotificationInbox";
 
 function cx(...cls: Array<string | false | null | undefined>) {
   return cls.filter(Boolean).join(" ");
@@ -132,6 +133,7 @@ export default function Header() {
           {/* RIGHT SIDE */}
           <div className="hd-public-header-actions flex shrink-0 items-center gap-3">
             <LanguageSwitcher isAuthenticated={isLoggedIn} variant="header-light" />
+            {user && <NotificationInbox />}
             {/* Login — тільки якщо не залогінений */}
             {!user && !isGuestHome && (
               <Link

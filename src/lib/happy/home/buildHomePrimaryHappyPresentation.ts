@@ -16,10 +16,12 @@ export type HomePrimaryHappyPresentation = {
   context: { text: string; source: HappyReasonSourceRef } | null;
   primaryAction: { kind: "accept_idea" | "continue_task" | "approve_action" | "show_rescue"; label: string } | null;
   secondaryAction: { kind: "dismiss_idea" | "reject_action"; label: string } | null;
+  occasionActions: { later: string; dismiss: string } | null;
   errorText: string;
   urgency: BirthdayUrgency;
   visualTreatment?: "standard" | "compact" | "high_attention" | "selection";
   occasionCandidates?: readonly OccasionPersonCandidate[];
+  postEvent?: { occasionKey: string; occurrenceKey: string; leadTimePrompt: (days: number) => string; acceptEarlier: string; keepCurrent: string; options: readonly { outcome: "went_well" | "needed_more_time" | "did_not_happen"; label: string }[] } | null;
 };
 
 function countdown(days: number | null, t: HomeTranslate): string | null {
@@ -62,6 +64,7 @@ export function buildHomePrimaryHappyPresentation(block: HomePrimaryHappyBlock |
     context: sourceContext(data, block.task.person.id, block.task.event.id, t),
     primaryAction: { kind: "continue_task", label: t("primaryHappy.actions.continue") },
     secondaryAction: null,
+    occasionActions: null,
     errorText: "",
     urgency: "normal",
   };
@@ -81,6 +84,7 @@ export function buildHomePrimaryHappyPresentation(block: HomePrimaryHappyBlock |
     secondaryAction: block.action.type === "save_gift" || block.action.type === "save_memory"
       ? { kind: "reject_action", label: t("primaryHappy.idea.dismiss") }
       : null,
+    occasionActions: null,
     errorText: t("primaryHappy.idea.error"),
     urgency: "normal",
   };
@@ -108,6 +112,7 @@ export function buildHomePrimaryHappyPresentation(block: HomePrimaryHappyBlock |
       context: null,
       primaryAction: null,
       secondaryAction: null,
+      occasionActions: { later: t("primaryHappy.occasion.later"), dismiss: t("primaryHappy.idea.dismiss") },
       errorText: t("primaryHappy.idea.error"),
       urgency: "normal",
       visualTreatment,
@@ -128,6 +133,7 @@ export function buildHomePrimaryHappyPresentation(block: HomePrimaryHappyBlock |
       context: null,
       primaryAction: { kind: "show_rescue", label: t("primaryHappy.rescue.cta") },
       secondaryAction: null,
+      occasionActions: { later: t("primaryHappy.occasion.later"), dismiss: t("primaryHappy.idea.dismiss") },
       errorText: t("primaryHappy.rescue.error"),
       urgency: "normal",
       visualTreatment: "high_attention",
@@ -141,6 +147,7 @@ export function buildHomePrimaryHappyPresentation(block: HomePrimaryHappyBlock |
     : event?.title ?? t("primaryHappy.generalTitle");
   const remaining = event && /^\d{4}-\d{2}-\d{2}$/.test(event.date) ? calendarDaysUntil(event.date, now) : null;
   const copy = semanticIdeaCopy(block.idea.type, t);
+  const postEventMatch = block.idea.type === "occasion_post_event" ? /^occasion:([a-z][a-z0-9_]*):(\d{4}):[0-9a-f-]+:post_event$/.exec(block.idea.proactiveKey ?? "") : null;
   const eventContextId = event?.category?.toLowerCase() === "birthday" && event ? `${event.id}:${event.date}` : event?.id ?? null;
   const urgency = event?.category?.toLowerCase() === "birthday" && eventContextId
     ? resolveBirthdayUrgency({ occurrence: event.date, daysUntil: remaining, giftReady: hasMatchingBirthdayGift((data.giftHistory ?? []).map((gift) => ({ personId: gift.personId, eventId: gift.eventId, lifecycle: gift.lifecycle })), event.personId, eventContextId) })
@@ -157,11 +164,21 @@ export function buildHomePrimaryHappyPresentation(block: HomePrimaryHappyBlock |
     title,
     timing: countdown(remaining, t),
     turningAgeLabel: turningAge === null ? null : t("events.turningAge", { age: turningAge }),
-    statusText: copy.statusText,
+    statusText: postEventMatch ? t("primaryHappy.postEvent.question") : copy.statusText,
     context: sourceContext(data, block.idea.personId, block.idea.eventId, t),
-    primaryAction: copy.primaryAction,
-    secondaryAction: { kind: "dismiss_idea", label: t("primaryHappy.idea.dismiss") },
+    primaryAction: postEventMatch ? null : copy.primaryAction,
+    secondaryAction: postEventMatch ? null : { kind: "dismiss_idea", label: t("primaryHappy.idea.dismiss") },
+    occasionActions: null,
     errorText: t("primaryHappy.idea.error"),
     urgency,
+    postEvent: postEventMatch ? {
+      occasionKey: postEventMatch[1], occurrenceKey: `occasion:${postEventMatch[1]}:${postEventMatch[2]}`,
+      leadTimePrompt: (days) => t("primaryHappy.postEvent.leadTimePrompt", { days }), acceptEarlier: t("primaryHappy.postEvent.acceptEarlier"), keepCurrent: t("primaryHappy.postEvent.keepCurrent"),
+      options: [
+        { outcome: "went_well", label: t("primaryHappy.postEvent.wentWell") },
+        { outcome: "needed_more_time", label: t("primaryHappy.postEvent.neededMoreTime") },
+        { outcome: "did_not_happen", label: t("primaryHappy.postEvent.didNotHappen") },
+      ],
+    } : null,
   };
 }

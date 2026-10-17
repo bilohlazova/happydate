@@ -55,14 +55,16 @@
       "urgent": "Dieser Anlass ist bald.",
       "today": "Dieser Anlass ist heute.",
       "selectionRequired": "Wähle die Person für diesen Anlass.",
-      "ready": "Alles ist unter Kontrolle."
+      "ready": "Alles ist unter Kontrolle.",
+      "later": "Später"
     },
     "rescue": {
       "title": "{occasion} für {name}",
       "status": "Es ist noch Zeit – hier ist ein schneller Plan.",
       "cta": "Schnelle Optionen zeigen",
       "error": "Schnelle Optionen konnten nicht erstellt werden. Bitte erneut versuchen."
-    }
+    },
+    "postEvent": { "question": "Wie ist es gelaufen?", "wentWell": "Alles ist gut gelaufen", "neededMoreTime": "Ich hätte mehr Zeit gebraucht", "didNotHappen": "Es hat nicht stattgefunden", "leadTimePrompt": "Beim nächsten Mal {days} Tage früher erinnern?", "acceptEarlier": "Ja, früher erinnern", "keepCurrent": "Aktuellen Zeitpunkt behalten" }
   },
   "greeting": {
     "named": "Hallo, {name}!",

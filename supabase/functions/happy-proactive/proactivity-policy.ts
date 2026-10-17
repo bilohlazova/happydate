@@ -20,6 +20,23 @@ export function isSignalAllowedByMode(mode: ProactivityMode, signal: ProactiveSi
 
 export type QuietDisposition = "later" | "dismissed";
 
+export const OCCASION_CHECKPOINTS = ["planning", "preparing", "urgent", "today"] as const;
+export type OccasionCheckpoint = (typeof OCCASION_CHECKPOINTS)[number];
+
+export function occasionCheckpointForPhase(phase: unknown): OccasionCheckpoint | null {
+  return OCCASION_CHECKPOINTS.includes(phase as OccasionCheckpoint) ? phase as OccasionCheckpoint : null;
+}
+
+export function nextOccasionCheckpoint(checkpoint: OccasionCheckpoint): OccasionCheckpoint | null {
+  const index = OCCASION_CHECKPOINTS.indexOf(checkpoint);
+  return index >= 0 && index < OCCASION_CHECKPOINTS.length - 1 ? OCCASION_CHECKPOINTS[index + 1] : null;
+}
+
+export function buildOccasionQuietKey(input: { occurrenceKey: string; personId: string | null; checkpoint: OccasionCheckpoint }): string {
+  const target = input.personId ?? "recipient-selection";
+  return `occasion:${input.occurrenceKey}:${target}:${input.checkpoint}`;
+}
+
 export function proactiveQuietKey(input: { userId: string; eventId: string; occurrenceDate: string; signal: ProactiveSignal }): string {
   return input.signal === "gift_missing"
     ? `birthday:gift_missing:${input.userId}:${input.eventId}:${input.occurrenceDate}`

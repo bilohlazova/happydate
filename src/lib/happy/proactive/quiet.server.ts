@@ -11,6 +11,29 @@ function admin(): SupabaseClient | null {
 
 export type QuietResult = { kind: "ok"; disposition: QuietDisposition; idempotent: boolean } | { kind: "not_found" | "conflict" | "unavailable" | "error" };
 
+async function persistQuiet(client: SupabaseClient, userId: string, quietKey: string, disposition: QuietDisposition): Promise<QuietResult> {
+  const previous = await client.from("happy_proactive_quiet").select("disposition").eq("user_id", userId).eq("quiet_key", quietKey).maybeSingle();
+  if (previous.error) return { kind: "error" };
+  const finalDisposition: QuietDisposition = previous.data?.disposition === "dismissed" ? "dismissed" : disposition;
+  const { error } = await client.from("happy_proactive_quiet").upsert({ user_id: userId, quiet_key: quietKey, disposition: finalDisposition, updated_at: new Date().toISOString() }, { onConflict: "user_id,quiet_key" });
+  if (error) return { kind: "error" };
+  return { kind: "ok", disposition: finalDisposition, idempotent: Boolean(previous.data) };
+}
+
+export async function quietHappySemanticKey(userId: string, quietKey: string, disposition: QuietDisposition): Promise<QuietResult> {
+  const client = admin();
+  if (!client || !quietKey.trim()) return { kind: "unavailable" };
+  return persistQuiet(client, userId, quietKey, disposition);
+}
+
+export async function listQuietKeys(userId: string, keys: readonly string[]): Promise<ReadonlySet<string>> {
+  const client = admin();
+  if (!client || keys.length === 0) return new Set();
+  const { data, error } = await client.from("happy_proactive_quiet").select("quiet_key").eq("user_id", userId).in("quiet_key", keys);
+  if (error) throw new Error("proactive_quiet_unavailable");
+  return new Set((data ?? []).flatMap((row) => typeof row.quiet_key === "string" ? [row.quiet_key] : []));
+}
+
 function parseSignalKey(key: string): { signal: ProactiveSignal; eventId: string; occurrenceDate: string } | null {
   const parts = key.split(":");
   if (parts[0] !== "birthday") return null;
@@ -34,11 +57,8 @@ export async function quietHappyProactiveItem(userId: string, itemId: string, di
     if (!notification.data?.dedupe_key || !parseSignalKey(notification.data.dedupe_key)) return { kind: "not_found" };
     quietKey = notification.data.dedupe_key;
   }
-  const previous = await client.from("happy_proactive_quiet").select("disposition").eq("user_id", userId).eq("quiet_key", quietKey).maybeSingle();
-  if (previous.error) return { kind: "error" };
-  const finalDisposition: QuietDisposition = previous.data?.disposition === "dismissed" ? "dismissed" : disposition;
-  const { error: quietError } = await client.from("happy_proactive_quiet").upsert({ user_id: userId, quiet_key: quietKey, disposition: finalDisposition, updated_at: new Date().toISOString() }, { onConflict: "user_id,quiet_key" });
-  if (quietError) return { kind: "error" };
+  const quietResult = await persistQuiet(client, userId, quietKey, disposition);
+  if (quietResult.kind !== "ok") return quietResult;
   if (row?.status === "new" || row?.status === "shown") {
     const { error } = await client.from("happy_ideas").update({ status: "dismissed", responded_at: new Date().toISOString() }).eq("id", itemId).eq("user_id", userId).in("status", ["new", "shown"]);
     if (error) return { kind: "error" };
@@ -47,7 +67,7 @@ export async function quietHappyProactiveItem(userId: string, itemId: string, di
     const { error } = await client.from("happy_notifications").update({ dismissed_at: new Date().toISOString() }).eq("id", itemId).eq("user_id", userId);
     if (error) return { kind: "error" };
   }
-  return { kind: "ok", disposition: finalDisposition, idempotent: Boolean(previous.data) };
+  return quietResult;
 }
 
 export { proactiveQuietKey };

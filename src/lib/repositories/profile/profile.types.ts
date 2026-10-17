@@ -3,6 +3,8 @@ import { isSupportedLocale, type AppLocale } from "../../../i18n/config.ts";
 export type ApplicationProfile = {
   id: string;
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   avatar_url: string | null;
   preferred_locale: AppLocale | null;
   gift_outcome_learning_enabled: boolean;

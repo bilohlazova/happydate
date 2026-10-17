@@ -162,11 +162,11 @@ class HomeRepositoryError extends Error {
 async function loadProfile(client: SupabaseClient, userId: string): Promise<HomeProfile | null> {
   const { data, error } = await client
     .from("profiles")
-    .select("full_name")
+    .select("full_name, first_name, last_name")
     .eq("id", userId)
     .maybeSingle();
   if (error) throw new HomeRepositoryError("profile", error.message);
-  return data ? { fullName: data.full_name ?? null } : null;
+  return data ? { fullName: data.full_name ?? null, firstName: data.first_name ?? null, lastName: data.last_name ?? null } : null;
 }
 
 async function loadPeople(client: SupabaseClient, userId: string): Promise<HomePerson[]> {

@@ -37,6 +37,8 @@ export type HomeEventSource = "event" | "birthday";
 
 export interface HomeProfile {
   fullName: string | null;
+  firstName: string | null;
+  lastName: string | null;
 }
 
 export interface HomePerson {

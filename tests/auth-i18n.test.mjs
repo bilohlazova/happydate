@@ -112,7 +112,9 @@ test("user email, names, and password values remain untranslated", async () => {
   assert.match(login, /value=\{password\}/);
   assert.match(register, /value=\{firstName\}/);
   assert.match(register, /value=\{lastName\}/);
-  assert.match(register, /const canonicalName = `\$\{firstName\.trim\(\)\} \$\{lastName\.trim\(\)\}`/);
+  assert.match(register, /const canonicalFirstName = firstName\.trim\(\)/);
+  assert.match(register, /first_name: canonicalFirstName/);
+  assert.match(register, /last_name: canonicalLastName/);
   assert.doesNotMatch(register, /data: \{ full_name: fullName \}/);
   assert.doesNotMatch(register, /email\?\.split\("@"\)/);
 });

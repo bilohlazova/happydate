@@ -80,7 +80,7 @@ export default function OnboardingPreviewPage() {
         return;
       }
       const [{ data: profile }, { data: survey }] = await Promise.all([
-        supabase.from("profiles").select("full_name").eq("id", auth.user.id).maybeSingle(),
+        supabase.from("profiles").select("first_name").eq("id", auth.user.id).maybeSingle(),
         supabase.from("user_survey").select("is_completed, reward_granted_at").eq("user_id", auth.user.id).maybeSingle(),
       ]);
       if (survey?.is_completed && survey?.reward_granted_at) {
@@ -88,7 +88,7 @@ export default function OnboardingPreviewPage() {
         return;
       }
       if (active) {
-        setProfileName(typeof profile?.full_name === "string" ? profile.full_name.trim() : "");
+        setProfileName(typeof profile?.first_name === "string" ? profile.first_name.trim() : "");
         setLoading(false);
       }
     })();

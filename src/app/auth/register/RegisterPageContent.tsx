@@ -35,9 +35,13 @@ export default function RegisterPage() {
 
     // `profiles` is the canonical source for the optional display name.
     // Keep an existing profile untouched when the field is left blank.
-    const canonicalName = `${firstName.trim()} ${lastName.trim()}`.trim();
+    const canonicalFirstName = firstName.trim();
+    const canonicalLastName = lastName.trim();
+    const canonicalName = `${canonicalFirstName} ${canonicalLastName}`.trim();
     await supabase.from("profiles").upsert(
-      canonicalName ? { id: user.id, full_name: canonicalName } : { id: user.id },
+      canonicalName
+        ? { id: user.id, first_name: canonicalFirstName, last_name: canonicalLastName, full_name: canonicalName }
+        : { id: user.id },
       { onConflict: "id", ignoreDuplicates: !canonicalName }
     );
 

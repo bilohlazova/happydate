@@ -125,11 +125,11 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className={`auth-care-page ${MobileUI.screen} flex items-center justify-center px-3 py-5 sm:px-4 sm:py-8`}>
-      <div className={`auth-care-card ${MobileUI.card} w-full max-w-[560px] p-5 sm:p-7`}>
+    <main className={`auth-care-page ${MobileUI.screen} flex items-center justify-center px-3 py-3 sm:px-4 sm:py-6`}>
+      <div className={`auth-care-card ${MobileUI.card} w-full max-w-[560px] p-4 sm:p-6`}>
         <p className="auth-care-eyebrow">{translate("brand.eyebrow")}</p>
         <h1 className="mb-1 text-[1.75rem] font-black leading-tight text-slate-900 sm:text-[2rem]">{translate("register.title")}</h1>
-        <p className="mb-5 text-sm leading-5 text-slate-500">
+        <p className="mb-3 text-sm leading-5 text-slate-500">
           {translate("register.subtitle")}
         </p>
 
@@ -144,10 +144,10 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <form onSubmit={handleRegister} className="auth-care-form space-y-3.5" aria-label={translate("accessibility.registerForm")}>
-          <div className="grid gap-3.5 sm:grid-cols-2">
+        <form onSubmit={handleRegister} className="auth-care-form space-y-2.5" aria-label={translate("accessibility.registerForm")}>
+          <div className="grid gap-2.5 sm:grid-cols-2">
             <div>
-            <label className="mb-1.5 block text-sm font-bold text-slate-700" htmlFor="auth-register-first-name">{translate("register.firstName")} *</label>
+            <label className="mb-1 block text-sm font-bold text-slate-700" htmlFor="auth-register-first-name">{translate("register.firstName")} *</label>
             <input
               id="auth-register-first-name"
               type="text"
@@ -160,7 +160,7 @@ export default function RegisterPage() {
             />
           </div>
             <div>
-            <label className="mb-1.5 block text-sm font-bold text-slate-700" htmlFor="auth-register-last-name">{translate("register.lastName")} *</label>
+            <label className="mb-1 block text-sm font-bold text-slate-700" htmlFor="auth-register-last-name">{translate("register.lastName")} *</label>
             <input
               id="auth-register-last-name"
               type="text"
@@ -175,7 +175,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-bold text-slate-700" htmlFor="auth-register-email">{translate("common.email")} *</label>
+            <label className="mb-1 block text-sm font-bold text-slate-700" htmlFor="auth-register-email">{translate("common.email")} *</label>
             <input
               id="auth-register-email"
               type="email"
@@ -189,7 +189,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-bold text-slate-700" htmlFor="auth-register-password">{translate("common.password")} *</label>
+            <label className="mb-1 block text-sm font-bold text-slate-700" htmlFor="auth-register-password">{translate("common.password")} *</label>
             <div className="relative">
               <input
                 id="auth-register-password"
@@ -214,7 +214,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-bold text-slate-700" htmlFor="auth-register-confirm">{translate("common.confirmPassword")} *</label>
+            <label className="mb-1 block text-sm font-bold text-slate-700" htmlFor="auth-register-confirm">{translate("common.confirmPassword")} *</label>
             <input
               id="auth-register-confirm"
               type={showPwd ? "text" : "password"}
@@ -239,7 +239,7 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <div className="mt-4 text-sm text-gray-600">
+        <div className="mt-2.5 text-sm text-gray-600">
           {translate("register.haveAccount")} {" "}
           <a href="/auth/login" className="text-sky-600 hover:underline">
             {translate("register.login")}

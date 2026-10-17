@@ -20,3 +20,10 @@ test("preview keeps the existing survey route separate", async () => {
   assert.match(survey, /save_my_onboarding_survey/);
   assert.match(source, /router\.replace\("\/"\)/);
 });
+
+test("birthday validation compares local calendar parts without a UTC date shift", () => {
+  assert.match(source, /date\.getFullYear\(\) === year/);
+  assert.match(source, /date\.getMonth\(\) === month - 1/);
+  assert.match(source, /date\.getDate\(\) === day/);
+  assert.doesNotMatch(source, /toISOString\(\)\.slice\(0, 10\) === value/);
+});

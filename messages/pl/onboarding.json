@@ -1,0 +1,60 @@
+{
+  "eyebrow": "Pierwsze poznanie",
+  "progress": "Krok {current} z {total}",
+  "back": "Wstecz",
+  "continue": "Dalej",
+  "skip": "Pomiń",
+  "add": "Dodaj",
+  "edit": "Edytuj",
+  "remove": "Usuń",
+  "welcome": {
+    "known": "{name}, miło Cię poznać! 💙",
+    "unknown": "Miło Cię poznać! 💙",
+    "body": "Chcemy lepiej Cię poznać, aby HappyDate pomagał znajdować miłe prezenty, pamiętać o ważnych chwilach i tworzyć wyjątkowe momenty",
+    "rewardTitle": "🎁 100 punktów za poznanie się",
+    "rewardBody": "Ukończ krótką ankietę i odbierz swoje pierwsze 100 punktów HappyDate",
+    "start": "Zacznij poznanie"
+  },
+  "birthday": {
+    "title": "Kiedy jest Twój wyjątkowy dzień? 🎂",
+    "body": "Chcemy również pamiętać o Twoich urodzinach",
+    "label": "Data urodzenia",
+    "placeholder": "Wybierz datę",
+    "invalid": "Wybierz prawidłową datę",
+    "skip": "Pomiń na razie"
+  },
+  "likes": {
+    "title": "Co sprawia Ci radość? 🎁",
+    "body": "Wybierz wszystko, co lubisz. Jeśli czegoś nie ma na liście, dodaj własną opcję",
+    "customLabel": "Co jeszcze lubisz?",
+    "customPlaceholder": "Na przykład winyle, rośliny domowe, jazdę na rowerze…"
+  },
+  "dislikes": {
+    "title": "Jakie prezenty zdecydowanie nie są dla Ciebie? 🙈",
+    "body": "Każdy ma inny gust. Powiedz, czego nie chcesz dostawać, abyśmy unikali nietrafionych propozycji",
+    "customLabel": "Chcesz coś doprecyzować?",
+    "customPlaceholder": "Na przykład lubię kwiaty, ale nie róże…",
+    "conflict": "Ta kategoria jest wśród ulubionych i niechcianych. To w porządku — możesz doprecyzować własnym tekstem."
+  },
+  "dreams": {
+    "title": "O czym od dawna marzysz? ✨",
+    "body": "To może być wyjątkowa podróż, nowe hobby albo mała rzecz, którą chcesz mieć. Nie ma zbyt dużych ani małych marzeń",
+    "label": "Moje marzenie…",
+    "placeholder": "Na przykład zobaczyć zorzę polarną lub nauczyć się grać na pianinie"
+  },
+  "complete": {
+    "title": "Tak się poznaliśmy! 🎉",
+    "body": "Dziękujemy, że opowiedziałeś trochę o sobie. HappyDate lepiej uwzględni teraz Twoje potrzeby",
+    "summary": "Twoje odpowiedzi",
+    "empty": "Na razie nic nie dodano",
+    "reward": "+100 punktów HappyDate",
+    "pending": "Tryb demonstracyjny: nagroda nie została jeszcze przyznana",
+    "finish": "Zakończ podgląd",
+    "editStep": "Zmień"
+  },
+  "categories": {
+    "flowers": "Kwiaty", "books": "Książki", "travel": "Podróże", "experiences": "Wrażenia",
+    "technology": "Technologie", "cosmetics": "Kosmetyki", "sweets": "Słodycze", "jewelry": "Biżuteria",
+    "clothes": "Ubrania", "games": "Gry", "sport": "Sport", "home": "Dom"
+  }
+}

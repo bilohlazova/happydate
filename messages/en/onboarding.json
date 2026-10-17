@@ -1,0 +1,60 @@
+{
+  "eyebrow": "A first hello",
+  "progress": "Step {current} of {total}",
+  "back": "Back",
+  "continue": "Continue",
+  "skip": "Skip",
+  "add": "Add",
+  "edit": "Edit",
+  "remove": "Remove",
+  "welcome": {
+    "known": "{name}, it’s lovely to meet you! 💙",
+    "unknown": "It’s lovely to meet you! 💙",
+    "body": "We’d like to get to know you a little better so HappyDate can help you find thoughtful gifts, remember what matters and create special moments",
+    "rewardTitle": "🎁 100 points for getting acquainted",
+    "rewardBody": "Complete this short questionnaire to receive your first 100 HappyDate points",
+    "start": "Start getting acquainted"
+  },
+  "birthday": {
+    "title": "When is your special day? 🎂",
+    "body": "We’d love to remember your birthday too",
+    "label": "Date of birth",
+    "placeholder": "Choose a date",
+    "invalid": "Choose a valid date",
+    "skip": "Skip for now"
+  },
+  "likes": {
+    "title": "What brings you joy? 🎁",
+    "body": "Choose everything you like. If something is missing, add your own option",
+    "customLabel": "What else do you like?",
+    "customPlaceholder": "For example, vinyl records, houseplants, cycling…"
+  },
+  "dislikes": {
+    "title": "Which gifts are definitely not for you? 🙈",
+    "body": "Everyone has different tastes. Tell us what you would rather avoid so recommendations can fit better",
+    "customLabel": "Anything to clarify?",
+    "customPlaceholder": "For example, I like flowers but not roses…",
+    "conflict": "This category is both liked and disliked. That’s okay — you can clarify with your own note."
+  },
+  "dreams": {
+    "title": "What have you been dreaming about? ✨",
+    "body": "It could be a special trip, a new hobby or a small thing you have wanted for a while. No dream is too big or too small",
+    "label": "My dream…",
+    "placeholder": "For example, see the Northern Lights or learn to play piano"
+  },
+  "complete": {
+    "title": "Now we’ve met! 🎉",
+    "body": "Thanks for sharing a little about yourself. HappyDate can now better reflect what you enjoy",
+    "summary": "Your answers",
+    "empty": "You chose not to add anything yet",
+    "reward": "+100 HappyDate points",
+    "pending": "Demo mode: the reward has not been credited yet",
+    "finish": "Finish preview",
+    "editStep": "Change"
+  },
+  "categories": {
+    "flowers": "Flowers", "books": "Books", "travel": "Travel", "experiences": "Experiences",
+    "technology": "Technology", "cosmetics": "Cosmetics", "sweets": "Sweets", "jewelry": "Jewelry",
+    "clothes": "Clothing", "games": "Games", "sport": "Sport", "home": "Home"
+  }
+}

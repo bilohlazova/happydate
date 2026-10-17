@@ -21,6 +21,7 @@ type DashboardMessages = typeof import("../../messages/pl/dashboard.json");
 type CareMessages = typeof import("../../messages/pl/care.json");
 type StaticMessages = typeof import("../../messages/pl/static.json");
 type ServicesMessages = typeof import("../../messages/pl/services.json");
+type OnboardingMessages = typeof import("../../messages/pl/onboarding.json");
 
 export interface AppMessages extends AbstractIntlMessages {
   common: CommonMessages;
@@ -40,6 +41,7 @@ export interface AppMessages extends AbstractIntlMessages {
   care: CareMessages;
   static: StaticMessages;
   services: ServicesMessages;
+  onboarding: OnboardingMessages;
 }
 
 type CommonMessageLoader = () => Promise<CommonMessages>;
@@ -59,6 +61,7 @@ type DashboardMessageLoader = () => Promise<DashboardMessages>;
 type CareMessageLoader = () => Promise<CareMessages>;
 type StaticMessageLoader = () => Promise<StaticMessages>;
 type ServicesMessageLoader = () => Promise<ServicesMessages>;
+type OnboardingMessageLoader = () => Promise<OnboardingMessages>;
 
 const COMMON_MESSAGE_LOADERS: Record<AppLocale, CommonMessageLoader> = {
   pl: () =>
@@ -284,6 +287,13 @@ const STATIC_MESSAGE_LOADERS: Record<AppLocale, StaticMessageLoader> = {
   de: () =>
     import("../../messages/de/static.json").then((module) => module.default),
 };
+const ONBOARDING_MESSAGE_LOADERS: Record<AppLocale, OnboardingMessageLoader> = {
+  pl: () => import("../../messages/pl/onboarding.json").then((module) => module.default),
+  uk: () => import("../../messages/uk/onboarding.json").then((module) => module.default),
+  en: () => import("../../messages/en/onboarding.json").then((module) => module.default),
+  ru: () => import("../../messages/ru/onboarding.json").then((module) => module.default),
+  de: () => import("../../messages/de/onboarding.json").then((module) => module.default),
+};
 
 async function loadCommonMessages(locale: AppLocale): Promise<CommonMessages> {
   try {
@@ -404,6 +414,7 @@ export async function loadMessages(locale: AppLocale): Promise<AppMessages> {
     care,
     staticMessages,
     services,
+    onboarding,
   ] = await Promise.all([
     loadCommonMessages(locale),
     loadNavigationMessages(locale),
@@ -422,6 +433,7 @@ export async function loadMessages(locale: AppLocale): Promise<AppMessages> {
     CARE_MESSAGE_LOADERS[locale](),
     STATIC_MESSAGE_LOADERS[locale](),
     SERVICES_MESSAGE_LOADERS[locale](),
+    ONBOARDING_MESSAGE_LOADERS[locale](),
   ]);
   return {
     common,
@@ -441,5 +453,6 @@ export async function loadMessages(locale: AppLocale): Promise<AppMessages> {
     care,
     static: staticMessages,
     services,
+    onboarding,
   };
 }

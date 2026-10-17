@@ -1,0 +1,60 @@
+{
+  "eyebrow": "Erstes Kennenlernen",
+  "progress": "Schritt {current} von {total}",
+  "back": "Zurück",
+  "continue": "Weiter",
+  "skip": "Überspringen",
+  "add": "Hinzufügen",
+  "edit": "Bearbeiten",
+  "remove": "Entfernen",
+  "welcome": {
+    "known": "{name}, schön, dich kennenzulernen! 💙",
+    "unknown": "Schön, dich kennenzulernen! 💙",
+    "body": "Wir möchten dich etwas besser kennenlernen, damit HappyDate passende Geschenke findet, Wichtiges erinnert und besondere Momente schafft",
+    "rewardTitle": "🎁 100 Punkte fürs Kennenlernen",
+    "rewardBody": "Fülle die kurze Umfrage aus und erhalte deine ersten 100 HappyDate-Punkte",
+    "start": "Kennenlernen beginnen"
+  },
+  "birthday": {
+    "title": "Wann ist dein besonderer Tag? 🎂",
+    "body": "Wir möchten auch deinen Geburtstag im Blick behalten",
+    "label": "Geburtsdatum",
+    "placeholder": "Datum auswählen",
+    "invalid": "Wähle ein gültiges Datum",
+    "skip": "Vorerst überspringen"
+  },
+  "likes": {
+    "title": "Was macht dir Freude? 🎁",
+    "body": "Wähle alles, was dir gefällt. Falls etwas fehlt, füge deine eigene Option hinzu",
+    "customLabel": "Was magst du noch?",
+    "customPlaceholder": "Zum Beispiel Schallplatten, Zimmerpflanzen, Radtouren…"
+  },
+  "dislikes": {
+    "title": "Welche Geschenke sind gar nicht deins? 🙈",
+    "body": "Jeder hat einen anderen Geschmack. Sag uns, was du lieber nicht bekommen möchtest",
+    "customLabel": "Möchtest du etwas ergänzen?",
+    "customPlaceholder": "Zum Beispiel Blumen ja, aber keine Rosen…",
+    "conflict": "Diese Kategorie steht bei beliebt und unerwünscht. Das ist okay — ergänze gern eine eigene Erklärung."
+  },
+  "dreams": {
+    "title": "Wovon träumst du schon lange? ✨",
+    "body": "Vielleicht von einer besonderen Reise, einem neuen Hobby oder einer kleinen Sache. Kein Traum ist zu groß oder zu klein",
+    "label": "Mein Traum…",
+    "placeholder": "Zum Beispiel Polarlichter sehen oder Klavier lernen"
+  },
+  "complete": {
+    "title": "Jetzt haben wir uns kennengelernt! 🎉",
+    "body": "Danke, dass du etwas über dich geteilt hast. HappyDate kann deine Wünsche nun besser berücksichtigen",
+    "summary": "Deine Antworten",
+    "empty": "Du hast bisher nichts hinzugefügt",
+    "reward": "+100 HappyDate-Punkte",
+    "pending": "Demo-Modus: Die Belohnung wurde noch nicht gutgeschrieben",
+    "finish": "Vorschau beenden",
+    "editStep": "Ändern"
+  },
+  "categories": {
+    "flowers": "Blumen", "books": "Bücher", "travel": "Reisen", "experiences": "Erlebnisse",
+    "technology": "Technologie", "cosmetics": "Kosmetik", "sweets": "Süßigkeiten", "jewelry": "Schmuck",
+    "clothes": "Kleidung", "games": "Spiele", "sport": "Sport", "home": "Für Zuhause"
+  }
+}

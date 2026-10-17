@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { mapAuthError } from "@/lib/auth/mapAuthError";
 import { Capacitor } from "@capacitor/core";
 import { nativeAuthRedirect, safePostAuthPath } from "@/lib/navigation/safeDeepLink";
+import { AuthLegalLinks } from "@/components/auth/AuthLegalLinks";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -32,25 +33,16 @@ export default function RegisterPage() {
     const user = data.user;
     if (!user) return;
 
-    // створюємо профіль (id, full_name) якщо ще нема
+    // `profiles` is the canonical source for the optional display name.
+    // Keep an existing profile untouched when the field is left blank.
+    const canonicalName = fullName.trim();
     await supabase.from("profiles").upsert(
-      { id: user.id, full_name: fullName || user.email?.split("@")[0] || "" },
-      { onConflict: "id" }
+      canonicalName ? { id: user.id, full_name: canonicalName } : { id: user.id },
+      { onConflict: "id", ignoreDuplicates: !canonicalName }
     );
 
-    // якщо анкета вже заповнена → поважаємо redirectTo, інакше → /survey
-    const { data: survey } = await supabase
-      .from("user_survey")
-      .select("is_completed")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
     const redirectTo = safePostAuthPath(params.get("redirectTo"), "/profile");
-    if (survey?.is_completed) {
-      router.replace(redirectTo);
-    } else {
-      router.replace("/survey");
-    }
+    router.replace(redirectTo);
   };
 
   // Якщо користувач уже залогінений — відразу перенаправляємо
@@ -94,9 +86,9 @@ export default function RegisterPage() {
     setInfoMsg(null);
 
     // Після підтвердження листа повернемося на /auth/callback,
-    // який встановить сесію; потім useEffect перенаправить на /survey
+    // який встановить сесію; потім useEffect збереже профіль і виконає safe redirect.
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const next = safePostAuthPath(params.get("redirectTo"), "/survey");
+    const next = safePostAuthPath(params.get("redirectTo"), "/profile");
     const callbackQuery = `next=${encodeURIComponent(next)}`;
     const emailRedirectTo = Capacitor.isNativePlatform()
       ? nativeAuthRedirect("/auth/callback", callbackQuery)
@@ -106,7 +98,6 @@ export default function RegisterPage() {
       email,
       password,
       options: {
-        data: { full_name: fullName },
         emailRedirectTo,
       },
     });
@@ -233,6 +224,8 @@ export default function RegisterPage() {
             {translate("register.login")}
           </a>
         </div>
+
+        <AuthLegalLinks />
       </div>
     </main>
   );

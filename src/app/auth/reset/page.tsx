@@ -8,6 +8,8 @@ import { useTranslations } from "next-intl";
 import { mapAuthError } from "@/lib/auth/mapAuthError";
 import { Capacitor } from "@capacitor/core";
 import { nativeAuthRedirect } from "@/lib/navigation/safeDeepLink";
+import { MobileUI } from "@/lib/theme/mobile";
+import { AuthLegalLinks } from "@/components/auth/AuthLegalLinks";
 
 export default function ResetPasswordPage() {
   const translate = useTranslations("auth");
@@ -41,8 +43,8 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <main className="auth-care-page flex min-h-screen items-center justify-center p-6">
-      <div className="auth-care-card w-full max-w-md p-6">
+    <main className={`auth-care-page ${MobileUI.screen} flex items-center justify-center px-4 py-6`}>
+      <div className={`auth-care-card ${MobileUI.card} w-full max-w-[430px] p-5`}>
         <div className="auth-care-brand" aria-hidden="true"><span>♥</span> HappyDate</div>
         <p className="auth-care-eyebrow">{translate("brand.eyebrow")}</p>
         <h1 className="text-2xl font-bold mb-1 text-sky-600">{translate("reset.title")}</h1>
@@ -74,14 +76,15 @@ export default function ResetPasswordPage() {
               placeholder={translate("common.emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="min-h-12 w-full rounded-2xl border p-3 text-base outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+              autoComplete="email"
+              className={MobileUI.input}
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="auth-care-submit min-h-12 w-full rounded-2xl px-4 font-extrabold text-white transition disabled:opacity-60"
+            className={`${MobileUI.button} auth-care-submit w-full text-white disabled:opacity-60`}
           >
             {loading ? translate("reset.submitting") : translate("reset.submit")}
           </button>
@@ -92,6 +95,7 @@ export default function ResetPasswordPage() {
             ← {translate("reset.backToLogin")}
           </a>
         </div>
+        <AuthLegalLinks />
       </div>
     </main>
   );

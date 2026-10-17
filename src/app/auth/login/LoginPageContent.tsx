@@ -8,6 +8,7 @@ import { MobileUI } from "@/lib/theme/mobile";
 import { useTranslations } from "next-intl";
 import { mapAuthError } from "@/lib/auth/mapAuthError";
 import { safePostAuthPath } from "@/lib/navigation/safeDeepLink";
+import { AuthLegalLinks } from "@/components/auth/AuthLegalLinks";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,19 +29,8 @@ export default function LoginPage() {
     const user = data.user;
     if (!user) return;
 
-    // перевіряємо, чи пройдена анкета
-    const { data: survey } = await supabase
-      .from("user_survey")
-      .select("is_completed")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
     const redirectTo = safePostAuthPath(params.get("redirectTo"), "/profile");
-    if (survey?.is_completed) {
-      router.replace(redirectTo);
-    } else {
-      router.replace("/survey");
-    }
+    router.replace(redirectTo);
   };
 
   // якщо вже залогінений — відразу перенаправляємо
@@ -169,6 +159,8 @@ export default function LoginPage() {
             {translate("login.noAccount")} {translate("login.register")}
           </a>
         </div>
+
+        <AuthLegalLinks />
 
         {/* opcjonalnie: separator i інші методи входу
         <div className="my-6 flex items-center">

@@ -18,11 +18,11 @@ async function translate(locale) {
 }
 
 const expected = {
-  pl: ["Zaloguj się", "Załóż konto", "Reset hasła", "Ustaw nowe hasło"],
-  uk: ["Увійти", "Створити обліковий запис", "Скидання пароля", "Встановити новий пароль"],
-  en: ["Log in", "Create an account", "Reset password", "Set a new password"],
-  ru: ["Войти", "Создать аккаунт", "Сброс пароля", "Установить новый пароль"],
-  de: ["Anmelden", "Konto erstellen", "Passwort zurücksetzen", "Neues Passwort festlegen"],
+  pl: ["Zaloguj się", "To, co ważne, zaczyna się od Ciebie.", "Reset hasła", "Ustaw nowe hasło"],
+  uk: ["Увійти", "Важливе починається з тебе", "Скидання пароля", "Встановити новий пароль"],
+  en: ["Log in", "What matters starts with you.", "Reset password", "Set a new password"],
+  ru: ["Войти", "Важное начинается с тебя.", "Сброс пароля", "Установить новый пароль"],
+  de: ["Anmelden", "Was wichtig ist, beginnt mit dir.", "Passwort zurücksetzen", "Neues Passwort festlegen"],
 };
 
 for (const locale of locales) {
@@ -80,16 +80,16 @@ test("Auth routes and redirects remain unchanged and unprefixed", async () => {
   ];
   const sources = await Promise.all(files.map((file) => readFile(path.join(root, file), "utf8")));
   const combined = sources.join("\n");
-  for (const route of ["/auth/login", "/auth/register", "/auth/reset", "/auth/callback", "/auth/update-password", "/profile", "/survey", "/dashboard"]) {
+  for (const route of ["/auth/login", "/auth/register", "/auth/reset", "/auth/callback", "/auth/update-password", "/profile", "/dashboard"]) {
     assert.match(combined, new RegExp(route.replaceAll("/", "\\/")));
   }
   assert.doesNotMatch(combined, /\/(pl|uk|en|ru|de)\/auth/);
 });
 
-test("registration has no invented or changed legal links", async () => {
-  const source = await readFile(path.join(root, "src/app/auth/register/RegisterPageContent.tsx"), "utf8");
-  assert.doesNotMatch(source, /href="\/(terms|privacy|regulamin)/);
-  assert.match(source, /href="\/auth\/login"/);
+test("registration links to the existing localized legal pages", async () => {
+  const source = await readFile(path.join(root, "src/components/auth/AuthLegalLinks.tsx"), "utf8");
+  assert.match(source, /href="\/regulamin"/);
+  assert.match(source, /href="\/privacy"/);
 });
 
 test("user email, name, and password values remain untranslated", async () => {
@@ -100,7 +100,8 @@ test("user email, name, and password values remain untranslated", async () => {
   assert.match(login, /value=\{email\}/);
   assert.match(login, /value=\{password\}/);
   assert.match(register, /value=\{fullName\}/);
-  assert.match(register, /data: \{ full_name: fullName \}/);
+  assert.doesNotMatch(register, /data: \{ full_name: fullName \}/);
+  assert.doesNotMatch(register, /email\?\.split\("@"\)/);
 });
 
 test("Auth pages never render raw Supabase errors", async () => {

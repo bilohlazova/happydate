@@ -102,7 +102,7 @@ function CookieConsent() {
 }
 
 export default function HomePageClient() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, profile } = useAuth();
   const searchParams = useSearchParams();
   const localeValue = useLocale();
   const locale = isSupportedLocale(localeValue) ? localeValue : "pl";
@@ -369,7 +369,7 @@ export default function HomePageClient() {
           <HomeErrorState title={homeT("error.title")} description={homeT("error.description")} retry={homeT("error.retry")} onRetry={reload} />
         </div>
       )}
-      {viewModel && user && <HomeDashboard viewModel={viewModel} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatScope({ type: "global" }); setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} onContinueHappyTask={continueHappyTask} onRespondHappyIdea={respondHappyIdea} onRespondHappyAction={respondHappyAction} onSelectOccasionPerson={selectOccasionPerson} onRequestRescue={requestOccasionRescue} onQuietOccasion={quietOccasion} onSubmitOccasionOutcome={submitOccasionOutcome} onAcceptOccasionLeadTime={acceptOccasionLeadTime} />}
+      {viewModel && user && <HomeDashboard viewModel={viewModel} firstName={profile?.firstName ?? viewModel.greeting.name} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatScope({ type: "global" }); setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} onContinueHappyTask={continueHappyTask} onRespondHappyIdea={respondHappyIdea} onRespondHappyAction={respondHappyAction} onSelectOccasionPerson={selectOccasionPerson} onRequestRescue={requestOccasionRescue} onQuietOccasion={quietOccasion} onSubmitOccasionOutcome={submitOccasionOutcome} onAcceptOccasionLeadTime={acceptOccasionLeadTime} />}
       {giftOutcomeConfirmation && (
         <GiftOutcomeConfirmation
           message={homeT("recommendations.giftOutcomeSaved", { outcome: homeT(`recommendations.giftOutcomeValue.${giftOutcomeConfirmation.outcome}` as never) })}

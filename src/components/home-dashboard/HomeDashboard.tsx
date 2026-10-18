@@ -13,6 +13,7 @@ import HomePrimaryHappyBlock from "@/components/happy/HomePrimaryHappyBlock";
 
 interface HomeDashboardProps {
   viewModel: HomeViewModel;
+  firstName: string | null;
   reminder: ReminderRecord | null;
   inAppDeliveryCount: number;
   reminderBusy: boolean;
@@ -36,13 +37,13 @@ interface HomeDashboardProps {
   onAcceptOccasionLeadTime?: (occasionKey: string, leadTimeDays: 14 | 21 | 30) => Promise<void>;
 }
 
-export default function HomeDashboard({ viewModel, reminder: _reminder, inAppDeliveryCount, reminderBusy: _reminderBusy, reminderError: _reminderError, onRetry, onAskHappy: _onAskHappy, onCompleteReminder: _onCompleteReminder, onSnoozeReminder: _onSnoozeReminder, onUndoReminder: _onUndoReminder, onPickGift, onGiftOutcome, onGiftFollowUp, onSaveGift, onContinueHappyTask, onRespondHappyIdea, onRespondHappyAction, onSelectOccasionPerson, onRequestRescue, onQuietOccasion, onSubmitOccasionOutcome, onAcceptOccasionLeadTime }: HomeDashboardProps) {
+export default function HomeDashboard({ viewModel, firstName, reminder: _reminder, inAppDeliveryCount, reminderBusy: _reminderBusy, reminderError: _reminderError, onRetry, onAskHappy: _onAskHappy, onCompleteReminder: _onCompleteReminder, onSnoozeReminder: _onSnoozeReminder, onUndoReminder: _onUndoReminder, onPickGift, onGiftOutcome, onGiftFollowUp, onSaveGift, onContinueHappyTask, onRespondHappyIdea, onRespondHappyAction, onSelectOccasionPerson, onRequestRescue, onQuietOccasion, onSubmitOccasionOutcome, onAcceptOccasionLeadTime }: HomeDashboardProps) {
   const t = useTranslations("home");
   return (
     <div className="hd-screen overflow-x-hidden">
       <div className="mx-auto w-full max-w-[1160px] px-4 pb-[calc(32px+var(--hd-nav-height)+env(safe-area-inset-bottom))] pt-5 sm:px-6 md:pb-14 md:pt-8">
         <section className="relative w-full max-w-[760px] overflow-hidden rounded-[1.35rem] border border-sky-100 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)] sm:p-5">
-          <WellbeingCheckIn locale={viewModel.locale} userName={viewModel.greeting.name} featuredEvent={viewModel.featuredEvent} onPickGift={onPickGift} onSaveGift={onSaveGift} />
+          <WellbeingCheckIn locale={viewModel.locale} userName={firstName} featuredEvent={viewModel.featuredEvent} onPickGift={onPickGift} onSaveGift={onSaveGift} />
         </section>
         {viewModel.primaryHappyBlock && viewModel.primaryHappyPresentation && <HomePrimaryHappyBlock block={viewModel.primaryHappyBlock} presentation={viewModel.primaryHappyPresentation} onContinueTask={onContinueHappyTask} onRespondIdea={onRespondHappyIdea} onRespondAction={onRespondHappyAction} onSelectOccasionPerson={onSelectOccasionPerson} onRequestRescue={onRequestRescue} onQuietOccasion={onQuietOccasion} onSubmitOccasionOutcome={onSubmitOccasionOutcome} onAcceptOccasionLeadTime={onAcceptOccasionLeadTime} />}
 

@@ -6,14 +6,12 @@ import { useTranslations } from "next-intl";
 import { CalendarDays } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { MobileUI } from "@/lib/theme/mobile";
+import { useLocale } from "next-intl";
+import { isSupportedLocale } from "@/i18n/config";
+import { GIFT_PREFERENCE_CATEGORY_IDS, giftPreferenceCategoryLabels } from "@/i18n/giftPreferenceCategories";
 
 type Step = "welcome" | "birthday" | "likes" | "dislikes" | "dreams" | "complete";
 type CustomValue = { id: string; value: string };
-
-const CATEGORY_IDS = [
-  "flowers", "books", "travel", "experiences", "technology", "cosmetics",
-  "sweets", "jewelry", "clothes", "games", "sport", "home",
-] as const;
 
 function validDate(value: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -56,6 +54,8 @@ function TagList({
 
 export default function OnboardingPreviewPage() {
   const t = useTranslations("onboarding");
+  const localeValue = useLocale();
+  const locale = isSupportedLocale(localeValue) ? localeValue : "pl";
   const text = t as unknown as (key: string, values?: Record<string, string | number>) => string;
   const router = useRouter();
   const [step, setStep] = useState<Step>("welcome");
@@ -217,7 +217,7 @@ export default function OnboardingPreviewPage() {
               <h1 id="onboarding-title" className="text-2xl font-black leading-tight text-slate-950 sm:text-3xl">{text(`${kind}.title`)}</h1>
               <p className="mt-3 text-sm leading-6 text-slate-600">{text(`${kind}.body`)}</p>
               <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {CATEGORY_IDS.map((id) => <button key={id} type="button" aria-pressed={selected.includes(id)} onClick={() => toggleCategory(kind, id)} className={`min-h-12 rounded-2xl border px-3 py-2 text-sm font-bold transition motion-reduce:transition-none ${selected.includes(id) ? "border-cyan-500 bg-cyan-50 text-cyan-900 ring-2 ring-cyan-100" : "border-slate-200 bg-white text-slate-700 hover:border-cyan-300"}`}>{text(`categories.${id}`)}</button>)}
+                {GIFT_PREFERENCE_CATEGORY_IDS.map((id) => <button key={id} type="button" aria-pressed={selected.includes(id)} onClick={() => toggleCategory(kind, id)} className={`min-h-12 rounded-2xl border px-3 py-2 text-sm font-bold transition motion-reduce:transition-none ${selected.includes(id) ? "border-cyan-500 bg-cyan-50 text-cyan-900 ring-2 ring-cyan-100" : "border-slate-200 bg-white text-slate-700 hover:border-cyan-300"}`}>{giftPreferenceCategoryLabels[locale][id]}</button>)}
               </div>
               {kind === "dislikes" && likes.some((id) => dislikes.includes(id)) && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm leading-5 text-amber-900" role="status">{t("dislikes.conflict")}</p>}
               <label className="mt-5 block text-sm font-bold text-slate-700" htmlFor={`onboarding-${kind}-custom`}>{text(`${kind}.customLabel`)}</label>

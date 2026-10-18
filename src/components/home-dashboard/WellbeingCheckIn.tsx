@@ -11,6 +11,8 @@ import type { HomeFeaturedEvent } from "@/lib/home/home.types";
 import { wellbeingReply } from "@/lib/assistant/wellbeingConversation";
 import { isSameLocalCalendarDay } from "@/lib/wellbeing/sameDay";
 import { detectWellbeingPattern, isSupportMomentCoolingDown, type WellbeingCheckin } from "@/lib/wellbeing/supportPattern";
+import { isSupportedLocale } from "@/i18n/config";
+import { formatFriendlyFirstName } from "@/i18n/friendlyName";
 
 type Mood = "good" | "neutral" | "low" | "skip" | "custom";
 type Line = { id: number; author: "happy" | "user"; text: string };
@@ -90,6 +92,8 @@ interface WellbeingCheckInProps {
 
 export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPickGift, onSaveGift }: WellbeingCheckInProps) {
   const copy = getCopy(locale);
+  const appLocale = isSupportedLocale(locale) ? locale : "uk";
+  const friendlyName = formatFriendlyFirstName(userName, appLocale);
   const wellbeingT = useTranslations("home.wellbeing");
   const birthdayIntro = useCallback((event: HomeFeaturedEvent) => {
     const values = { daysRemaining: event.daysUntil, personName: event.personName ?? event.title ?? "" };
@@ -247,14 +251,14 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
 
   useEffect(() => {
     if (!enabled || !wellbeingHistoryResolved) return;
-    const initializationKey = hasCheckedInToday ? "returning" : "first-time";
+    const initializationKey = `${hasCheckedInToday ? "returning" : "first-time"}:${friendlyName ?? "neutral"}`;
     if (initializedConversationStateRef.current === initializationKey) return;
     initializedConversationStateRef.current = initializationKey;
     if (!hasCheckedInToday) {
-      setLines([{ id: nextId.current++, author: "happy", text: `${copy.welcome}${userName?.trim() ? `, ${userName.trim()}` : ""} 👋\n${copy.greeting}` }]);
+      setLines([{ id: nextId.current++, author: "happy", text: `${copy.welcome}${friendlyName ? `, ${friendlyName}` : ""}! 👋\n${copy.greeting}` }]);
       return;
     }
-    const greeting = wellbeingT("returningGreeting", { name: userName?.trim() || "" });
+    const greeting = friendlyName ? wellbeingT("returningGreeting", { name: friendlyName }) : `${copy.welcome}! 👋`;
     if (featuredEvent?.source === "birthday" || featuredEvent?.category === "birthday") {
       // Returning context is initialized together; gift controls must not wait on typing timers.
       setLines([
@@ -268,7 +272,7 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
     }
     const eventMessage = featuredEvent ? ` ${featuredEvent.countdownLabel} ${wellbeingT("importantEventLabel")} — ${featuredEvent.title}.` : ` ${wellbeingT("noEvent")}`;
     setLines([{ id: nextId.current++, author: "happy", text: `${greeting}${eventMessage}` }]);
-  }, [birthdayIntro, copy.greeting, copy.welcome, enabled, featuredEvent, hasCheckedInToday, wellbeingHistoryLoading, wellbeingHistoryResolved, wellbeingT, userName]);
+  }, [birthdayIntro, copy.greeting, copy.welcome, enabled, featuredEvent, friendlyName, hasCheckedInToday, wellbeingHistoryLoading, wellbeingHistoryResolved, wellbeingT]);
 
   return (
     <section className="w-full max-w-[700px]" aria-label="Персональна турбота HappyDate">

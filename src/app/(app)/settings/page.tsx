@@ -1,25 +1,83 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Database, Globe2, LockKeyhole, Shield, Sparkles, User, Mail, KeyRound, PauseCircle, Trash2 } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useLocale } from "next-intl";
+import { useEffect, useState } from "react";
+import { Bell, Database, Globe2, KeyRound, LockKeyhole, Shield, Sparkles, Trash2, User } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
+import { useAuth } from "@/components/AuthProvider";
 import { isSupportedLocale } from "@/i18n/config";
-import { settingsAccountLabels, settingsPlanLabels, settingsUi } from "@/i18n/settingsUi";
+import { settingsUi } from "@/i18n/settingsUi";
+import { loadGiftOutcomeLearningEnabled, updateGiftOutcomeLearningEnabled } from "@/lib/repositories/profile/giftOutcomeLearning.repository";
+import { supabase } from "@/lib/supabaseClient";
+
+const SETTINGS_COPY = {
+  uk: { intro: "Сповіщення, приватність, персоналізація та дані — окремо від вашого профілю.", push: "Push-сповіщення", reminders: "Нагадування", care: "Персональна турбота й check-in-и", giftLearning: "Навчання на реакціях на подарунки", enabled: "Увімкнено", disabled: "Вимкнено", saved: "Налаштування збережено", error: "Не вдалося зберегти налаштування.", privacy: "Політика конфіденційності", export: "Експортувати дані", language: "Мова застосунку" },
+  pl: { intro: "Powiadomienia, prywatność, personalizacja i dane — oddzielnie od profilu.", push: "Powiadomienia push", reminders: "Przypomnienia", care: "Osobista troska i check-iny", giftLearning: "Uczenie się z reakcji na prezenty", enabled: "Włączone", disabled: "Wyłączone", saved: "Ustawienie zapisane", error: "Nie udało się zapisać ustawienia.", privacy: "Polityka prywatności", export: "Eksportuj dane", language: "Język aplikacji" },
+  en: { intro: "Notifications, privacy, personalization, and data — separate from your profile.", push: "Push notifications", reminders: "Reminders", care: "Personal care and check-ins", giftLearning: "Learn from gift reactions", enabled: "Enabled", disabled: "Disabled", saved: "Setting saved", error: "The setting could not be saved.", privacy: "Privacy policy", export: "Export data", language: "Application language" },
+  de: { intro: "Benachrichtigungen, Datenschutz, Personalisierung und Daten — getrennt von deinem Profil.", push: "Push-Benachrichtigungen", reminders: "Erinnerungen", care: "Persönliche Begleitung und Check-ins", giftLearning: "Aus Geschenkreaktionen lernen", enabled: "Aktiviert", disabled: "Deaktiviert", saved: "Einstellung gespeichert", error: "Die Einstellung konnte nicht gespeichert werden.", privacy: "Datenschutzerklärung", export: "Daten exportieren", language: "Anwendungssprache" },
+  ru: { intro: "Уведомления, конфиденциальность, персонализация и данные — отдельно от профиля.", push: "Push-уведомления", reminders: "Напоминания", care: "Персональная забота и check-in-ы", giftLearning: "Обучение на реакциях на подарки", enabled: "Включено", disabled: "Выключено", saved: "Настройка сохранена", error: "Не удалось сохранить настройку.", privacy: "Политика конфиденциальности", export: "Экспортировать данные", language: "Язык приложения" },
+} as const;
+
+function SettingsLink({ href, icon: Icon, label, danger = false }: { href: string; icon: typeof Bell; label: string; danger?: boolean }) {
+  return <Link href={href} className={`flex min-h-16 items-center gap-4 border-b border-slate-100 px-5 py-3 last:border-0 ${danger ? "text-rose-600 hover:bg-rose-50" : "text-slate-800 hover:bg-slate-50"}`}><Icon size={20} className={`shrink-0 ${danger ? "text-rose-500" : "text-cyan-600"}`} aria-hidden="true" /><span className="flex-1 font-bold">{label}</span><span className="text-xl text-slate-400" aria-hidden="true">›</span></Link>;
+}
+
+function PreferenceSwitch({ label, checked, busy, onChange, enabledLabel, disabledLabel }: { label: string; checked: boolean; busy: boolean; onChange: () => void; enabledLabel: string; disabledLabel: string }) {
+  return <button type="button" role="switch" aria-checked={checked} disabled={busy} onClick={onChange} className="flex min-h-16 w-full items-center gap-4 border-b border-slate-100 px-5 py-3 text-left last:border-0 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"><Sparkles size={20} className="shrink-0 text-cyan-600" aria-hidden="true" /><span className="flex-1 font-bold text-slate-800">{label}</span><span className={`rounded-full px-3 py-1 text-xs font-extrabold ${checked ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{busy ? "…" : checked ? enabledLabel : disabledLabel}</span></button>;
+}
 
 export default function SettingsPage() {
   const t = useTranslations("profile");
   const localeValue = useLocale();
-  const localeKey = isSupportedLocale(localeValue) ? localeValue : "pl";
-  const copy = settingsUi[localeKey];
-  const account = settingsAccountLabels[localeKey];
-  const proactivityLabel = ({ uk: "Проактивність", pl: "Proaktywność", en: "Proactivity", de: "Proaktivität", ru: "Проактивность" } as const)[localeKey];
-  const groups = [
-    [copy.groups[0], [[Bell, copy.rows[0], "/settings/notifications"], [Sparkles, copy.rows[1], "/settings/personalization"], [Sparkles, proactivityLabel, "/settings/proactivity"], [Globe2, ({ uk: "Локальні події", pl: "Lokalne okazje", en: "Local occasions", de: "Lokale Anlässe", ru: "Местные события" } as const)[localeKey], "/settings/occasions"], [Shield, settingsPlanLabels[localeKey], "/settings/plan", copy.values.free]]],
-    [copy.groups[1], [[User, copy.rows[2], "/profile"], [Mail, copy.rows[3], "/settings/email"], [KeyRound, copy.rows[4], "/settings/password"]]],
-    [copy.groups[2], [[Shield, copy.rows[5], "/settings/privacy"], [LockKeyhole, copy.rows[6], "/settings/security"], [LockKeyhole, copy.rows[7], "/settings/sessions"]]],
-    [copy.groups[3], [[Database, copy.rows[8], "/settings/data"]]],
-    [copy.groups[4], [[Globe2, copy.rows[9], "/settings/app", copy.values.language]]],
-  ] as const;
-  return <main className="hd-page-shell"><div className="hd-page-shell__container"><section className="hd-page-card"><header className="hd-page-card__header"><div className="hd-page-heading"><span className="hd-page-heading__icon"><LockKeyhole size={22} /></span><div><h1>{t("settings.title")}</h1><p>{t("subtitle")}</p></div></div></header><div className="hd-page-card__body">{groups.map(([title, rows]) => <section key={title} className="mb-4"><h2 className="mb-2 px-1 text-sm font-extrabold uppercase tracking-wide text-slate-400">{title}</h2><div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">{rows.map(([Icon, label, href, value]) => <Link key={label} href={href} className="flex min-h-16 items-center gap-4 border-b border-slate-100 px-5 py-3 last:border-0 hover:bg-slate-50"><Icon size={20} className="shrink-0 text-cyan-600" aria-hidden="true" /><span className="flex-1 font-bold text-slate-800">{label}</span>{value && <span className="text-sm text-slate-500">{value}</span>}<span className="text-xl text-slate-400" aria-hidden="true">›</span></Link>)}</div></section>)}<section><h2 className="mb-2 px-1 text-sm font-extrabold uppercase tracking-wide text-slate-400">{account.group}</h2><div className="overflow-hidden rounded-3xl border border-slate-200 bg-white"><Link href="/settings/pause-account" className="flex min-h-16 items-center gap-4 border-b border-slate-100 px-5 py-3 hover:bg-slate-50"><PauseCircle size={20} className="text-slate-500" /><span className="flex-1 font-bold text-slate-800"><span className="block">{account.pause}</span><small className="font-medium text-slate-500">{account.pauseDescription}</small></span><span>›</span></Link><Link href="/settings/delete-account" className="flex min-h-16 items-center gap-4 px-5 py-3 text-rose-600 hover:bg-rose-50"><Trash2 size={20} /><span className="flex-1 font-bold"><span className="block">{t("security.deleteAccount")}</span><small className="font-medium text-rose-400">{account.deleteDescription}</small></span><span>›</span></Link></div></section></div></section></div></main>;
+  const locale = isSupportedLocale(localeValue) ? localeValue : "pl";
+  const copy = SETTINGS_COPY[locale];
+  const labels = settingsUi[locale];
+  const { user } = useAuth();
+  const [giftLearning, setGiftLearning] = useState(true);
+  const [wellbeingCare, setWellbeingCare] = useState(false);
+  const [busy, setBusy] = useState<"gift" | "care" | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    void Promise.all([
+      loadGiftOutcomeLearningEnabled(user.id),
+      supabase.from("profiles").select("wellbeing_personalization_enabled").eq("id", user.id).maybeSingle(),
+    ]).then(([giftEnabled, careResult]) => {
+      if (!active) return;
+      setGiftLearning(giftEnabled);
+      setWellbeingCare(careResult.data?.wellbeing_personalization_enabled === true);
+    }).catch(() => { if (active) setMessage(copy.error); });
+    return () => { active = false; };
+  }, [copy.error, user]);
+
+  const changeGiftLearning = async () => {
+    if (busy) return;
+    const next = !giftLearning;
+    setBusy("gift"); setMessage(null);
+    try { await updateGiftOutcomeLearningEnabled(next); setGiftLearning(next); setMessage(copy.saved); }
+    catch { setMessage(copy.error); }
+    finally { setBusy(null); }
+  };
+
+  const changeWellbeingCare = async () => {
+    if (!user || busy) return;
+    const next = !wellbeingCare;
+    setBusy("care"); setMessage(null);
+    const { error } = await supabase.from("profiles").update({ wellbeing_personalization_enabled: next }).eq("id", user.id);
+    if (error) setMessage(copy.error); else { setWellbeingCare(next); setMessage(copy.saved); }
+    setBusy(null);
+  };
+
+  return <main className="hd-page-shell"><div className="hd-page-shell__container"><section className="hd-page-card"><header className="hd-page-card__header"><div className="hd-page-heading"><span className="hd-page-heading__icon"><LockKeyhole size={22} /></span><div><h1>{t("settings.title")}</h1><p>{copy.intro}</p></div></div></header><div className="hd-page-card__body">
+    {message && <p className="mb-4 rounded-2xl bg-cyan-50 px-4 py-3 text-sm font-bold text-cyan-800" role="status">{message}</p>}
+    <section className="mb-5"><h2 className="mb-2 px-1 text-sm font-extrabold uppercase tracking-wide text-slate-400">{labels.groups[0]}</h2><div className="overflow-hidden rounded-3xl border border-slate-200 bg-white"><SettingsLink href="/settings/reminders" icon={Bell} label={copy.push} /><SettingsLink href="/settings/reminders" icon={Bell} label={copy.reminders} /><PreferenceSwitch label={copy.care} checked={wellbeingCare} busy={busy === "care"} onChange={() => void changeWellbeingCare()} enabledLabel={copy.enabled} disabledLabel={copy.disabled} /><PreferenceSwitch label={copy.giftLearning} checked={giftLearning} busy={busy === "gift"} onChange={() => void changeGiftLearning()} enabledLabel={copy.enabled} disabledLabel={copy.disabled} /></div></section>
+    <section className="mb-5"><h2 className="mb-2 px-1 text-sm font-extrabold uppercase tracking-wide text-slate-400">{labels.groups[1]}</h2><div className="overflow-hidden rounded-3xl border border-slate-200 bg-white"><SettingsLink href="/profile" icon={User} label={labels.rows[2]} /><SettingsLink href="/auth/reset" icon={KeyRound} label={t("security.changePassword")} /></div></section>
+    <section className="mb-5"><h2 className="mb-2 px-1 text-sm font-extrabold uppercase tracking-wide text-slate-400">{labels.groups[2]}</h2><div className="overflow-hidden rounded-3xl border border-slate-200 bg-white"><SettingsLink href="/privacy" icon={Shield} label={copy.privacy} /><SettingsLink href="/settings/sessions" icon={LockKeyhole} label={t("security.activeSessions")} /></div></section>
+    <section className="mb-5"><h2 className="mb-2 px-1 text-sm font-extrabold uppercase tracking-wide text-slate-400">{labels.groups[3]}</h2><div className="overflow-hidden rounded-3xl border border-slate-200 bg-white"><SettingsLink href="/settings/export" icon={Database} label={copy.export} /></div></section>
+    <section className="mb-5"><h2 className="mb-2 px-1 text-sm font-extrabold uppercase tracking-wide text-slate-400">{copy.language}</h2><div className="rounded-3xl border border-slate-200 bg-white p-4"><div className="flex items-center gap-3"><Globe2 size={20} className="text-cyan-600" aria-hidden="true" /><LanguageSwitcher isAuthenticated variant="profile" /></div></div></section>
+    <section><div className="overflow-hidden rounded-3xl border border-rose-100 bg-white"><SettingsLink href="/settings/delete-account" icon={Trash2} label={t("security.deleteAccount")} danger /></div></section>
+  </div></section></div></main>;
 }

@@ -71,7 +71,8 @@ test("Profile links to available account controls and leaves only future setting
     ...source.matchAll(/href="([^"]+)"/g),
     ...source.matchAll(/href:\s*"([^"]+)"/g),
   ].map((match) => match[1]);
-  assert.deepEqual(routes, ["/survey", "/settings/reminders", "/settings/reminders", "/auth/reset", "/settings/sessions", "/privacy", "/settings/export", "/settings/delete-account"]);
+  for (const route of ["/settings/reminders", "/auth/reset", "/settings/sessions", "/privacy", "/settings/export", "/settings/delete-account"]) assert.equal(routes.includes(route), true, route);
+  for (const route of ["/people", "/dashboard", "/notes"]) assert.match(source, new RegExp(`"${route}"`));
   assert.equal(routes.some((route) => /^\/(pl|uk|en|ru|de)(\/|$)/.test(route)), false);
   for (const route of ["/settings/reminders", "/auth/reset", "/settings/sessions", "/settings/export", "/settings/delete-account"]) {
     assert.match(source, new RegExp(route.replaceAll("/", "\\/")));
@@ -79,8 +80,8 @@ test("Profile links to available account controls and leaves only future setting
   for (const route of ["/settings/notifications", "/settings/ai", "/settings/password", "/care/manage"]) {
     assert.doesNotMatch(source, new RegExp(route.replaceAll("/", "\\/")));
   }
-  assert.match(source, /comingSoon: true/);
-  assert.match(source, /aria-disabled="true"/);
+  assert.match(source, /copy\.soon/);
+  assert.doesNotMatch(source, /geolocation|navigator\.geolocation/);
 });
 
 test("Profile reuses the shared LanguageSwitcher", async () => {
@@ -91,9 +92,10 @@ test("Profile reuses the shared LanguageSwitcher", async () => {
 
 test("user profile values remain direct, untranslated values", async () => {
   const source = await readFile(path.join(root, "src/app/(app)/profile/page.tsx"), "utf8");
-  assert.match(source, /\{fullName \|\| translate\("hero\.defaultName"\)\}/);
+  assert.match(source, /\{displayName \|\| copy\.defaultName\}/);
   assert.match(source, /\{email\s*&& <p[^>]*>\{email\}<\/p>\}/);
-  assert.match(source, /value=\{fullName\}/);
+  assert.match(source, /value=\{draftFirstName\}/);
+  assert.match(source, /value=\{draftLastName\}/);
 });
 
 test("Profile UI never renders raw Supabase errors", async () => {

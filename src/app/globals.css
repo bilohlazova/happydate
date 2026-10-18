@@ -1800,9 +1800,18 @@ body[data-authenticated="false"] .hd-main { padding-bottom: 0; }
 .pr-input { border-width: 1px; background: #f8fafc; }
 .pr-btn-primary { box-shadow: 0 10px 24px rgba(2,132,199,.22); }
 .pr-btn-ghost { background: rgba(255,255,255,.82); color: #475569; }
+.pr-hero__inner > .pr-btn-ghost { width: auto; min-width: 176px; height: 44px; }
 @media (min-width: 640px) {
   .pr-shell { padding-inline: 0; }
   .pr-care-upsell__perks { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
+@media (min-width: 768px) {
+  .pr-shell { max-width: 920px; }
+}
+@media (max-width: 639px) {
+  .pr-hero__inner { flex-wrap: wrap; }
+  .pr-hero__inner > .pr-btn-ghost { width: 100%; }
+  .pr-shell { overflow-x: clip; }
 }
 
 /* People hub: the person is the primary object, dates and memory are supporting context. */

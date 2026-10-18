@@ -6,10 +6,12 @@ test("profile distinguishes working settings from future capabilities", async ()
   const page = await readFile(new URL("../src/app/(app)/profile/page.tsx", import.meta.url), "utf8");
 
   assert.doesNotMatch(page, /<ComingSoonNotice/);
-  assert.match(page, /На одній хвилі/);
+  assert.match(page, /copy\.socialTitle/);
+  const dictionary = await readFile(new URL("../src/i18n/profileUi.ts", import.meta.url), "utf8");
+  assert.match(dictionary, /На одній хвилі/);
   assert.doesNotMatch(page, /href: "\/settings\/(notifications|ai|delete|password)"/);
-  assert.match(page, /href: "\/settings\/reminders"/);
-  assert.match(page, /href: "\/settings\/sessions"/);
-  assert.match(page, /href: "\/auth\/reset"/);
-  assert.match(page, /href: "\/settings\/export"/);
+  assert.match(page, /href="\/settings\/reminders"/);
+  assert.match(page, /href="\/settings\/sessions"/);
+  assert.match(page, /href="\/auth\/reset"/);
+  assert.match(page, /href="\/settings\/export"/);
 });

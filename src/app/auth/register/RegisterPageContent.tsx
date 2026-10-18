@@ -38,12 +38,16 @@ export default function RegisterPage() {
     const canonicalFirstName = firstName.trim();
     const canonicalLastName = lastName.trim();
     const canonicalName = `${canonicalFirstName} ${canonicalLastName}`.trim();
-    await supabase.from("profiles").upsert(
+    const { error: profileError } = await supabase.from("profiles").upsert(
       canonicalName
         ? { id: user.id, first_name: canonicalFirstName, last_name: canonicalLastName, full_name: canonicalName }
         : { id: user.id },
       { onConflict: "id", ignoreDuplicates: !canonicalName }
     );
+    if (profileError) {
+      setErrorMsg(translate("errors.profileSyncFailed"));
+      return;
+    }
 
     const { data: survey } = await supabase.from("user_survey").select("is_completed, reward_granted_at").eq("user_id", user.id).maybeSingle();
     const redirectTo = survey?.is_completed && survey?.reward_granted_at ? "/" : "/onboarding-preview";
@@ -108,6 +112,10 @@ export default function RegisterPage() {
       password,
       options: {
         emailRedirectTo,
+        data: {
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+        },
       },
     });
 

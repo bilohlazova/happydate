@@ -54,7 +54,7 @@ test("Profile uses profiles.points as the single confirmed points source", async
     new URL("../src/app/(app)/profile/page.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(source, /select\("full_name, avatar_url, points"\)/);
-  assert.match(source, /setPoints\(profile\.points \?\? 0\)/);
+  assert.match(source, /select\("first_name, last_name, full_name, avatar_url, points, gift_outcome_learning_enabled"\)/);
+  assert.match(source, /setPoints\(profileResult\.data\.points \?\? 0\)/);
   assert.doesNotMatch(source, /points_balance|\.balance/);
 });

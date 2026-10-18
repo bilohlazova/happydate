@@ -7,9 +7,9 @@ const root = process.cwd();
 
 test("profile security controls lead to working password, session and notification routes", async () => {
   const profile = await readFile(path.join(root, "src/app/(app)/profile/page.tsx"), "utf8");
-  assert.match(profile, /changePassword"\), href: "\/auth\/reset"/);
-  assert.match(profile, /activeSessions"\), href: "\/settings\/sessions"/);
-  assert.match(profile, /translate\("notifications"\), href: "\/settings\/reminders"/);
+  assert.match(profile, /href="\/auth\/reset"[\s\S]*translate\("security\.changePassword"\)/);
+  assert.match(profile, /href="\/settings\/sessions"[\s\S]*translate\("security\.activeSessions"\)/);
+  assert.match(profile, /href="\/settings\/reminders"[\s\S]*translate\("settings\.notifications"\)/);
 });
 
 test("session control preserves the current device and revokes only other sessions", async () => {

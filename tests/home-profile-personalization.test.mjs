@@ -44,7 +44,26 @@ test("Profile combines the confirmed onboarding reward with the points balance",
   ]);
   assert.match(profile, /survey\.rewarded \?/);
   assert.match(profile, /pointsCopy\.reward/);
+  assert.match(profile, /aria-expanded=\{historyOpen\}/);
+  assert.match(profile, /setHistoryOpen/);
   assert.doesNotMatch(profile, /copy\.surveyTitle/);
   assert.doesNotMatch(profile, /reward_granted_at[^\n]*\+\s*100/);
   for (const locale of ["uk", "pl", "en", "de", "ru"]) assert.match(historyCopy, new RegExp(`\\b${locale}:`));
+});
+
+test("compact Profile copy and layout stay localized and preserve mobile touch targets", async () => {
+  const [profile, compactCopy, pointsCopy, css] = await Promise.all([
+    readFile(new URL("../src/app/(app)/profile/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/i18n/profileCompactUi.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/i18n/pointsHistoryUi.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/app/globals.css", import.meta.url), "utf8"),
+  ]);
+  for (const locale of ["uk", "pl", "en", "de", "ru"]) {
+    assert.match(compactCopy, new RegExp(`\\b${locale}:`));
+    assert.match(pointsCopy, new RegExp(`\\b${locale}:`));
+  }
+  assert.match(profile, /min-h-11/);
+  assert.match(profile, /break-words/);
+  assert.match(css, /\.pr-shell--compact/);
+  assert.doesNotMatch(profile, /geolocation|navigator\.geolocation/);
 });

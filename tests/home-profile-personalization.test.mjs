@@ -36,3 +36,15 @@ test("Home and Happy Chat consume the trusted first name while Profile has no se
   assert.match(chat, /formatFriendlyFirstName\(homeContext\.userName/);
   assert.doesNotMatch(profile, /settings\.title|LanguageSwitcher|gift_outcome_learning_enabled/);
 });
+
+test("Profile combines the confirmed onboarding reward with the points balance", async () => {
+  const [profile, historyCopy] = await Promise.all([
+    readFile(new URL("../src/app/(app)/profile/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/i18n/pointsHistoryUi.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(profile, /survey\.rewarded \?/);
+  assert.match(profile, /pointsCopy\.reward/);
+  assert.doesNotMatch(profile, /copy\.surveyTitle/);
+  assert.doesNotMatch(profile, /reward_granted_at[^\n]*\+\s*100/);
+  for (const locale of ["uk", "pl", "en", "de", "ru"]) assert.match(historyCopy, new RegExp(`\\b${locale}:`));
+});

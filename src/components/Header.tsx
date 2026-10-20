@@ -26,7 +26,6 @@ export default function Header() {
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const profileButtonRef = useRef<HTMLButtonElement>(null);
   const isLoggedIn = Boolean(user);
-  const isGuestHome = pathname === "/" && !user;
   const isAuthPage = pathname.startsWith("/auth/");
   const isOnboardingPage = pathname.startsWith("/onboarding-preview");
   const isFocusedFlow = isAuthPage || isOnboardingPage;
@@ -150,16 +149,7 @@ export default function Header() {
             <LanguageSwitcher isAuthenticated={isLoggedIn} variant="header-light" />
             {!isFocusedFlow && user && <NotificationInbox />}
             {/* Login — тільки якщо не залогінений */}
-            {!isFocusedFlow && !user && !isGuestHome && (
-              <Link
-                href="/auth/login"
-                className="hd-button hd-auth-desktop-link min-h-9 bg-slate-100 px-3 text-sm font-bold text-slate-700 hover:bg-slate-200"
-              >
-                {translate("header.login")}
-              </Link>
-            )}
-            {!isFocusedFlow && !user && !isGuestHome && <Link href="/auth/register" className="hd-button hd-auth-desktop-link min-h-9 whitespace-nowrap bg-cyan-600 px-3 text-sm font-bold text-white hover:bg-cyan-700">{translate("header.register")}</Link>}
-            {!isFocusedFlow && user && <div ref={profileMenuRef} className="relative"><button ref={profileButtonRef} onClick={() => { setProfileOpen((v) => !v); setMobileMenuOpen(false); }} className="flex min-h-11 items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-bold text-slate-700 hover:bg-slate-100" aria-label={translate("header.account")} aria-expanded={profileOpen}><span className="grid h-8 w-8 place-items-center rounded-full bg-cyan-100 text-cyan-700">👤</span><span className="hidden max-w-32 truncate sm:inline">{profile?.firstName || translate("header.account")}</span></button>{profileOpen && <div className="absolute right-0 top-12 z-50 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl"><Link className="block min-h-11 rounded-xl px-3 py-3 text-sm hover:bg-slate-50" href="/profile" onClick={() => setProfileOpen(false)}>{translate("header.profile")}</Link><Link className="block min-h-11 rounded-xl px-3 py-3 text-sm hover:bg-slate-50" href="/settings" onClick={() => setProfileOpen(false)}>{translate("header.settings")}</Link><button className="block min-h-11 w-full rounded-xl px-3 py-3 text-left text-sm text-red-600 hover:bg-red-50" onClick={async () => { await supabase.auth.signOut(); setProfileOpen(false); }}>{translate("header.logout")}</button></div>}</div>}
+            {!isFocusedFlow && <div ref={profileMenuRef} className="relative"><button ref={profileButtonRef} onClick={() => { setProfileOpen((v) => !v); setMobileMenuOpen(false); }} className="flex min-h-11 items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-bold text-slate-700 hover:bg-slate-100" aria-label={translate("header.account")} aria-expanded={profileOpen}><span className="grid h-8 w-8 place-items-center rounded-full bg-cyan-100 text-cyan-700">👤</span><span className="hidden max-w-32 truncate sm:inline">{user ? (profile?.firstName || translate("header.account")) : translate("header.account")}</span></button>{profileOpen && <div className="absolute right-0 top-12 z-50 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl"><>{user ? <><Link className="block min-h-11 rounded-xl px-3 py-3 text-sm hover:bg-slate-50" href="/profile" onClick={() => setProfileOpen(false)}>{translate("header.profile")}</Link><Link className="block min-h-11 rounded-xl px-3 py-3 text-sm hover:bg-slate-50" href="/settings" onClick={() => setProfileOpen(false)}>{translate("header.settings")}</Link><button className="block min-h-11 w-full rounded-xl px-3 py-3 text-left text-sm text-red-600 hover:bg-red-50" onClick={async () => { await supabase.auth.signOut(); setProfileOpen(false); }}>{translate("header.logout")}</button></> : <><Link className="block min-h-11 rounded-xl px-3 py-3 text-sm hover:bg-slate-50" href="/auth/login" onClick={() => setProfileOpen(false)}>{translate("header.login")}</Link><Link className="block min-h-11 rounded-xl px-3 py-3 text-sm hover:bg-slate-50" href="/auth/register" onClick={() => setProfileOpen(false)}>{translate("header.register")}</Link></>}</></div>}</div>}
 
             {/* HAMBURGER — мобільний доступ до тих самих посилань */}
             {!isFocusedFlow && <button
@@ -182,9 +172,9 @@ export default function Header() {
           <div
             id="happydate-mobile-menu"
             ref={mobileMenuRef}
-            className="happydate-mobile-menu bg-white/96 shadow-lg backdrop-blur-xl sm:hidden"
+            className="happydate-mobile-menu z-50 bg-white shadow-[0_16px_34px_rgba(15,23,42,0.14)] sm:hidden"
           >
-            {(appShell ? [{ href: "/services", labelKey: "services" }, { href: "/about", labelKey: "about" }] : [{ href: "/services", labelKey: "services" }, { href: "/about", labelKey: "about" }, { href: "/auth/login", labelKey: "login" }, { href: "/auth/register", labelKey: "register" }]).map((item) => (
+            {[{ href: "/services", labelKey: "services" }, { href: "/about", labelKey: "about" }].map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

@@ -438,7 +438,7 @@ body[data-authenticated="false"] .hd-main { padding-bottom: 0; }
   border-radius: var(--hd-radius-control);
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .hd-mobile-menu-button {
     display: none;
   }

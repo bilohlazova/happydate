@@ -19,8 +19,9 @@ The jobs use maintained major-version action tags (`actions/checkout@v4`,
 `actions/upload-artifact@v4`). Pinning those actions to reviewed commit SHAs is
 an optional repository-hardening task; no SHA is guessed in this audit.
 
-The weekly Assistant workflow is also read-only. Synthetic validation is
-always free and is reported separately from the optional paid OpenAI run. The
+The weekly Assistant workflow is also read-only. Synthetic dataset validation
+is always free, checks the versioned fixtures/evaluator contract only, and does
+not generate model responses. It is reported separately from the optional paid OpenAI run. The
 paid run is enabled only by the existing
 `HAPPYDATE_ASSISTANT_EVAL_OPENAI_API_KEY` secret; no new secret is introduced.
 

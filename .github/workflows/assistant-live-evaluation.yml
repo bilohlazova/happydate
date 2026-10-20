@@ -36,11 +36,11 @@ jobs:
       - name: Validate synthetic scenarios
         run: npm run eval:assistant
 
-      - name: Record synthetic validation PASS
+      - name: Record synthetic dataset validation PASS
         if: success()
         run: |
-          echo "### Synthetic validation: PASS" >> "$GITHUB_STEP_SUMMARY"
-          echo "The versioned, no-cost Assistant scenarios passed." >> "$GITHUB_STEP_SUMMARY"
+          echo "### Synthetic dataset validation: PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "The versioned dataset and evaluator contract passed; no model responses were generated." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Record real OpenAI evaluation SKIPPED
         if: env.OPENAI_API_KEY == ''
@@ -50,7 +50,10 @@ jobs:
 
       - name: Run real OpenAI evaluation (paid)
         if: env.OPENAI_API_KEY != ''
-        run: npm run eval:assistant:live | tee assistant-live-evaluation.txt
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run eval:assistant:live | tee assistant-live-evaluation.txt
 
       - name: Record real OpenAI evaluation PASS
         if: success() && env.OPENAI_API_KEY != ''

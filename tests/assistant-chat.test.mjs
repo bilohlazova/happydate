@@ -398,7 +398,7 @@ test("empty gift output explains evidence boundaries in every locale without dec
     }), async () => ({ stream: (async function* () {})() }));
     const text = await response.text();
     assert.match(text, new RegExp(fragment));
-    assert.doesNotMatch(text, /для Тато|для Тато/);
+    assert.doesNotMatch(text, /для Тато/);
   }
 });
 

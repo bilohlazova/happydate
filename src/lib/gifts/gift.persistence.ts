@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   CreateGiftInput,
   GiftLifecycle,
@@ -117,11 +118,12 @@ function normalizedGiftTitle(value: string): string {
 }
 
 async function findEquivalentActiveGift(
+  client: SupabaseClient,
   userId: string,
   input: CreateGiftInput,
   normalizedTitle: string,
 ): Promise<GiftRecord | null> {
-  let query = supabase
+  let query = client
     .from("gifts")
     .select(GIFT_COLUMNS)
     .eq("user_id", userId)
@@ -141,7 +143,14 @@ async function findEquivalentActiveGift(
 }
 
 export async function listCanonicalGifts(userId: string): Promise<GiftRecord[]> {
-  const { data, error } = await supabase
+  return listCanonicalGiftsWithClient(supabase, userId);
+}
+
+export async function listCanonicalGiftsWithClient(
+  client: SupabaseClient,
+  userId: string,
+): Promise<GiftRecord[]> {
+  const { data, error } = await client
     .from("gifts")
     .select(GIFT_COLUMNS)
     .eq("user_id", userId)
@@ -151,7 +160,34 @@ export async function listCanonicalGifts(userId: string): Promise<GiftRecord[]> 
   return (data ?? []).map(mapGift);
 }
 
+/** Exact owner/context read for synthetic Occasion Gift identities. */
+export async function listCanonicalGiftsForContextWithClient(
+  client: SupabaseClient,
+  input: { userId: string; personId: string; contextKey: string },
+): Promise<GiftRecord[]> {
+  const { data, error } = await client
+    .from("gifts")
+    .select(GIFT_COLUMNS)
+    .eq("user_id", input.userId)
+    .eq("person_id", input.personId)
+    .eq("event_context_key", input.contextKey)
+    .order("created_at", { ascending: false })
+    .limit(20)
+    .returns<GiftRow[]>();
+  if (error) throw failure("listCanonicalGiftsForContext", error.message);
+  return (data ?? []).map(mapGift);
+}
+
 export async function createCanonicalGift(
+  userId: string,
+  input: CreateGiftInput,
+): Promise<GiftRecord> {
+  return createCanonicalGiftWithClient(supabase, userId, input);
+}
+
+/** Server executor hook: the same canonical gift validation, on a trusted client. */
+export async function createCanonicalGiftWithClient(
+  client: SupabaseClient,
   userId: string,
   input: CreateGiftInput,
 ): Promise<GiftRecord> {
@@ -162,7 +198,7 @@ export async function createCanonicalGift(
     ? input.occurredOn ?? new Date().toISOString().slice(0, 10)
     : input.occurredOn ?? null;
   const identity = persistedGiftEventIdentity(input.eventId);
-  const { data, error } = await supabase.from("gifts").insert({
+  const { data, error } = await client.from("gifts").insert({
     user_id: userId,
     person_id: input.personId,
     event_id: identity.eventId,
@@ -172,7 +208,7 @@ export async function createCanonicalGift(
     occurred_on: occurredOn,
   }).select(GIFT_COLUMNS).returns<GiftRow[]>().single();
   if (error?.code === "23505" && lifecycle !== "given") {
-    const existing = await findEquivalentActiveGift(userId, input, title);
+    const existing = await findEquivalentActiveGift(client, userId, input, title);
     if (existing) return existing;
   }
   if (error) throw failure("createCanonicalGift", error.message);

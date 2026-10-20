@@ -16,7 +16,7 @@ export async function loadHome({
   currentDate = new Date(),
   eventTranslate,
 }: LoadHomeOptions = {}): Promise<HomeLoaderData> {
-  const data = await getHomeRepositoryData(undefined, undefined, undefined, { includeGiftHistory: true });
+  const data = await getHomeRepositoryData(undefined, undefined, undefined, { includeGiftHistory: true, now: currentDate });
   const brains = orchestrateHomeBrains(data, { currentDate, eventTranslate });
   return {
     userId: data.userId,
@@ -33,6 +33,8 @@ export async function loadHome({
     happyTasks: data.happyTasks,
     happyActions: data.happyActions,
     happyIdeas: data.happyIdeas,
+    happyOccasionSignals: data.happyOccasionSignals,
+    happyRescueSignals: data.happyRescueSignals,
     giftHistory: data.giftHistory,
     personKnowledge: brains.care.personKnowledge,
     brainInsights: brains.care.brainInsights,

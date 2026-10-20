@@ -19,6 +19,8 @@ import { confirmHappyLearningCandidate, requestHappyLearningDetection } from "@/
 import type { HappyLearningDetectionCandidate } from "@/lib/happy-learning/happyLearningDetectV2.types";
 import { savePersonGiftLinkOnce } from "@/lib/gifts/gift.loaders";
 import { supabase } from "@/lib/supabaseClient";
+import { isSupportedLocale } from "@/i18n/config";
+import { formatFriendlyFirstName } from "@/i18n/friendlyName";
 
 interface ChatAssistantModalProps {
   open: boolean;
@@ -575,8 +577,9 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   if (!open) return null;
 
   const greeting = t(`greeting.${homeContext.greetingPeriod}`);
-  const greetingTitle = homeContext.userName
-    ? t("greeting.named", { greeting, name: homeContext.userName })
+  const friendlyUserName = formatFriendlyFirstName(homeContext.userName, isSupportedLocale(locale) ? locale : "pl");
+  const greetingTitle = friendlyUserName
+    ? t("greeting.named", { greeting, name: friendlyUserName })
     : greeting;
   const status = homeContext.error
     ? {

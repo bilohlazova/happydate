@@ -172,12 +172,8 @@ function selectFeatured(events: HomeEvent[]): HomeEvent | null {
 }
 
 export function resolveHomeUserName(data: HomeRepositoryData): string | null {
-  const emailName = data.email?.split("@")[0] ?? null;
-  for (const candidate of [data.profile?.fullName, data.authMetadataName, emailName]) {
-    const normalized = candidate?.replace(/\s+/g, " ").trim();
-    if (normalized) return normalized.split(" ")[0] ?? normalized;
-  }
-  return null;
+  const firstName = data.profile?.firstName?.replace(/\s+/g, " ").trim();
+  return firstName || null;
 }
 
 function formatCountdown(t: HomeTranslate, value: number): string {
@@ -451,7 +447,10 @@ export function buildHomeViewModel(
     actions: data.happyActions ?? [],
     tasks: data.happyTasks ?? [],
     ideas: data.happyIdeas ?? [],
+    occasionSignals: data.happyOccasionSignals ?? [],
+    rescueSignals: data.happyRescueSignals ?? [],
     events: data.events,
+    proactivityMode: data.proactivityMode,
   });
   const primaryHappyPresentation = buildHomePrimaryHappyPresentation(primaryHappyBlock, data, now, t);
 

@@ -17,6 +17,8 @@ export type AssistantProviderMessage = AssistantConversationItem | { role: "syst
 export type AssistantProviderOutput = {
   stream: AsyncIterable<string>;
   usage?: Promise<AiTokenUsage | null>;
+  /** Optional structured server-only proposal; never accepted from the client. */
+  memoryProposal?: unknown | Promise<unknown>;
 };
 export type AssistantTextProvider = (
   messages: AssistantProviderMessage[],
@@ -57,7 +59,7 @@ type ChatResponseOptions = {
   serverSavedGiftLinks?: readonly AssistantSavedGiftLinkContext[];
   serverPets?: readonly AssistantPetContext[];
   serverPersonMemoryProfile?: string | null;
-  onCompleted?: (request: AssistantChatRequest, responseText: string) => Promise<void>;
+  onCompleted?: (request: AssistantChatRequest, responseText: string, memoryProposal?: unknown) => Promise<void>;
   prepareRequest?: (request: AssistantChatRequest) => Promise<{
     request: AssistantChatRequest;
     serverGiftOutcomes?: readonly AssistantGiftOutcomeContext[];
@@ -236,6 +238,7 @@ export async function createAssistantChatResponse(
     const providerOutput = await provider(messages, abort.signal, budgetReservation);
     const output = Symbol.asyncIterator in providerOutput ? providerOutput : providerOutput.stream;
     const usage = Symbol.asyncIterator in providerOutput ? undefined : providerOutput.usage;
+    const memoryProposal = Symbol.asyncIterator in providerOutput ? undefined : providerOutput.memoryProposal;
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
@@ -262,7 +265,8 @@ export async function createAssistantChatResponse(
               pricingVersion: AI_COST_POLICY.version,
             });
           }
-          if (completedText.trim()) await options.onCompleted?.(request, completedText).catch(() => {
+          const structuredProposal = memoryProposal === undefined ? undefined : await Promise.resolve(memoryProposal).catch(() => undefined);
+          if (completedText.trim() || structuredProposal !== undefined) await options.onCompleted?.(request, completedText, structuredProposal).catch(() => {
             logOperationalWarning("assistant-chat", "conversation-history-save-skipped");
           });
           controller.close();

@@ -5,11 +5,13 @@ import test from "node:test";
 
 const root = process.cwd();
 
-test("profile security controls lead to working password, session and notification routes", async () => {
-  const profile = await readFile(path.join(root, "src/app/(app)/profile/page.tsx"), "utf8");
-  assert.match(profile, /changePassword"\), href: "\/auth\/reset"/);
-  assert.match(profile, /activeSessions"\), href: "\/settings\/sessions"/);
-  assert.match(profile, /translate\("notifications"\), href: "\/settings\/reminders"/);
+test("settings owns working password, session and notification routes", async () => {
+  const settings = await readFile(path.join(root, "src/app/(app)/settings/page.tsx"), "utf8");
+  assert.match(settings, /href="\/auth\/reset"/);
+  assert.match(settings, /href="\/settings\/sessions"/);
+  assert.match(settings, /href="\/settings\/reminders"/);
+  assert.match(settings, /href="\/settings\/export"/);
+  assert.match(settings, /href="\/settings\/delete-account"/);
 });
 
 test("session control preserves the current device and revokes only other sessions", async () => {

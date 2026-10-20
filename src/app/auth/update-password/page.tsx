@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useTranslations } from "next-intl";
 import { mapAuthError } from "@/lib/auth/mapAuthError";
+import { MobileUI } from "@/lib/theme/mobile";
+import { AuthLegalLinks } from "@/components/auth/AuthLegalLinks";
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
@@ -17,6 +19,7 @@ export default function UpdatePasswordPage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [showPwd, setShowPwd] = useState(false);
 
   // 🔒 Sprawdzamy, czy jest aktywna sesja resetu
   useEffect(() => {
@@ -56,8 +59,8 @@ export default function UpdatePasswordPage() {
   };
 
   return (
-    <main className="auth-care-page flex min-h-screen items-center justify-center p-6">
-      <div className="auth-care-card w-full max-w-md p-6">
+    <main className={`auth-care-page ${MobileUI.screen} flex items-center justify-center px-4 py-6`}>
+      <div className={`auth-care-card ${MobileUI.card} w-full max-w-[430px] p-5`}>
         <div className="auth-care-brand" aria-hidden="true"><span>♥</span> HappyDate</div>
         <p className="auth-care-eyebrow">{translate("brand.eyebrow")}</p>
         <h1 className="text-2xl font-bold mb-1 text-sky-600">{translate("updatePassword.title")}</h1>
@@ -82,16 +85,22 @@ export default function UpdatePasswordPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="auth-new-password">
               {translate("updatePassword.newPassword")}
             </label>
-            <input
-              id="auth-new-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="min-h-12 w-full rounded-2xl border p-3 text-base outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
-              minLength={8}
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                id="auth-new-password"
+                type={showPwd ? "text" : "password"}
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className={`${MobileUI.input} pr-11`}
+                minLength={8}
+                placeholder="••••••••"
+              />
+              <button type="button" onClick={() => setShowPwd((value) => !value)} className="absolute inset-y-0 right-0 min-w-11 px-3 text-gray-500" aria-label={translate(showPwd ? "common.hidePassword" : "common.showPassword")}>
+                {showPwd ? "🙈" : "👁️"}
+              </button>
+            </div>
           </div>
 
           <div>
@@ -100,11 +109,12 @@ export default function UpdatePasswordPage() {
             </label>
             <input
               id="auth-confirm-password"
-              type="password"
+              type={showPwd ? "text" : "password"}
+              autoComplete="new-password"
               value={password2}
               onChange={(e) => setPassword2(e.target.value)}
               required
-              className="min-h-12 w-full rounded-2xl border p-3 text-base outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+              className={MobileUI.input}
               minLength={8}
               placeholder="••••••••"
             />
@@ -113,11 +123,12 @@ export default function UpdatePasswordPage() {
           <button
             type="submit"
             disabled={loading}
-            className="auth-care-submit min-h-12 w-full rounded-2xl px-4 font-extrabold text-white transition disabled:opacity-60"
+            className={`${MobileUI.button} auth-care-submit w-full text-white disabled:opacity-60`}
           >
             {loading ? translate("updatePassword.submitting") : translate("updatePassword.submit")}
           </button>
         </form>
+        <AuthLegalLinks />
       </div>
     </main>
   );

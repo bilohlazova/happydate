@@ -17,6 +17,8 @@ import { loadAssistantPersonSymbol } from "@/lib/assistant/personSymbolContext.s
 import { buildPersonMemoryProfile, formatPersonMemoryProfileForAssistant } from "@/lib/memory-engine";
 import { loadPersonHappyConversationHistory, savePersonHappyConversation } from "@/lib/assistant/happyConversationHistory.server";
 import { ChatScopeNotFoundError, resolveVerifiedChatScope } from "@/lib/assistant/chatScope";
+import { getActiveTaskDecisions } from "@/lib/happy/taskDecisions.server";
+import { createMemoryProposalFromCandidate } from "@/lib/happy/actions/memoryProposal.server";
 
 export const runtime = "nodejs";
 
@@ -49,6 +51,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
   let verifiedScope: Awaited<ReturnType<typeof resolveVerifiedChatScope>> | null = null;
+  let verifiedContextReady = false;
   if (identity.kind === "authenticated" && identity.userId) {
     try {
       const rlsSession = createAssistantRlsClient(request);
@@ -69,6 +72,7 @@ export async function POST(request: Request) {
     async (messages: AssistantProviderMessage[], signal?: AbortSignal) => {
       if (!apiKey) throw Object.assign(new Error("OpenAI is not configured"), { code: "missing_api_key" });
       const openai = new OpenAI({ apiKey });
+      const proposalToolEnabled = verifiedContextReady && verifiedScope?.type !== "global" && Boolean(verifiedScope?.personId);
       const stream = await openai.chat.completions.create(
         {
           model: ASSISTANT_CHAT_CONFIG.model,
@@ -77,16 +81,40 @@ export async function POST(request: Request) {
           stream: true,
           stream_options: { include_usage: true },
           messages,
+          ...(proposalToolEnabled ? {
+            tools: [{
+              type: "function" as const,
+              function: {
+                name: "propose_memory",
+                description: "Propose one stable person fact explicitly stated by the user for approval. Never use this for task-local decisions, uncertainty, assistant text, or inferred facts.",
+                strict: true,
+                parameters: {
+                  type: "object",
+                  properties: {
+                    kind: { type: "string", enum: ["general_person_knowledge", "task_local", "uncertain", "do_not_remember"] },
+                    content: { type: "string", minLength: 1, maxLength: 2_000 },
+                  },
+                  required: ["kind", "content"],
+                  additionalProperties: false,
+                },
+              },
+            }],
+            tool_choice: "auto" as const,
+          } : {}),
         },
         { signal },
       );
 
       let resolveUsage: (usage: AiTokenUsage | null) => void = () => undefined;
+      let resolveMemoryProposal: (proposal: unknown) => void = () => undefined;
       const usage = new Promise<AiTokenUsage | null>((resolve) => { resolveUsage = resolve; });
+      const memoryProposal = new Promise<unknown>((resolve) => { resolveMemoryProposal = resolve; });
       return {
         usage,
+        memoryProposal: proposalToolEnabled ? memoryProposal : undefined,
         stream: (async function* () {
           let measured: AiTokenUsage | null = null;
+          const toolArguments = new Map<number, { name: string; arguments: string }>();
           try {
             for await (const chunk of stream) {
               if (chunk.usage) {
@@ -97,9 +125,21 @@ export async function POST(request: Request) {
               }
               const content = chunk.choices[0]?.delta?.content;
               if (content) yield content;
+              for (const toolCall of chunk.choices[0]?.delta?.tool_calls ?? []) {
+                const current = toolArguments.get(toolCall.index) ?? { name: "", arguments: "" };
+                current.name += toolCall.function?.name ?? "";
+                current.arguments += toolCall.function?.arguments ?? "";
+                toolArguments.set(toolCall.index, current);
+              }
             }
           } finally {
             resolveUsage(measured);
+            let proposal: unknown;
+            const first = [...toolArguments.values()].find((call) => call.name === "propose_memory");
+            if (first) {
+              try { proposal = JSON.parse(first.arguments); } catch { proposal = undefined; }
+            }
+            resolveMemoryProposal(proposal);
           }
         })(),
       };
@@ -109,11 +149,26 @@ export async function POST(request: Request) {
       identity,
       rateLimiter,
       budget,
-      onCompleted: async (preparedRequest, responseText) => {
+      onCompleted: async (preparedRequest, responseText, memoryProposal) => {
         if (identity.kind !== "authenticated" || !identity.userId) return;
+        if (verifiedContextReady && verifiedScope) {
+          // Structured proposals are supplied by a trusted provider/tool
+          // boundary only; the browser request and assistant text are never
+          // interpreted as commands here.
+          if (memoryProposal !== undefined) {
+            await createMemoryProposalFromCandidate({
+              userId: identity.userId,
+              scope: verifiedScope,
+              currentUserMessage: preparedRequest.message,
+              candidate: memoryProposal,
+            }).catch(() => undefined);
+          }
+        }
         const active = preparedRequest.context.personResolutionStatus === "resolved" ? preparedRequest.context.activePerson : null;
         if (!active) return;
-        await savePersonHappyConversation({ userId: identity.userId, personId: active.id, userMessage: preparedRequest.message, happyResponse: responseText });
+        if (responseText.trim()) {
+          await savePersonHappyConversation({ userId: identity.userId, personId: active.id, userMessage: preparedRequest.message, happyResponse: responseText });
+        }
       },
       prepareRequest: async (clientRequest) => {
         if (identity.kind !== "authenticated" || !identity.userId) {
@@ -128,7 +183,12 @@ export async function POST(request: Request) {
             rlsSession.accessToken,
             { includeGiftHistory: true },
           );
-          const verifiedRequest = buildVerifiedAssistantRequest(clientRequest, homeData, verifiedScope ?? { type: "global", userId: "guest" });
+          const taskDecisions = verifiedScope?.type === "task"
+            ? await getActiveTaskDecisions(rlsSession.client, { userId: identity.userId, taskId: verifiedScope.taskId })
+            : null;
+          if (verifiedScope?.type === "task" && !taskDecisions) throw new Error("task decisions unavailable");
+          const verifiedRequest = buildVerifiedAssistantRequest(clientRequest, homeData, verifiedScope ?? { type: "global", userId: "guest" }, taskDecisions);
+          verifiedContextReady = true;
           const [serverGiftOutcomes, serverSavedGiftLinks, serverPets, serverSymbol, serverHappyConversations] = verifiedRequest.context.activePerson
             && verifiedRequest.context.personResolutionStatus === "resolved"
               ? await Promise.all([
@@ -154,6 +214,7 @@ export async function POST(request: Request) {
           })) : null;
           return { request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks, serverPets, serverPersonMemoryProfile };
         } catch (error) {
+          verifiedContextReady = false;
           // A temporary context failure must never make the conversation unavailable.
           logOperationalWarning("assistant-chat", "verified-context-fallback", {
             reason: error instanceof Error ? error.name : "unknown",

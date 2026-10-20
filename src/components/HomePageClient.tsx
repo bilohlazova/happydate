@@ -15,6 +15,7 @@ import { isSupportedLocale } from "@/i18n/config";
 import { logOperationalError } from "@/lib/observability/safeLogger";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { ensureHomeReminder } from "@/lib/reminders/homeReminderActions";
 import {
@@ -26,7 +27,9 @@ import {
 } from "@/lib/repositories/reminders";
 import { recordKnowledgeReviewInteraction } from "@/lib/repositories/knowledgeReviewInteractions.repository";
 import { useAuth } from "@/components/AuthProvider";
+import { supabase } from "@/lib/supabaseClient";
 import GuestHomePresentation from "@/components/GuestHome";
+import type { ChatScopeInput } from "@/lib/assistant/chatScope";
 
 const safeStorage = {
   getItem: (key: string): string | null => {
@@ -99,7 +102,8 @@ function CookieConsent() {
 }
 
 export default function HomePageClient() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, profile } = useAuth();
+  const searchParams = useSearchParams();
   const localeValue = useLocale();
   const locale = isSupportedLocale(localeValue) ? localeValue : "pl";
   const homeT = useTranslations("home");
@@ -110,6 +114,7 @@ export default function HomePageClient() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInitialPrompt, setChatInitialPrompt] = useState<string | null>(null);
   const [chatGiftRequest, setChatGiftRequest] = useState<{ personId: string; eventId: string; mode?: "selection" | "supplementary" } | null>(null);
+  const [chatScope, setChatScope] = useState<ChatScopeInput>({ type: "global" });
   const [reminder, setReminder] = useState<ReminderRecord | null>(null);
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminderError, setReminderError] = useState<string | null>(null);
@@ -118,6 +123,7 @@ export default function HomePageClient() {
   const [giftOutcomeUndoBusy, setGiftOutcomeUndoBusy] = useState(false);
   const [giftOutcomeUndoError, setGiftOutcomeUndoError] = useState(false);
   const giftOutcomeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openedNotificationScopeRef = useRef<string | null>(null);
 
   const reload = useCallback(() => setReloadKey((value) => value + 1), []);
 
@@ -132,6 +138,23 @@ export default function HomePageClient() {
   useEffect(() => () => {
     if (giftOutcomeTimerRef.current) clearTimeout(giftOutcomeTimerRef.current);
   }, []);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    const scopeType = searchParams.get("notificationScope");
+    if (!scopeType || openedNotificationScopeRef.current === searchParams.toString()) return;
+    const taskId = searchParams.get("taskId");
+    const isUuid = (value: string | null): value is string => Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value));
+    const timeout = window.setTimeout(() => {
+      if (scopeType === "task" && isUuid(taskId)) setChatScope({ type: "task", taskId });
+      else setChatScope({ type: "global" });
+      setChatInitialPrompt(null);
+      setChatGiftRequest(null);
+      setChatOpen(true);
+      openedNotificationScopeRef.current = searchParams.toString();
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [authLoading, searchParams, user]);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -230,6 +253,71 @@ export default function HomePageClient() {
     reload();
   }, [reload]);
 
+  const respondHappyAction = useCallback(async (actionId: string, response: "approve" | "reject") => {
+    const result = await fetch(`/api/happy/actions/${encodeURIComponent(actionId)}/${response}`, { method: "POST" });
+    // A concurrent or already-terminal action is stale client state. Reload
+    // authoritative Home data without presenting it as a successful mutation.
+    if (result.status === 409) {
+      reload();
+      throw new Error("Happy action is no longer pending");
+    }
+    if (!result.ok) throw new Error("Happy action response failed");
+    reload();
+  }, [reload]);
+
+  const continueHappyTask = useCallback(async (taskId: string) => {
+    const result = await fetch(`/api/happy/tasks/${encodeURIComponent(taskId)}/continue`, { method: "POST" });
+    if (!result.ok) throw new Error("Happy task continuation failed");
+    const body = await result.json() as { kind?: string };
+    reload();
+    if (body.kind === "generated") { setChatScope({ type: "task", taskId }); setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }
+  }, [reload]);
+
+  const selectOccasionPerson = useCallback(async (occurrenceKey: string, personId: string) => {
+    const result = await fetch(`/api/happy/occasions/${encodeURIComponent(occurrenceKey)}/person`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ personId }),
+    });
+    if (!result.ok) throw new Error("Occasion person selection failed");
+    reload();
+  }, [reload]);
+
+  const requestOccasionRescue = useCallback(async (occurrenceKey: string) => {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) throw new Error("Missing authenticated session");
+    const result = await fetch(`/api/happy/occasions/${encodeURIComponent(occurrenceKey)}/rescue`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: "{}" });
+    if (!result.ok) throw new Error("Occasion rescue unavailable");
+    const body = await result.json() as { suggestions?: unknown };
+    if (!Array.isArray(body.suggestions)) throw new Error("Occasion rescue unavailable");
+    return body.suggestions.filter((item): item is { category: string; title: string; description: string; whyItFits?: string } => !!item && typeof item === "object" && typeof (item as { category?: unknown }).category === "string" && typeof (item as { title?: unknown }).title === "string" && typeof (item as { description?: unknown }).description === "string" && ((item as { whyItFits?: unknown }).whyItFits === undefined || typeof (item as { whyItFits?: unknown }).whyItFits === "string"));
+  }, []);
+
+  const quietOccasion = useCallback(async (occurrenceKey: string, disposition: "later" | "dismiss") => {
+    const result = await fetch(`/api/happy/occasions/${encodeURIComponent(occurrenceKey)}/${disposition}`, { method: "POST" });
+    if (!result.ok) throw new Error("Occasion quiet update failed");
+    reload();
+  }, [reload]);
+
+  const submitOccasionOutcome = useCallback(async (occurrenceKey: string, outcome: "went_well" | "needed_more_time" | "did_not_happen") => {
+    const result = await fetch(`/api/happy/occasions/${encodeURIComponent(occurrenceKey)}/outcome`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ outcome }),
+    });
+    if (!result.ok) throw new Error("Occasion outcome update failed");
+    const body = await result.json() as { earlierLeadTimeProposal?: unknown };
+    reload();
+    return { earlierLeadTimeProposal: body.earlierLeadTimeProposal === 14 || body.earlierLeadTimeProposal === 21 || body.earlierLeadTimeProposal === 30 ? body.earlierLeadTimeProposal as 14 | 21 | 30 : null };
+  }, [reload]);
+
+  const acceptOccasionLeadTime = useCallback(async (occasionKey: string, leadTimeDays: 14 | 21 | 30) => {
+    const result = await fetch(`/api/happy/occasions/${encodeURIComponent(occasionKey)}/lead-time`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ leadTimeDays }) });
+    if (!result.ok) throw new Error("Occasion timing update failed");
+    reload();
+  }, [reload]);
+
   const giftFollowUp = useCallback(async (giftId: string, action: "snooze" | "dismiss") => {
     await changeGiftOutcomeFollowUp(giftId, action);
     reload();
@@ -281,7 +369,7 @@ export default function HomePageClient() {
           <HomeErrorState title={homeT("error.title")} description={homeT("error.description")} retry={homeT("error.retry")} onRetry={reload} />
         </div>
       )}
-      {viewModel && user && <HomeDashboard viewModel={viewModel} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} onContinueHappyTask={() => { /* Task Runner will own this action. */ }} onRespondHappyIdea={respondHappyIdea} />}
+      {viewModel && user && <HomeDashboard viewModel={viewModel} firstName={profile?.firstName ?? viewModel.greeting.name} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatScope({ type: "global" }); setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} onContinueHappyTask={continueHappyTask} onRespondHappyIdea={respondHappyIdea} onRespondHappyAction={respondHappyAction} onSelectOccasionPerson={selectOccasionPerson} onRequestRescue={requestOccasionRescue} onQuietOccasion={quietOccasion} onSubmitOccasionOutcome={submitOccasionOutcome} onAcceptOccasionLeadTime={acceptOccasionLeadTime} />}
       {giftOutcomeConfirmation && (
         <GiftOutcomeConfirmation
           message={homeT("recommendations.giftOutcomeSaved", { outcome: homeT(`recommendations.giftOutcomeValue.${giftOutcomeConfirmation.outcome}` as never) })}
@@ -301,6 +389,7 @@ export default function HomePageClient() {
         initialPrompt={chatInitialPrompt}
         autoSubmitInitialPrompt={Boolean(chatInitialPrompt)}
         giftRequest={chatGiftRequest}
+            scope={chatScope}
       />
     </>
   );

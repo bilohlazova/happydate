@@ -2,16 +2,15 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { MobileUI } from "@/lib/theme/mobile";
 import { useTranslations } from "next-intl";
 import { mapAuthError } from "@/lib/auth/mapAuthError";
-import { safePostAuthPath } from "@/lib/navigation/safeDeepLink";
+import { AuthLegalLinks } from "@/components/auth/AuthLegalLinks";
 
 export default function LoginPage() {
   const router = useRouter();
-  const params = useSearchParams();
   const translate = useTranslations("auth");
 
   const [email, setEmail] = useState("");
@@ -28,19 +27,9 @@ export default function LoginPage() {
     const user = data.user;
     if (!user) return;
 
-    // перевіряємо, чи пройдена анкета
-    const { data: survey } = await supabase
-      .from("user_survey")
-      .select("is_completed")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    const redirectTo = safePostAuthPath(params.get("redirectTo"), "/profile");
-    if (survey?.is_completed) {
-      router.replace(redirectTo);
-    } else {
-      router.replace("/survey");
-    }
+    const { data: survey } = await supabase.from("user_survey").select("is_completed, reward_granted_at").eq("user_id", user.id).maybeSingle();
+    const redirectTo = survey?.is_completed && survey?.reward_granted_at ? "/" : "/onboarding-preview";
+    router.replace(redirectTo);
   };
 
   // якщо вже залогінений — відразу перенаправляємо
@@ -169,6 +158,8 @@ export default function LoginPage() {
             {translate("login.noAccount")} {translate("login.register")}
           </a>
         </div>
+
+        <AuthLegalLinks />
 
         {/* opcjonalnie: separator i інші методи входу
         <div className="my-6 flex items-center">

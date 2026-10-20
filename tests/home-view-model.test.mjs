@@ -39,7 +39,7 @@ const t = (key, values = {}) => Object.entries(values).reduce((value, [name, rep
 
 function data(overrides = {}) {
   return {
-    isAuthenticated: true, profile: { fullName: "Maria Test" }, authMetadataName: null, email: "mail@example.com",
+    isAuthenticated: true, profile: { fullName: "Maria Test", firstName: "Maria", lastName: "Test" }, authMetadataName: null, email: "mail@example.com",
     people: [], events: [], memories: [], errors: [], ...overrides,
   };
 }
@@ -158,11 +158,13 @@ test("gift preparation and birthday urgency are scoped to the exact person and o
   assert.equal(otherEvent.featuredEvent?.giftPreparation.hasSelectedGift, false);
 });
 
-test("profile name falls back to auth metadata and then email", () => {
-  const metadata = buildHomeViewModel(data({ profile: { fullName: "" }, authMetadataName: "Anna Kowalska" }), "pl", t);
-  assert.equal(metadata.greeting.name, "Anna");
+test("Happy uses only the canonical first name and never guesses from legacy fields", () => {
+  const firstName = buildHomeViewModel(data({ profile: { fullName: "Білоглазова Марія", firstName: "Марія", lastName: "Білоглазова" } }), "uk", t);
+  assert.equal(firstName.greeting.name, "Марія");
+  const legacy = buildHomeViewModel(data({ profile: { fullName: "Білоглазова Марія", firstName: null, lastName: null }, authMetadataName: "Anna Kowalska" }), "pl", t);
+  assert.equal(legacy.greeting.name, null);
   const email = buildHomeViewModel(data({ profile: null, authMetadataName: null, email: "kasia@example.com" }), "pl", t);
-  assert.equal(email.greeting.name, "kasia");
+  assert.equal(email.greeting.name, null);
 });
 
 test("daily briefing is personalized, traceable and uses confirmed saved context", () => {

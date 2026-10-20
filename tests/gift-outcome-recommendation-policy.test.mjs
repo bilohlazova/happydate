@@ -99,12 +99,14 @@ test("outcome learning consent is owner-controlled and invalidates stale recomme
     "utf8",
   );
   const route = await readFile(new URL("../src/app/api/ai/gift-suggestions/route.ts", import.meta.url), "utf8");
-  const profile = await readFile(new URL("../src/app/(app)/profile/page.tsx", import.meta.url), "utf8");
+  const settings = await readFile(new URL("../src/app/(app)/settings/page.tsx", import.meta.url), "utf8");
   assert.match(migration, /gift_outcome_learning_enabled boolean not null default true/i);
   assert.match(migration, /grant update[\s\S]*gift_outcome_learning_enabled[\s\S]*to authenticated/i);
   assert.match(migration, /person\.user_id = new\.id/i);
   assert.match(migration, /recipient_reaction is distinct from new\.recipient_reaction/i);
   assert.match(route, /applyGiftOutcomeRecommendationPolicy/);
   assert.match(route, /usesOutcomeLearning/);
-  assert.match(profile, /role="switch"/);
+  assert.match(settings, /loadGiftOutcomeLearningEnabled/);
+  assert.match(settings, /updateGiftOutcomeLearningEnabled/);
+  assert.match(settings, /role="switch"/);
 });

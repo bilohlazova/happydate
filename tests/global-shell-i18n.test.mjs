@@ -132,9 +132,11 @@ test("authenticated shell keeps app navigation and profile actions", async () =>
   for (const label of ["profile", "settings", "logout"]) assert.match(header, new RegExp(`header\\.${label}`));
   assert.doesNotMatch(header, /header\.reviews/);
   assert.doesNotMatch(profile, /<SettingsCard|<SecurityCard|<LogoutButton/);
-  assert.match(settings, /\/settings\/notifications/);
-  assert.match(settings, /\/settings\/personalization/);
-  assert.match(settings, /\/settings\/app/);
+  assert.match(settings, /\/settings\/reminders/);
+  assert.match(settings, /wellbeing_personalization_enabled/);
+  assert.match(settings, /loadGiftOutcomeLearningEnabled/);
+  assert.match(settings, /updateGiftOutcomeLearningEnabled/);
+  assert.match(settings, /<LanguageSwitcher isAuthenticated variant="profile" \/>/);
   assert.match(deleteAccount, /settings\/delete-account|settingsT\("title"\)/);
 });
 

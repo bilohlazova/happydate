@@ -28,17 +28,38 @@ test("survey completion and reward are atomic and idempotent", async () => {
   assert.match(sql, /grant execute on function public\.save_my_onboarding_survey/);
 });
 
-test("survey dates use canonical Events and cannot delete unrelated events", async () => {
+test("Block D preserves legacy event answers when the new onboarding UI omits dates", async () => {
+  const sql = await readFile(new URL("../supabase/migrations/20261020153546_preserve_legacy_survey_events.sql", import.meta.url), "utf8");
+  assert.match(sql, /p_special_dates is null/);
+  assert.match(sql, /preserve legacy survey events/);
+  assert.match(sql, /coalesce\(v_existing\.special_date_event_ids, '\{\}'\)/);
+  assert.match(sql, /v_existing\.reward_granted_at is null/);
+});
+
+test("survey dates use canonical Events without deleting legacy or unrelated events", async () => {
   const [sql, page] = await Promise.all([
     readFile(migrationUrl, "utf8"),
     readFile(new URL("../src/app/survey/page.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(sql, /id = any\(v_existing\.special_date_event_ids\)/);
   assert.match(sql, /insert into public\.events/);
   assert.match(sql, /'yearly'/);
   assert.match(page, /\.from\("events"\)/);
   assert.match(page, /\.rpc\("save_my_onboarding_survey"/);
   assert.doesNotMatch(page, /user_special_dates/);
+});
+
+test("latest onboarding RPC preserves event rows and records provenance for new rows", async () => {
+  const sql = await readFile(new URL("../supabase/migrations/20261020153546_preserve_legacy_survey_events.sql", import.meta.url), "utf8");
+  assert.match(sql, /add column if not exists survey_origin/);
+  assert.match(sql, /survey_origin[\s\S]*onboarding survey/i);
+  assert.match(sql, /survey_origin\)\s*values[\s\S]*'onboarding_survey'/i);
+  assert.match(sql, /update public\.events[\s\S]*survey_origin = 'onboarding_survey'/i);
+  assert.match(sql, /event\.user_id = v_user_id/);
+  assert.match(sql, /for update/);
+  assert.doesNotMatch(sql, /delete\s+from\s+public\.events/i);
+  assert.match(sql, /where user_id = v_user_id/);
+  assert.match(sql, /pg_catalog\.pg_advisory_xact_lock/);
+  assert.match(sql, /v_existing\.reward_granted_at is null/);
 });
 
 test("account export includes the private onboarding answers", async () => {

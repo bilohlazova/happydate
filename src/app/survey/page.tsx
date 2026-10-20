@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { MobileUI } from "@/lib/theme/mobile";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { logOperationalError } from "@/lib/observability/safeLogger";
+import { isSupportedLocale } from "@/i18n/config";
+import { canonicalizeGiftPreference, localizeGiftPreferences } from "@/i18n/giftPreferenceCategories";
 
 type SpecialDate = {
   id?: string;
@@ -40,6 +42,8 @@ function toYmd(d: string): string | null {
 
 export default function SurveyPage() {
   const t = useTranslations("static.survey");
+  const localeValue = useLocale();
+  const locale = isSupportedLocale(localeValue) ? localeValue : "pl";
   const router = useRouter();
   const [uid, setUid] = useState<string | null>(null);
 
@@ -105,8 +109,8 @@ export default function SurveyPage() {
     })();
   }, [router]);
 
-  const likesText = useMemo(() => joinTags(likes), [likes]);
-  const dislikesText = useMemo(() => joinTags(dislikes), [dislikes]);
+  const likesText = useMemo(() => joinTags(localizeGiftPreferences(likes, locale)), [likes, locale]);
+  const dislikesText = useMemo(() => joinTags(localizeGiftPreferences(dislikes, locale)), [dislikes, locale]);
 
   const addEmptyDate = () =>
     setDates((d) => [...d, { date: "", label: "", kind: "support" }]);
@@ -208,8 +212,8 @@ export default function SurveyPage() {
             </label>
             <input
               type="text"
-              defaultValue={likesText}
-              onChange={(e) => setLikes(splitTags(e.target.value))}
+              value={likesText}
+              onChange={(e) => setLikes(splitTags(e.target.value).map((value) => canonicalizeGiftPreference(value, locale)))}
               className={MobileUI.input}
               placeholder={t("likesPlaceholder")}
             />
@@ -222,8 +226,8 @@ export default function SurveyPage() {
             </label>
             <input
               type="text"
-              defaultValue={dislikesText}
-              onChange={(e) => setDislikes(splitTags(e.target.value))}
+              value={dislikesText}
+              onChange={(e) => setDislikes(splitTags(e.target.value).map((value) => canonicalizeGiftPreference(value, locale)))}
               className={MobileUI.input}
               placeholder={t("dislikesPlaceholder")}
             />

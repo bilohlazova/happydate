@@ -27,6 +27,7 @@ export type HappyAgentIntentContext = {
   activeTasks?: HappyAgentTaskItem[];
   activeIdeas?: HappyAgentIdeaItem[];
   recentActions?: HappyAgentActionItem[];
+  taskDecisions?: { avoidGiftThemes: string[] };
 };
 
 export type HappyAgentIntentSelectionResult =

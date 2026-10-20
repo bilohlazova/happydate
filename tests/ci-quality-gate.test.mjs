@@ -43,8 +43,8 @@ test("CI uses placeholders rather than production secrets and pins the Node cont
     readFile(new URL(".nvmrc", ROOT), "utf8"),
   ]);
   assert.match(source, /node-version-file:\s*\.nvmrc/);
-  assert.equal(nvmrc.trim(), "22");
-  assert.equal(packageJson.engines.node, ">=22 <23");
+  assert.equal(nvmrc.trim(), "24");
+  assert.equal(packageJson.engines.node, "24.x");
   assert.match(source, /example\.supabase\.co/);
   assert.match(source, /sb_publishable_ci_placeholder/);
   assert.doesNotMatch(source, /OPENAI_API_KEY|SUPABASE_SERVICE_ROLE_KEY|CRON_SECRET|RESEND_API_KEY/);

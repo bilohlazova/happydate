@@ -1,14 +1,50 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 
-const AuthContext = createContext<{ user: User | null; loading: boolean }>({ user: null, loading: true });
+export type AuthProfile = {
+  firstName: string | null;
+  lastName: string | null;
+  fullName: string | null;
+};
+
+type AuthContextValue = {
+  user: User | null;
+  loading: boolean;
+  profile: AuthProfile | null;
+  refreshProfile: () => Promise<void>;
+};
+
+const AuthContext = createContext<AuthContextValue>({
+  user: null,
+  loading: true,
+  profile: null,
+  refreshProfile: async () => undefined,
+});
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<AuthProfile | null>(null);
+
+  const refreshProfile = useCallback(async () => {
+    if (!user) {
+      setProfile(null);
+      return;
+    }
+    const { data } = await supabase
+      .from("profiles")
+      .select("first_name, last_name, full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+    setProfile(data ? {
+      firstName: data.first_name?.trim() || null,
+      lastName: data.last_name?.trim() || null,
+      fullName: data.full_name?.trim() || null,
+    } : null);
+  }, [user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -26,7 +62,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     document.body.dataset.authenticated = user ? "true" : "false";
   }, [user]);
 
-  return <AuthContext.Provider value={{ user, loading }}>{children}</AuthContext.Provider>;
+  useEffect(() => {
+    void (async () => {
+      await refreshProfile();
+    })();
+  }, [refreshProfile]);
+
+  return <AuthContext.Provider value={{ user, loading, profile, refreshProfile }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

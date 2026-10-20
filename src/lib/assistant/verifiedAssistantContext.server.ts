@@ -10,6 +10,7 @@ import { buildHappyPersonContext } from "./buildHappyPersonContext";
 import { buildAssistantPeopleContext } from "./peopleContext";
 import { buildAssistantMemoryContextFromSemanticMemory } from "./assistantSemanticMemoryAdapter";
 import type { VerifiedChatScope } from "./chatScope";
+import type { ActiveTaskDecisions } from "@/lib/happy/taskDecisions";
 
 
 /**
@@ -21,6 +22,7 @@ export function buildVerifiedAssistantRequest(
   request: AssistantChatRequest,
   data: HomeRepositoryResult,
   scope: VerifiedChatScope,
+  taskDecisions: ActiveTaskDecisions | null = null,
   currentDate = new Date(),
 ): AssistantChatRequest {
   const brains = orchestrateHomeBrains(data, { currentDate });
@@ -96,7 +98,7 @@ export function buildVerifiedAssistantRequest(
     events,
     people,
     memories,
-    taskContext: scope.type === "task" ? { type: scope.taskType } : null,
+    taskContext: scope.type === "task" ? { type: scope.taskType, avoidGiftThemes: taskDecisions?.avoidGiftThemes ?? [] } : null,
     giftContext,
   });
 }

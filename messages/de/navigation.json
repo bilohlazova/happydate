@@ -42,5 +42,12 @@
     "reject": "Ablehnen",
     "settings": "Einstellungen",
     "bannerLabel": "Cookie-Informationen"
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "empty": "Noch keine Benachrichtigungen.",
+    "markRead": "Als gelesen markieren",
+    "open": "Öffnen",
+    "loading": "Laden"
   }
 }

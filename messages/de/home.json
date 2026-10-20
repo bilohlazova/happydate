@@ -1,6 +1,71 @@
 {
-  "happyTask": { "title": "Geburtstag von {name}", "progress": "{completed} von {total} fertig", "continue": "Fortsetzen", "optional": "optional", "steps": { "analyze_context": "Personeninformationen prüfen", "analyze_gifts": "Frühere Geschenke prüfen", "generate_gift_ideas": "Geschenkideen entwickeln", "choose_gift": "Geschenk auswählen", "save_gift": "Geschenk speichern", "prepare_greeting": "Gruß vorbereiten" } },
-  "primaryHappy": { "eyebrow": "Happy", "generalTitle": "Ein Vorschlag von Happy", "idea": { "accept": "Annehmen", "dismiss": "Ablehnen", "error": "Der Vorschlag konnte nicht aktualisiert werden. Bitte versuche es erneut." }, "status": { "giftUnresolved": "Ein Geschenk wurde noch nicht ausgewählt.", "prepareGreeting": "Das Geschenk ist bereit — jetzt kannst du einen Gruß vorbereiten.", "taskWaiting": "Happy wartet auf deine Auswahl.", "idea": "Es gibt einen hilfreichen Vorschlag für dich." }, "context": { "preference": "Ich erinnere mich: {value}" }, "actions": { "startGiftPlanning": "Vorbereitung beginnen", "giftHelp": "Geschenk finden", "prepareGreeting": "Gruß vorbereiten", "continue": "Fortsetzen", "reviewIdea": "Vorschlag ansehen" }, "approval": { "title": "Bestätigung erforderlich", "unavailable": "Die Bestätigung für diese Aktion wird bald verfügbar sein.", "actions": { "save_gift": "Geschenk speichern", "save_memory": "Erinnerung speichern", "create_reminder": "Erinnerung erstellen" } } },
+  "happyTask": {
+    "title": "Geburtstag von {name}",
+    "progress": "{completed} von {total} fertig",
+    "continue": "Fortsetzen",
+    "optional": "optional",
+    "steps": {
+      "analyze_context": "Personeninformationen prüfen",
+      "analyze_gifts": "Frühere Geschenke prüfen",
+      "generate_gift_ideas": "Geschenkideen entwickeln",
+      "choose_gift": "Geschenk auswählen",
+      "save_gift": "Geschenk speichern",
+      "prepare_greeting": "Gruß vorbereiten"
+    }
+  },
+  "primaryHappy": {
+    "eyebrow": "Happy",
+    "generalTitle": "Ein Vorschlag von Happy",
+    "idea": {
+      "accept": "Annehmen",
+      "dismiss": "Ablehnen",
+      "error": "Der Vorschlag konnte nicht aktualisiert werden. Bitte versuche es erneut."
+    },
+    "status": {
+      "giftUnresolved": "Ein Geschenk wurde noch nicht ausgewählt.",
+      "prepareGreeting": "Das Geschenk ist bereit — jetzt kannst du einen Gruß vorbereiten.",
+      "taskWaiting": "Happy wartet auf deine Auswahl.",
+      "idea": "Es gibt einen hilfreichen Vorschlag für dich."
+    },
+    "context": {
+      "preference": "Ich erinnere mich: {value}"
+    },
+    "actions": {
+      "startGiftPlanning": "Vorbereitung beginnen",
+      "giftHelp": "Geschenk finden",
+      "prepareGreeting": "Gruß vorbereiten",
+      "continue": "Fortsetzen",
+      "reviewIdea": "Vorschlag ansehen"
+    },
+    "approval": {
+      "title": "Bestätigung erforderlich",
+      "unavailable": "Die Bestätigung für diese Aktion wird bald verfügbar sein.",
+      "actions": {
+        "save_gift": "Geschenk speichern",
+        "save_memory": "Erinnerung speichern",
+        "create_reminder": "Erinnerung erstellen"
+      }
+    },
+    "occasion": {
+      "pl_boys_day": "Jungentag",
+      "title": "{occasion} für {name}",
+      "selectionTitle": "Für wen ist {occasion}?",
+      "planning": "Du kannst mit der Vorbereitung beginnen.",
+      "preparing": "Zeit, den nächsten Schritt zu wählen.",
+      "urgent": "Dieser Anlass ist bald.",
+      "today": "Dieser Anlass ist heute.",
+      "selectionRequired": "Wähle die Person für diesen Anlass.",
+      "ready": "Alles ist unter Kontrolle.",
+      "later": "Später"
+    },
+    "rescue": {
+      "title": "{occasion} für {name}",
+      "status": "Es ist noch Zeit – hier ist ein schneller Plan.",
+      "cta": "Schnelle Optionen zeigen",
+      "error": "Schnelle Optionen konnten nicht erstellt werden. Bitte erneut versuchen."
+    },
+    "postEvent": { "question": "Wie ist es gelaufen?", "wentWell": "Alles ist gut gelaufen", "neededMoreTime": "Ich hätte mehr Zeit gebraucht", "didNotHappen": "Es hat nicht stattgefunden", "leadTimePrompt": "Beim nächsten Mal {days} Tage früher erinnern?", "acceptEarlier": "Ja, früher erinnern", "keepCurrent": "Aktuellen Zeitpunkt behalten" }
+  },
   "greeting": {
     "named": "Hallo, {name}!",
     "fallback": "Hallo!",
@@ -140,7 +205,17 @@
     "giftOutcomeDismiss": "Nicht mehr nach diesem Geschenk fragen",
     "giftOutcomeActionError": "Die Auswahl konnte nicht gespeichert werden. Bitte erneut versuchen."
   },
-  "guest": {"title":"Bewahren Sie, was wichtig ist","description":"HappyDate hilft Ihnen, wichtige Menschen, Daten, Erinnerungen und kleine Details im Blick zu behalten, die im Alltag leicht verloren gehen.","register":"Konto erstellen","login":"Anmelden","previewTitle":"Beginnen Sie mit einer wichtigen Person oder einem Ereignis","previewDescription":"Erstellen Sie Ihren persönlichen Raum, damit Happy Ihnen hilft, Nähe zu bewahren und Wichtiges nicht zu verlieren.","people":"Wichtige Menschen","dates":"Wichtige Daten","memories":"Erinnerungen und Notizen"},
+  "guest": {
+    "title": "Bewahren Sie, was wichtig ist",
+    "description": "HappyDate hilft Ihnen, wichtige Menschen, Daten, Erinnerungen und kleine Details im Blick zu behalten, die im Alltag leicht verloren gehen.",
+    "register": "Konto erstellen",
+    "login": "Anmelden",
+    "previewTitle": "Beginnen Sie mit einer wichtigen Person oder einem Ereignis",
+    "previewDescription": "Erstellen Sie Ihren persönlichen Raum, damit Happy Ihnen hilft, Nähe zu bewahren und Wichtiges nicht zu verlieren.",
+    "people": "Wichtige Menschen",
+    "dates": "Wichtige Daten",
+    "memories": "Erinnerungen und Notizen"
+  },
   "empty": {
     "title": "Beginne mit einer wichtigen Person oder einem Ereignis",
     "description": "Füge eine Person oder ein Datum hinzu. Happy zeigt nur Informationen aus deinen Daten.",

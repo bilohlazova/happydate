@@ -6,7 +6,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useTranslations } from "next-intl";
-import { safePostAuthPath } from "@/lib/navigation/safeDeepLink";
 import { logOperationalError } from "@/lib/observability/safeLogger";
 
 export default function AuthCallbackPage() {
@@ -19,7 +18,6 @@ export default function AuthCallbackPage() {
 
       const code = url.searchParams.get("code");
       const type = url.searchParams.get("type");
-      const next = url.searchParams.get("next");
 
       try {
         // PKCE flow (?code=...)
@@ -49,8 +47,17 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        // normal login redirect
-        router.replace(safePostAuthPath(next));
+        // Normal auth always resolves the durable onboarding state before routing.
+        // This prevents a stale/forged `next` value from bypassing the first-run flow
+        // and keeps completed users out of onboarding without a visible flash.
+        const { data: auth } = await supabase.auth.getUser();
+        if (!auth.user) throw new Error("Missing authenticated user");
+        const { data: survey } = await supabase
+          .from("user_survey")
+          .select("is_completed, reward_granted_at")
+          .eq("user_id", auth.user.id)
+          .maybeSingle();
+        router.replace(survey?.is_completed && survey?.reward_granted_at ? "/" : "/onboarding-preview");
 
       } catch (e) {
         logOperationalError("auth-callback", "exchange-failed", e);

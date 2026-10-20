@@ -447,12 +447,12 @@ body[data-authenticated="false"] .hd-main { padding-bottom: 0; }
 /* Keep the notification sheet inside the viewport on narrow Safari screens. */
 @media (max-width: 639px) {
   .hd-notification-panel {
-    position: fixed;
+    position: fixed !important;
     top: calc(env(safe-area-inset-top) + 4.25rem);
-    right: 12px;
-    left: 12px;
-    width: auto;
-    max-width: none;
+    right: 12px !important;
+    left: 12px !important;
+    width: auto !important;
+    max-width: none !important;
   }
 }
 

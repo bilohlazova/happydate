@@ -10,7 +10,7 @@ import { formatAssistantSavedGiftLinkContext } from "./chatContract.ts";
 import { ASSISTANT_BEHAVIOR_MANIFEST } from "./assistantBehaviorManifest.ts";
 import type { AssistantPetContext } from "./petContext.server.ts";
 import { AI_COST_POLICY, estimateInputTokens, estimatedUsd, type AiBudget, type AiBudgetReservation, type AiTokenUsage } from "./aiBudget.ts";
-import { buildAssistantResponsePlan } from "./responsePlan.ts";
+import { buildAssistantResponsePlan, classifyAssistantResponseIntent } from "./responsePlan.ts";
 import { wellbeingMode } from "./wellbeingConversation.ts";
 
 export type AssistantProviderMessage = AssistantConversationItem | { role: "system"; content: string };
@@ -107,6 +107,33 @@ export function classifyAssistantProviderError(error: unknown, timedOut = false)
 function providerFailureResponse(diagnostic: SafeProviderDiagnostic): Response {
   const status = diagnostic.errorType === "timeout" ? 504 : 503;
   return Response.json({ error: "provider_unavailable" }, { status });
+}
+
+function emptyAssistantResponse(request: AssistantChatRequest): string {
+  const isGiftContext = Boolean(request.context.giftContext) || classifyAssistantResponseIntent(request.message) === "gift";
+  if (!isGiftContext) {
+    switch (request.locale) {
+      case "uk": return "Не вдалося сформувати відповідь. Спробуй ще раз.";
+      case "ru": return "Не удалось сформировать ответ. Попробуй ещё раз.";
+      case "de": return "Die Antwort konnte nicht erstellt werden. Bitte versuche es noch einmal.";
+      case "en": return "I couldn't form a response. Please try again.";
+      case "pl":
+      default: return "Nie udało się przygotować odpowiedzi. Spróbuj ponownie.";
+    }
+  }
+  switch (request.locale) {
+    case "uk":
+      return "Не вдалося підібрати рекомендацію. Я не буду вигадувати вподобання. Спробуй ще раз або розкажи, що саме подобається цій людині чи може бути корисним.";
+    case "ru":
+      return "Не удалось подобрать рекомендацию. Я не буду выдумывать предпочтения. Попробуй ещё раз или расскажи, что именно нравится этому человеку или может пригодиться.";
+    case "de":
+      return "Ich konnte keine Empfehlung erstellen. Ich werde keine Vorlieben erfinden. Versuche es bitte noch einmal oder erzähle mir, was dieser Person gefällt oder nützlich sein könnte.";
+    case "en":
+      return "I couldn't prepare a recommendation. I won't invent preferences. Please try again or tell me what this person likes or might find useful.";
+    case "pl":
+    default:
+      return "Nie udało się przygotować rekomendacji. Nie będę wymyślać preferencji. Spróbuj ponownie albo napisz, co ta osoba lubi lub co może jej się przydać.";
+  }
 }
 
 function combinedAbortSignal(clientSignal: AbortSignal | undefined, timeoutMs: number) {
@@ -266,7 +293,9 @@ export async function createAssistantChatResponse(
             });
           }
           const structuredProposal = memoryProposal === undefined ? undefined : await Promise.resolve(memoryProposal).catch(() => undefined);
-          if (completedText.trim() || structuredProposal !== undefined) await options.onCompleted?.(request, completedText, structuredProposal).catch(() => {
+          const responseText = completedText.trim() ? completedText : emptyAssistantResponse(request);
+          if (completedText.trim() === "") controller.enqueue(encoder.encode(responseText));
+          if (completedText.trim() || structuredProposal !== undefined) await options.onCompleted?.(request, responseText, structuredProposal).catch(() => {
             logOperationalWarning("assistant-chat", "conversation-history-save-skipped");
           });
           controller.close();

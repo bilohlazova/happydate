@@ -363,6 +363,45 @@ test("streaming response reuses history and emits provider chunks", async () => 
   assert.equal(capturedMessages.at(-1).content, "Pomóż mi zaplanować dzień");
 });
 
+test("empty ordinary chat output returns a short localized fallback in every locale", async () => {
+  const expected = {
+    pl: "Nie udało się przygotować odpowiedzi. Spróbuj ponownie.",
+    uk: "Не вдалося сформувати відповідь. Спробуй ще раз.",
+    ru: "Не удалось сформировать ответ. Попробуй ещё раз.",
+    en: "I couldn't form a response. Please try again.",
+    de: "Die Antwort konnte nicht erstellt werden. Bitte versuche es noch einmal.",
+  };
+  for (const [locale, fallback] of Object.entries(expected)) {
+    const response = await createAssistantChatResponse(validRequest({ locale }), async () => ({ stream: (async function* () {})() }));
+    assert.equal(response.status, 200);
+    assert.equal(await response.text(), fallback);
+  }
+});
+
+test("empty gift output explains evidence boundaries in every locale without declining names", async () => {
+  const expectedFragments = {
+    pl: "Nie będę wymyślać preferencji",
+    uk: "Я не буду вигадувати вподобання",
+    ru: "Я не буду выдумывать предпочтения",
+    en: "I won't invent preferences",
+    de: "Ich werde keine Vorlieben erfinden",
+  };
+  for (const [locale, fragment] of Object.entries(expectedFragments)) {
+    const response = await createAssistantChatResponse(validRequest({
+      locale,
+      message: "Допоможи мені підібрати подарунок для Тато",
+      context: {
+        userName: null, insight: null, events: [],
+        people: [{ id: "tato", name: "Тато", relation: "parent", birthday: null, gender: "male" }],
+        memories: [], activePersonId: "tato", personResolutionStatus: "resolved",
+      },
+    }), async () => ({ stream: (async function* () {})() }));
+    const text = await response.text();
+    assert.match(text, new RegExp(fragment));
+    assert.doesNotMatch(text, /для Тато/);
+  }
+});
+
 test("server-verified gift outcomes are appended as a separate system boundary", async () => {
   let capturedMessages;
   const response = await createAssistantChatResponse(

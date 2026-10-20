@@ -1,8 +1,12 @@
 # HappyDate implementation status
 
-Status date: 2026-08-16. This is a product and engineering audit against the
+Historical snapshot date: 2026-08-16. This is a product and engineering audit against the
 agreed vision: a person-centred care system with memory, timely action, voice,
 calendar, notes, gifts, and eventually commerce and social discovery.
+
+This document is historical context, not a live product-status report. Verify
+current behavior against the source code, committed migrations, and current CI
+before relying on any dated claim.
 
 ## Completed foundations
 

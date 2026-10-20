@@ -26,9 +26,10 @@ complete services.
 
 Planned or deliberately deferred capabilities include subscriptions and store
 billing, marketplace checkout and fulfilment, social discovery, full contact
-synchronization, and car-grade/background voice. See
+synchronization, and car-grade/background voice. The dated
 [`docs/happydate-implementation-status.md`](docs/happydate-implementation-status.md)
-for the current scope and release blockers.
+audit from 2026-08-16 is historical context, not the current product status;
+the scope above is the repository's current documented boundary.
 
 ## Architecture
 

@@ -109,6 +109,24 @@ function providerFailureResponse(diagnostic: SafeProviderDiagnostic): Response {
   return Response.json({ error: "provider_unavailable" }, { status });
 }
 
+function emptyAssistantResponse(request: AssistantChatRequest): string {
+  const person = request.context.activePerson?.name;
+  const subject = person ? ` ${person}` : "";
+  switch (request.locale) {
+    case "uk":
+      return `Я не встигла сформувати відповідь${subject ? ` для${subject}` : ""}. Не буду вигадувати вподобання. Спробуйте ще раз або розкажіть, що саме цій людині подобається чи може бути корисним.`;
+    case "ru":
+      return `Мне не удалось сформировать ответ${subject ? ` для${subject}` : ""}. Я не буду выдумывать предпочтения. Попробуйте ещё раз или расскажите, что этому человеку нравится или может пригодиться.`;
+    case "de":
+      return `Ich konnte gerade keine Antwort${subject ? ` für${subject}` : ""} formulieren. Ich werde keine Vorlieben erfinden. Versuche es bitte noch einmal oder erzähle mir, was dieser Person gefällt oder nützlich sein könnte.`;
+    case "en":
+      return `I could not finish an answer${subject ? ` for${subject}` : ""}. I will not invent preferences. Please try again or tell me what this person likes or might find useful.`;
+    case "pl":
+    default:
+      return `Nie udało mi się przygotować odpowiedzi${subject ? ` dla${subject}` : ""}. Nie będę wymyślać preferencji. Spróbuj ponownie albo napisz, co ta osoba lubi lub co może jej się przydać.`;
+  }
+}
+
 function combinedAbortSignal(clientSignal: AbortSignal | undefined, timeoutMs: number) {
   const controller = new AbortController();
   let timedOut = false;
@@ -266,7 +284,9 @@ export async function createAssistantChatResponse(
             });
           }
           const structuredProposal = memoryProposal === undefined ? undefined : await Promise.resolve(memoryProposal).catch(() => undefined);
-          if (completedText.trim() || structuredProposal !== undefined) await options.onCompleted?.(request, completedText, structuredProposal).catch(() => {
+          const responseText = completedText.trim() ? completedText : emptyAssistantResponse(request);
+          if (completedText.trim() === "") controller.enqueue(encoder.encode(responseText));
+          if (completedText.trim() || structuredProposal !== undefined) await options.onCompleted?.(request, responseText, structuredProposal).catch(() => {
             logOperationalWarning("assistant-chat", "conversation-history-save-skipped");
           });
           controller.close();

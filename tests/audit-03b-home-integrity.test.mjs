@@ -2,7 +2,26 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { isCurrentHomeLoad } from "../src/lib/home/homeLoadGuard.ts";
+import { selectRenderableHomeSnapshot } from "../src/lib/home/homeRender.ts";
 import { shouldShowHomeEmptyState } from "../src/components/home-dashboard/homeState.ts";
+
+const snapshot = { ownerId: "user-a", viewModel: { greeting: { name: "A" } } };
+
+test("render selector never exposes an owner-scoped snapshot during auth transitions", () => {
+  assert.equal(selectRenderableHomeSnapshot(snapshot, "user-a", false)?.greeting.name, "A");
+  assert.equal(selectRenderableHomeSnapshot(snapshot, "user-b", false), null);
+  assert.equal(selectRenderableHomeSnapshot(snapshot, null, false), null);
+  assert.equal(selectRenderableHomeSnapshot(snapshot, "user-b", true), null);
+  assert.equal(selectRenderableHomeSnapshot(snapshot, "user-a", true), null);
+});
+
+test("owner transitions cannot render A after sign-out or for B", () => {
+  const userA = { ownerId: "user-a", viewModel: { greeting: { name: "A" } } };
+  const noSnapshot = null;
+  assert.equal(selectRenderableHomeSnapshot(userA, "user-a", false)?.greeting.name, "A");
+  assert.equal(selectRenderableHomeSnapshot(noSnapshot, null, false), null);
+  assert.equal(selectRenderableHomeSnapshot(userA, "user-b", false), null);
+});
 
 test("home load guard rejects stale owners and stale request versions", () => {
   assert.equal(isCurrentHomeLoad(3, 3, "user-a", "user-a"), true);

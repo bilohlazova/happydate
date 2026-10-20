@@ -23,7 +23,7 @@ test("profile dropdown uses ordinary links and restores focus only for Escape", 
   const header = await readFile(path.join(root, "src/components/Header.tsx"), "utf8");
   assert.match(header, /profileButtonRef\.current\?\.focus\(\)/);
   assert.match(header, /event\.key === "Escape"/);
-  assert.match(header, /aria-haspopup="true"/);
+  assert.doesNotMatch(header, /aria-haspopup/);
   assert.match(header, /aria-expanded=\{profileOpen\}/);
   assert.match(header, /aria-controls="happydate-profile-menu"/);
   assert.doesNotMatch(header, /role="menu"|role="menuitem"/);

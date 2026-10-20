@@ -8,4 +8,3 @@ export function formatFriendlyFirstName(firstName: string | null | undefined, lo
   if (locale === "uk" && /ія$/iu.test(name)) return name.replace(/ія$/iu, "іє");
   return name;
 }
-

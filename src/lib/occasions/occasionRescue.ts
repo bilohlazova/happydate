@@ -44,4 +44,3 @@ export const rescueResultSchema = z.object({
   suggestions: z.array(rescueSuggestionSchema).min(3).max(5),
 }).strict();
 export type RescueResult = z.infer<typeof rescueResultSchema>;
-

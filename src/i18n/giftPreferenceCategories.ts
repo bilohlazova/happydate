@@ -20,7 +20,6 @@ const categoryIds = new Set<string>(GIFT_PREFERENCE_CATEGORY_IDS);
 export function isGiftPreferenceCategoryId(value: string): value is GiftPreferenceCategoryId {
   return categoryIds.has(value);
 }
-
 export function localizeGiftPreference(value: string, locale: AppLocale): string {
   return isGiftPreferenceCategoryId(value) ? giftPreferenceCategoryLabels[locale][value] : value;
 }

@@ -18,7 +18,6 @@ function normalizeGender(value: unknown): OccasionPersonProjection["gender"] {
   if (value === "female" || value === "male" || value === "other") return value;
   return null;
 }
-
 function projectPerson(row: Record<string, unknown>): OccasionPersonProjection {
   return {
     id: String(row.id),

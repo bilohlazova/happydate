@@ -47,4 +47,3 @@ test("database selection and reconciliation keep executor generic and birthday w
   assert.match(reject, /reconcileBirthdaySaveGiftAction/);
   assert.doesNotMatch(executor, /happy_task_gift_recommendations|happy_task_decisions/);
 });
-

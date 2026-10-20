@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
@@ -99,6 +100,13 @@ export default function ProfilePage() {
     void load();
   }, [router, translate, user]);
 
+  useEffect(() => {
+    if (!editing) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [editing]);
+
   const openEditor = () => { setDraftFirstName(firstName); setDraftLastName(lastName); setNameError(null); setMessage(null); setEditing(true); };
   const saveProfile = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -114,7 +122,19 @@ export default function ProfilePage() {
     await refreshProfile(); router.refresh();
   };
 
-  return <main className="safe-container pr-shell pr-shell--compact" aria-label={translate("accessibility.pageLabel")}>
+  const editorModal = editing && typeof document !== "undefined" ? createPortal(
+    <div className="fixed inset-0 z-[1000] grid items-end bg-slate-900/35 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title">
+      <form onSubmit={saveProfile} className="mx-auto max-h-[calc(100dvh-env(safe-area-inset-top))] w-full max-w-xl overflow-y-auto overscroll-contain rounded-t-[2rem] bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[90dvh] sm:rounded-[2rem] sm:pb-5">
+        <div className="mb-4 flex items-center justify-between"><h2 id="profile-edit-title" className="text-xl font-extrabold text-slate-900">{copy.edit}</h2><button type="button" className="grid h-11 w-11 place-items-center rounded-full bg-slate-100" onClick={() => setEditing(false)} aria-label={copy.close}>✕</button></div>
+        <div className="grid gap-4 sm:grid-cols-2"><label className="pr-field"><span className="pr-field__label">{copy.firstName} *</span><input className="pr-input" value={draftFirstName} onChange={(event) => setDraftFirstName(event.target.value)} autoComplete="given-name" autoFocus /></label><label className="pr-field"><span className="pr-field__label">{copy.lastName}</span><input className="pr-input" value={draftLastName} onChange={(event) => setDraftLastName(event.target.value)} autoComplete="family-name" /></label></div>
+        {nameError && <p className="mt-2 text-sm font-bold text-red-600" role="alert">{nameError}</p>}
+        <button className="pr-btn-primary mt-5 w-full" type="submit" disabled={saving}>{saving ? translate("account.saving") : translate("account.save")}</button>
+      </form>
+    </div>,
+    document.body,
+  ) : null;
+
+  return <><main className="safe-container pr-shell pr-shell--compact" aria-label={translate("accessibility.pageLabel")}>
     <header className="pr-page-intro"><span className="pr-page-intro__eyebrow">HappyDate</span><h1>{translate("title")}</h1></header>
     <section className="pr-hero" aria-labelledby="profile-personal-title">
       <div className="pr-hero__glow" aria-hidden="true" />
@@ -130,6 +150,5 @@ export default function ProfilePage() {
     <section className="pr-card border-cyan-100 bg-gradient-to-br from-white to-cyan-50/70"><div className="flex flex-wrap items-center gap-2"><span className="pr-card__icon">✨</span><p className="pr-card__title">{copy.socialTitle}</p><span className="rounded-full bg-cyan-100 px-2 py-1 text-[10px] font-extrabold uppercase tracking-wide text-cyan-700">{copy.soon}</span></div><p className="mt-2 text-sm font-semibold leading-5 text-slate-700">{compactCopy.social}</p><div className="mt-2 flex flex-wrap gap-2 text-xs font-bold text-slate-600"><span className="rounded-full bg-white px-3 py-2 shadow-sm">☕ {copy.coffee}</span><span className="rounded-full bg-white px-3 py-2 shadow-sm">🚶 {copy.walk}</span><span className="rounded-full bg-white px-3 py-2 shadow-sm">💬 {copy.talk}</span></div><p className="mt-3 border-t border-cyan-100 pt-2 text-xs font-semibold leading-5 text-slate-500">🔒 {compactCopy.privacy}</p></section>
     <section className="pr-card"><div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><span className="pr-card__icon">♡</span><div><p className="pr-card__title">{copy.preferencesTitle}</p><p className="text-xs text-slate-500">{copy.preferencesIntro}</p></div></div><Link href={survey.completed ? "/survey" : "/onboarding-preview"} className="pr-btn-ghost min-h-11 px-3 text-sm">✏️ {survey.completed ? copy.surveyEdit : copy.surveyStart}</Link></div><div className="mt-3 grid gap-2 md:grid-cols-3">{[[copy.likes, localizeGiftPreferences(survey.likes, locale)], [copy.dislikes, localizeGiftPreferences(survey.dislikes, locale)], [copy.dreams, survey.dream ? [survey.dream] : []]].map(([label, values]) => <div key={String(label)} className="rounded-xl bg-slate-50 p-3"><p className="text-[11px] font-black uppercase tracking-wide text-slate-500">{label as string}</p><p className="mt-1.5 break-words text-sm leading-5 text-slate-700">{(values as string[]).length ? (values as string[]).join(" · ") : copy.empty}</p></div>)}</div></section>
     <section className="pr-card"><div className="pr-card__header"><span className="pr-card__icon">♡</span><p className="pr-card__title">{copy.statsTitle}</p></div><div className="grid grid-cols-3 gap-2 text-center">{[[counts.people, copy.people, "/people"], [counts.dates, copy.dates, "/dashboard"], [counts.memories, copy.memories, "/notes"]].map(([value, label, href]) => <Link href={String(href)} key={String(label)} className="rounded-xl bg-slate-50 p-3 hover:bg-cyan-50"><strong className="block text-xl text-slate-900">{value}</strong><span className="text-xs font-bold text-slate-500">{label}</span></Link>)}</div></section>
-    {editing && <div className="fixed inset-0 z-[100] grid items-end bg-slate-900/35 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="profile-edit-title"><form onSubmit={saveProfile} className="mx-auto max-h-[calc(100dvh-env(safe-area-inset-top))] w-full max-w-xl overflow-y-auto rounded-t-[2rem] bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[90dvh] sm:rounded-[2rem] sm:pb-5"><div className="mb-4 flex items-center justify-between"><h2 id="profile-edit-title" className="text-xl font-extrabold text-slate-900">{copy.edit}</h2><button type="button" className="grid h-11 w-11 place-items-center rounded-full bg-slate-100" onClick={() => setEditing(false)} aria-label={copy.close}>✕</button></div><div className="grid gap-4 sm:grid-cols-2"><label className="pr-field"><span className="pr-field__label">{copy.firstName} *</span><input className="pr-input" value={draftFirstName} onChange={(event) => setDraftFirstName(event.target.value)} autoComplete="given-name" autoFocus /></label><label className="pr-field"><span className="pr-field__label">{copy.lastName}</span><input className="pr-input" value={draftLastName} onChange={(event) => setDraftLastName(event.target.value)} autoComplete="family-name" /></label></div>{nameError && <p className="mt-2 text-sm font-bold text-red-600" role="alert">{nameError}</p>}<button className="pr-btn-primary mt-5 w-full" type="submit" disabled={saving}>{saving ? translate("account.saving") : translate("account.save")}</button></form></div>}
-  </main>;
+  </main>{editorModal}</>;
 }

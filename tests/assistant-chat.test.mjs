@@ -363,6 +363,25 @@ test("streaming response reuses history and emits provider chunks", async () => 
   assert.equal(capturedMessages.at(-1).content, "Pomóż mi zaplanować dzień");
 });
 
+test("tool-call-only provider output still returns a safe user-visible response", async () => {
+  const response = await createAssistantChatResponse(
+    validRequest({ locale: "uk", context: {
+      userName: null, insight: null, events: [],
+      people: [{ id: "tato", name: "Тато", relation: "parent", birthday: null, gender: "male" }],
+      memories: [],
+      activePersonId: "tato", personResolutionStatus: "resolved",
+    } }),
+    async () => ({
+      stream: (async function* () {})(),
+      memoryProposal: Promise.resolve({ kind: "general_person_knowledge", content: "Любить каву" }),
+    }),
+  );
+  assert.equal(response.status, 200);
+  const text = await response.text();
+  assert.match(text, /Не буду вигадувати вподобання/);
+  assert.match(text, /Тато/);
+});
+
 test("server-verified gift outcomes are appended as a separate system boundary", async () => {
   let capturedMessages;
   const response = await createAssistantChatResponse(

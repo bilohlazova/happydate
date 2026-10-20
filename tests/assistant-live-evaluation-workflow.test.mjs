@@ -11,8 +11,12 @@ test("weekly Assistant baseline is synthetic, bounded and explicitly secret-gate
   assert.match(workflow, /permissions:\s*\n\s*contents: read/);
   assert.match(workflow, /timeout-minutes: 15/);
   assert.match(workflow, /OPENAI_API_KEY: \$\{\{ secrets\.HAPPYDATE_ASSISTANT_EVAL_OPENAI_API_KEY \}\}/);
+  assert.match(workflow, /Use Node\.js 24/);
   assert.match(workflow, /npm run eval:assistant\s/);
+  assert.match(workflow, /Synthetic validation: PASS/);
+  assert.match(workflow, /Real OpenAI evaluation: SKIPPED/);
   assert.match(workflow, /npm run eval:assistant:live \| tee assistant-live-evaluation\.txt/);
+  assert.match(workflow, /Real OpenAI evaluation: PASS/);
   assert.match(workflow, /retention-days: 30/);
   assert.doesNotMatch(workflow, /NEXT_PUBLIC_|SUPABASE|production|user[_ -]?data/i);
 });

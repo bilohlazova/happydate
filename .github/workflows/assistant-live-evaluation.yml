@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   evaluate-conversation-brain:
-    name: Synthetic Conversation Brain baseline
+    name: Synthetic and optional live Conversation Brain baseline
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -33,16 +33,30 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
-      - name: Validate versioned synthetic scenarios
+      - name: Validate synthetic scenarios
         run: npm run eval:assistant
 
-      - name: Explain dormant live baseline
-        if: env.OPENAI_API_KEY == ''
-        run: echo "Live Assistant evaluation skipped because HAPPYDATE_ASSISTANT_EVAL_OPENAI_API_KEY is not configured." >> "$GITHUB_STEP_SUMMARY"
+      - name: Record synthetic validation PASS
+        if: success()
+        run: |
+          echo "### Synthetic validation: PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "The versioned, no-cost Assistant scenarios passed." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Run paid live Assistant evaluation
+      - name: Record real OpenAI evaluation SKIPPED
+        if: env.OPENAI_API_KEY == ''
+        run: |
+          echo "### Real OpenAI evaluation: SKIPPED" >> "$GITHUB_STEP_SUMMARY"
+          echo "Skipped because HAPPYDATE_ASSISTANT_EVAL_OPENAI_API_KEY is not configured; no paid calls were made." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run real OpenAI evaluation (paid)
         if: env.OPENAI_API_KEY != ''
         run: npm run eval:assistant:live | tee assistant-live-evaluation.txt
+
+      - name: Record real OpenAI evaluation PASS
+        if: success() && env.OPENAI_API_KEY != ''
+        run: |
+          echo "### Real OpenAI evaluation: PASS" >> "$GITHUB_STEP_SUMMARY"
+          echo "The paid synthetic evaluation completed successfully; response content is not uploaded." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload content-free evaluation result
         if: always() && env.OPENAI_API_KEY != ''

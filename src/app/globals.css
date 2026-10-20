@@ -574,6 +574,28 @@ body[data-authenticated="false"] .hd-main { padding-bottom: 0; }
 .pr-shell--compact .pr-card { padding: 16px; }
 .pr-shell--compact .pr-card__header { margin-bottom: 8px; }
 .pr-shell--compact .pr-card__icon { width: 32px; height: 32px; }
+
+/* Informational examples for the upcoming "На одній хвилі" feature. */
+.pr-social-chips { align-items: center; }
+.pr-social-chip {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 7px 12px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(15,23,42,.04);
+}
+.pr-social-chip--coffee { border-color: #ead7b2; background: #fff8e8; color: #805b27; }
+.pr-social-chip--walk { border-color: #b9e4d0; background: #effcf5; color: #18724b; }
+.pr-social-chip--talk { border-color: #bedcf5; background: #eff8ff; color: #236b9f; }
 @media (max-width: 639px) {
   .pr-shell--compact { gap: 10px; padding-top: 10px; }
   .pr-shell--compact .pr-hero,

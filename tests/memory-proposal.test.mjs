@@ -92,7 +92,7 @@ test("route accepts structured provider output but never parses assistant text",
   const server = await read("src/lib/assistant/chatServer.ts");
   const route = await read("src/app/api/ai-chat/route.ts");
   assert.match(server, /memoryProposal\?: unknown/);
-  assert.match(server, /onCompleted\?\.\(request, completedText, structuredProposal\)/);
+  assert.match(server, /onCompleted\?\.\(request, responseText, structuredProposal\)/);
   assert.match(route, /createMemoryProposalFromCandidate/);
   assert.doesNotMatch(route, /responseText.*match|regex|RegExp/);
 });

@@ -10,6 +10,7 @@ import WellbeingCheckIn from "./WellbeingCheckIn";
 import type { ReminderRecord } from "@/lib/repositories/reminders";
 import type { GiftOutcomeValue } from "@/lib/gifts/gift.types";
 import HomePrimaryHappyBlock from "@/components/happy/HomePrimaryHappyBlock";
+import { shouldShowHomeEmptyState } from "./homeState";
 
 interface HomeDashboardProps {
   viewModel: HomeViewModel;
@@ -39,6 +40,7 @@ interface HomeDashboardProps {
 
 export default function HomeDashboard({ viewModel, firstName, reminder: _reminder, inAppDeliveryCount, reminderBusy: _reminderBusy, reminderError: _reminderError, onRetry, onAskHappy: _onAskHappy, onCompleteReminder: _onCompleteReminder, onSnoozeReminder: _onSnoozeReminder, onUndoReminder: _onUndoReminder, onPickGift, onGiftOutcome, onGiftFollowUp, onSaveGift, onContinueHappyTask, onRespondHappyIdea, onRespondHappyAction, onSelectOccasionPerson, onRequestRescue, onQuietOccasion, onSubmitOccasionOutcome, onAcceptOccasionLeadTime }: HomeDashboardProps) {
   const t = useTranslations("home");
+  const showEmptyState = shouldShowHomeEmptyState(viewModel.isEmpty, viewModel.errors.length);
   return (
     <div className="hd-screen overflow-x-hidden">
       <div className="mx-auto w-full max-w-[1160px] px-4 pb-[calc(32px+var(--hd-nav-height)+env(safe-area-inset-bottom))] pt-5 sm:px-6 md:pb-14 md:pt-8">
@@ -54,7 +56,7 @@ export default function HomeDashboard({ viewModel, firstName, reminder: _reminde
         )}
 
         {viewModel.errors.length > 0 && <div className="mt-5"><HomeErrorState title={t("error.title")} description={t("error.description")} retry={t("error.retry")} onRetry={onRetry} /></div>}
-        {viewModel.isEmpty ? (
+        {showEmptyState ? (
           <HomeEmptyState title={t("empty.title")} description={t("empty.description")} addPerson={t("empty.addPerson")} addEvent={t("empty.addEvent")} />
         ) : (
           <div>

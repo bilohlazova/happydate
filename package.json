@@ -13,6 +13,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "verify": "npm run lint && npm run typecheck && npm test && npm run eval:assistant",
+    "preflight:production": "node --experimental-strip-types scripts/preflight-production-config.mjs",
     "smoke:production": "node scripts/smoke-production.mjs",
     "eval:assistant": "node --experimental-strip-types scripts/evaluate-assistant.mjs",
     "eval:assistant:live": "RUN_LIVE_ASSISTANT_EVALS=1 node --experimental-strip-types scripts/evaluate-assistant.mjs",

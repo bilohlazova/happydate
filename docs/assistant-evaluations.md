@@ -44,4 +44,9 @@ Supabase or production-user credentials. Its 30-day artifact contains only the
 behavior/model header, scenario IDs, PASS/FAIL state and failure codes. Model
 response text is never printed or uploaded. Until the dedicated secret is
 configured, the offline contract still runs and the workflow explicitly
-records that the paid live baseline was skipped.
+records `Synthetic dataset validation: PASS` separately from `Real OpenAI
+evaluation: SKIPPED`. The synthetic step validates the versioned dataset and
+evaluator contract only; it does not generate or assess model responses. When
+the dedicated secret is configured, a successful paid run records `Real OpenAI
+evaluation: PASS`; a failed paid run fails the job and does not produce a
+passing summary.

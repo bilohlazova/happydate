@@ -12,6 +12,7 @@ import { shouldSynchronizeProfileLocale } from "@/i18n/profileLocaleSync";
 import { getPreferredLocaleForUser } from "@/lib/repositories/profile/profileLocale.repository";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationInbox from "@/components/notifications/NotificationInbox";
+import { shouldRestoreProfileFocus } from "@/components/profileMenuBehavior";
 
 function cx(...cls: Array<string | false | null | undefined>) {
   return cls.filter(Boolean).join(" ");
@@ -88,13 +89,13 @@ export default function Header() {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setProfileOpen(false);
-        profileButtonRef.current?.focus();
+        if (shouldRestoreProfileFocus("escape")) profileButtonRef.current?.focus();
       }
     };
     const closeOnOutsidePointer = (event: PointerEvent) => {
       if (!profileMenuRef.current?.contains(event.target as Node) && !profileButtonRef.current?.contains(event.target as Node)) {
         setProfileOpen(false);
-        profileButtonRef.current?.focus();
+        if (shouldRestoreProfileFocus("outside-pointer")) profileButtonRef.current?.focus();
       }
     };
     window.addEventListener("keydown", closeOnEscape);
@@ -162,7 +163,7 @@ export default function Header() {
             <LanguageSwitcher isAuthenticated={isLoggedIn} variant="header-light" />
             {!isFocusedFlow && user && <NotificationInbox />}
             {/* Login — тільки якщо не залогінений */}
-            {!isFocusedFlow && <div ref={profileMenuRef} className="relative"><button type="button" ref={profileButtonRef} onClick={() => { setProfileOpen((v) => !v); setMobileMenuOpen(false); }} className="flex min-h-11 items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-bold text-slate-700 hover:bg-slate-100" aria-label={translate("header.account")} aria-haspopup="menu" aria-expanded={profileOpen} aria-controls="happydate-profile-menu"><span className="grid h-8 w-8 place-items-center rounded-full bg-cyan-100 text-cyan-700">👤</span><span className="hidden max-w-32 truncate sm:inline">{user ? (profile?.firstName || translate("header.account")) : translate("header.account")}</span></button>{profileOpen && <div id="happydate-profile-menu" role="menu" className="absolute right-0 top-12 z-50 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">{user ? <><Link ref={profileFirstItemRef} role="menuitem" className="block min-h-11 rounded-xl px-3 py-3 text-sm hover:bg-slate-50" href="/profile" onClick={() => setProfileOpen(false)}>{translate("header.profile")}</Link><Link role="menuitem" className="block min-h-11 rounded-xl px-3 py-3 text-sm hover:bg-slate-50" href="/settings" onClick={() => setProfileOpen(false)}>{translate("header.settings")}</Link><button type="button" role="menuitem" className="block min-h-11 w-full rounded-xl px-3 py-3 text-left text-sm text-red-600 hover:bg-red-50" onClick={async () => { await supabase.auth.signOut(); setProfileOpen(false); }}>{translate("header.logout")}</button></> : <><Link ref={profileFirstItemRef} role="menuitem" className="block min-h-11 rounded-xl px-3 py-3 text-sm hover:bg-slate-50" href="/auth/login" onClick={() => setProfileOpen(false)}>{translate("header.login")}</Link><Link role="menuitem" className="block min-h-11 rounded-xl px-3 py-3 text-sm hover:bg-slate-50" href="/auth/register" onClick={() => setProfileOpen(false)}>{translate("header.register")}</Link></>}</div>}</div>}
+            {!isFocusedFlow && <div ref={profileMenuRef} className="relative"><button type="button" ref={profileButtonRef} onClick={() => { setProfileOpen((v) => !v); setMobileMenuOpen(false); }} className="flex min-h-11 items-center gap-2 rounded-xl px-2 py-1.5 text-sm font-bold text-slate-700 hover:bg-slate-100" aria-label={translate("header.account")} aria-haspopup="true" aria-expanded={profileOpen} aria-controls="happydate-profile-menu"><span className="grid h-8 w-8 place-items-center rounded-full bg-cyan-100 text-cyan-700">👤</span><span className="hidden max-w-32 truncate sm:inline">{user ? (profile?.firstName || translate("header.account")) : translate("header.account")}</span></button>{profileOpen && <div id="happydate-profile-menu" className="absolute right-0 top-12 z-50 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">{user ? <><Link ref={profileFirstItemRef} className="block min-h-11 rounded-xl px-3 py-3 text-sm hover:bg-slate-50" href="/profile" onClick={() => setProfileOpen(false)}>{translate("header.profile")}</Link><Link className="block min-h-11 rounded-xl px-3 py-3 text-sm hover:bg-slate-50" href="/settings" onClick={() => setProfileOpen(false)}>{translate("header.settings")}</Link><button type="button" className="block min-h-11 w-full rounded-xl px-3 py-3 text-left text-sm text-red-600 hover:bg-red-50" onClick={async () => { await supabase.auth.signOut(); setProfileOpen(false); }}>{translate("header.logout")}</button></> : <><Link ref={profileFirstItemRef} className="block min-h-11 rounded-xl px-3 py-3 text-sm hover:bg-slate-50" href="/auth/login" onClick={() => setProfileOpen(false)}>{translate("header.login")}</Link><Link className="block min-h-11 rounded-xl px-3 py-3 text-sm hover:bg-slate-50" href="/auth/register" onClick={() => setProfileOpen(false)}>{translate("header.register")}</Link></>}</div>}</div>}
 
             {/* HAMBURGER — мобільний доступ до тих самих посилань */}
             {!isFocusedFlow && <button

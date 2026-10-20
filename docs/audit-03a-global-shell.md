@@ -10,8 +10,9 @@
 ## Fixed
 
 - Mobile menu button and panel now remain available below `768px`; the custom CSS hide rule is aligned to `768px`.
-- Account menu now has `aria-haspopup`, `aria-controls`, menu roles, Escape close, outside-click focus restoration, first-item focus on open, route-close behavior, and explicit close after sign-out/navigation.
+- Account dropdown now uses ordinary links/buttons with `aria-haspopup`, `aria-controls`, and `aria-expanded`; Escape closes and restores focus, while outside pointerdown closes without stealing focus from the next interactive target.
 - Initial auth errors now settle loading safely. Profile requests are invalidated on user changes and stale responses are ignored.
+- Initial `getUser()` results are version-guarded so a newer `onAuthStateChange` session cannot be overwritten by an older promise result.
 
 ## Main landmark inventory (source-level)
 

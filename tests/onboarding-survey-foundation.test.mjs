@@ -29,12 +29,11 @@ test("survey completion and reward are atomic and idempotent", async () => {
 });
 
 test("Block D preserves legacy event answers when the new onboarding UI omits dates", async () => {
-  const sql = await readFile(new URL("../supabase/migrations/20261017104602_harden_onboarding_completion_idempotency.sql", import.meta.url), "utf8");
+  const sql = await readFile(new URL("../supabase/migrations/20261020153546_preserve_legacy_survey_events.sql", import.meta.url), "utf8");
   assert.match(sql, /p_special_dates is null/);
   assert.match(sql, /preserve legacy survey events/);
   assert.match(sql, /coalesce\(v_existing\.special_date_event_ids, '\{\}'\)/);
-  assert.match(sql, /column public\.user_survey\.completed_at/);
-  assert.match(sql, /column public\.user_survey\.reward_granted_at/);
+  assert.match(sql, /v_existing\.reward_granted_at is null/);
 });
 
 test("survey dates use canonical Events without deleting legacy or unrelated events", async () => {

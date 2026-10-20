@@ -1,0 +1,4 @@
+-- Intentionally empty seed for local development.
+--
+-- Supabase runs this file after migrations during `supabase db reset`.
+-- Product and user data must never be copied into the local seed.

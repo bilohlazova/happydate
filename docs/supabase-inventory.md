@@ -1,5 +1,11 @@
 # HappyDate Supabase Inventory
 
+> Historical snapshot: the remote metadata and administrative observations in
+> this document are dated and labelled below. They are not a live description
+> of production. Current application expectations should be checked against
+> the committed migrations and source code; any new remote claim requires a
+> separate read-only verification.
+
 - Status: Read-only inventory complete; confirmed client contract corrections implemented
 - Remote metadata observed: 2026-08-03
 - Scope: public PostgREST schema, Auth settings, Storage bucket configuration,

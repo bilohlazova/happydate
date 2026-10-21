@@ -7,7 +7,8 @@ import GiftOutcomeConfirmation from "@/components/home-dashboard/GiftOutcomeConf
 import ChatAssistantModal from "@/components/ChatAssistantModal";
 import { loadHome } from "@/lib/home/loadHome";
 import { buildHomeViewModel } from "@/lib/home/buildHomeViewModel";
-import type { HomeViewModel } from "@/lib/home/home.types";
+import { isCurrentHomeLoad } from "@/lib/home/homeLoadGuard";
+import { selectRenderableHomeSnapshot, type HomeSnapshot } from "@/lib/home/homeRender";
 import { changeGiftOutcomeFollowUp, confirmPersonGiftOutcome, savePersonGiftOutcomeNote, undoPersonGiftOutcome } from "@/lib/gifts/gift.loaders";
 import { createSelectedPersonGift } from "@/lib/gifts/gift.loaders";
 import type { GiftOutcomeValue } from "@/lib/gifts/gift.types";
@@ -108,7 +109,7 @@ export default function HomePageClient() {
   const locale = isSupportedLocale(localeValue) ? localeValue : "pl";
   const homeT = useTranslations("home");
   const relationT = useTranslations("people.relationships");
-  const [viewModel, setViewModel] = useState<HomeViewModel | null>(null);
+  const [homeSnapshot, setHomeSnapshot] = useState<HomeSnapshot | null>(null);
   const [fatalError, setFatalError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [chatOpen, setChatOpen] = useState(false);
@@ -124,6 +125,9 @@ export default function HomePageClient() {
   const [giftOutcomeUndoError, setGiftOutcomeUndoError] = useState(false);
   const giftOutcomeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openedNotificationScopeRef = useRef<string | null>(null);
+  const homeRequestVersionRef = useRef(0);
+  const homeOwnerRef = useRef<string | null>(null);
+  const viewModel = selectRenderableHomeSnapshot(homeSnapshot, user?.id ?? null, authLoading);
 
   const reload = useCallback(() => setReloadKey((value) => value + 1), []);
 
@@ -138,6 +142,20 @@ export default function HomePageClient() {
   useEffect(() => () => {
     if (giftOutcomeTimerRef.current) clearTimeout(giftOutcomeTimerRef.current);
   }, []);
+
+  useEffect(() => {
+    const nextOwnerId = user?.id ?? null;
+    homeOwnerRef.current = nextOwnerId;
+    homeRequestVersionRef.current += 1;
+    if (authLoading || nextOwnerId) return;
+    // Clear the in-memory snapshot when auth ownership ends.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHomeSnapshot(null);
+    setFatalError(false);
+    setReminder(null);
+    setReminderError(null);
+    setInAppDeliveryCount(0);
+  }, [authLoading, user?.id]);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -159,17 +177,21 @@ export default function HomePageClient() {
   useEffect(() => {
     if (authLoading || !user) return;
     let cancelled = false;
+    const requestId = ++homeRequestVersionRef.current;
+    const ownerId = user.id;
+    homeOwnerRef.current = ownerId;
     // Reset the route snapshot before loading the newly requested locale/version.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setFatalError(false);
-    setViewModel(null);
+    setHomeSnapshot(null);
     setReminder(null);
     setReminderError(null);
     setInAppDeliveryCount(0);
 
     void loadHome()
       .then(async (data) => {
-        if (cancelled) return;
+        if (cancelled || !isCurrentHomeLoad(requestId, homeRequestVersionRef.current, ownerId, homeOwnerRef.current)) return;
+        if (data.userId !== ownerId) return;
         const nextViewModel = buildHomeViewModel(
           data,
           locale,
@@ -177,7 +199,7 @@ export default function HomePageClient() {
           new Date(),
           (key, values) => relationT(key as never, values as never),
         );
-        setViewModel(nextViewModel);
+        setHomeSnapshot({ ownerId, viewModel: nextViewModel });
         if (nextViewModel.recommendations.some((item) => item.knowledgeReview)) {
           void recordKnowledgeReviewInteraction("home", "shown");
         }
@@ -185,18 +207,18 @@ export default function HomePageClient() {
         try {
           const nextReminder = await ensureHomeReminder(nextViewModel.featuredEvent);
           const deliveries = await consumeQueuedInAppDeliveries();
-          if (!cancelled) {
+          if (!cancelled && isCurrentHomeLoad(requestId, homeRequestVersionRef.current, ownerId, homeOwnerRef.current)) {
             setReminder(nextReminder);
             setInAppDeliveryCount(deliveries.length);
           }
         } catch (error) {
           logOperationalError("home", "reminder-initialization-failed", error);
-          if (!cancelled) setReminderError("initialization_failed");
+          if (!cancelled && isCurrentHomeLoad(requestId, homeRequestVersionRef.current, ownerId, homeOwnerRef.current)) setReminderError("initialization_failed");
         }
       })
       .catch((error) => {
         logOperationalError("home", "data-load-failed", error);
-        if (!cancelled) setFatalError(true);
+        if (!cancelled && isCurrentHomeLoad(requestId, homeRequestVersionRef.current, ownerId, homeOwnerRef.current)) setFatalError(true);
       });
 
     return () => { cancelled = true; };

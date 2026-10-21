@@ -39,10 +39,22 @@ const t = (key, values = {}) => Object.entries(values).reduce((value, [name, rep
 
 function data(overrides = {}) {
   return {
-    isAuthenticated: true, profile: { fullName: "Maria Test", firstName: "Maria", lastName: "Test" }, authMetadataName: null, email: "mail@example.com",
+    userId: "owner-1", isAuthenticated: true, profile: { fullName: "Maria Test", firstName: "Maria", lastName: "Test" }, authMetadataName: null, email: "mail@example.com",
     people: [], events: [], memories: [], errors: [], ...overrides,
   };
 }
+
+test("proactivity mode reaches Happy signal selection for every supported mode", () => {
+  const idea = {
+    id: "00000000-0000-4000-8000-000000000001", userId: "owner-1", type: "gift_help",
+    title: "Prepare", message: "Prepare something thoughtful", status: "new",
+    personId: null, eventId: null, createdAt: "2026-07-17T00:00:00Z",
+  };
+  for (const [mode, expected] of [["minimal", null], ["balanced", "idea"], ["active", "idea"]]) {
+    const model = buildHomeViewModel(data({ proactivityMode: mode, happyIdeas: [idea] }), "pl", t, new Date(2026, 6, 17));
+    assert.equal(model.primaryHappyBlock?.type ?? null, expected, `mode ${mode}`);
+  }
+});
 
 test("featured event prefers a supported important event inside seven days", () => {
   const model = buildHomeViewModel(data({ events: [

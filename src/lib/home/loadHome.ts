@@ -21,6 +21,7 @@ export async function loadHome({
   return {
     userId: data.userId,
     isAuthenticated: data.isAuthenticated,
+    proactivityMode: data.proactivityMode,
     profile: data.profile,
     authMetadataName: data.authMetadataName,
     email: data.email,

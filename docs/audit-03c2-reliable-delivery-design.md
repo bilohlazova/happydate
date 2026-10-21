@@ -106,20 +106,18 @@ Existing `happy_notifications` rows, including rows with legacy or null `dedupe_
 
 Do not use one `status` for all meanings.
 
-**Delivery attempt state** (per owner, logical key, channel):
+**Channel delivery-attempt state** is separate per channel:
 
-`queued → claimed → content_persisted → provider_accepted`  
-with `failed`, `skipped`, and lease-timeout recovery as side paths.
+- **in_app:** `queued → processing → content_persisted`, with `failed`, `skipped`, and lease-timeout recovery as side paths. `content_persisted` is reached only after the complete `happy_notifications` content and owner-scoped destination references are durably committed.
+- **push:** `queued → processing → provider_accepted`, or `failed`/`skipped`, with lease-timeout recovery. `provider_accepted` means only that the provider accepted the attempt according to the selected policy.
 
-- In-app reaches `content_persisted` only after the complete `happy_notifications` content and owner-scoped destination references are durably committed.
-- Push may reach `provider_accepted` after the provider accepts the payload; it still has no display/read/open guarantee.
-- `sent` may remain as a compatibility projection during rollout, but new code must not interpret it as displayed or acknowledged.
+`sent` may remain as a compatibility projection during rollout, but new code must not interpret it as persisted content, displayed, read, or opened. A push provider acceptance has no display/read/open guarantee.
 
-**User acknowledgement state** is separate:
+**User acknowledgement state** is separate and does not gate delivery persistence:
 
-`persisted → displayed → read → opened`
+`content_persisted → [displayed] → read → opened`
 
-`displayed` is a client observation and must be idempotent. `read_at` and `opened_at` remain the existing Inbox fields and remain monotonic. Repeated browser opening, read, or open requests must return the same terminal acknowledgement without incrementing or decrementing counts twice.
+`displayed` is optional client telemetry, not a prerequisite for `read_at` or `opened_at`. It must be idempotent when implemented. `read_at` and `opened_at` remain the existing Inbox fields and remain monotonic. Repeated browser opening, read, or open requests must return the same terminal acknowledgement without incrementing or decrementing counts twice.
 
 ### 3.3 Autonomous atomic in-app persistence
 
@@ -159,8 +157,11 @@ All reminder lifecycle writers must use the same lock order: **reminder row → 
 
 - `complete`, `cancel`, and `snooze` lock the reminder first and then update only the allowed current state.
 - The in-app writer locks the reminder first, rechecks the state, then locks/claims the attempt. It cannot persist content for a terminal reminder.
-- Cancellation or completion before the writer commits causes the writer to skip/cancel the attempt with no notification content.
-- Cancellation after the notification transaction commits suppresses future attempts; it does not silently retract already-persisted Inbox content. Any dismissal/retraction is a separate product action.
+The outcome is determined by transaction serialization and lock acquisition, not by the wall-clock order in which a request was initiated:
+
+- If the lifecycle transaction acquires the reminder lock first and commits cancellation/completion, the writer subsequently observes the terminal state and skips/cancels the attempt with no notification content.
+- If the writer acquires the reminder lock first, rechecks the active state, persists the notification and mapping, and commits first, a later cancellation/completion suppresses future attempts but does not silently retract already-persisted Inbox content. Any dismissal/retraction is a separate product action.
+- If either transaction is waiting on the lock, it must re-read the committed row after acquiring the lock; a stale pre-lock read must never decide the outcome.
 
 Claims use leases and owner predicates. Unique constraints enforce one logical notification per owner. Every reference lookup and acknowledgement keeps the owner condition. RLS remains enabled for user-facing tables; service-role writers are restricted to trusted server functions and never expose service credentials to web, iOS, or Android.
 
@@ -244,14 +245,14 @@ Each phase should be a small, independently reviewed PR; none is part of this de
 | Concurrent queue workers | `SKIP LOCKED`/lease ownership prevents double processing; loser retries or observes committed mapping. |
 | Crash before Inbox persistence | Transaction rolls back or lease expires; attempt remains retryable; no false delivered state. |
 | Crash after Inbox persistence | Retry finds the logical key and finalizes mapping; no duplicate content. |
-| Repeat every 60 or 180 minutes | New attempt key, same reminder-level notification; no duplicate Inbox row; `read_at`/`opened_at` are not reset. |
+| Repeat every 60 or 180 minutes | Every repeat gets a new delivery-attempt key; all attempts retain the same reminder-level notification key, so no duplicate Inbox row is created and `read_at`/`opened_at` are not reset. |
 | Offline user and reconnect | Server persists Inbox content independently of Home render; reconnect lists it through the existing API. |
 | Repeated browser opening | Same row; `displayed`/`read_at`/`opened_at` are monotonic and idempotent. |
 | Cross-account access | User A cannot claim, read, acknowledge, or resolve User B's delivery/content. |
 | Push-only preference with no active device | No false acceptance; explicit bounded unavailable-device outcome; no hot-loop or silent loss. |
 | Multiple devices with partial APNs/FCM success | One channel attempt, durable per-device outcomes, retry only failed eligible devices, no duplicate Inbox item. |
-| Cancellation before writer commit | No notification content; attempt is cancelled/skipped and cannot become persisted. |
-| Cancellation after notification persistence | Future attempts stop; existing persisted content follows the approved deletion/dismissal policy. |
+| Cancellation wins lock first | Writer observes the committed terminal state; no notification content is persisted. |
+| Writer wins lock first | Notification/mapping commit succeeds; later cancellation stops future attempts but does not retract persisted content. |
 | Legacy `sent` row without notification mapping | Quarantined/audited; no automatic replay or fabricated content. |
 | Deletion of referenced event/person/task | Current cascade behavior is verified; future snapshot/null-destination policy is tested separately. |
 | Feature-flag rollback | New writer can be disabled without routing to direct `sent`-without-content behavior; queued/leased rows remain recoverable. |

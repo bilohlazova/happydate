@@ -13,6 +13,7 @@
 - Added owner-scoped snapshots, request sequencing, response owner validation, and reset on auth ownership changes.
 - Added distinct loading, empty, network error, unauthorized, and unavailable states with retry.
 - Added pagination for all server-reported pages and idempotent local read-count transitions for repeated read/open operations.
+- Pagination failures retain the failed page and append mode so Retry replays the same request without replacing or duplicating earlier items.
 - Preserved owner-scoped destination resolution and server-side authorization.
 
 ## TESTED

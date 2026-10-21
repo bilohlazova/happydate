@@ -7,6 +7,8 @@ export interface InboxSnapshot<T> {
   unreadCount: number;
   page: number;
   hasMore: boolean;
+  failedPage?: number;
+  failedAppend?: boolean;
 }
 
 export function mergeInboxPage<T>(
@@ -26,6 +28,27 @@ export function mergeInboxPage<T>(
     unreadCount: Math.max(0, unreadCount),
     page,
     hasMore,
+  };
+}
+
+export function markInboxPageFailure<T>(
+  current: InboxSnapshot<T> | null,
+  ownerId: string,
+  page: number,
+  append: boolean,
+  status: Extract<InboxStatus, "error" | "unavailable" | "unauthorized">,
+  preserveCurrent = true,
+): InboxSnapshot<T> {
+  const sameOwner = preserveCurrent && current?.ownerId === ownerId;
+  return {
+    ownerId,
+    status,
+    items: sameOwner ? current.items : [],
+    unreadCount: sameOwner ? current.unreadCount : 0,
+    page: sameOwner ? current.page : 0,
+    hasMore: false,
+    failedPage: page,
+    failedAppend: append,
   };
 }
 

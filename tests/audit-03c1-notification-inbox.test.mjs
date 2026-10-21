@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { applyInboxReadMutation, mergeInboxPage, selectRenderableInbox } from "../src/lib/notifications/inboxState.ts";
+import { applyInboxReadMutation, markInboxPageFailure, mergeInboxPage, selectRenderableInbox } from "../src/lib/notifications/inboxState.ts";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const item = (id, readAt = null) => ({ id, readAt });
@@ -23,6 +23,23 @@ test("pagination appends only to the same owner and preserves server unread coun
   assert.equal(second.hasMore, false);
   const wrongOwner = mergeInboxPage(first, "user-b", 1, [item("b")], 1, false, true);
   assert.deepEqual(wrongOwner.items.map((entry) => entry.id), ["b"]);
+});
+
+test("page 0 success, page 1 failure, then retry page 1 success keeps items and avoids duplicates", async () => {
+  const first = mergeInboxPage(null, "user-a", 0, [item("1"), item("2")], 2, true, false);
+  const failed = markInboxPageFailure(first, "user-a", 1, true, "error");
+  assert.deepEqual(failed.items.map((entry) => entry.id), ["1", "2"]);
+  assert.equal(failed.failedPage, 1);
+  assert.equal(failed.failedAppend, true);
+  const retried = mergeInboxPage(failed, "user-a", failed.failedPage, [item("3")], 2, false, failed.failedAppend);
+  assert.deepEqual(retried.items.map((entry) => entry.id), ["1", "2", "3"]);
+  assert.equal(retried.items.filter((entry) => entry.id === "3").length, 1);
+  const unavailable = markInboxPageFailure(first, "user-a", 1, true, "unavailable");
+  assert.equal(unavailable.failedPage, 1);
+  assert.equal(unavailable.failedAppend, true);
+  const component = await read("src/components/notifications/NotificationInbox.tsx");
+  assert.match(component, /visible\?\.failedPage/);
+  assert.match(component, /visible\?\.failedAppend/);
 });
 
 test("repeated read/open responses decrement unread only on the first transition", () => {

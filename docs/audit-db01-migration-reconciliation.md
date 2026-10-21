@@ -146,8 +146,8 @@ The mapped expected GitHub order is:
 
 There are 31 pairwise inversions, concentrated in two groups:
 
-1. `20260923172825_normalize_public_data_api_grants` (row 62) executes after rows 63–70, so the public-grant normalization is later than the task/notification and birthday-preparation group.
-2. The block for rows 75–89 is reordered as rows `76,77,79,80,81,82,83,84,85,86,87,89,75,78,88` rather than `75,76,77,78,79,80,81,82,83,84,85,86,87,88,89`. In particular, task-decision/action grants, birthday continuation/gift/greeting/proactivity migrations, onboarding hardening, and profile-name migrations do not follow the GitHub sequence.
+1. Row #62, `20260921120000_add_gift_event_context_key`, executes in Staging after rows #63–70. Row #63 is `20260923172825_normalize_public_data_api_grants` and begins that eight-row displaced group. Moving row #62 behind each of rows #63–70 accounts for exactly 8 pairwise inversions.
+2. The GitHub-mapped block for rows #75–89 is reordered in Staging as `76,77,79,80,81,82,83,84,85,86,87,89,75,78,88` rather than `75,76,77,78,79,80,81,82,83,84,85,86,87,88,89`; this accounts for exactly 23 pairwise inversions. The Staging-only `harden_onboarding_completion_idempotency` ledger entry is not a GitHub-mapped row and is excluded from this inversion count. Profile-name migrations #90–91 retain their relative order and are likewise not causes of the 31 inversions.
 
 Rows outside these groups have no detected relative-order inversion; their Staging version IDs are still renumbered. The dependency risk is therefore limited to the reordered groups, but exact safety remains **UNVERIFIED** until the stored statements and dependency assumptions are reviewed together.
 

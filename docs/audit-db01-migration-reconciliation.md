@@ -1,7 +1,7 @@
 # AUDIT-DB-01 — Three-Way Migration Reconciliation
 
 **Repository:** `bilohlazova/happydate`  
-**Audit base:** `origin/main` `f3098bc989078c28c31b590175b38ca0284206c0`  
+**Audit base:** `origin/main` `c2db87e425856458478efdc4f1f1c63bb9bdda40`  
 **Scope:** read-only GitHub and Supabase metadata/schema inspection.
 
 No `db push`, `db reset`, migration repair, DDL/DML, history rename/delete, RLS/cron/function/secret/settings change, or Production-data copy was performed.

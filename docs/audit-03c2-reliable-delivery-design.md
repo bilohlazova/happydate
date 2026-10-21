@@ -258,7 +258,7 @@ Each phase should be a small, independently reviewed PR; none is part of this de
 | Feature-flag rollback | New writer can be disabled without routing to direct `sent`-without-content behavior; queued/leased rows remain recoverable. |
 | Reminder cancellation/completion during claim | Final lifecycle state wins; no new content is persisted after the terminal transition. |
 | Timezone, DST, and quiet hours | Due evaluation uses the owner's IANA timezone; boundaries and overnight windows are deterministic. |
-| Repeat interval | Each scheduled occurrence has a distinct logical key; existing occurrence uniqueness is preserved. |
+| Repeat interval | Each scheduled repeat has a distinct delivery-attempt key, while retaining the same reminder-level notification key; existing occurrence uniqueness is preserved. |
 | Retry and deduplication | Same key is retried safely; successful retry never duplicates Inbox content. |
 | Pre-existing delivery rows | Legacy queued/sent rows are classified and handled without silently losing or duplicating them. |
 | Push provider acceptance | Provider ID is stored; state is not reported as displayed/read/opened. |

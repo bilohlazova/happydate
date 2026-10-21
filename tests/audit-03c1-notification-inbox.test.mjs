@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { applyInboxReadMutation, markInboxPageFailure, mergeInboxPage, selectRenderableInbox } from "../src/lib/notifications/inboxState.ts";
+import { applyInboxReadMutation, markInboxPageFailure, mergeInboxPage, selectRenderableInbox, shouldKeepInboxItemsVisible } from "../src/lib/notifications/inboxState.ts";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const item = (id, readAt = null) => ({ id, readAt });
@@ -40,6 +40,19 @@ test("page 0 success, page 1 failure, then retry page 1 success keeps items and 
   const component = await read("src/components/notifications/NotificationInbox.tsx");
   assert.match(component, /visible\?\.failedPage/);
   assert.match(component, /visible\?\.failedAppend/);
+});
+
+test("append failure keeps the Inbox list presentation while first-load and unauthorized errors replace it", () => {
+  const first = mergeInboxPage(null, "user-a", 0, [item("1")], 1, true, false);
+  const appendError = markInboxPageFailure(first, "user-a", 1, true, "error");
+  const unavailable = markInboxPageFailure(first, "user-a", 1, true, "unavailable");
+  const firstLoadError = markInboxPageFailure(null, "user-a", 0, false, "error");
+  const unauthorized = markInboxPageFailure(first, "user-a", 1, true, "unauthorized", false);
+
+  assert.equal(shouldKeepInboxItemsVisible(appendError, "user-a", false), true);
+  assert.equal(shouldKeepInboxItemsVisible(unavailable, "user-a", false), true);
+  assert.equal(shouldKeepInboxItemsVisible(firstLoadError, "user-a", false), false);
+  assert.equal(shouldKeepInboxItemsVisible(unauthorized, "user-a", false), false);
 });
 
 test("repeated read/open responses decrement unread only on the first transition", () => {

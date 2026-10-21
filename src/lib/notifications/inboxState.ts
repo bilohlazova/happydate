@@ -74,3 +74,15 @@ export function selectRenderableInbox<T>(
   if (authLoading || !currentUserId || !snapshot || snapshot.ownerId !== currentUserId) return null;
   return snapshot;
 }
+
+export function shouldKeepInboxItemsVisible<T>(
+  snapshot: InboxSnapshot<T> | null,
+  currentUserId: string | null,
+  authLoading: boolean,
+): boolean {
+  const visible = selectRenderableInbox(snapshot, currentUserId, authLoading);
+  if (!visible || visible.status === "unauthorized" || visible.items.length === 0) return false;
+  return visible.status === "ready"
+    || visible.status === "loading"
+    || ((visible.status === "error" || visible.status === "unavailable") && visible.failedAppend === true);
+}

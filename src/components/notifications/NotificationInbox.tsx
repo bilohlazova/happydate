@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { applyInboxReadMutation, markInboxPageFailure, mergeInboxPage, selectRenderableInbox, type InboxSnapshot } from "@/lib/notifications/inboxState";
+import { applyInboxReadMutation, markInboxPageFailure, mergeInboxPage, selectRenderableInbox, shouldKeepInboxItemsVisible, type InboxSnapshot } from "@/lib/notifications/inboxState";
 import { supabase } from "@/lib/supabaseClient";
 
 type NotificationItem = {
@@ -108,6 +108,9 @@ export default function NotificationInbox() {
   const items = visible?.items ?? [];
   const unreadCount = visible?.unreadCount ?? 0;
   const badge = unreadCount > 99 ? "99+" : unreadCount > 9 ? "9+" : String(unreadCount);
+  const isInboxError = status === "error" || status === "unauthorized" || status === "unavailable";
+  const keepItemsVisible = shouldKeepInboxItemsVisible(snapshot, user?.id ?? null, authLoading);
+  const showInlineError = keepItemsVisible && (status === "error" || status === "unavailable");
 
   async function authRequest(path: string) {
     const ownerId = user?.id ?? null;
@@ -170,9 +173,9 @@ export default function NotificationInbox() {
       </button>
       {open && <section id="happy-notification-inbox" className="hd-notification-panel absolute right-0 top-12 z-50 w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl" aria-label={t("title")}>
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3"><h2 className="font-extrabold text-slate-900">{t("title")}</h2>{status === "loading" && <LoaderCircle className="h-4 w-4 animate-spin text-slate-400" aria-label={t("loading")} />}</div>
-        {status === "error" || status === "unauthorized" || status === "unavailable" ? <div className="px-4 py-8 text-center text-sm text-slate-600" role="alert"><p>{errorMessage}</p><button type="button" onClick={() => void load(visible?.failedPage ?? visible?.page ?? 0, visible?.failedAppend ?? false)} className="mt-3 font-bold text-sky-700 underline">{t("retry")}</button></div> : items.length === 0 && status !== "loading" ? <p className="px-4 py-8 text-center text-sm text-slate-500">{t("empty")}</p> : <div className="max-h-[min(70vh,520px)] overflow-y-auto">{items.map((item) => <article key={item.id} className={`border-b border-slate-100 px-4 py-3 ${item.readAt ? "" : "bg-sky-50/60"}`}>
+        {isInboxError && !showInlineError ? <div className="px-4 py-8 text-center text-sm text-slate-600" role="alert"><p>{errorMessage}</p><button type="button" onClick={() => void load(visible?.failedPage ?? visible?.page ?? 0, visible?.failedAppend ?? false)} className="mt-3 font-bold text-sky-700 underline">{t("retry")}</button></div> : items.length === 0 && status !== "loading" ? <p className="px-4 py-8 text-center text-sm text-slate-500">{t("empty")}</p> : <><div className="max-h-[min(70vh,520px)] overflow-y-auto">{items.map((item) => <article key={item.id} className={`border-b border-slate-100 px-4 py-3 ${item.readAt ? "" : "bg-sky-50/60"}`}>
           <div className="flex items-start gap-2"><span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${item.readAt ? "bg-slate-200" : "bg-sky-500"}`} aria-hidden="true" /><div className="min-w-0 flex-1"><p className="font-bold text-slate-900">{item.title}</p>{item.message && <p className="mt-1 text-sm leading-5 text-slate-600">{item.message}</p>}<time className="mt-2 block text-xs text-slate-400" dateTime={item.createdAt}>{formatDate(item.createdAt)}</time><div className="mt-2 flex gap-2">{!item.readAt && <button type="button" disabled={pendingIds.has(item.id)} onClick={() => void markRead(item.id)} className="text-xs font-bold text-slate-600 underline disabled:opacity-50">{t("markRead")}</button>}<button type="button" disabled={pendingIds.has(item.id)} onClick={() => void openNotification(item)} className="inline-flex items-center gap-1 text-xs font-bold text-sky-700 underline disabled:opacity-50">{t("open")}<ExternalLink className="h-3 w-3" aria-hidden="true" /></button></div></div></div>
-        </article>)}{visible?.hasMore && <button type="button" onClick={() => void load(visible.page + 1, true)} disabled={status === "loading"} className="w-full px-4 py-3 text-sm font-bold text-sky-700 disabled:opacity-50">{status === "loading" ? t("loadingMore") : t("loadMore")}</button>}</div>}
+        </article>)}{visible?.hasMore && <button type="button" onClick={() => void load(visible.page + 1, true)} disabled={status === "loading"} className="w-full px-4 py-3 text-sm font-bold text-sky-700 disabled:opacity-50">{status === "loading" ? t("loadingMore") : t("loadMore")}</button>}</div>{showInlineError && <div className="border-t border-amber-100 bg-amber-50 px-4 py-3 text-center text-sm text-amber-900" role="alert"><p>{errorMessage}</p><button type="button" onClick={() => void load(visible?.failedPage ?? visible?.page ?? 0, visible?.failedAppend ?? false)} className="mt-2 font-bold text-sky-700 underline">{t("retry")}</button></div>}</>}
         {actionError && <p className="border-t border-rose-100 bg-rose-50 px-4 py-2 text-xs text-rose-800" role="alert">{t("error")}</p>}
       </section>}
     </div>

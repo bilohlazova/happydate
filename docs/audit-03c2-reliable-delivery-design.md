@@ -60,7 +60,7 @@ Current trusted writers include birthday/proactive and occasion functions. They 
 - disables a device only for explicit invalid-token responses;
 - marks rows `skipped` when there is no active device.
 
-Push provider acceptance is not proof of device display, read, or open. The dispatcher is operationally dependent on a protected invocation schedule; the repository contains the function and configuration, but no confirmed schedule invocation was inferred from source alone.
+Push provider acceptance is not proof of device display, read, or open. The repository contains the function and configuration, but this audit did not verify a deployed invocation schedule for the dispatcher; its schedule must be confirmed separately before calling push operationally active.
 
 ### 1.5 Preferences, quiet hours, and repeats
 
@@ -87,15 +87,20 @@ Completion/cancellation updates the logical reminder, but the current schema doe
 
 ## 3. PROPOSED CONTRACT
 
-### 3.1 Stable identity and compatibility
+### 3.1 Stable identity, attempts, and compatibility
 
-Introduce one backend-generated logical identity for each reminder occurrence:
+Keep two identities separate:
 
-`reminder:v1:<reminder_id>:<occurrence_date>:<action_kind>:<scheduled_for_utc>`
+- **Notification identity:** `reminder:v1:<reminder_id>`. `reminder.id` is already occurrence-scoped by `(user_id, event_id, occurrence_date, action_kind)`, so it is stable for one logical reminder occurrence. `scheduled_for` must not be part of the Inbox dedupe key.
+- **Delivery-attempt identity:** `attempt:v1:<reminder_id>:<channel>:<scheduled_for_utc>`. The database-level equivalent remains `(reminder_id, channel, scheduled_for)` and identifies one scheduled attempt/channel, not a new user-facing message.
 
-The exact serialized form is an implementation detail, but it must be deterministic, bounded, owner-scoped, and generated server-side. The key must not contain user-controlled text. The same logical key is reused by in-app and push attempts so one logical reminder can have multiple channels without creating a second Inbox message.
+The owner is stored and checked separately from both keys. Keys are backend-generated, bounded, deterministic, and contain no user-controlled text. In-app and push attempts for the same reminder occurrence point to the same notification identity, while retaining independent channel status and retry metadata.
 
-Existing `happy_notifications` rows, including rows with legacy or null `dedupe_key`, remain readable and acknowledgeable. New reminder-backed rows use the stable key and the existing `(user_id, dedupe_key)` uniqueness boundary.
+Every repeat interval creates a new delivery attempt for the same `reminder.id`; it does not create another `happy_notifications` row. A retry of an attempt upserts or reuses the one notification mapping. A genuinely new occurrence gets a new `reminder.id` and therefore a new notification identity.
+
+Repeats do not reset `read_at` or `opened_at`. If the existing notification is unread, it remains unread; if the user has read or opened it, it remains acknowledged. A repeat may update internal `last_attempted_at`/delivery evidence, but must not manufacture an unread duplicate. A future product decision may add an explicit “remind me again” acknowledgement action, but that is not implicit in delivery retry.
+
+Existing `happy_notifications` rows, including rows with legacy or null `dedupe_key`, remain readable and acknowledgeable. New reminder-backed rows use the stable notification key and the existing `(user_id, dedupe_key)` uniqueness boundary. Legacy rows are never re-keyed automatically.
 
 ### 3.2 Separate state machines
 
@@ -116,17 +121,29 @@ with `failed`, `skipped`, and lease-timeout recovery as side paths.
 
 `displayed` is a client observation and must be idempotent. `read_at` and `opened_at` remain the existing Inbox fields and remain monotonic. Repeated browser opening, read, or open requests must return the same terminal acknowledgement without incrementing or decrementing counts twice.
 
-### 3.3 Atomic in-app persistence
+### 3.3 Autonomous atomic in-app persistence
 
-The trusted server transaction that claims an in-app attempt must:
+The in-app writer must be a trusted PostgreSQL function, invoked by a protected `pg_cron` job or an equivalent server-only scheduler. It must not depend on Home, Notification Inbox, an open browser, or a client token. The existing queue job may call this writer after queueing, or the writer may claim due reminder attempts directly; there must be one authoritative writer path.
 
-1. lock/claim one due attempt with an owner and lease;
-2. recheck the logical reminder is not cancelled/completed and the channel is enabled;
-3. upsert the complete `happy_notifications` row using `(owner_id, logical_key)`;
-4. record the notification ID and mark the in-app attempt `content_persisted`;
-5. commit all of the above atomically.
+For each bounded batch, one transaction must:
 
-The operation returns the persisted notification identity/content reference only after commit. A client must never be responsible for creating the authoritative Inbox row.
+1. select due candidate reminders in deterministic order and lock the reminder row first with `FOR UPDATE SKIP LOCKED`;
+2. lock the owner preference row consistently, then lock the matching in-app delivery attempt;
+3. recheck owner identity, reminder state (`pending`/`snoozed` only), scheduled time, in-app preference, quiet-hours policy, and attempt lease/status;
+4. derive the complete localized title, message, type, priority, and owner-scoped destination references from trusted data;
+5. upsert `happy_notifications` by `(user_id, notification_key)` and obtain its ID;
+6. record the notification mapping on the delivery attempt and set the in-app attempt to `content_persisted`;
+7. commit the notification, mapping, and final attempt status together.
+
+Only a successful commit means `in-app content persisted`. A returned row or log line before commit is not delivery evidence. The client may later observe the row and acknowledge it, but never creates the authoritative content.
+
+Operational constraints:
+
+- Use a bounded batch, for example 50–100 reminders per invocation, with a database limit and a short transaction per batch.
+- Use a lease/claim timestamp and recovery timeout for attempts that die while processing.
+- Emit counts for selected, persisted, dedupe-hit, skipped-terminal, failed, recovered, and oldest pending age; never log private message content or tokens.
+- Retry transaction failures with bounded backoff. A retry that finds the notification mapping finalizes the attempt; it never inserts a second Inbox row.
+- The writer must continue to work when no Home page is rendered and must be independently testable against a staging database.
 
 ### 3.4 Crash, timeout, and retry behavior
 
@@ -136,13 +153,27 @@ The operation returns the persisted notification identity/content reference only
 - A transaction rollback leaves the attempt retryable; it must never leave a terminal delivery state without the content.
 - Retries are idempotent and bounded by policy, but in-app persistence should not be abandoned merely because a browser was offline: persisted Inbox content is the durable handoff and remains available on reconnect.
 
-### 3.5 Concurrency and ownership
+### 3.5 Concurrency, lock order, and ownership
 
-Claims use row locks/leases and an owner predicate. Unique constraints enforce one logical notification per owner. Every reference lookup and acknowledgement keeps the owner condition. RLS remains enabled for user-facing tables; service-role writers are restricted to trusted server functions and never expose service credentials to web, iOS, or Android.
+All reminder lifecycle writers must use the same lock order: **reminder row → owner preference row → delivery-attempt row**. Queueing, autonomous in-app persistence, completion, cancellation, and snooze must use owner predicates while acquiring these locks. A delivery candidate that cannot acquire the reminder lock is skipped and retried later; it must not be force-updated.
 
-### 3.6 Push semantics
+- `complete`, `cancel`, and `snooze` lock the reminder first and then update only the allowed current state.
+- The in-app writer locks the reminder first, rechecks the state, then locks/claims the attempt. It cannot persist content for a terminal reminder.
+- Cancellation or completion before the writer commits causes the writer to skip/cancel the attempt with no notification content.
+- Cancellation after the notification transaction commits suppresses future attempts; it does not silently retract already-persisted Inbox content. Any dismissal/retraction is a separate product action.
 
-Push and in-app use the same logical key but have independent attempts. Push provider acceptance records only the provider result and opaque provider ID. Invalid tokens may be disabled as today; transient failures remain retryable. A push failure must not delete or invalidate the already-persisted Inbox notification. A push success must not mark it displayed, read, or opened.
+Claims use leases and owner predicates. Unique constraints enforce one logical notification per owner. Every reference lookup and acknowledgement keeps the owner condition. RLS remains enabled for user-facing tables; service-role writers are restricted to trusted server functions and never expose service credentials to web, iOS, or Android.
+
+### 3.6 Push and device fanout semantics
+
+Push and in-app use the same notification identity but have independent attempts. The later `20260804154538_create_push_device_registration.sql` behavior remains the baseline: a push attempt is eligible only when push is enabled and an active device exists.
+
+- For push-only preferences with no active device, do not claim success. The current queue path may leave no push row and keep the reminder due; the target contract must avoid a one-minute hot loop by recording an explicit `awaiting_device`/`skipped_no_active_device` outcome or otherwise applying a bounded next-attempt policy. It must not silently mark provider acceptance.
+- One logical push delivery may fan out to multiple devices. Keep one aggregate delivery record for the channel plus per-device attempt results (or an equivalent durable child result set) so one successful device does not hide failures on other devices.
+- APNs/FCM partial success records each device result, opaque provider ID where available, invalid-token classification, and retry eligibility. The aggregate is `provider_accepted` only when the chosen policy says the channel attempt has sufficient acceptance; it is never `displayed`.
+- A provider acceptance must not set Inbox `read_at`, `opened_at`, or `displayed`. Push failure must not delete or invalidate already-persisted in-app content.
+
+The dispatcher’s actual invocation schedule remains a separate operational prerequisite and must be verified before claiming push delivery is active.
 
 ### 3.7 Compatibility surface
 
@@ -156,6 +187,19 @@ The implementation must preserve:
 
 The safest rollout is additive: first create the mapping/state boundary, then migrate the in-app consumer to persist content transactionally, then add acknowledgement telemetry only if product needs it. No existing Inbox row should be rewritten solely to adopt the new contract.
 
+### 3.8 Durable content, deletion, and privacy
+
+The current foreign keys for `happy_notifications.person_id`, `event_id`, and `task_id` use `ON DELETE CASCADE`. Therefore deleting a referenced person, event, or task currently deletes the Inbox row and its `read_at`/`opened_at` history. This audit does not change those foreign keys.
+
+Recommended target policy, subject to a separate migration decision:
+
+- Persist the user-facing title/message and logical notification key as a bounded content snapshot at creation time; do not reconstruct historical text from a mutable event/person/task row.
+- Prefer preserving the snapshot after source deletion while nulling the optional destination reference, if product/privacy review accepts that retention. This would require an explicit future FK/policy migration and is not implemented here.
+- Until that migration is approved, document the current cascade behavior and treat source deletion as deletion of the associated Inbox content. No retry may recreate it from a deleted source.
+- Destination resolution must verify ownership and existence at open time. If the target is gone, use a safe owner-scoped fallback such as global Happy chat or a non-actionable Inbox detail; never expose a raw foreign ID or another owner’s resource.
+- Store only the minimum reminder content needed for the Inbox contract. Do not copy private notes, device tokens, provider credentials, or unrelated person data into a notification snapshot.
+- Existing proactive notifications retain their current semantic dedupe keys and writers. Reminder delivery must not create a second item for a proactive notification representing the same logical opportunity; any future bridge requires an explicit mapping/reconciliation rule.
+
 ## 4. MIGRATION PREREQUISITES — AUDIT-DB-01
 
 Read-only checks were performed against:
@@ -164,6 +208,8 @@ Read-only checks were performed against:
 - Staging project `happydate-staging` (`xgelazzdgluuenqkymox`)
 
 The live schema query confirmed that both environments contain the relevant tables and the current columns described above, including `reminder_deliveries.next_attempt_at`/`provider_message_id` and `happy_notifications.opened_at`. The live function definitions confirmed the current `SKIP LOCKED` claim and direct in-app `queued → sent` update in both environments.
+
+The live schema also confirms the current `happy_notifications` reference behavior: `person_id`, `event_id`, and `task_id` are nullable foreign keys with `ON DELETE CASCADE`. This is a current deletion semantic, not a recommendation to change it in AUDIT-03C-2A.
 
 The read-only migration ledger returned 92 applied rows for each environment. Production exposes the canonical migration names/versions in the returned ledger; the supplied AUDIT-DB-01 comparison reports 18 of 92 version numbers differing from GitHub. Staging clearly uses rewritten execution versions (for example `20261017072720`) while retaining original migration names, and the supplied comparison reports 92 of 92 number mismatches plus a name-set difference. These observations must be reconciled by an exact pairwise report, not by count or name-only matching.
 
@@ -181,13 +227,14 @@ Safe prerequisite plan, with no automatic execution:
 Each phase should be a small, independently reviewed PR; none is part of this design-only change.
 
 1. **AUDIT-DB-01 reconciliation** — establish authoritative migration/history parity and a schema snapshot.
-2. **Contract primitives** — add the logical key/mapping and attempt lease fields with additive constraints and backfill-safe handling for pre-existing delivery rows.
-3. **Trusted content writer** — implement one server/RPC transaction that upserts complete Inbox content and records the notification mapping; preserve legacy rows and API behavior.
-4. **In-app consumer cutover** — stop direct `queued → sent` acknowledgement for new rows; return only committed notification IDs/content references. Keep a guarded compatibility path for old rows.
-5. **Lifecycle race handling** — recheck cancellation/completion, add lease recovery, and test repeat/occurrence behavior.
-6. **Push projection** — map existing push attempts to the same logical key, retain provider retry/invalid-token behavior, and explicitly separate provider acceptance from user acknowledgement.
-7. **Client acknowledgement** — optionally record displayed state; keep existing read/open routes and monotonic semantics.
-8. **Observability and cleanup** — measure orphaned attempts, duplicate conflicts, retry age, and acknowledgement latency before removing compatibility code.
+2. **Contract primitives** — add the reminder-level notification key, attempt key/mapping, and lease fields with additive constraints and backfill-safe handling for pre-existing delivery rows.
+3. **Autonomous trusted writer** — implement one server/RPC transaction that locks in the documented order, upserts complete Inbox content, records the mapping, and finalizes in-app persistence; preserve legacy rows and API behavior.
+4. **In-app consumer cutover** — stop direct `queued → sent` acknowledgement for new rows; remove the Home dependency. Keep a guarded compatibility path for old rows.
+5. **Lifecycle race handling** — recheck cancellation/completion/snooze under the common lock order, add lease recovery, and test repeat/occurrence behavior.
+6. **Push fanout projection** — map existing push attempts to the same notification key, add per-device results or an approved equivalent, retain provider retry/invalid-token behavior, and explicitly separate provider acceptance from user acknowledgement.
+7. **Deletion/content policy** — make an explicit decision about current cascade versus snapshot retention before changing any foreign key.
+8. **Client acknowledgement** — optionally record displayed state; keep existing read/open routes and monotonic semantics.
+9. **Observability and cleanup** — measure orphaned attempts, duplicate conflicts, retry age, device partial success, and acknowledgement latency before removing compatibility code.
 
 ## 6. TEST MATRIX
 
@@ -197,9 +244,17 @@ Each phase should be a small, independently reviewed PR; none is part of this de
 | Concurrent queue workers | `SKIP LOCKED`/lease ownership prevents double processing; loser retries or observes committed mapping. |
 | Crash before Inbox persistence | Transaction rolls back or lease expires; attempt remains retryable; no false delivered state. |
 | Crash after Inbox persistence | Retry finds the logical key and finalizes mapping; no duplicate content. |
+| Repeat every 60 or 180 minutes | New attempt key, same reminder-level notification; no duplicate Inbox row; `read_at`/`opened_at` are not reset. |
 | Offline user and reconnect | Server persists Inbox content independently of Home render; reconnect lists it through the existing API. |
 | Repeated browser opening | Same row; `displayed`/`read_at`/`opened_at` are monotonic and idempotent. |
 | Cross-account access | User A cannot claim, read, acknowledge, or resolve User B's delivery/content. |
+| Push-only preference with no active device | No false acceptance; explicit bounded unavailable-device outcome; no hot-loop or silent loss. |
+| Multiple devices with partial APNs/FCM success | One channel attempt, durable per-device outcomes, retry only failed eligible devices, no duplicate Inbox item. |
+| Cancellation before writer commit | No notification content; attempt is cancelled/skipped and cannot become persisted. |
+| Cancellation after notification persistence | Future attempts stop; existing persisted content follows the approved deletion/dismissal policy. |
+| Legacy `sent` row without notification mapping | Quarantined/audited; no automatic replay or fabricated content. |
+| Deletion of referenced event/person/task | Current cascade behavior is verified; future snapshot/null-destination policy is tested separately. |
+| Feature-flag rollback | New writer can be disabled without routing to direct `sent`-without-content behavior; queued/leased rows remain recoverable. |
 | Reminder cancellation/completion during claim | Final lifecycle state wins; no new content is persisted after the terminal transition. |
 | Timezone, DST, and quiet hours | Due evaluation uses the owner's IANA timezone; boundaries and overnight windows are deterministic. |
 | Repeat interval | Each scheduled occurrence has a distinct logical key; existing occurrence uniqueness is preserved. |
@@ -214,9 +269,10 @@ Each phase should be a small, independently reviewed PR; none is part of this de
 ## 7. ROLLBACK STRATEGY
 
 - Keep all new schema additive and feature-gated. Do not delete or rewrite existing `reminder_deliveries` or `happy_notifications` rows.
-- If the new writer fails, disable only the new consumer path and leave legacy rows queued/retryable; preserve the existing Inbox API and read/open routes.
+- If the new writer fails, disable only the new writer/feature flag and leave new queued or leased rows recoverable; do not fall back to the legacy mechanism that marks in-app rows `sent` without Inbox content.
 - If a partial rollout created a mapping, retry by logical key and reuse the existing notification rather than inserting a compensating duplicate.
 - If push projection fails, disable push dispatch independently; persisted in-app content remains the source of truth.
+- Historical `sent` rows without a notification mapping are not automatically replayed. They require an explicit reconciliation decision and, if content cannot be proven, remain audit-only rather than being duplicated or guessed.
 - Before each migration phase, record row counts, status counts, orphan counts, and representative owner-scoped samples. Roll back code by deployment flag/version, not by destructive SQL.
 - Any schema rollback must be a separately reviewed additive compatibility migration after confirming no live rows depend on the field. Never use `db reset`, destructive DDL, or migration-history rewriting as an operational rollback.
 

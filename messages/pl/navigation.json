@@ -48,6 +48,12 @@
     "empty": "Nie ma jeszcze powiadomień.",
     "markRead": "Oznacz jako przeczytane",
     "open": "Otwórz",
-    "loading": "Ładowanie"
+    "loading": "Ładowanie",
+    "loadingMore": "Ładowanie starszych…",
+    "loadMore": "Pokaż starsze",
+    "retry": "Spróbuj ponownie",
+    "error": "Nie udało się załadować powiadomień.",
+    "unauthorized": "Zaloguj się ponownie, aby zobaczyć powiadomienia.",
+    "unavailable": "Powiadomienia są chwilowo niedostępne."
   }
 }

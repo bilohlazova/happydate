@@ -48,6 +48,12 @@
     "empty": "No notifications yet.",
     "markRead": "Mark as read",
     "open": "Open",
-    "loading": "Loading"
+    "loading": "Loading",
+    "loadingMore": "Loading older…",
+    "loadMore": "Show older",
+    "retry": "Try again",
+    "error": "Notifications could not be loaded.",
+    "unauthorized": "Sign in again to view notifications.",
+    "unavailable": "Notifications are temporarily unavailable."
   }
 }

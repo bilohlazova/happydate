@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   const page = pageValue === null ? 0 : Number(pageValue);
   if (!Number.isInteger(page) || page < 0 || page > 100) return Response.json({ error: "invalid_request" }, { status: 400 });
   try {
-    return Response.json(await listHappyNotifications(identity.userId, page), { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ ...(await listHappyNotifications(identity.userId, page)), ownerId: identity.userId }, { headers: { "Cache-Control": "no-store" } });
   } catch {
     return Response.json({ error: "service_unavailable" }, { status: 503 });
   }

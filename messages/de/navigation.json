@@ -48,6 +48,12 @@
     "empty": "Noch keine Benachrichtigungen.",
     "markRead": "Als gelesen markieren",
     "open": "Öffnen",
-    "loading": "Laden"
+    "loading": "Laden",
+    "loadingMore": "Ältere werden geladen…",
+    "loadMore": "Ältere anzeigen",
+    "retry": "Erneut versuchen",
+    "error": "Benachrichtigungen konnten nicht geladen werden.",
+    "unauthorized": "Melde dich erneut an, um Benachrichtigungen zu sehen.",
+    "unavailable": "Benachrichtigungen sind vorübergehend nicht verfügbar."
   }
 }

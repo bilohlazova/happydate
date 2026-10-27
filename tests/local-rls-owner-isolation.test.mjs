@@ -261,7 +261,7 @@ begin
       array[repeat('x', 281)], array['alcohol'], 'Invalid input', 'Should not persist', null
     );
     raise exception 'invalid survey input unexpectedly succeeded';
-  exception when sqlstate = '22023' then
+  exception when sqlstate '22023' then
     raise notice 'PASS invalid survey input rejected atomically';
   end;
 end

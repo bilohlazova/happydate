@@ -229,21 +229,30 @@ begin
   end if;
   if not exists (
     select 1 from public.events
-    where id = '${ids.eventB}' and user_id = '${ids.userB}'
-      and title = 'Synthetic owner B event' and date = date '2030-01-02'
-  ) then
-    raise exception 'owner A changed owner B event through the survey RPC';
-  end if;
-  if not exists (
-    select 1 from public.events
     where id = generated_id and user_id = '${ids.userA}'
       and title = 'A-owned replacement' and survey_origin = 'onboarding_survey'
   ) then
     raise exception 'explicit date save did not create an owner A survey event';
   end if;
+end
+$assert$;
+
+-- A cannot see B through RLS. Inspect B physically as the test session owner.
+reset role;
+do $assert$
+begin
+  if not exists (
+    select 1 from public.events
+    where id = '${ids.eventB}' and user_id = '${ids.userB}'
+      and title = 'Synthetic owner B event' and date = date '2030-01-02'
+  ) then
+    raise exception 'owner A changed owner B event through the survey RPC';
+  end if;
   raise notice 'PASS cross-owner survey isolation: owner B event unchanged';
 end
 $assert$;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '${ids.userA}', true);
 
 do $assert$
 begin
@@ -269,6 +278,12 @@ begin
   if current_points <> 100 or current_likes <> array['books']::text[] then
     raise exception 'invalid survey input caused a partial state change';
   end if;
+end
+$assert$;
+
+reset role;
+do $assert$
+begin
   if not exists (
     select 1 from public.events
     where id = '${ids.eventB}' and user_id = '${ids.userB}'
@@ -279,6 +294,8 @@ begin
   raise notice 'PASS invalid survey input: no partial state change';
 end
 $assert$;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '${ids.userA}', true);
 `;
 }
 

@@ -31,14 +31,14 @@
     "date-fns": "4.4.0",
     "date-holidays": "^3.35.0",
     "lucide-react": "^0.544.0",
-    "next": "16.3.8",
+    "next": "16.4.3",
     "next-intl": "4.13.5",
     "openai": "6.49.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "replicate": "1.4.0",
     "resend": "6.18.1",
-    "zod": "4.4.3"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@capacitor/cli": "8.5.3",

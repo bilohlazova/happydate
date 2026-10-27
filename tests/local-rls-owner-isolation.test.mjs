@@ -360,7 +360,21 @@ test("local RLS regression: policy contents and SQL grants are safe", { skip: !e
 test("local onboarding survey RPC preserves data, reward idempotency and ownership", { skip: !enabled }, () => {
   const output = runSql("onboarding survey RPC behavior", (ids) => `
     reset role;
-    insert into public.profiles (id, points) values ('${ids.userA}', 0), ('${ids.userB}', 0);
+    do $assert$
+    declare profile_count integer;
+    begin
+      select count(*) into profile_count
+      from public.profiles
+      where id in ('${ids.userA}', '${ids.userB}');
+      if profile_count <> 2 then
+        raise exception 'expected exactly two trigger-created profiles, got %', profile_count;
+      end if;
+      update public.profiles
+      set points = 0
+      where id in ('${ids.userA}', '${ids.userB}');
+      raise notice 'PASS trigger-created profiles: exactly two initialized';
+    end
+    $assert$;
     set local role authenticated;
     select set_config('request.jwt.claim.sub', '${ids.userA}', true);
     ${assertOnboardingSurveyState(ids)}

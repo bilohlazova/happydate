@@ -88,8 +88,12 @@ jobs:
             "select version from supabase_migrations.schema_migrations order by version" > /tmp/applied-migrations
           diff -u /tmp/expected-migrations /tmp/applied-migrations
 
-      - name: Run RLS owner-isolation regression tests
-        run: node --test tests/local-rls-owner-isolation.test.mjs
+      - name: Run RLS and onboarding survey behavioral tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${RUN_LOCAL_SUPABASE_RLS_TESTS:-}" = "1"
+          node --test tests/local-rls-owner-isolation.test.mjs
 
       - name: Stop temporary Supabase stack
         if: always()

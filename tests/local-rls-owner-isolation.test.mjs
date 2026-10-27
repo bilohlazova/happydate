@@ -139,6 +139,149 @@ select set_config('request.jwt.claim.sub', '${ids.userA}', true);
 `;
 }
 
+function assertOnboardingSurveyState(ids) {
+  return `
+do $assert$
+declare
+  awarded integer;
+  returned_ids uuid[];
+  current_points integer;
+begin
+  select points_awarded, special_date_event_ids
+    into awarded, returned_ids
+  from public.save_my_onboarding_survey(
+    array['flowers'], array['alcohol'], 'A calm home', 'Synthetic notes', null
+  );
+  if awarded <> 100 then
+    raise exception 'first survey completion awarded %, expected 100', awarded;
+  end if;
+  if coalesce(cardinality(returned_ids), 0) <> 0 then
+    raise exception 'first survey completion unexpectedly returned event ids';
+  end if;
+  select points into current_points from public.profiles where id = '${ids.userA}';
+  if current_points <> 100 then
+    raise exception 'first survey completion points %, expected 100', current_points;
+  end if;
+  raise notice 'PASS first survey completion: 100 points';
+end
+$assert$;
+
+reset role;
+insert into public.events (id, user_id, title, date, category, is_important)
+values ('${ids.eventA}', '${ids.userA}', 'Synthetic legacy survey event', date '2031-01-02', 'celebration', true);
+update public.user_survey
+set special_date_event_ids = array['${ids.eventA}']::uuid[], likes = array['flowers']::text[]
+where user_id = '${ids.userA}';
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '${ids.userA}', true);
+
+do $assert$
+declare
+  awarded integer;
+  returned_ids uuid[];
+  current_points integer;
+begin
+  select points_awarded, special_date_event_ids
+    into awarded, returned_ids
+  from public.save_my_onboarding_survey(
+    array['books'], array['alcohol'], 'Updated dream', 'Updated notes', null
+  );
+  if awarded <> 0 then
+    raise exception 'repeat survey completion awarded %, expected 0', awarded;
+  end if;
+  if returned_ids <> array['${ids.eventA}']::uuid[] then
+    raise exception 'NULL special dates changed stored event references';
+  end if;
+  select points into current_points from public.profiles where id = '${ids.userA}';
+  if current_points <> 100 then
+    raise exception 'repeat survey completion points %, expected 100', current_points;
+  end if;
+  if not exists (
+    select 1 from public.events
+    where id = '${ids.eventA}' and user_id = '${ids.userA}'
+      and title = 'Synthetic legacy survey event'
+      and date = date '2031-01-02' and category = 'celebration'
+  ) then
+    raise exception 'NULL special dates changed the existing event';
+  end if;
+  raise notice 'PASS repeat survey completion: no extra points; event preserved';
+end
+$assert$;
+
+reset role;
+update public.user_survey
+set special_date_event_ids = array['${ids.eventB}']::uuid[]
+where user_id = '${ids.userA}';
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '${ids.userA}', true);
+
+do $assert$
+declare
+  generated_id uuid;
+begin
+  select special_date_event_ids[1] into generated_id
+  from public.save_my_onboarding_survey(
+    array['books'], array['alcohol'], 'Updated dream', 'Updated notes',
+    '[{"kind":"celebration","date":"2031-02-03","label":"A-owned replacement"}]'::jsonb
+  );
+  if generated_id is null then
+    raise exception 'explicit date save did not return a generated event id';
+  end if;
+  if not exists (
+    select 1 from public.events
+    where id = '${ids.eventB}' and user_id = '${ids.userB}'
+      and title = 'Synthetic owner B event' and date = date '2030-01-02'
+  ) then
+    raise exception 'owner A changed owner B event through the survey RPC';
+  end if;
+  if not exists (
+    select 1 from public.events
+    where id = generated_id and user_id = '${ids.userA}'
+      and title = 'A-owned replacement' and survey_origin = 'onboarding_survey'
+  ) then
+    raise exception 'explicit date save did not create an owner A survey event';
+  end if;
+  raise notice 'PASS cross-owner survey isolation: owner B event unchanged';
+end
+$assert$;
+
+do $assert$
+begin
+  begin
+    perform public.save_my_onboarding_survey(
+      array[repeat('x', 281)], array['alcohol'], 'Invalid input', 'Should not persist', null
+    );
+    raise exception 'invalid survey input unexpectedly succeeded';
+  exception when sqlstate = '22023' then
+    raise notice 'PASS invalid survey input rejected atomically';
+  end;
+end
+$assert$;
+
+do $assert$
+declare
+  current_points integer;
+  current_likes text[];
+begin
+  select points, likes into current_points, current_likes
+  from public.profiles join public.user_survey on user_survey.user_id = profiles.id
+  where profiles.id = '${ids.userA}';
+  if current_points <> 100 or current_likes <> array['books']::text[] then
+    raise exception 'invalid survey input caused a partial state change';
+  end if;
+  if not exists (
+    select 1 from public.events
+    where id = '${ids.eventB}' and user_id = '${ids.userB}'
+      and title = 'Synthetic owner B event' and date = date '2030-01-02'
+  ) then
+    raise exception 'invalid survey input changed owner B event state';
+  end if;
+  raise notice 'PASS invalid survey input: no partial state change';
+end
+$assert$;
+`;
+}
+
 test("local RLS regression: policy contents and SQL grants are safe", { skip: !enabled }, () => {
   const output = runSql("RLS/GRANT contract", () => `
     do $assert$
@@ -212,6 +355,45 @@ test("local RLS regression: policy contents and SQL grants are safe", { skip: !e
   assert.match(output, /PASS policy\/GRANT contract: people/);
   assert.match(output, /PASS policy\/GRANT contract: events/);
   assert.match(output, /PASS policy\/GRANT contract: memories/);
+});
+
+test("local onboarding survey RPC preserves data, reward idempotency and ownership", { skip: !enabled }, () => {
+  const output = runSql("onboarding survey RPC behavior", (ids) => `
+    reset role;
+    insert into public.profiles (id, points) values ('${ids.userA}', 0), ('${ids.userB}', 0);
+    set local role authenticated;
+    select set_config('request.jwt.claim.sub', '${ids.userA}', true);
+    ${assertOnboardingSurveyState(ids)}
+  `);
+  for (const marker of [
+    "PASS first survey completion: 100 points",
+    "PASS repeat survey completion: no extra points; event preserved",
+    "PASS cross-owner survey isolation: owner B event unchanged",
+    "PASS invalid survey input rejected atomically",
+    "PASS invalid survey input: no partial state change",
+  ]) assert.match(output, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+});
+
+test("local onboarding survey RPC grants execution only to authenticated", { skip: !enabled }, () => {
+  const output = runSql("onboarding survey RPC grants", () => `
+    do $assert$
+    begin
+      if not has_function_privilege(
+        'authenticated',
+        'public.save_my_onboarding_survey(text[], text[], text, text, jsonb)',
+        'execute'
+      ) then raise exception 'authenticated is missing RPC EXECUTE'; end if;
+      if has_function_privilege(
+        'anon',
+        'public.save_my_onboarding_survey(text[], text[], text, text, jsonb)',
+        'execute'
+      ) then raise exception 'anon unexpectedly has RPC EXECUTE'; end if;
+      raise notice 'PASS onboarding RPC grants: authenticated only';
+    end
+    $assert$;
+
+  `);
+  assert.match(output, /PASS onboarding RPC grants: authenticated only/);
 });
 
 test("local RLS regression: owner CRUD is exact and foreign UPDATE/DELETE are no-ops", { skip: !enabled }, () => {

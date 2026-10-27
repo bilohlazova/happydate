@@ -48,6 +48,54 @@ jobs:
       - name: Exercise production HTTP runtime
         run: npm run smoke:production
 
+  database-security:
+    name: Database security / RLS isolation
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: "true"
+      RUN_LOCAL_SUPABASE_RLS_TESTS: "1"
+      LOCAL_SUPABASE_DB_CONTAINER: supabase_db_happydate
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Use pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.0
+
+      - name: Start an isolated local Supabase database and replay migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase start --exclude studio,imgproxy,mailpit,logflare,vector,supavisor,edge-runtime,realtime,storage-api,postgrest,postgres-meta,kong,gotrue
+          docker inspect "$LOCAL_SUPABASE_DB_CONTAINER" >/dev/null
+          docker exec "$LOCAL_SUPABASE_DB_CONTAINER" pg_isready -U postgres -d postgres
+
+      - name: Verify complete ordered migration replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sed 's#.*/##' | sort | sed 's/_.*//' > /tmp/expected-migrations
+          docker exec "$LOCAL_SUPABASE_DB_CONTAINER" psql -U postgres -d postgres -At -c \
+            "select version from supabase_migrations.schema_migrations order by version" > /tmp/applied-migrations
+          diff -u /tmp/expected-migrations /tmp/applied-migrations
+
+      - name: Run RLS owner-isolation regression tests
+        run: node --test tests/local-rls-owner-isolation.test.mjs
+
+      - name: Stop temporary Supabase stack
+        if: always()
+        shell: bash
+        run: supabase stop --no-backup || true
+
   android-debug:
     name: Android debug shell
     needs: web-quality

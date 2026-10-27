@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import test from "node:test";
 
 const enabled = process.env.RUN_LOCAL_SUPABASE_RLS_TESTS === "1";
-const databaseContainer = "supabase_db_toto";
+const databaseContainer = process.env.LOCAL_SUPABASE_DB_CONTAINER ?? "supabase_db_toto";
 
 function createIds() {
   return {

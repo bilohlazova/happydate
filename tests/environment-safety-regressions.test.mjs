@@ -6,7 +6,7 @@ import { resolveSupabasePublicConfig } from "../src/lib/supabase/publicConfig.ts
 import { getAssistantEnvironmentStatus } from "../src/lib/assistant/chatEnvironment.ts";
 import { createConfiguredAssistantRateLimiter } from "../src/lib/assistant/rateLimiter.ts";
 const token = (role, ref = "xgelazzdgluuenqkymox") => `e30.${Buffer.from(JSON.stringify({ role, ref })).toString("base64url")}.synthetic`;
-const safe = { VERCEL_ENV: "preview", NEXT_PUBLIC_SUPABASE_URL: "https://xgelazzdgluuenqkymox.supabase.co", NEXT_PUBLIC_SUPABASE_ANON_KEY: token("anon") };
+const safe = { VERCEL_ENV: "preview", VERCEL_GIT_COMMIT_REF: "fix/onboarding-survey-safe-ui", NEXT_PUBLIC_SUPABASE_URL: "https://xgelazzdgluuenqkymox.supabase.co", NEXT_PUBLIC_SUPABASE_ANON_KEY: token("anon") };
 
 test("A: invalid URL errors contain variable/category only, no input or cause", () => {
   for (const VERCEL_ENV of ["preview", "production", undefined]) {

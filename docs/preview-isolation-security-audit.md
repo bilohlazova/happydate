@@ -1,5 +1,32 @@
 # HappyDate security audit — 2026-10-28
 
+## Current temporary policy — branch-scoped integration
+
+This section supersedes the broad Preview restriction in the historical audit below. Only local integration branch codex/pr14-security-integration has been changed; no push, merge, deployment, Vercel mutation, SQL or database access was performed in this step.
+
+- Universal checks run before build and in instrumentation for every context: trim all NEXT_PUBLIC values; reject recognized server credentials and non-anon JWT roles; sanitize URL parsing errors without input/cause. Supabase JWT project claims are checked against the configured URL. Secret recognition is pattern-based, not an exhaustive detector for arbitrary opaque secrets.
+- PR14 strict policy requires VERCEL_ENV=preview plus VERCEL_GIT_COMMIT_REF=fix/onboarding-survey-safe-ui. NODE_ENV does not select deployment policy. The approved endpoint is exactly HTTPS xgelazzdgluuenqkymox.supabase.co, optionally with one trailing slash; credentials, path, port, query and fragment are rejected.
+- PR14 accepts matching Staging anon JWT claims OR an exact public key independently inventoried using Supabase get_publishable_keys for xgelazzdgluuenqkymox on 2026-10-28. Only active publishable keys are stored in verifiedStagingPublishableKeys.ts; these are designed for browser distribution, not server secrets. No service-role/secret key was retrieved for this allowlist. Unknown/rotated publishable keys fail closed in PR14 pending a reviewed inventory update.
+- effectivePublicKey is shared with publicConfig. Explicit empty/whitespace publishable values disable config; only absence permits anon fallback. PR14 rejects missing effective configuration. Empty Sensitive provider overrides stay disabled: nonempty Supabase admin/OpenAI/Redis and other known privileged integration values are rejected in PR14.
+- Other named Preview branches, including codex/staging-block-b, get status other-preview-unverified and are not subject to the PR14 provider/allowlist restrictions. A normal Staging publishable key and separate test-provider credentials are permitted there. This does NOT certify their isolation: even Production-backed Preview passes this temporary branch-scoped policy with an explicitly unverified status. Global Production credential inheritance remains HIGH/CRITICAL risk requiring separate audit and approval.
+- Production is selected exclusively through VERCEL_ENV=production and checks its own supplied endpoint; it may keep its own private credentials. Local/development gets local-unverified, and unknown contexts never get PR14 isolated status. Vercel Preview without a branch identifier fails closed rather than guessing. A known Vercel deployment missing its environment identifier also fails closed.
+
+### Vercel context availability and proposed fallback
+
+Official [Vercel system variable documentation](https://vercel.com/docs/environment-variables/system-environment-variables) lists VERCEL_ENV and VERCEL_GIT_COMMIT_REF at both build and runtime, subject to enabling system-variable access. Read-only project/deployment connector responses confirm historical PR14 Git metadata but do not expose the system-variable access flag or actual runtime values. Therefore the EXISTING remote PR14 deployment is not declared protected. Actual context availability must be confirmed before using any future Preview; no deployment was launched to prove it.
+
+Optional explicit fallback supported by code: HAPPYDATE_PREVIEW_POLICY=pr14-staging-v1, scoped ONLY to target Preview and Git branch fix/onboarding-survey-safe-ui, never globally. It still requires VERCEL_ENV=preview; an unknown marker, non-Preview context or contradictory branch fails. The marker has NOT been added to Vercel and requires separate approval if needed. If all platform identifiers are absent, local execution cannot be distinguished from a misconfigured deployment; status remains unverified, not protected.
+
+### Local verification
+
+Node 24.21.0: full npm run verify passed (ESLint, TypeScript, 1374 tests: 1368 passed / 6 skipped, synthetic assistant dataset 15 scenarios with live provider evaluation skipped). Optimized webpack build passed using synthetic PR14 Staging configuration and empty provider overrides. Local next start smoke: an unauthenticated GET to the closed POST-only webhook returns 405 for permitted contexts; missing branch context and malformed URL block handling, with no input/cause leakage. No database/provider requests were made. The initial smoke harness incorrectly treated the Next Ready banner as application readiness; this was corrected to issue the local request and all four runtime cases then passed.
+
+Seven new policy tests cover verified Staging publishable/anon, other Preview with private test credentials and unverified Production inheritance, universal public-secret rejection across contexts, Production versus NODE_ENV/local behavior, unknown deployment context, marker fallback/conflicts, and empty canonical keys. All prior regression cases remain; their Preview fixtures now explicitly name PR14. git diff --check passes; trailing blank line removed. UI survey equals original PR14; PostgreSQL behavioral tests and workflow equal origin/main (including merged PR15). SQL tests remain skipped because no disposable DB was started.
+
+npm ci reported three low-severity dependency advisories; dependency remediation was outside this change. Known remote risks remain: generic Preview can inherit Production Supabase/Redis credentials, old immutable deployments and possible historical public-key exposure need separate incident review, and live context/provider configuration is not certified by local tests. This is a locally verified candidate for separately approved push, not authorization to deploy or a claim of remote isolation.
+
+## Historical audit and corrections
+
 ## Follow-up correction of commit 24943a0
 
 The initial implementation had four confirmed defects; the original validation claims below must be read with this correction. Regression tests were written first: A, B, C and D each failed against 24943a0, then passed after the fixes.
@@ -68,4 +95,3 @@ Supabase live cron/vault/webhooks/auth redirect configuration and Firebase/APNS/
 ## Verification and release gate
 1359 tests: 1355 pass, 4 skip. TypeScript, targeted ESLint, git diff --check and optimized webpack build pass with synthetic public configuration. Initial sandbox build could not resolve Google Fonts; approved network retry passed. No deployment performed. Tests cover Production/mismatched URLs, privileged public JWT/secret keys, shadowed keys, inherited credentials, opaque keys, empty disabled overrides and value-free errors. No authenticated survey or live provider tests. Final Vercel reread: 21 entries; all variables outside PR14 retain original updatedAt, targets and branch scopes.
 A fresh PR14 Preview can be built from corrected branch settings, but existing deployments remain unsafe. Strong fail-closed code exists only in the local audit branch until explicitly integrated into PR14; no push performed. Confirm fresh deployment's resolved public Staging project and disabled integrations before authenticated testing. Build outcome is recorded in final response.
-

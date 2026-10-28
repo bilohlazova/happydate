@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { assertEnvironmentSafety } from "../src/lib/supabase/environmentSafety.ts";
 const jwt = (role, ref) => `e30.${Buffer.from(JSON.stringify({role, ref})).toString("base64url")}.test`;
-const safe = { VERCEL_ENV: "preview", NEXT_PUBLIC_SUPABASE_URL: "https://xgelazzdgluuenqkymox.supabase.co", NEXT_PUBLIC_SUPABASE_ANON_KEY: jwt("anon", "xgelazzdgluuenqkymox") };
+const safe = { VERCEL_ENV: "preview", VERCEL_GIT_COMMIT_REF: "fix/onboarding-survey-safe-ui", NEXT_PUBLIC_SUPABASE_URL: "https://xgelazzdgluuenqkymox.supabase.co", NEXT_PUBLIC_SUPABASE_ANON_KEY: jwt("anon", "xgelazzdgluuenqkymox") };
 test("isolated Preview passes without contacting services", () => assert.doesNotThrow(() => assertEnvironmentSafety(safe)));
 test("Preview rejects Production, mismatched and opaque public keys", () => {
   for (const override of [

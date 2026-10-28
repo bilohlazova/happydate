@@ -10,8 +10,7 @@ export type EnvironmentSafetyStatus =
   | "pr14-preview-isolated"
   | "other-preview-unverified"
   | "production-config-checked"
-  | "local-unverified"
-  | "unknown-context-unverified";
+  | "local-unverified";
 
 function invalid(name: string, category: string): never {
   throw new Error(`${name}: ${category}`);
@@ -57,8 +56,16 @@ export function assertEnvironmentSafety(env: Environment): EnvironmentSafetyStat
   const parsed = url ? parseUrl(url) : undefined;
   const branch = env.VERCEL_GIT_COMMIT_REF?.trim();
   const marker = env.HAPPYDATE_PREVIEW_POLICY?.trim();
+  const local = env.HAPPYDATE_LOCAL_EXECUTION?.trim();
+  if (local && local !== "1") invalid("HAPPYDATE_LOCAL_EXECUTION", "invalid_local_opt_in");
+  // Explicit local execution is a trust assertion, never an absence-based guess.
+  // Never set it in Vercel or checked-in .env files.
+  const hostedContext = ["VERCEL", "VERCEL_ENV", "VERCEL_TARGET_ENV", "VERCEL_GIT_COMMIT_REF",
+    "VERCEL_URL", "VERCEL_BRANCH_URL", "VERCEL_DEPLOYMENT_ID", "VERCEL_REGION", "VERCEL_PROJECT_ID"]
+    .some(name => Boolean(env[name]?.trim()));
+  if (local && (hostedContext || marker)) invalid("HAPPYDATE_LOCAL_EXECUTION", "local_context_conflict");
   if (marker && marker !== PR14_POLICY_MARKER) invalid("HAPPYDATE_PREVIEW_POLICY", "unknown_policy");
-  if (marker && env.VERCEL_ENV !== "preview") invalid("HAPPYDATE_PREVIEW_POLICY", "preview_context_required");
+  if (marker && env.VERCEL_ENV && env.VERCEL_ENV !== "preview") invalid("HAPPYDATE_PREVIEW_POLICY", "preview_context_required");
   if (marker && branch && branch !== PR14_BRANCH) invalid("HAPPYDATE_PREVIEW_POLICY", "branch_context_mismatch");
 
   if (env.VERCEL_ENV === "production") {
@@ -68,16 +75,15 @@ export function assertEnvironmentSafety(env: Environment): EnvironmentSafetyStat
     return "production-config-checked";
   }
 
-  if (env.VERCEL_ENV !== "preview") {
-    if ((env.VERCEL === "1" && env.VERCEL_ENV !== "development") || (branch === PR14_BRANCH && env.VERCEL_ENV !== "development")) {
-      invalid("VERCEL_ENV", "deployment_context_missing_or_unknown");
-    }
-    if (env.VERCEL_ENV === undefined || env.VERCEL_ENV === "development") return "local-unverified";
-    return "unknown-context-unverified";
+  if (!marker && env.VERCEL_ENV !== "preview") {
+    if (env.VERCEL_ENV === "development" || local === "1") return "local-unverified";
+    // With no identifiers, hosted and local processes are indistinguishable.
+    // Refuse both unless local execution is explicitly opted in.
+    invalid("VERCEL_ENV", "execution_context_required");
   }
 
-  // Never guess the branch from NODE_ENV or URLs. Missing Git context fails closed.
-  // Marker is a separately approved, Preview + PR14 branch-scoped fallback only.
+  // A branch-scoped policy marker independently enforces the strict policy.
+  // It is not permission to use providers and never overrides contradictory context.
   if (!branch && !marker) invalid("VERCEL_GIT_COMMIT_REF", "preview_branch_missing");
   if (branch !== PR14_BRANCH && !marker) return "other-preview-unverified";
 

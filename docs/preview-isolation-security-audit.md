@@ -1,6 +1,22 @@
 # HappyDate security audit — 2026-10-28
 
-## Current temporary policy — branch-scoped integration
+## Current required-context policy — final pre-push correction
+
+This section supersedes c114231's absence-based local classification and marker semantics in the historical sections below.
+
+- No deployment identifiers and no explicit execution marker: fail with VERCEL_ENV: execution_context_required during config evaluation and runtime registration. NODE_ENV=development/production/test never exempts this check. VERCEL=1 alone identifies hosted intent but cannot select a branch/environment, so it fails too.
+- Complete Production and other Preview contexts retain their previous behavior. PR14 still requires the isolated Staging endpoint/public key and empty privileged providers. Other named Preview remains explicitly unverified, not certified safe.
+- Local next dev/build/start requires HAPPYDATE_LOCAL_EXECUTION=1 (or the explicit Vercel development context). The local opt-in is never injected automatically based on missing identifiers. Any supplied Vercel identity or branch policy marker conflicts with this opt-in and fails closed. README and .env.example document setting it only in the shell or untracked local env file. The local GitHub CI build/smoke job declares it explicitly; Vercel does not inherit that job environment.
+- HAPPYDATE_PREVIEW_POLICY=pr14-staging-v1 now independently enforces the strict PR14 policy even if VERCEL_ENV and Git ref are absent. A supplied contradictory environment or branch is rejected. The marker is a trusted configuration assertion, not cryptographic proof of the host/branch; if ever used, it must be scoped ONLY to Preview + fix/onboarding-survey-safe-ui. It has not been added to Vercel.
+- Guarantees: absence alone cannot bypass the guard anymore. Explicitly falsifying execution context remains outside what an application can prove: a hosted process stripped of all platform context AND deliberately supplied the local-only opt-in is indistinguishable from an approved local process. Never configure HAPPYDATE_LOCAL_EXECUTION on Vercel or commit an enabled local opt-in in .env files. Likewise VERCEL=1 alone cannot prove project/branch identity.
+
+The user manually confirmed Vercel system-variable access enabled, connected repository bilohlazova/happydate, and Ignored Build Step=Automatic. These are human-provided Dashboard confirmations, not newly discovered API flags. With this correction, missing runtime identifiers cause failure rather than silent policy omission, so no extra Vercel change is required to close the reported absence bypass. The optional branch-scoped marker would require separate configuration approval.
+
+Verification on Node 24.21.0: five new regression tests first failed on c114231, then passed. Full npm run verify passed: ESLint, TypeScript, 1379 tests / 1373 pass / 6 skip, and 15-scenario synthetic assistant eval (live skipped). Local optimized webpack build passed under synthetic PR14 context. Eight local runtime checks passed: all identifiers absent rejected, VERCEL=1 alone rejected, complete PR14 accepted, policy-marker-only accepted with Staging policy, other Preview accepted as unverified, explicit local next start/dev accepted, and malformed URL errors kept input redacted. Only an unauthenticated localhost GET to a closed POST-only route was used; no provider/database traffic or deployment. git diff --check passed.
+
+The six skipped tests remain five local PostgreSQL RLS/RPC tests and one runtime-schema test, gated by explicit local-DB flags; no SQL was run. UI survey is untouched. Residual shared Production credentials in other Preview and historical deployment/key-exposure risks remain subject to the previously agreed separate audit. Local pre-push disposition: GO for separately authorized push to the PR14 branch under the confirmed Dashboard settings; this is not a Production release/merge approval or proof of remote DB behavior.
+
+## Previous branch-scoped policy (c114231; historical)
 
 This section supersedes the broad Preview restriction in the historical audit below. Only local integration branch codex/pr14-security-integration has been changed; no push, merge, deployment, Vercel mutation, SQL or database access was performed in this step.
 

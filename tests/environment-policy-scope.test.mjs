@@ -41,7 +41,7 @@ test("Production uses VERCEL_ENV, never NODE_ENV or the PR14 Git ref", () => {
   const env = { VERCEL_ENV: "production", VERCEL_GIT_COMMIT_REF: PR14_BRANCH, NEXT_PUBLIC_SUPABASE_URL: "https://yzcvdspiiiaidsdripxr.supabase.co",
     NEXT_PUBLIC_SUPABASE_ANON_KEY: jwt("anon", "yzcvdspiiiaidsdripxr"), OPENAI_API_KEY: "synthetic", SUPABASE_SERVICE_ROLE_KEY: "synthetic" };
   assert.equal(assertEnvironmentSafety(env), "production-config-checked");
-  assert.equal(assertEnvironmentSafety({ ...staging, NODE_ENV: "production", OPENAI_API_KEY: "synthetic" }), "local-unverified");
+  assert.equal(assertEnvironmentSafety({ ...staging, HAPPYDATE_LOCAL_EXECUTION: "1", NODE_ENV: "production", OPENAI_API_KEY: "synthetic" }), "local-unverified");
 });
 test("unknown Vercel context cannot silently skip PR14 policy", () => {
   for (const env of [
@@ -50,13 +50,13 @@ test("unknown Vercel context cannot silently skip PR14 policy", () => {
     { ...staging, VERCEL_GIT_COMMIT_REF: PR14_BRANCH },
     { ...pr14, VERCEL_ENV: "unexpected" },
   ]) assert.throws(() => assertEnvironmentSafety(env));
-  assert.equal(assertEnvironmentSafety({ ...staging, VERCEL_ENV: "unexpected" }), "unknown-context-unverified");
+  assert.throws(() => assertEnvironmentSafety({ ...staging, VERCEL_ENV: "unexpected" }));
 });
 test("explicit branch-scoped marker can replace missing ref but never a contradictory context", () => {
   const env = { ...staging, VERCEL_ENV: "preview", HAPPYDATE_PREVIEW_POLICY: PR14_POLICY_MARKER };
   assert.equal(assertEnvironmentSafety(env), "pr14-preview-isolated");
   for (const override of [
-    { VERCEL_GIT_COMMIT_REF: "other" }, { VERCEL_ENV: "production" }, { VERCEL_ENV: undefined },
+    { VERCEL_GIT_COMMIT_REF: "other" }, { VERCEL_ENV: "production" },
     { HAPPYDATE_PREVIEW_POLICY: "unknown-synthetic-canary" },
   ]) assert.throws(() => assertEnvironmentSafety({ ...env, ...override }), error => {
     assert.doesNotMatch(inspect(error, { showHidden: true }), /unknown-synthetic-canary/);

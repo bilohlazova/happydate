@@ -53,7 +53,7 @@ test("Production and local configurations are independent from Preview restricti
   assert.doesNotThrow(() => assertEnvironmentSafety({ ...production, VERCEL_ENV: "production" }));
   assert.throws(() => assertEnvironmentSafety({ ...safe, VERCEL_ENV: "production" }));
   assert.throws(() => assertEnvironmentSafety({ ...production, VERCEL_ENV: "production", NEXT_PUBLIC_SUPABASE_ANON_KEY: token("service_role", "yzcvdspiiiaidsdripxr") }));
-  assert.doesNotThrow(() => assertEnvironmentSafety({ NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321", NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_local" }));
+  assert.doesNotThrow(() => assertEnvironmentSafety({ HAPPYDATE_LOCAL_EXECUTION: "1", NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321", NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_local" }));
 });
 test("empty Sensitive overrides remain disabled without modifying or falling back", () => {
   const env = { ...safe, OPENAI_API_KEY: "", SUPABASE_SERVICE_ROLE_KEY: "", UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "" };

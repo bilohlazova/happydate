@@ -1,4 +1,21 @@
 # HappyDate security audit — 2026-10-28
+
+## Follow-up correction of commit 24943a0
+
+The initial implementation had four confirmed defects; the original validation claims below must be read with this correction. Regression tests were written first: A, B, C and D each failed against 24943a0, then passed after the fixes.
+
+- URL parsing catches native exceptions and throws a new value-free error without cause/input. Messages contain only a variable name and category. Tests inspect hidden error properties using synthetic canaries across Preview, Production and local environments.
+- All NEXT_PUBLIC values are trimmed before checks. Secret Supabase keys, non-anon JWT roles, recognized server-token prefixes and private-key headers are rejected. Pattern checks cannot identify arbitrary opaque secrets; public-variable inventory remains necessary.
+- Both guard and resolver call effectivePublicKey. An explicitly empty/whitespace publishable key disables configuration, with no anon fallback; only an absent publishable key selects anon. Preview rejects missing/disabled effective configuration. No default Production credentials are introduced.
+- Preview accepts only the approved HTTPS Staging hostname with optional trailing slash. Userinfo, port, paths, query, fragment and noncanonical encodings/components are rejected. Production validates its own configured project endpoint independently; local development retains local HTTP/publishable support. Privileged-public-key rejection applies everywhere.
+- Empty Sensitive provider overrides remain untouched and disabled. Assistant status reports providers unconfigured and the production-mode rate limiter returns null; no provider calls are made by these checks.
+
+Verification: all 1365 tests completed (1361 passed, 4 skipped), full ESLint, TypeScript, git diff --check and optimized local webpack build passed. Synthetic public build configuration used; no authenticated survey/provider tests, SQL or deployments. Additional Production-negative assertions passed in the six-test regression suite after the full suite run.
+
+Read-only PR14 worktree investigation: its two dirty files exactly match blobs from 44fedcd (initial PR15 implementation). quality.yml hash dff3f06 and local-rls-owner-isolation.test.mjs hash 206c303. PR15 head 6fca16b adds subsequent fixes: trigger-created profiles, cross-owner assertions outside RLS, and PL/pgSQL syntax. GitHub reports PR15 merged; local main was not updated. These are stale PR15 edits, not independent security changes. Git cannot establish who left an uncommitted copy. Neither file nor PR14 HEAD was altered.
+
+No PR14 integration performed. Four local code defects are resolved; remote resolved deployment environment, old artifact exposure/rotation and previously listed external-service conditions remain unverified. Do not claim end-to-end isolation or integrate automatically while those release conditions and dirty-worktree handling remain unresolved. Future local transfer needs both original guard wiring from 24943a0 and this correction; this follow-up commit alone is not a standalone guard installation.
+
 Scope: PR14 head 7f00f6d603d2ac5d32caa8dce9bb5e9a2d6171b2. No push, merge, SQL, migrations, data changes or deployment.
 ## Verified Vercel inventory before changes
 19 variables; hiddenProductionEnvCount=0. Dates UTC. Branch-specific Preview overrides generic Preview. Application prefers PUBLISHABLE_KEY over ANON_KEY. No shared configurationId returned; team-level settings not independently inventoried.

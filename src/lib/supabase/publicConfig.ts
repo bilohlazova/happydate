@@ -1,4 +1,4 @@
-import { assertPublicKeySafe } from "./environmentSafety.ts";
+import { assertPublicKeySafe, effectivePublicKey } from "./environmentSafety.ts";
 
 export interface SupabasePublicConfig {
   url: string;
@@ -20,10 +20,7 @@ export function resolveSupabasePublicConfig(
   environment: SupabasePublicEnvironment,
 ): SupabasePublicConfig | null {
   const url = environment.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const key = (
-    environment.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-    ?? environment.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )?.trim();
+  const key = effectivePublicKey(environment);
 
   for (const candidate of [environment.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, environment.NEXT_PUBLIC_SUPABASE_ANON_KEY]) {
     if (candidate) assertPublicKeySafe(candidate.trim(), url);

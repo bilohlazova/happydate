@@ -1,3 +1,5 @@
+import { assertPublicKeySafe } from "./environmentSafety.ts";
+
 export interface SupabasePublicConfig {
   url: string;
   key: string;
@@ -23,6 +25,9 @@ export function resolveSupabasePublicConfig(
     ?? environment.NEXT_PUBLIC_SUPABASE_ANON_KEY
   )?.trim();
 
+  for (const candidate of [environment.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, environment.NEXT_PUBLIC_SUPABASE_ANON_KEY]) {
+    if (candidate) assertPublicKeySafe(candidate.trim(), url);
+  }
   return url && key ? { url, key } : null;
 }
 

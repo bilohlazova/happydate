@@ -11,6 +11,7 @@ const ORCHESTRATION_REASONS = new Set(["home_daily_context"]);
 const ORCHESTRATION_ACTIONS = new Set(["open_gift_assistant"]);
 const ASSISTANT_BEHAVIOR_VERSIONS = new Set(["assistant-2026-08-23.1", "assistant-2026-08-29.1", "assistant-2026-09-07.1"]);
 const AI_PRICING_VERSIONS = new Set(["gpt-4.1-mini-standard-2026-08-16"]);
+export const PR14_RUNTIME_SAFETY_PASS = "HAPPYDATE_PR14_RUNTIME_SAFETY_PASS";
 
 type OrchestrationTraceInput = {
   memorySourceCount: number;
@@ -47,6 +48,11 @@ export function logOperationalError(scope: string, event: string, error?: unknow
 
 export function logOperationalWarning(scope: string, event: string, error?: unknown): void {
   console.warn(JSON.stringify({ level: "warn", service: "happydate", scope: eventToken(scope), event: eventToken(event), diagnostic: diagnosticFrom(error), occurredAt: new Date().toISOString() }));
+}
+
+/** Fixed, content-free one-time deployment diagnostic marker. */
+export function logPr14RuntimeSafetyPass(): void {
+  console.info(PR14_RUNTIME_SAFETY_PASS);
 }
 
 function countBucket(value: number): "0" | "1" | "2-5" | "6-20" | "21+" {

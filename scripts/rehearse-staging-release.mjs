@@ -8,8 +8,8 @@ const container=process.env.LOCAL_SUPABASE_DB_CONTAINER ?? 'supabase_db_toto';
 if (!/^supabase_db_[a-z0-9_-]+$/.test(container)) throw new Error('Expected local Supabase database container');
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 const [rpc,storage,snapshot,verify,preflight]=await Promise.all([
-  read('supabase/migrations/20261102183848_reconcile_survey_event_preservation.sql'),
-  read('supabase/migrations/20261102183850_provision_release_media_buckets.sql'),
+  read('supabase/staging-reconciliations/20261102183848_reconcile_survey_event_preservation.sql'),
+  read('supabase/staging-reconciliations/20261102183850_provision_release_media_buckets.sql'),
   read('scripts/sql/staging-release-preservation-snapshot.sql'),
   read('scripts/sql/staging-release-preservation-assert.sql'),
   read('scripts/sql/staging-release-preflight.sql'),

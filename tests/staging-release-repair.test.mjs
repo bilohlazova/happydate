@@ -4,8 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 
-const rpcUrl = new URL('../supabase/migrations/20261102183848_reconcile_survey_event_preservation.sql', import.meta.url);
-const storageUrl = new URL('../supabase/migrations/20261102183850_provision_release_media_buckets.sql', import.meta.url);
+const rpcUrl = new URL('../supabase/staging-reconciliations/20261102183848_reconcile_survey_event_preservation.sql', import.meta.url);
+const storageUrl = new URL('../supabase/staging-reconciliations/20261102183850_provision_release_media_buckets.sql', import.meta.url);
 const [rpc, storage, oldRpc, canonical, preflight, snapshot, preserveVerify] = await Promise.all([
   readFile(rpcUrl, 'utf8'), readFile(storageUrl, 'utf8'),
   readFile(new URL('./fixtures/staging-survey-before-release-repair.sql', import.meta.url), 'utf8'),

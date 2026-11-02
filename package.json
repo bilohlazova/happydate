@@ -12,7 +12,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run lint && npm run typecheck && npm test && npm run eval:assistant",
+    "verify": "npm run lint && npm run typecheck && npm test && npm run eval:assistant && npm run check:migrations",
     "preflight:production": "node --experimental-strip-types scripts/preflight-production-config.mjs",
     "smoke:production": "node scripts/smoke-production.mjs",
     "eval:assistant": "node --experimental-strip-types scripts/evaluate-assistant.mjs",
@@ -21,7 +21,8 @@
     "test:fast": "node scripts/test-fast.mjs",
     "test:security": "node --experimental-strip-types --test tests/environment*.test.mjs tests/*preview*isolation*.test.mjs tests/preview-environment-safety.test.mjs tests/bounded-json.test.mjs tests/assistant-ai-budget.test.mjs tests/assistant-verified-context.test.mjs tests/assistant-scoped-person-over-100.test.mjs tests/memory-capture-ownership.test.mjs tests/authenticated-rpc-security-contract.test.mjs tests/deepmerge-security.test.mjs",
     "test:integration": "node scripts/test-integration.mjs",
-    "test:auth:local": "node scripts/audit-local-auth.mjs"
+    "test:auth:local": "node scripts/audit-local-auth.mjs",
+    "check:migrations": "node scripts/check-staging-reconciliation.mjs"
   },
   "dependencies": {
     "@capacitor/android": "8.5.3",

@@ -1,0 +1,26 @@
+{
+  "project_id": "xgelazzdgluuenqkymox",
+  "scope": "staging-only",
+  "automatic_replay": false,
+  "approved_source_commit": "d263b9278876e24b4608590f0252d4e12772c293",
+  "operations": [
+    {
+      "source_file": "supabase/staging-reconciliations/20261102183848_reconcile_survey_event_preservation.sql",
+      "source_sha256": "2029d4966e7915d2b1832a9563dee57a41d039dd8e06b4bd67880132bc071a1e",
+      "remote_version": "20261102190934",
+      "remote_name": "20261102183848_reconcile_survey_event_preservation",
+      "applied_query_sha256": "9d14ec9dd5108e0339df0118ad64e6df50770243c6eb97c3bd99cfd8e798ee70",
+      "approved_query_sha256": "9d14ec9dd5108e0339df0118ad64e6df50770243c6eb97c3bd99cfd8e798ee70",
+      "exact_approved_query_match": true
+    },
+    {
+      "source_file": "supabase/staging-reconciliations/20261102183850_provision_release_media_buckets.sql",
+      "source_sha256": "5e9c04193aaaf45e2789749b03880f9cccc910c462576db3b9a9ced642ba44bd",
+      "remote_version": "20261102191356",
+      "remote_name": "20261102183850_provision_release_media_buckets",
+      "applied_query_sha256": "b8627d23fa134a98a8ec11d4d2631927b0d3c5ab51c25d76ade14a558150c44c",
+      "approved_query_sha256": "b8627d23fa134a98a8ec11d4d2631927b0d3c5ab51c25d76ade14a558150c44c",
+      "exact_approved_query_match": true
+    }
+  ]
+}

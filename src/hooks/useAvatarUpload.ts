@@ -60,6 +60,9 @@ export function useAvatarUpload({ userId, onSuccess, onError }: UseAvatarUploadO
         allowEditing: true,
         resultType: CameraResultType.Uri,  // returns a webPath, never a raw path
         source: CameraSource.Prompt,
+        // Web has no registered PWA action sheet; native platforms ignore this
+        // web-only option and retain their existing Camera/Gallery prompt.
+        webUseInput: true,
       });
 
       // User cancelled → photo.webPath is undefined

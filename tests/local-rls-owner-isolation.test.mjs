@@ -490,7 +490,7 @@ test("local RLS regression: ownership and cross-reference checks reject foreign 
   assert.match(output, /PASS blocked: event INSERT with foreign person_id SQLSTATE=42501/);
   assert.match(output, /PASS blocked: memory UPDATE with foreign event_id SQLSTATE=42501/);
 });
-\n
+
 test("local RLS regression: 101st owned person is discoverable with exact scope but hidden from foreign user", { skip: !enabled }, () => {
   const output = runSql("101st scoped person isolation", (ids) => `
     insert into public.people (id, user_id, name)

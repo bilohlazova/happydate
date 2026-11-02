@@ -19,6 +19,7 @@ import type {
   HomeHappyIdea,
 } from "@/lib/home/home.types";
 import { canonicalRelationKey } from "@/lib/people/canonicalRelation";
+import type { PersonRelationKey } from "@/lib/repositories/person.types";
 import { canonicalGiftEventContext } from "@/lib/gifts/giftEventContext";
 import type { HappyTaskCardSource } from "@/lib/happy/task-ui/happyTaskCard";
 import type { ProactivityMode } from "../../../../supabase/functions/happy-proactive/proactivity-policy.ts";
@@ -178,7 +179,7 @@ type HomePersonRecord = {
   birth_year: number | null;
   relationship: string | null;
   relation_label: string | null;
-  relation_key: string | null;
+  relation_key: PersonRelationKey | null;
   gender: string | null;
 };
 

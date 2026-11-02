@@ -109,3 +109,11 @@ CI retains all five check names, bounded timeouts/read permissions, strict error
 7. **P2:** device push/camera/deep-link/offline and real mail-flow smoke; complete rendered authenticated browser journeys. No claims of universal ASVS/OWASP compliance.
 
 No Production GO is issued while these release conditions remain open. Draft review/iteration can proceed on the test branch; merging or Production operations require separate permission.
+
+## Hosted evidence addendum (after initial report commit)
+
+[Draft PR #20](https://github.com/bilohlazova/happydate/pull/20) targets the release branch. Its initial head was `58135c945f098b8b5a5e4b110dece499912b088c`; remediation commit remains `7e3ff5aa28bf00df5b487be692d2fb3d59dcdc8f`.
+
+[Fresh CI run 41500595842](https://github.com/bilohlazova/happydate/actions/runs/41500595842): web (including full lint/typecheck/tests/eval/build/smoke), dependency and Android passed. iOS acquired a runner and reached compilation, unlike the original cancelled run. DB replay and all seven RLS tests passed, but the newly enabled schema test exposed a second hardcoded container name in its object-catalog query. Both queries now share `databaseContainer`; the corrected targeted local schema test passes. A new hosted run is necessary specifically because this required test failed; prior successes are not being repeated as local development checks. Latest hosted status and final exact head are recorded on the Draft PR to avoid triggering more builds for report-only status edits.
+
+Fresh Preview `dpl_Ay9MjiUDBct1QeooZbunvoR4gjht` is READY on `58135c9`, using the strict audit-branch guard. Native Vercel connector HTTP fetch returned 200 for `/`, `/auth/login` and `/about`; private `/api/happy/notifications` returned 401 without bearer identity. Home response has CSP, DENY/nosniff/referrer/permissions policies, HSTS and no-store. Rendered home HTML contained no recognized privileged token patterns (this is not a whole-bundle scan). The connector used its temporary deployment-scoped access mechanism; project protection settings and old deployments were not modified. This establishes application HTTP startup on the strict guard; authenticated browser/device/provider journeys remain outside this smoke.

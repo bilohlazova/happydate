@@ -2,6 +2,9 @@
 
 **Disposition: NO-GO for Production release.** Code remediation for issue #19 is implemented, but Staging is missing release behavior/storage, exact-head hosted CI/Preview validation is pending, and historical Preview credential exposure is unresolved. This is a bounded audit, not an ASVS certification.
 
+
+**Continuation update:** hosted iOS and the full baseline run on `842735c08cd2c454affc5c8873c730e1c409e404` subsequently succeeded. The Staging repair is now prepared/rehearsed locally, not applied live; see [remaining-blocker plan and results](staging-release-remediation.md) and [sanitized Preview inventory](release-evidence/preview-inventory-2026-11-02.json). Earlier pending-hosted statements below are the original audit snapshot, superseded by this update and the continuation report. Production disposition remains NO-GO pending Staging approval/validation and historical credential-risk decisions.
+
 ## Revision and scope
 
 - Repository: bilohlazova/happydate. [Release PR #18](https://github.com/bilohlazova/happydate/pull/18) remains open/draft, base `main`, head `fix/assistant-owned-person-over-100` at `da8c12a71cd35ca5290f1f92f4d084eccbda4280`, rechecked before editing.

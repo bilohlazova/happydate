@@ -123,7 +123,7 @@ jobs:
           set -euo pipefail
           test "${RUN_LOCAL_SUPABASE_RLS_TESTS:-}" = "1"
           test "${RUN_LOCAL_SUPABASE_SCHEMA_TESTS:-}" = "1"
-          node --test tests/local-rls-owner-isolation.test.mjs tests/local-runtime-schema-contract.test.mjs
+          node --test tests/local-rls-owner-isolation.test.mjs tests/local-runtime-schema-contract.test.mjs tests/staging-release-repair.test.mjs
 
       - name: Stop temporary Supabase stack
         if: always()

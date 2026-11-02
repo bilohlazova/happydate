@@ -1,0 +1,1526 @@
+{
+  "observedAt": "2026-11-02",
+  "projectId": "prj_OGq9ziCkTB4TkhU3faKqLgAkgwPv",
+  "teamId": "team_iVAGho4AJPmXIdhotMQrmda0",
+  "scope": "All retained deployments returned by both pages; deleted deployments and historical environment snapshots not accessible",
+  "globalPreviewIsolationCorrectedAt": "2026-11-02T17:56:32.146Z",
+  "deployments": [
+    {
+      "id": "dpl_2fvVpx3JRMbQmGdf9wkGNymnfGAN",
+      "url": "happydate-kna97n0m1-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T18:29:38.169Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/release-readiness-audit",
+      "sha": "842735c08cd2c454affc5c8873c730e1c409e404",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": [
+        {
+          "hostname": "happydate-git-codex-r-98f786-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_Ay9MjiUDBct1QeooZbunvoR4gjht",
+      "url": "happydate-ce4sj3a0t-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T18:26:11.383Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/release-readiness-audit",
+      "sha": "58135c945f098b8b5a5e4b110dece499912b088c",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_8Zj3ouH4BT2qdx7fK6v9RVrJveaH",
+      "url": "happydate-ceslkc9tw-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:57:33.085Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/assistant-owned-person-over-100",
+      "sha": "da8c12a71cd35ca5290f1f92f4d084eccbda4280",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": [
+        {
+          "hostname": "happydate-git-fix-ass-c07d78-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_C14SHDHaCM1iBZXCnV9fR1AS4oQK",
+      "url": "happydate-pp9ffhrku-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:37:45.816Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/assistant-owned-person-over-100",
+      "sha": "da8c12a71cd35ca5290f1f92f4d084eccbda4280",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_6AXThjD2YVpUnjh4jFauKduJ47WZ",
+      "url": "happydate-fyup86s3j-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:35:48.100Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/assistant-owned-person-over-100",
+      "sha": "623599eab26b6534d004b7e3f187c2d8658619ec",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_Hc7pzCZkmvwhdESNb4UvDKJv13BZ",
+      "url": "happydate-ezfphbigi-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:35:30.521Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/assistant-owned-person-over-100",
+      "sha": "89dad91ae814cc88b86fc8553a0adb07db3deaca",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_G9KV5HJpmPq3G9ppXCZ3qGyeR19n",
+      "url": "happydate-h9kq86m1w-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:29:02.496Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/assistant-owned-person-over-100",
+      "sha": "2b79d8e4c947d124714b80ca7dbcfee05f9b3fdb",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_9GYsdaZ8gxUKisYWx78A8m5Pg94x",
+      "url": "happydate-ggoqxiyxn-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:28:48.624Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/assistant-owned-person-over-100",
+      "sha": "47642a3bf950b310297e22be324cf72d48a7540b",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_9cGXvSfXy4p2ajRKTeMfdq5ugaRf",
+      "url": "happydate-hqqtlkfm3-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:28:38.364Z",
+      "state": "CANCELED",
+      "target": "preview",
+      "branch": "fix/assistant-owned-person-over-100",
+      "sha": "cd3f1c9299e6d77728343cfd7f657b32823b370f",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_G7bmyow77mncXALYWHvZPLm5YFvE",
+      "url": "happydate-p3ras1jtv-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:28:19.924Z",
+      "state": "ERROR",
+      "target": "preview",
+      "branch": "fix/assistant-owned-person-over-100",
+      "sha": "8a73015fe4ecb741447d4bb4d25ef3af29c5b9aa",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_5cj5mJhm6aaWzx313A98zyFgguft",
+      "url": "happydate-lkp1feysx-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:26:15.231Z",
+      "state": "ERROR",
+      "target": "preview",
+      "branch": "fix/assistant-owned-person-over-100",
+      "sha": "84a83e74c1d264290a43e2e54209d9deb6324ee4",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_4a9DXR2MJK9afwaZmHPV3NZYRHM7",
+      "url": "happydate-4lrxl0w2c-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:23:35.462Z",
+      "state": "ERROR",
+      "target": "preview",
+      "branch": "fix/assistant-owned-person-over-100",
+      "sha": "e09490d6842ad684911ded18bf4c6ef382cb6692",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_HaUVHr73h5J6i3cEERZibaGn52xV",
+      "url": "happydate-kt4spg12e-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:23:24.001Z",
+      "state": "ERROR",
+      "target": "preview",
+      "branch": "fix/assistant-owned-person-over-100",
+      "sha": "550d9cb59d8c1f7f73bd19875a61ad7c7f4a4cca",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_CrL3NJbwwb4vmynYVYxPSAJFUNXD",
+      "url": "happydate-j5d15nnrc-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:23:11.772Z",
+      "state": "ERROR",
+      "target": "preview",
+      "branch": "fix/assistant-owned-person-over-100",
+      "sha": "cb520300c1631b249ed9090be881b76d93b08a29",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_H4zQqCTLyZjCveosqjpupHUUEn8r",
+      "url": "happydate-gsjkq0mfg-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:21:12.876Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/dependency-glob-minimatch-2026-11",
+      "sha": "597b271bc46dabc46d3495ee7d61b7548974e354",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-fix-dep-b5b53d-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_CPFzPhKWzHYD8sGFsxsh8sPv5rxr",
+      "url": "happydate-i6d4towb8-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:21:01.190Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/dependency-glob-minimatch-2026-11",
+      "sha": "72e54c92d6a90d49c09a89ef97682dadb617d4f3",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_EN7uj1xLzJEabFJgBJFcq6aLQB8u",
+      "url": "happydate-llsaumh87-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:20:38.502Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/dependency-glob-minimatch-2026-11",
+      "sha": "ff52578f0264dc520968d3b963d77ce89bfc3dda",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_5t8wRDozoQUtpMewQ8vAkL73PNKU",
+      "url": "happydate-bx0440ct5-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:18:32.813Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/dependency-glob-minimatch-2026-11",
+      "sha": "d5247c572d38f05397b8c66cd5ed57c91ed317df",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_HkCvqKoe4hx4np5J6SE9hyzvkMX3",
+      "url": "happydate-62po5r92w-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-11-02T17:13:49.349Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "ci/independent-dependency-audit-2026-11",
+      "sha": "495468be11deed44371ab978a8df9ffa49b4d18b",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-ci-inde-cf25d2-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_D7KRHFFsRNGaGdCwLxDADzkagtYt",
+      "url": "happydate-c3v1c4a8c-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-30T19:22:59.101Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/onboarding-survey-safe-ui",
+      "sha": "ade05361436dd45355e818735fc13602cb2e84af",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-fix-onb-e4bcd2-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_35fCmrz9uQyNE3H4pfzcK7xnwfCp",
+      "url": "happydate-dw862os4e-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-30T19:09:51.206Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/onboarding-survey-safe-ui",
+      "sha": "eafe5f4284e439d4404fe881dc0ba6a9e6e77430",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_2syKgwjC25TBSusvuLVczPqvsu3b",
+      "url": "happydate-6ux5izb7s-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-29T06:15:57.893Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/onboarding-survey-safe-ui",
+      "sha": "afd5afbd0b59d84e5fd6fd1ba42e1174c223f1a7",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_FTGLDVWBcTQCyXKctaeubYnKyCqk",
+      "url": "happydate-1gvlwx1gm-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-28T18:16:50.432Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/onboarding-survey-safe-ui",
+      "sha": "ed032bebe783a871b7872c5b064a6a34b7b20084",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_3qiFK4y7AsqnPa3P9wkqLR7jTcgf",
+      "url": "happydate-p3qpmw26s-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-27T19:42:53.801Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "6f193f601f7e1640c20f6529f883bd933b088a16",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": [
+        {
+          "hostname": "happydate.vercel.app",
+          "bypassCount": 0
+        },
+        {
+          "hostname": "happydate-git-main-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        },
+        {
+          "hostname": "happydate-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_vVLoAKHZnRt6XfkTPysbFzsMMq6a",
+      "url": "happydate-2htauebxu-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-27T19:35:36.481Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "test/onboarding-rpc-behavioral-ci",
+      "sha": "6fca16b8a1584365f8d6c3e3c9ed9dee492644e9",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-test-on-412383-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_3xb61QTukBJBXpfEZDZocaSgQnCV",
+      "url": "happydate-kh7d5379i-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-27T19:31:09.338Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "test/onboarding-rpc-behavioral-ci",
+      "sha": "d5c135e07a85cab7e735bcc7b017844dc9d5bc0e",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_54U4qzguJo8Xf5eQYqFJQYhdx6dW",
+      "url": "happydate-qfkdbsavb-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-27T19:25:30.457Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "test/onboarding-rpc-behavioral-ci",
+      "sha": "1c98dafcc487bc4993f3f1668c5266341fe44a26",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_5aF379vMkbLJ3SMekkQ4Zn1xqw5p",
+      "url": "happydate-2qeysh467-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-27T19:17:34.404Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "test/onboarding-rpc-behavioral-ci",
+      "sha": "44fedcd9546567ff2f092958279c4a94b509e4fb",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_2vKTDAwHLqDwRSmDvcYoAtat26YD",
+      "url": "happydate-r1lhv45sc-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-27T18:47:07.574Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/onboarding-survey-safe-ui",
+      "sha": "7f00f6d603d2ac5d32caa8dce9bb5e9a2d6171b2",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_FjWeRPmkaniJz85kFbkXJeAGCU7J",
+      "url": "happydate-frclocqrj-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-27T18:23:43.278Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "4279c635ebff6297b7e366e58646c26f8eeaeb15",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_DsGWxsitsxmLuT93Y3FduHpLe2Pq",
+      "url": "happydate-91t8kljby-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-27T18:08:46.353Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "test/rls-owner-isolation",
+      "sha": "ece46dac1ca0a7bcd015a53ff763f35f219021f6",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-test-rl-11e6a9-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_8Djzv4gurBcP3AGxSGxXmUUNcrHp",
+      "url": "happydate-v3akv3zvp-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-27T18:04:15.033Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "3c3cc9566275abf9766e9549672b2a6be05bc63d",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_GEUNxMspDzixAGTvrdeQ1m98umzN",
+      "url": "happydate-irkauacki-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-27T17:37:03.514Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/security-dependencies-2026-10",
+      "sha": "79a49b7072326cf04823431c3245946bceca9f07",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-fix-sec-813f74-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_6rZHKwtr8uYiHLpinzoUdvE46VBt",
+      "url": "happydate-k3g06ssgm-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-27T17:20:24.792Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "test/rls-owner-isolation",
+      "sha": "2253c55949a440ee57ac53ef4afaf6994947554b",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_HPaKcvwpSaKdDZBdHRsAjgYKgSnp",
+      "url": "happydate-50l0ihohm-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T11:29:52.495Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "d69800283ac906d9f12db71a8d262942b258afa7",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_EWe3FCENHrBSS1SXUoYw9AK4xqVr",
+      "url": "happydate-aglypk8w2-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T11:21:11.072Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "docs/audit-db01b-stored-sql-rehearsal",
+      "sha": "b28e46a104dd5029f092991d44bb64b7014120b9",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-docs-au-02fe6b-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_HprKeDAvyPuKbpeyFTNuZQ8dT5hX",
+      "url": "happydate-8i7hv2pbz-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T11:04:53.733Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "f4209e79bccc20237c945c043b74841aeec5c148",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_G2uAVqJujrKjHTSFnLTbxUjuxUzK",
+      "url": "happydate-ap8hrmjw7-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T10:55:27.109Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "docs/audit-db01-migration-reconciliation",
+      "sha": "892aab3ab79dcb3502278efdbf79ff8d7ce44a9a",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-docs-au-5e9d6e-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_6RsXWJueiGXaJSfZ4CnyfxNvus4R",
+      "url": "happydate-ir6s6tdhw-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T10:46:57.256Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "docs/audit-db01-migration-reconciliation",
+      "sha": "bd2c92d354a673a36876117f993d403c4c25c961",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_4XTvWcLDPsGnak3Yb3v7fph5pj1j",
+      "url": "happydate-8hpz5jezr-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T10:33:56.123Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "docs/audit-db01-migration-reconciliation",
+      "sha": "2188aa147a460a2316ca1d81491ff784a92c47d4",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_9Ycgr3v3bHXn3d3GSY5w96KjVVcN",
+      "url": "happydate-g003wfllt-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T10:12:52.789Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "docs/audit-db01-migration-reconciliation",
+      "sha": "84df28b0bf56ab7b3a39082ff1e83ba419bf13a8",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_4BuA3Bi1gdjtrZc2pA1AWiuMuBt3",
+      "url": "happydate-ofjwemsae-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T10:05:33.633Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "docs/audit-db01-migration-reconciliation",
+      "sha": "bd5d1c715954c3f40f51130375884ca21a37d1b0",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_EErsbGf7JNjhxLdcpfmVBGuktPxt",
+      "url": "happydate-8j8x4qbn9-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T08:49:55.072Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "c2db87e425856458478efdc4f1f1c63bb9bdda40",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_FdHsrz4KXabzsjWX5itBBFwtgjUC",
+      "url": "happydate-46a6m2n0w-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T08:46:40.597Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "docs/audit-03c2-reliable-delivery",
+      "sha": "ab51cdc24fdeee20b1f648e96517aabe954e00bf",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-docs-au-6467cc-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_72jMN9wEgcJufKVTgeHp7cHdnhWi",
+      "url": "happydate-kyvbjxpnq-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T08:31:22.795Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "f3098bc989078c28c31b590175b38ca0284206c0",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_CSMkAScXTvoqw9dZYXxiohQ6gL3y",
+      "url": "happydate-k5jvsb6hg-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T07:32:02.163Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "docs/audit-03c2-reliable-delivery",
+      "sha": "882bbb409636d92c623cc065aecb4b705625b97e",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_CvwJJY83naMDqFqgug3YHoAXgWh2",
+      "url": "happydate-enpbks3xp-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T07:28:24.445Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "docs/audit-03c2-reliable-delivery",
+      "sha": "7c2577d32463de8ec094bdbb0af00958ac984713",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_F8kkrS2cKPsbnwp7pTk8CG55Si78",
+      "url": "happydate-5zjw2xz22-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T06:50:15.885Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "f3098bc989078c28c31b590175b38ca0284206c0",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_AKNCC1NUQEFQcf8raUJ44R8WtZzw",
+      "url": "happydate-9bzy8uj0l-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T06:22:08.432Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/audit-03c1-notification-inbox",
+      "sha": "648aa6c4765d88e048ac485aedcacceeec5086a2",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-fix-aud-4bc463-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_AkEP4dZmdVHCZ2syuz4UuuHoAK7Q",
+      "url": "happydate-mnflbywup-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T06:11:41.229Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/audit-03c1-notification-inbox",
+      "sha": "675ea91a3ee215be9d4d324a3147466d012d3ec0",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_4pHVoot7rfM4S4EYbnA6rodnKqAm",
+      "url": "happydate-l5ybfezs8-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T05:56:36.076Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/audit-03c1-notification-inbox",
+      "sha": "4dc7b10250da8ab17dee0db946414d8324d15585",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_EUZuHRoPxEhSB9u512n1D5TFXRar",
+      "url": "happydate-lkpk7dhn2-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-21T05:32:41.539Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "f80d194a1dea8018975923c3c2008e3f4db9d4a6",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_6L8bTNQ8mWzmRhPTpAt4g5PencHA",
+      "url": "happydate-5f2vekx4j-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T20:04:46.437Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/audit-03b-home-integrity",
+      "sha": "3c3f1370561b3ec72f7fd1bb5c44ead85bd6277d",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-fix-aud-82e40e-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_3tBgh6dfXn4qoxsvW4Fw23YikdGh",
+      "url": "happydate-d0r8woagm-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T19:56:01.966Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/audit-03b-home-integrity",
+      "sha": "4ff415dc03a7be53e1e70884f66020ad7a052ff7",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_CJ17x4TfiDGs24EepvWTUQ8yVfne",
+      "url": "happydate-6uw71qqzh-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T19:45:34.603Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "2c301330128ffbf89750ebcd4989858a731f7ade",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_GucsV3qz4yFvgeKafxtwKYfYKvQD",
+      "url": "happydate-m5a8x9lt1-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T19:35:11.844Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/audit-03a-global-shell",
+      "sha": "664afb44ef91720b97cb43a20c5cf9df55895f54",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-fix-aud-65a0a8-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_B7Ct8MLqqRu4VKWWSpJMMm8JwR1Q",
+      "url": "happydate-fvog7uao5-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T19:18:05.859Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/audit-03a-global-shell",
+      "sha": "e43c91063840e48f29274feff42a605592046f2a",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_BnDwMbS6WUp4zEy5RnShRP2bAhDb",
+      "url": "happydate-g0sf5kjf1-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T19:04:17.042Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "fix/audit-03a-global-shell",
+      "sha": "86e16554b162129be84980ba04b4d9a443f0e83c",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_DPqVf2AVjWWdkURRUiy4qzWYaXdD",
+      "url": "happydate-38rgmumbm-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T18:17:07.797Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "6aa1c19761c8d73c7e22dc767f74fa6a2f8968e6",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_3vUtxaaB44nzdPwWwPoMs2hPZfAZ",
+      "url": "happydate-6iqrggc7e-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T18:03:28.291Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/audit-02-ci-release-safety",
+      "sha": "d27a162dbabd8dcd42ace6fb95babd30005880d7",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-codex-a-6ed95b-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_8JLqAEfbDFbQD3P154j6gB3Tx266",
+      "url": "happydate-5aoqi3edz-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T17:47:52.941Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/audit-02-ci-release-safety",
+      "sha": "af15a4df2eaf77f3f67bfb2e84aaa67ba384ae7f",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_EEdTxTZ7QAWLqj4bA3mcetZnvdGa",
+      "url": "happydate-58izwftw4-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T17:30:48.446Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "17cb5589565a30f970ab7a2fd15b1b229708cfcf",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_4Q5QzLQT5SxwjM8dje2bULX1ubfb",
+      "url": "happydate-evw9qei8h-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T17:18:19.646Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/audit-01-root-config-cleanup",
+      "sha": "21f4d4ebe956cb2ad5668698acb811ef8b6083cb",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-codex-a-a9d588-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_5zXHZybUMCVT2c6FbcBV9Hg5N4EG",
+      "url": "happydate-6j5si29pi-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T17:14:08.798Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/audit-01-root-config-cleanup",
+      "sha": "c47f3a49d915c0d7fd9226aa899ec8627ab3232d",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_9YdxgQEYqshnWH4JivXX9X8bqERH",
+      "url": "happydate-5pfbr4w6t-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T16:54:48.482Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "297bbfaea405a77074d9f4e719dae37c91699521",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_5LbfmQJ6YcZpKqRn56npy6aj5Djy",
+      "url": "happydate-jr0fydwod-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T16:47:07.028Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "297bbfaea405a77074d9f4e719dae37c91699521",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_6vC6kWDdLzLkPMyo6wAbceCE3Xhz",
+      "url": "happydate-h0tpsmm6i-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T16:40:12.371Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/fix-production-ai-chat-tool-stream",
+      "sha": "faa42805d4bc1bfe0e2ed6ad0ee27283b8fb0c0e",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-codex-f-7dbc13-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_7U5RuXS3e24xkbZ5SXcWzJ4o2dSg",
+      "url": "happydate-m8mvv6bl7-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T16:39:54.702Z",
+      "state": "CANCELED",
+      "target": "preview",
+      "branch": "codex/fix-production-ai-chat-tool-stream",
+      "sha": "0c8349b49c4b088a7b701c1c33c574399c402749",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_ALhgR1Gw8fzhWRgWpZwXf5kLGnt7",
+      "url": "happydate-e8azt8sph-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T16:39:48.170Z",
+      "state": "CANCELED",
+      "target": "preview",
+      "branch": "codex/fix-production-ai-chat-tool-stream",
+      "sha": "ad44bb7a8dad21c28e6a9c66dedf9ff6e2f24d8e",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_5CnWKPCPWhRnHsygVZiHKbtGikQa",
+      "url": "happydate-nt8g5inf8-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T16:35:02.146Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/fix-production-ai-chat-tool-stream",
+      "sha": "7042678da556bc96428a8d2ded33c9f72df93ac8",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_EWgez1RCBddoknLXpKfswNHT8tde",
+      "url": "happydate-pgh757n8n-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T16:34:37.008Z",
+      "state": "CANCELED",
+      "target": "preview",
+      "branch": "codex/fix-production-ai-chat-tool-stream",
+      "sha": "80979dfa4938e41641a98d1d9c99be9e065199c3",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_F7qPPgx2Lu66cAcrXgTcW3769U4f",
+      "url": "happydate-3i6u8tbx3-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T16:34:21.259Z",
+      "state": "CANCELED",
+      "target": "preview",
+      "branch": "codex/fix-production-ai-chat-tool-stream",
+      "sha": "17829e40d1b99a58328d6b2875c64c18a8a06c60",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_A9ge1TwznX6ZiKDJBFBb1TnP3tdr",
+      "url": "happydate-31oj2hxfl-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T16:34:14.294Z",
+      "state": "CANCELED",
+      "target": "preview",
+      "branch": "codex/fix-production-ai-chat-tool-stream",
+      "sha": "d3119a42a45a1f38250b2c968a5838692b36cb45",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_EJys5NLCzerWpewALdq8s9JdZn59",
+      "url": "happydate-1qb7spgky-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T16:11:16.679Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "8bdce494cfccb9c84f58a8c2b7dfee43a8e55c99",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_4QWueWP1mnN5VqQj4SkUpvLAS6bM",
+      "url": "happydate-epftnwbwg-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T16:04:53.109Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "2f6d38fca1e4f1280e756734756fe0e2d0eba1d7",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-codex-s-bb8c52-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 1
+        }
+      ]
+    },
+    {
+      "id": "dpl_Ae5tKLkdSP9wKRKA5ECUiZNc5YaT",
+      "url": "happydate-faovfhw3m-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T16:01:21.183Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "8dcb8029855b00f844ee16540b4c3c38620cd2bc",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_3MXPUR3RaQeMk8YJF6M8kN8kvsy2",
+      "url": "happydate-t67sgcp5x-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T07:34:02.271Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "dcb2ff5adfd9b9e156ba4a0c96463e422f341dca",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_6fY7scdXwYue3VGSzhqUJ9MGytqx",
+      "url": "happydate-kxbf2x7qr-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T07:31:53.391Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "dcb2ff5adfd9b9e156ba4a0c96463e422f341dca",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_GDJKMZrzH4DcYnrv1pDYSKi3CZkU",
+      "url": "happydate-id1fxxggu-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T06:59:51.025Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "1c4b034a8e4cb45b0d7dcf3cb93bd8ad7af59d26",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_434vAz3WxsNTwTNEAZwrwWJUFsYH",
+      "url": "happydate-d4qjynbx4-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T06:59:34.913Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "1c4b034a8e4cb45b0d7dcf3cb93bd8ad7af59d26",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_2Pd95DaJWs36d3jHGk6gRir1Mpf3",
+      "url": "happydate-7jo2sjgt6-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T06:53:39.175Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "ef37e101c738408a66ed757d1a8c1809ed6e1913",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_BqTiwXn5RU99GtftqnRNVzZTTzL1",
+      "url": "happydate-3da3ufgvs-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T06:53:16.772Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "ef37e101c738408a66ed757d1a8c1809ed6e1913",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_EVkMAXuJxp99Hmj11vnyvEdRWmt5",
+      "url": "happydate-8xijttdpo-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T06:51:09.381Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "2f77d2a746bf4e3b79ed4e6fc5237c75e2178397",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_7PjKqAa6XgLcPvhQZDrDVar9MBio",
+      "url": "happydate-dcnxos2fu-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T06:50:56.493Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "2f77d2a746bf4e3b79ed4e6fc5237c75e2178397",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_GS9C6wh3HiJWBfU4AP9PNj742Vph",
+      "url": "happydate-qjvjr2nuk-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T06:47:59.618Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "529f8cd07bb89f35aeef373e08d0a3cce58d8d50",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_GzwNPDuow3ezVEtiZsDpMM7UJEN7",
+      "url": "happydate-7j86db5nw-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T06:47:51.349Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "529f8cd07bb89f35aeef373e08d0a3cce58d8d50",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_AbgV8zawvUiyZ9UbX3xxb3aAid9d",
+      "url": "happydate-p67o152b7-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T06:45:34.407Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "2943e61ee7da108ddb39ac762ba063c4d5a465cd",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_5cZa4NtVs3vNzfdzVvs8HWZiV3YP",
+      "url": "happydate-1qnh653p8-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T06:45:20.192Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "2943e61ee7da108ddb39ac762ba063c4d5a465cd",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_68joJzJTh4KUi4LfpvTW6tg82NM6",
+      "url": "happydate-n6d87n7y3-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T06:33:32.680Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "3b68e7aea90cf0df80f3a6e54cf56aad93039b87",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_6fdaJYq1C4shYvJpvJSUX5pU6fNP",
+      "url": "happydate-ki97w6iip-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T06:32:27.721Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "3b68e7aea90cf0df80f3a6e54cf56aad93039b87",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_6QpDrmjjYCbEktjrii2diVWZ9Vjb",
+      "url": "happydate-gw82y1dbp-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T05:52:30.408Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "e1360d66142e4cfae5f8f84855240f2f3e9ba6a0",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_BW9YALzKjLG8dTYCWg2MuHwFQ4iK",
+      "url": "happydate-kclwm27nd-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-20T05:50:59.994Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "e1360d66142e4cfae5f8f84855240f2f3e9ba6a0",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_AgnmLzym7xcUGWKb1ceDgKGTuKny",
+      "url": "happydate-9a28qfe50-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-19T19:16:35.343Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "fd0955d710db0687f4e9c0988688db647bb16a44",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_6cx4LUTa46jHV8EoYKGW22gfvLsQ",
+      "url": "happydate-8iiydvfn6-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-19T19:08:43.523Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "c7823292ad5bd0a94a971e8ada6d0173d9dc8abc",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_7jz94zbWf4EBbHRZVQh2Zk4b1VcK",
+      "url": "happydate-5x5pm7ylw-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-18T04:32:12.735Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "d3438e5fe02b95b0222cdc47d0f8d70fc01f1397",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_7bASvp7Yrpo6FkvMRvr11ou3CURP",
+      "url": "happydate-prpt72ttx-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-18T04:18:13.356Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "87b2e835b48cbbd8091fadff9d61fdf40a51aed8",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_3ZUT8UyfHYNudtPW5e57fx5kQsnY",
+      "url": "happydate-ioxi36671-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-18T04:17:11.808Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "90a9ee6328014946073629e515b3786e3d7e9b84",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_3NSuqnQjBbuF7iSJPmrc55oap4Jz",
+      "url": "happydate-msfg8qqfz-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-18T04:09:52.796Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "391051959bd9a4b5b98940b164a24e352f98a5c6",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_Ek346oFRXEeKJYPs2TEUB1yf5yA6",
+      "url": "happydate-5hq1c99r3-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-17T11:15:01.854Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "0d5672c81d10fb1ebb9f60738e25d48211cf0207",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_3c6Nz9tXpLhddeUPfX8HCqRnPHXE",
+      "url": "happydate-f71kymo5f-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-17T11:10:57.647Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "b8a817092f2d170bf3db7963e534a3af3668a681",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_7JQa9Qy1R5NWMVDvCye8UEpnud2L",
+      "url": "happydate-j9c3iu3uu-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-17T11:07:52.996Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "be9c264178571947e160fcd00db3834cb2236781",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_FDyfzGn48JtP4aUmmL8ZgKoPoy3P",
+      "url": "happydate-7d3iazdas-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-17T11:00:45.154Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "05904de52dda871040eed1d75412663c51293445",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_Fz5AgMYtAa3RkC3ZWt4Lsk998Vc8",
+      "url": "happydate-93xfz19az-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-17T10:55:43.376Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "e1bdfb194c5cf73d4f8c2be80480552d5dccdf9e",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_GwBQeAxybK2h2P2cECdhFnNVsKeF",
+      "url": "happydate-14b9uoqwg-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-17T10:50:37.837Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "cd0c883f1630fc76310347c678cc1f805814cb12",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_ABGLLxtyr5M7kEVcYihCMCYEpqL4",
+      "url": "happydate-1irqch4kq-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-17T10:41:23.256Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "fa107737e1769e51e54bac39a194d27fd15ec3e1",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_8Yzwaicpn7xstXZcRhq8EG1dKg5Q",
+      "url": "happydate-oommbhg8n-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-17T10:31:06.089Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "7e8f295bbad1654350df0f53f6c0e5bd03de9593",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_GRENeJnMs1U7RZvcXp2k5Bt4ctzU",
+      "url": "happydate-tsgr07ah6-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-17T10:26:52.180Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "06b3f38e743c091d812735b700049b0697ec012c",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_GcBDz5hVjBTnxEiqzRNvmaPrkw5p",
+      "url": "happydate-1zz9dnzr2-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-17T09:50:40.598Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "b11d2ee71c0dbc454bdc546a43d91094371c8ee4",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_6qQHZFHBQkWZBxeZX7PjwZafJNXH",
+      "url": "happydate-5a0g4c6l7-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-17T08:26:49.661Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/staging-block-b",
+      "sha": "b11d2ee71c0dbc454bdc546a43d91094371c8ee4",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": []
+    },
+    {
+      "id": "dpl_BrGdC5QTeK1Tx6LkWqXW1maw3Hgc",
+      "url": "happydate-76fiug8zn-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-09T17:05:51.129Z",
+      "state": "READY",
+      "target": "preview",
+      "branch": "codex/security-node24",
+      "sha": "3f623d33b7a28258e14723210369b076fe91de04",
+      "legacyBeforeGenericIsolation": true,
+      "aliases": [
+        {
+          "hostname": "happydate-git-codex-s-acaea4-bilohlazovamari-gmailcoms-projects.vercel.app",
+          "bypassCount": 0
+        }
+      ]
+    },
+    {
+      "id": "dpl_CQpx3o9D28pAsPcc6cAJD9rbj268",
+      "url": "happydate-ney3xn02z-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-09T16:51:52.477Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "5e09be98c704511823322474d210702d622c21b7",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_7kUrdzz8dNasKkbLbVUCakRAdRUi",
+      "url": "happydate-ddthb3lgp-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-09T16:39:47.972Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "30d65db2c07cf07bbe790087014262097cbf3c59",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_6b9z7CPJzkEsYt85aK9kF3hn22gu",
+      "url": "happydate-kkrvydq0v-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-08T16:39:09.702Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "2b86ee4a9d423874936388b8bccf55be89557bf8",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_Aycb4CMNNqXb1VFBLe3nJG3FZGTK",
+      "url": "happydate-dryxwmqtb-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-10-08T16:02:09.254Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "abcf6a7c996ce9b5008688b036d84112b588805f",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    },
+    {
+      "id": "dpl_7eENSNnf83pCdzKSbRNwL524wijQ",
+      "url": "happydate-3a07y8e7w-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "createdAt": "2026-09-29T15:51:54.326Z",
+      "state": "READY",
+      "target": "production",
+      "branch": "main",
+      "sha": "8c079128f61475745cbd5c9f42f37b12c88f0d8c",
+      "legacyBeforeGenericIsolation": false,
+      "aliases": []
+    }
+  ],
+  "aliasInventory": [
+    {
+      "alias": "happydate-git-codex-r-98f786-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_2fvVpx3JRMbQmGdf9wkGNymnfGAN",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-fix-ass-c07d78-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_8Zj3ouH4BT2qdx7fK6v9RVrJveaH",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-fix-dep-b5b53d-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_H4zQqCTLyZjCveosqjpupHUUEn8r",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-ci-inde-cf25d2-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_HkCvqKoe4hx4np5J6SE9hyzvkMX3",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-test-on-412383-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_vVLoAKHZnRt6XfkTPysbFzsMMq6a",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-fix-onb-e4bcd2-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_D7KRHFFsRNGaGdCwLxDADzkagtYt",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-fix-sec-813f74-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_GEUNxMspDzixAGTvrdeQ1m98umzN",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-test-rl-11e6a9-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_DsGWxsitsxmLuT93Y3FduHpLe2Pq",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-docs-au-02fe6b-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_EWe3FCENHrBSS1SXUoYw9AK4xqVr",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-docs-au-5e9d6e-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_G2uAVqJujrKjHTSFnLTbxUjuxUzK",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-docs-au-6467cc-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_FdHsrz4KXabzsjWX5itBBFwtgjUC",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-fix-aud-4bc463-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_AKNCC1NUQEFQcf8raUJ44R8WtZzw",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-fix-aud-82e40e-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_6L8bTNQ8mWzmRhPTpAt4g5PencHA",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-fix-aud-65a0a8-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_GucsV3qz4yFvgeKafxtwKYfYKvQD",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-codex-a-6ed95b-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_3vUtxaaB44nzdPwWwPoMs2hPZfAZ",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-codex-a-a9d588-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_4Q5QzLQT5SxwjM8dje2bULX1ubfb",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-codex-f-7dbc13-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_6vC6kWDdLzLkPMyo6wAbceCE3Xhz",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-codex-s-bb8c52-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_4QWueWP1mnN5VqQj4SkUpvLAS6bM",
+      "protectionBypassCount": 1,
+      "bypassMetadata": [
+        {
+          "scope": "alias-protection-override",
+          "createdAt": 1792230921831
+        }
+      ]
+    },
+    {
+      "alias": "happydate-git-codex-s-acaea4-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_BrGdC5QTeK1Tx6LkWqXW1maw3Hgc",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate.vercel.app",
+      "deploymentId": "dpl_3qiFK4y7AsqnPa3P9wkqLR7jTcgf",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_3qiFK4y7AsqnPa3P9wkqLR7jTcgf",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    },
+    {
+      "alias": "happydate-git-main-bilohlazovamari-gmailcoms-projects.vercel.app",
+      "deploymentId": "dpl_3qiFK4y7AsqnPa3P9wkqLR7jTcgf",
+      "protectionBypassCount": 0,
+      "bypassMetadata": []
+    }
+  ],
+  "limitations": [
+    "Bypass tokens omitted; expiration absent on returned override metadata, not proof of perpetual validity.",
+    "Project-wide automation bypass secrets and deployment-scoped sharing links not exposed by normalized read tools.",
+    "IP/system bypass endpoint returned 402 plan unavailable; installed CLI 46.0.2 does not implement mapped api command; no upgrade or protection change performed."
+  ]
+}

@@ -490,3 +490,60 @@ test("local RLS regression: ownership and cross-reference checks reject foreign 
   assert.match(output, /PASS blocked: event INSERT with foreign person_id SQLSTATE=42501/);
   assert.match(output, /PASS blocked: memory UPDATE with foreign event_id SQLSTATE=42501/);
 });
+\n
+test("local RLS regression: 101st owned person is discoverable with exact scope but hidden from foreign user", { skip: !enabled }, () => {
+  const output = runSql("101st scoped person isolation", (ids) => `
+    insert into public.people (id, user_id, name)
+    select gen_random_uuid(), '${ids.userA}',
+      case when number = 101 then 'ZZZ Synthetic 101st'
+           else 'AAA Synthetic ' || lpad(number::text, 3, '0') end
+    from generate_series(1, 101) as number;
+
+    do $assert$
+    declare
+      target_id uuid;
+      bounded_count integer;
+      visible_target integer;
+      scoped_count integer;
+      foreign_count integer;
+    begin
+      select id into strict target_id
+      from public.people
+      where user_id = '${ids.userA}' and name = 'ZZZ Synthetic 101st';
+
+      select count(*) into bounded_count from (
+        select id from public.people
+        where user_id = '${ids.userA}'
+        order by name asc limit 100
+      ) bounded;
+      if bounded_count <> 100 then
+        raise exception 'Home must remain limited to 100, got %', bounded_count;
+      end if;
+
+      select count(*) into visible_target from (
+        select id from public.people
+        where user_id = '${ids.userA}'
+        order by name asc limit 100
+      ) bounded where id = target_id;
+      if visible_target <> 0 then
+        raise exception '101st person unexpectedly appeared in the first 100';
+      end if;
+
+      select count(*) into scoped_count
+      from public.people where id = target_id and user_id = '${ids.userA}';
+      if scoped_count <> 1 then
+        raise exception 'Scoped owner lookup did not find the 101st person';
+      end if;
+
+      select count(*) into foreign_count
+      from public.people where id = '${ids.personB}' and user_id = '${ids.userA}';
+      if foreign_count <> 0 then
+        raise exception 'Foreign owner person was visible through scoped lookup';
+      end if;
+
+      raise notice 'PASS scoped 101st person: bounded 100, owner 1, foreign 0';
+    end
+    $assert$;
+  `);
+  assert.match(output, /PASS scoped 101st person: bounded 100, owner 1, foreign 0/);
+});

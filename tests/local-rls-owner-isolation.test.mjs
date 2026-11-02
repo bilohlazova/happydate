@@ -495,9 +495,9 @@ test("local RLS regression: 101st owned person is discoverable with exact scope 
   const output = runSql("101st scoped person isolation", (ids) => `
     insert into public.people (id, user_id, name)
     select gen_random_uuid(), '${ids.userA}',
-      case when number = 101 then 'ZZZ Synthetic 101st'
-           else 'AAA Synthetic ' || lpad(number::text, 3, '0') end
-    from generate_series(1, 101) as number;
+      case when n = 101 then 'ZZZ Synthetic 101st'
+           else 'AAA Synthetic ' || lpad(n::text, 3, '0') end
+    from generate_series(1, 101) as series(n);
 
     do $assert$
     declare
@@ -536,7 +536,7 @@ test("local RLS regression: 101st owned person is discoverable with exact scope 
       end if;
 
       select count(*) into foreign_count
-      from public.people where id = '${ids.personB}' and user_id = '${ids.userA}';
+      from public.people where id = '${ids.personB}';
       if foreign_count <> 0 then
         raise exception 'Foreign owner person was visible through scoped lookup';
       end if;

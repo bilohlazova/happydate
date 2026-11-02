@@ -10,7 +10,7 @@ import { loadAssistantSavedGiftLinkContext } from "@/lib/assistant/savedGiftLink
 import { loadAssistantPetContext } from "@/lib/assistant/petContext.server";
 import { readBoundedJson } from "@/lib/server/readBoundedJson";
 import { logOperationalError, logOperationalWarning } from "@/lib/observability/safeLogger";
-import { getHomeRepositoryData } from "@/lib/repositories/home/home.repository";
+import { getHomeRepositoryData, loadOwnedHomePerson } from "@/lib/repositories/home/home.repository";
 import { buildGuestAssistantRequest, buildVerifiedAssistantRequest } from "@/lib/assistant/verifiedAssistantContext.server";
 import { createConfiguredAiBudget, type AiTokenUsage } from "@/lib/assistant/aiBudget";
 import { loadAssistantPersonSymbol } from "@/lib/assistant/personSymbolContext.server";
@@ -183,6 +183,16 @@ export async function POST(request: Request) {
             rlsSession.accessToken,
             { includeGiftHistory: true },
           );
+          // The Home projection is intentionally capped at 100; explicitly verified
+          // person/event/task chat targets must not disappear beyond that limit.
+          const scopedPersonId = verifiedScope?.type === "person" || verifiedScope?.type === "event" || verifiedScope?.type === "task"
+            ? verifiedScope.personId
+            : null;
+          if (scopedPersonId && !homeData.people.some((person) => person.id === scopedPersonId)) {
+            const ownedPerson = await loadOwnedHomePerson(rlsSession.client, identity.userId, scopedPersonId);
+            if (!ownedPerson) throw new ChatScopeNotFoundError();
+            homeData.people = [...homeData.people, ownedPerson];
+          }
           const taskDecisions = verifiedScope?.type === "task"
             ? await getActiveTaskDecisions(rlsSession.client, { userId: identity.userId, taskId: verifiedScope.taskId })
             : null;

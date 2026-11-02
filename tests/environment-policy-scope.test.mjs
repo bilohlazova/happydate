@@ -23,9 +23,9 @@ test("other Preview accepts publishable and separate provider credentials withou
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_synthetic", OPENAI_API_KEY: "synthetic",
     SUPABASE_SERVICE_ROLE_KEY: "synthetic", UPSTASH_REDIS_REST_URL: "https://redis.example", UPSTASH_REDIS_REST_TOKEN: "synthetic" };
   assert.equal(assertEnvironmentSafety(env), "other-preview-unverified");
-  // This temporary policy deliberately does NOT certify other Preview backends.
-  assert.equal(assertEnvironmentSafety({ ...env, NEXT_PUBLIC_SUPABASE_URL: "https://yzcvdspiiiaidsdripxr.supabase.co",
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: jwt("anon", "yzcvdspiiiaidsdripxr") }), "other-preview-unverified");
+  // Separate provider provenance remains unverified, but Production is forbidden.
+  assert.throws(() => assertEnvironmentSafety({ ...env, NEXT_PUBLIC_SUPABASE_URL: "https://yzcvdspiiiaidsdripxr.supabase.co",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: jwt("anon", "yzcvdspiiiaidsdripxr") }), /production_endpoint_forbidden_in_preview/);
 });
 test("universal public-secret rejection applies to every context, including unknown", () => {
   for (const context of [{}, { VERCEL_ENV: "production" }, { VERCEL_ENV: "preview", VERCEL_GIT_COMMIT_REF: "other" }, pr14]) {

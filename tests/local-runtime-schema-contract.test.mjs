@@ -50,7 +50,7 @@ test("clean local rebuild satisfies the minimum runtime core schema contract", {
       and table_name in ('profiles','people','events','memories','subscriptions')
     order by table_name, ordinal_position`;
   const result = spawnSync("docker", [
-    "exec", "supabase_db_toto", "psql", "-U", "postgres", "-d", "postgres",
+    "exec", process.env.LOCAL_SUPABASE_DB_CONTAINER ?? "supabase_db_toto", "psql", "-U", "postgres", "-d", "postgres",
     "-At", "-F", "|", "-c", sql,
   ], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr || result.stdout);

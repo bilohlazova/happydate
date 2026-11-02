@@ -547,3 +547,31 @@ test("local RLS regression: 101st owned person is discoverable with exact scope 
   `);
   assert.match(output, /PASS scoped 101st person: bounded 100, owner 1, foreign 0/);
 });
+
+test("local RLS: profiles, gifts, task approvals and private Storage resist cross-account attacks", { skip: !enabled }, () => {
+  const output = runSql("extended owner boundaries", ids => `
+    reset role;
+    insert into public.gifts (user_id, person_id, title) values ('${ids.userB}', '${ids.personB}', 'Private B gift');
+    insert into public.happy_tasks (user_id, person_id, type, title) values ('${ids.userB}', '${ids.personB}', 'birthday', 'Private B task');
+    insert into public.happy_actions (user_id, type, payload) values ('${ids.userB}', 'save_memory', '{}');
+    -- Bucket provisioning is external to the historical SQL baseline. Fixture only.
+    insert into storage.buckets (id, name, public) values ('memory-images', 'memory-images', false) on conflict (id) do nothing;
+    insert into storage.objects (bucket_id, name, owner_id) values ('memory-images', '${ids.userB}/private.png', '${ids.userB}');
+    set local role authenticated;
+    ${assertVisibleRowCount('foreign profile hidden', `select id from public.profiles where id = '${ids.userB}'`, 0)}
+    ${assertDmlRowCount('foreign profile unchanged', `update public.profiles set full_name = 'attacker' where id = '${ids.userB}';`, 0)}
+    ${['gifts', 'happy_tasks', 'happy_actions'].map(table => assertVisibleRowCount(`foreign ${table} hidden`, `select id from public.${table} where user_id = '${ids.userB}'`, 0)).join('\n')}
+    ${assertDmlRowCount('foreign gift update blocked', `update public.gifts set title = 'attacker' where user_id = '${ids.userB}';`, 0)}
+    ${assertDmlRowCount('foreign gift delete blocked', `delete from public.gifts where user_id = '${ids.userB}';`, 0)}
+    ${expectBlocked('direct task mutation', `update public.happy_tasks set status = 'completed' where user_id = '${ids.userB}';`)}
+    ${expectBlocked('direct AI action approval', `update public.happy_actions set status = 'completed' where user_id = '${ids.userB}';`)}
+    ${expectBlocked('forged AI action', `insert into public.happy_actions (user_id,type,payload) values ('${ids.userA}','save_memory','{}');`)}
+    ${expectBlocked('foreign person gift', `insert into public.gifts (user_id,person_id,title) values ('${ids.userA}','${ids.personB}','attacker');`)}
+    ${assertVisibleRowCount('foreign Storage hidden', `select id from storage.objects where bucket_id = 'memory-images' and name = '${ids.userB}/private.png'`, 0)}
+    ${assertDmlRowCount('foreign Storage update blocked', `update storage.objects set name = '${ids.userB}/attacker.png' where bucket_id = 'memory-images' and name = '${ids.userB}/private.png';`, 0)}
+    reset role;
+    ${assertVisibleRowCount('B gift preserved', `select id from public.gifts where user_id = '${ids.userB}' and title = 'Private B gift'`, 1)}
+    ${assertVisibleRowCount('B action still pending', `select id from public.happy_actions where user_id = '${ids.userB}' and status = 'pending'`, 1)}
+  `);
+  assert.match(output, /PASS B action still pending/);
+});

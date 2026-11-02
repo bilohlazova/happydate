@@ -17,7 +17,10 @@
     "smoke:production": "node scripts/smoke-production.mjs",
     "eval:assistant": "node --experimental-strip-types scripts/evaluate-assistant.mjs",
     "eval:assistant:live": "RUN_LIVE_ASSISTANT_EVALS=1 node --experimental-strip-types scripts/evaluate-assistant.mjs",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test:fast": "node scripts/test-fast.mjs",
+    "test:security": "node --experimental-strip-types --test tests/environment*.test.mjs tests/*preview*isolation*.test.mjs tests/preview-environment-safety.test.mjs tests/bounded-json.test.mjs tests/assistant-ai-budget.test.mjs tests/assistant-verified-context.test.mjs tests/assistant-scoped-person-over-100.test.mjs tests/memory-capture-ownership.test.mjs tests/authenticated-rpc-security-contract.test.mjs tests/deepmerge-security.test.mjs",
+    "test:integration": "node scripts/test-integration.mjs"
   },
   "dependencies": {
     "@capacitor/android": "8.5.3",

@@ -68,12 +68,14 @@
       "brace-expansion": "5.0.12"
     },
     "glob": {
+      ".": "14.0.2",
       "brace-expansion": "5.0.12"
     },
     "date-holidays": {
       "js-yaml": "5.4.3",
       "moment": "2.31.0"
     },
-    "deepmerge": "$deepmerge"
+    "deepmerge": "$deepmerge",
+    "minimatch": "11.0.1"
   }
 }

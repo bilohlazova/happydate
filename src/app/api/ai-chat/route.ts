@@ -6,6 +6,7 @@ import { createAssistantRlsClient, getAssistantRequestIdentity } from "@/lib/ass
 import { createConfiguredAssistantRateLimiter } from "@/lib/assistant/rateLimiter";
 import { createAssistantChatResponse, type AssistantProviderMessage } from "@/lib/assistant/chatServer";
 import { loadAssistantGiftOutcomeContext } from "@/lib/assistant/giftOutcomeContext.server";
+import { includeVerifiedScopedPerson } from "@/lib/assistant/includeVerifiedScopedPerson";
 import { loadAssistantSavedGiftLinkContext } from "@/lib/assistant/savedGiftLinkContext.server";
 import { loadAssistantPetContext } from "@/lib/assistant/petContext.server";
 import { readBoundedJson } from "@/lib/server/readBoundedJson";
@@ -188,11 +189,9 @@ export async function POST(request: Request) {
           const scopedPersonId = verifiedScope?.type === "person" || verifiedScope?.type === "event" || verifiedScope?.type === "task"
             ? verifiedScope.personId
             : null;
-          if (scopedPersonId && !homeData.people.some((person) => person.id === scopedPersonId)) {
-            const ownedPerson = await loadOwnedHomePerson(rlsSession.client, identity.userId, scopedPersonId);
-            if (!ownedPerson) throw new ChatScopeNotFoundError();
-            homeData.people = [...homeData.people, ownedPerson];
-          }
+          homeData.people = await includeVerifiedScopedPerson(homeData.people, scopedPersonId, (personId) =>
+            loadOwnedHomePerson(rlsSession.client, identity.userId!, personId),
+          );
           const taskDecisions = verifiedScope?.type === "task"
             ? await getActiveTaskDecisions(rlsSession.client, { userId: identity.userId, taskId: verifiedScope.taskId })
             : null;

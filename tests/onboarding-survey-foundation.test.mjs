@@ -36,15 +36,15 @@ test("Block D preserves legacy event answers when the new onboarding UI omits da
   assert.match(sql, /v_existing\.reward_granted_at is null/);
 });
 
-test("survey dates use canonical Events without deleting legacy or unrelated events", async () => {
+test("legacy survey editing preserves event references without loading or editing dates", async () => {
   const [sql, page] = await Promise.all([
-    readFile(migrationUrl, "utf8"),
+    readFile(new URL("../supabase/migrations/20261020153546_preserve_legacy_survey_events.sql", import.meta.url), "utf8"),
     readFile(new URL("../src/app/survey/page.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(sql, /insert into public\.events/);
-  assert.match(sql, /'yearly'/);
-  assert.match(page, /\.from\("events"\)/);
   assert.match(page, /\.rpc\("save_my_onboarding_survey"/);
+  assert.match(page, /p_special_dates:\s*null/);
+  assert.doesNotMatch(page, /\.from\("events"\)|special_date_event_ids|survey-care-dates|addEmptyDate/);
+  assert.match(sql, /p_special_dates jsonb default '\[\]'::jsonb/i);
   assert.doesNotMatch(page, /user_special_dates/);
 });
 

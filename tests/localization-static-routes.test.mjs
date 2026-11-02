@@ -28,12 +28,12 @@ test("review bodies and author names remain untouched user content", async () =>
   assert.match(source, /toLocaleDateString\(locale\)/);
 });
 
-test("survey stores canonical kinds instead of localized labels", async () => {
+test("legacy survey keeps preference values canonical and does not edit dates", async () => {
   const source = await readFile(
     path.join(root, "src/app/survey/page.tsx"),
     "utf8"
   );
-  assert.match(source, /label: d\.label\?\.trim\(\) \|\| d\.kind/);
-  assert.match(source, /value="support">\{t\("support"\)\}/);
-  assert.match(source, /value="celebration">\{t\("celebration"\)\}/);
+  assert.match(source, /canonicalizeGiftPreference/);
+  assert.match(source, /p_special_dates:\s*null/);
+  assert.doesNotMatch(source, /value="support"|value="celebration"|d\.label/);
 });

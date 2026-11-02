@@ -14,15 +14,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  web-quality:
-    name: Verify, build and runtime smoke
+  dependency-audit:
+    name: Audit dependency vulnerabilities
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     env:
       CI: "true"
-      NEXT_TELEMETRY_DISABLED: "1"
-      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_ci_placeholder"
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -38,6 +35,30 @@ jobs:
 
       - name: Audit dependency vulnerabilities
         run: npm audit --audit-level=low
+
+  web-quality:
+    name: Verify, build and runtime smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Local CI build/runtime only; never add this opt-in to Vercel.
+      HAPPYDATE_LOCAL_EXECUTION: "1"
+      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_ci_placeholder"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
 
       - name: Lint, typecheck and test
         run: npm run verify

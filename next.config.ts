@@ -1,5 +1,8 @@
 import createNextIntlPlugin from "next-intl/plugin";
 import type { NextConfig } from "next";
+import { assertEnvironmentSafety } from "./src/lib/supabase/environmentSafety.ts";
+
+assertEnvironmentSafety(process.env);
 
 const isProduction = process.env.NODE_ENV === "production";
 

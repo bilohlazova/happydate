@@ -19,6 +19,7 @@ import type {
   HomeHappyIdea,
 } from "@/lib/home/home.types";
 import { canonicalRelationKey } from "@/lib/people/canonicalRelation";
+import type { PersonRelationKey } from "@/lib/repositories/person.types";
 import { canonicalGiftEventContext } from "@/lib/gifts/giftEventContext";
 import type { HappyTaskCardSource } from "@/lib/happy/task-ui/happyTaskCard";
 import type { ProactivityMode } from "../../../../supabase/functions/happy-proactive/proactivity-policy.ts";
@@ -169,15 +170,21 @@ async function loadProfile(client: SupabaseClient, userId: string): Promise<Home
   return data ? { fullName: data.full_name ?? null, firstName: data.first_name ?? null, lastName: data.last_name ?? null } : null;
 }
 
-async function loadPeople(client: SupabaseClient, userId: string): Promise<HomePerson[]> {
-  const { data, error } = await client
-    .from("people")
-    .select("id, name, birthday, birth_year, relationship, relation_label, relation_key, gender")
-    .eq("user_id", userId)
-    .order("name", { ascending: true })
-    .limit(100);
-  if (error) throw new HomeRepositoryError("people", error.message);
-  return (data ?? []).map((person) => ({
+const HOME_PERSON_COLUMNS = "id, name, birthday, birth_year, relationship, relation_label, relation_key, gender";
+
+type HomePersonRecord = {
+  id: string;
+  name: string;
+  birthday: string | null;
+  birth_year: number | null;
+  relationship: string | null;
+  relation_label: string | null;
+  relation_key: PersonRelationKey | null;
+  gender: string | null;
+};
+
+function projectHomePerson(person: HomePersonRecord): HomePerson {
+  return {
     id: person.id,
     name: person.name,
     birthday: person.birthday ?? null,
@@ -190,7 +197,34 @@ async function loadPeople(client: SupabaseClient, userId: string): Promise<HomeP
     gender: person.gender === "female" || person.gender === "male" || person.gender === "other" || person.gender === "unspecified"
       ? person.gender
       : null,
-  }));
+  };
+}
+
+async function loadPeople(client: SupabaseClient, userId: string): Promise<HomePerson[]> {
+  const { data, error } = await client
+    .from("people")
+    .select(HOME_PERSON_COLUMNS)
+    .eq("user_id", userId)
+    .order("name", { ascending: true })
+    .limit(100);
+  if (error) throw new HomeRepositoryError("people", error.message);
+  return (data ?? []).map(projectHomePerson);
+}
+
+/** Fetch one already verified chat target even when it is outside Home's first 100 people. */
+export async function loadOwnedHomePerson(
+  client: SupabaseClient,
+  userId: string,
+  personId: string,
+): Promise<HomePerson | null> {
+  const { data, error } = await client
+    .from("people")
+    .select(HOME_PERSON_COLUMNS)
+    .eq("id", personId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new HomeRepositoryError("people", error.message);
+  return data ? projectHomePerson(data) : null;
 }
 
 async function loadEvents(client: SupabaseClient, userId: string): Promise<HomeStoredEvent[]> {

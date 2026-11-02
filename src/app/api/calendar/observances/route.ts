@@ -1,5 +1,5 @@
 import Holidays from "date-holidays";
-import { buildCalendarObservances } from "@/lib/events/holidayObservances";
+import { buildCalendarObservances } from "../../../../lib/events/holidayObservances.ts";
 
 const COUNTRY_BY_LOCALE = { uk: "UA", pl: "PL", de: "DE", en: "GB", ru: "RU" } as const;
 const COUNTRY_LANGUAGE = { UA: "uk", PL: "pl", DE: "de", GB: "en", RU: "ru" } as const;
@@ -9,7 +9,7 @@ type SupportedLocale = keyof typeof COUNTRY_BY_LOCALE;
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const rawLocale = searchParams.get("locale")?.toLowerCase().split("-")[0] ?? "en";
-  const locale: SupportedLocale = rawLocale in COUNTRY_BY_LOCALE ? rawLocale as SupportedLocale : "en";
+  const locale: SupportedLocale = Object.hasOwn(COUNTRY_BY_LOCALE, rawLocale) ? rawLocale as SupportedLocale : "en";
   const year = Number(searchParams.get("year"));
   const holidayCatalog = new Holidays();
   const sourceCountries = holidayCatalog.getCountries(locale);
@@ -23,9 +23,9 @@ export async function GET(request: Request) {
     return Response.json({ error: "Invalid calendar year." }, { status: 400 });
   }
 
-  const country = requestedCountry && requestedCountry in countries ? requestedCountry : COUNTRY_BY_LOCALE[locale];
+  const country = requestedCountry && Object.hasOwn(countries, requestedCountry) ? requestedCountry : COUNTRY_BY_LOCALE[locale];
   const holidays = new Holidays(country);
-  const countryLanguage = country in COUNTRY_LANGUAGE ? COUNTRY_LANGUAGE[country as keyof typeof COUNTRY_LANGUAGE] : locale;
+  const countryLanguage = Object.hasOwn(COUNTRY_LANGUAGE, country) ? COUNTRY_LANGUAGE[country as keyof typeof COUNTRY_LANGUAGE] : locale;
   holidays.setLanguages([locale, countryLanguage, "en"]);
 
   const observances = buildCalendarObservances(holidays.getHolidays(year), country, year, locale);

@@ -55,7 +55,7 @@ Requirements: Node.js 24 and npm. Install dependencies and start the web app:
 
 ```sh
 npm ci
-npm run dev
+HAPPYDATE_LOCAL_EXECUTION=1 npm run dev
 ```
 
 Copy `.env.example` to a local environment file and provide the required local
@@ -69,11 +69,18 @@ Run the quality checks with:
 npm run lint
 npm run typecheck
 npm test
-npm run build -- --webpack
+HAPPYDATE_LOCAL_EXECUTION=1 npm run build -- --webpack
 ```
 
 The full repository gate is `npm run verify`; an already-built production
-server can be checked with `npm run smoke:production`.
+server can be checked with `HAPPYDATE_LOCAL_EXECUTION=1 npm run smoke:production`.
+
+Set `HAPPYDATE_LOCAL_EXECUTION=1` only for local dev/build/start, either in the
+command environment or an untracked `.env.local`. Missing deployment context
+now fails closed; `NODE_ENV` never grants a local exemption. Do not set this
+local opt-in on Vercel: it is rejected when hosted identifiers or the PR14
+policy marker are present. CI declares it explicitly for local Next build/smoke.
+For manual local `next start`, pass the same opt-in as for the build.
 
 ## Mobile role
 

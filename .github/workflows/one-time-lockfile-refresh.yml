@@ -1,0 +1,41 @@
+name: One-time lockfile refresh
+
+on:
+  push:
+    branches: [fix/dependency-glob-minimatch-2026-11]
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.repository == 'bilohlazova/happydate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Regenerate lockfile using npm
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Validate resolved versions
+        run: |
+          node -e "const p = require('./package-lock.json'); const glob = p.packages['node_modules/glob']?.version; const mini = p.packages['node_modules/minimatch']?.version; console.log({glob, minimatch:mini}); if (glob !== '14.0.2' || mini !== '11.0.1') process.exit(1)"
+      - name: Verify reproducible install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Commit only generated package-lock.json
+        run: |
+          set -euo pipefail
+          test "$(git branch --show-current)" = "fix/dependency-glob-minimatch-2026-11"
+          test -z "$(git status --porcelain | grep -v ' package-lock.json' || true)"
+          git add -- package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lockfile already up to date"
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "chore(deps): regenerate lockfile for glob and minimatch"
+          git push origin HEAD:fix/dependency-glob-minimatch-2026-11

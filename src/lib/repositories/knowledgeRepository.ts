@@ -245,6 +245,12 @@ export async function listKnowledge(
   return mapLegacyMemoriesToKnowledge(rows);
 }
 
+export async function listOwnedMemoryImageValues(userId: string): Promise<string[][]> {
+  const { data, error } = await supabase.from("memories").select("images").eq("user_id", userId);
+  if (error) throw repositoryError("listOwnedMemoryImageValues", error.message);
+  return (data ?? []).map((row) => Array.isArray(row.images) ? row.images : []);
+}
+
 /** Owner-scoped Knowledge read for an already authenticated RLS client. */
 export async function listKnowledgeWithClient(
   client: SupabaseClient,

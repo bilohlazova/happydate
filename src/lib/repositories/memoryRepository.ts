@@ -8,6 +8,7 @@ import {
   createKnowledge,
   deleteKnowledge,
   listNotesKnowledgeProjection,
+  listOwnedMemoryImageValues,
   updateKnowledge,
 } from "./knowledgeRepository";
 import type {
@@ -290,9 +291,10 @@ export async function deleteMemoryImageObjects(
     return { deleted: [], ignored, failed: [] };
   }
 
-  const { data: rows, error: referenceError } = await supabase.from("memories").select("images").eq("user_id", user.id);
-  if (referenceError) return { deleted: [], ignored, failed: acceptedPaths.map((objectPath) => ({ objectPath, error: referenceError.message })) };
-  const referenced = new Set((rows ?? []).flatMap((row) => Array.isArray(row.images) ? getOwnedMemoryImagePaths(row.images, user.id).acceptedPaths : []));
+  let rows: string[][];
+  try { rows = await listOwnedMemoryImageValues(user.id); }
+  catch (referenceError) { return { deleted: [], ignored, failed: acceptedPaths.map((objectPath) => ({ objectPath, error: referenceError instanceof Error ? referenceError.message : String(referenceError) })) }; }
+  const referenced = new Set(rows.flatMap((images) => getOwnedMemoryImagePaths(images, user.id).acceptedPaths));
   const removable = acceptedPaths.filter((path) => !referenced.has(path));
   if (removable.length === 0) return { deleted: [], ignored, failed: [] };
   const { error } = await supabase.storage
@@ -343,7 +345,9 @@ export async function updateNotesMemory(
   memoryId: string,
   input: UpdateNotesMemoryInput
 ): Promise<void> {
-  const { data: before, error: beforeError } = await supabase.from("memories").select("images").eq("id", memoryId).maybeSingle();
+  const beforeRows = await listNotesKnowledgeProjection({ userId: (await getCurrentMemoryUserId()) ?? "" });
+  const before = beforeRows.find((row) => row.id === memoryId);
+  const beforeError = null;
   if (beforeError) throw beforeError;
   const safeInput =
     input.images === undefined
@@ -375,7 +379,9 @@ export async function updateNotesMemory(
  * Hard-delete a memory, preserving the existing Notes behavior.
  */
 export async function deleteMemory(memoryId: string): Promise<void> {
-  const { data: before, error: beforeError } = await supabase.from("memories").select("images").eq("id", memoryId).maybeSingle();
+  const beforeRows = await listNotesKnowledgeProjection({ userId: (await getCurrentMemoryUserId()) ?? "" });
+  const before = beforeRows.find((row) => row.id === memoryId);
+  const beforeError = null;
   if (beforeError) throw beforeError;
   await deleteKnowledge(memoryId);
   const previous = Array.isArray(before?.images) ? before.images : [];

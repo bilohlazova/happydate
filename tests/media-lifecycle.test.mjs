@@ -12,7 +12,7 @@ test("avatar replacement persists before old-object cleanup and exposes removal"
 
 test("memory lifecycle reads prior images and protects referenced paths", async () => {
   const source = await readFile(new URL("../src/lib/repositories/memoryRepository.ts", import.meta.url), "utf8");
-  assert.match(source, /select\("images"\)/g);
+  assert.match(source, /listOwnedMemoryImageValues/);
   assert.match(source, /const referenced = new Set/);
   assert.match(source, /const removable = acceptedPaths\.filter/);
   assert.match(source, /Memory image cleanup failed/);

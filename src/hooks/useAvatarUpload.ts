@@ -37,13 +37,14 @@ export type UploadState =
 
 interface UseAvatarUploadOptions {
   userId: string;
+  currentPath?: string | null;
   /** Called after successful upload so parent can persist avatarPath */
-  onSuccess: (filePath: string) => void;
+  onSuccess: (filePath: string) => void | Promise<void>;
   /** Called on any error so parent can surface a message */
   onError: (message: string) => void;
 }
 
-export function useAvatarUpload({ userId, onSuccess, onError }: UseAvatarUploadOptions) {
+export function useAvatarUpload({ userId, currentPath, onSuccess, onError }: UseAvatarUploadOptions) {
   const [state, setState] = useState<UploadState>({ status: "idle" });
 
   const pickAndUpload = async () => {
@@ -103,9 +104,25 @@ export function useAvatarUpload({ userId, onSuccess, onError }: UseAvatarUploadO
 
       if (uploadError) throw new Error(uploadError.message);
 
-      // ── Step 5: Notify parent ─────────────────────────────────
+      // Persist the new reference before touching the old object. The callback
+      // owns the profile update and may throw; in that case remove only the
+      // newly-created orphan and retain the old avatar.
+      try {
+        await onSuccess(filePath);
+      } catch (persistError) {
+        const { error: orphanError } = await supabase.storage.from("avatars").remove([filePath]);
+        const detail = persistError instanceof Error ? persistError.message : "Avatar save failed";
+        if (orphanError) throw new Error(`${detail}; cleanup failed: ${orphanError.message}`);
+        throw persistError;
+      }
+
+      if (currentPath && currentPath !== filePath) {
+        const oldKey = currentPath.replace(/^avatars\//, "");
+        const { error: cleanupError } = await supabase.storage.from("avatars").remove([oldKey]);
+        if (cleanupError) throw new Error(`Avatar saved, but old avatar cleanup failed: ${cleanupError.message}`);
+      }
+
       setState({ status: "success", filePath });
-      onSuccess(filePath);
 
     } catch (err: unknown) {
       // Graceful handling — app must NEVER crash here

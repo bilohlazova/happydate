@@ -63,13 +63,14 @@ export default function ProfilePage() {
 
   const { state: avatarState, pickAndUpload } = useAvatarUpload({
     userId: userId ?? "",
-    onSuccess: (filePath) => {
+    currentPath: avatarPath,
+    onSuccess: async (filePath) => {
       setAvatarPath(filePath);
       if (!userId) return;
-      void supabase.from("profiles").update({ avatar_url: filePath }).eq("id", userId).then(({ error }) => {
-        setMessage(error ? translate("errors.avatarSaveFailed") : translate("states.avatarSaved"));
-        refreshAvatar();
-      });
+      const { error } = await supabase.from("profiles").update({ avatar_url: filePath }).eq("id", userId);
+      if (error) { setAvatarPath(avatarPath); throw error; }
+      setMessage(translate("states.avatarSaved"));
+      await refreshAvatar();
     },
     onError: () => setMessage(translate("errors.uploadFailed")),
   });
@@ -139,7 +140,7 @@ export default function ProfilePage() {
     <section className="pr-hero" aria-labelledby="profile-personal-title">
       <div className="pr-hero__glow" aria-hidden="true" />
       <div className="pr-hero__inner">
-        <div className="pr-avatar-wrap">{avatarUrl ? <Image src={avatarUrl} alt={translate("avatar.alt")} width={84} height={84} className="pr-avatar-img" unoptimized /> : <div className="pr-avatar-placeholder">{avatarState.status === "loading" ? "…" : avatarFallback}</div>}<button type="button" className="pr-avatar-edit" aria-label={translate("accessibility.changeAvatar")} onClick={pickAndUpload} disabled={avatarState.status === "loading"}>✏️</button></div>
+        <div className="pr-avatar-wrap">{avatarUrl ? <Image src={avatarUrl} alt={translate("avatar.alt")} width={84} height={84} className="pr-avatar-img" unoptimized /> : <div className="pr-avatar-placeholder">{avatarState.status === "loading" ? "…" : avatarFallback}</div>}<button type="button" className="pr-avatar-edit" aria-label={translate("accessibility.changeAvatar")} onClick={pickAndUpload} disabled={avatarState.status === "loading"}>✏️</button>{avatarPath && <button type="button" className="absolute -bottom-2 -right-2 rounded-full bg-white px-2 py-1 text-xs font-bold shadow" aria-label="Remove avatar" disabled={avatarState.status === "loading"} onClick={async () => { if (!userId || !avatarPath) return; setMessage(null); const previous = avatarPath; const { error: updateError } = await supabase.from("profiles").update({ avatar_url: null }).eq("id", userId); if (updateError) { setMessage(updateError.message); return; } const { error: removeError } = await supabase.storage.from("avatars").remove([previous.replace(/^avatars\//, "")]); if (removeError) { setMessage(`Avatar removed from profile; storage cleanup failed: ${removeError.message}`); return; } setAvatarPath(null); setMessage("Avatar removed"); await refreshAvatar(); }}>×</button>}</div>
         <div className="min-w-0 flex-1"><p id="profile-personal-title" className="text-[11px] font-black uppercase tracking-[.15em] text-cyan-700">{copy.personal}</p><h2 className="pr-hero__name">{displayName || copy.defaultName}</h2>{email && <p className="pr-hero__email">{email}</p>}{memberSince && <p className="pr-hero__since">{memberSinceLabels[locale].replace("{date}", memberSince)}</p>}{membershipDuration && <p className="text-xs font-bold text-cyan-700">{copy.together.replace("{duration}", membershipDuration)}</p>}</div>
         <button type="button" className="pr-btn-ghost shrink-0" onClick={openEditor}>✏️ {copy.edit}</button>
       </div>

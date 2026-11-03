@@ -1,13 +1,13 @@
 # HappyDate release readiness — 2026-11-03
 
-**NO-GO for unconditional release of `53dc719`.** A real browser upload exposed an avatar defect not covered by the previous chooser-only smoke. A minimal local fix passes targeted tests and browser upload/replacement against Staging, but is not deployed. No new full CI or deployment was started. This is a residual-check report, not a repeated audit.
+**NO-GO for unconditional release pending hosted verification.** Local commit `b040702` is extended by the media-lifecycle batch below; it is not deployed until the single requested push and final CI run.
 
 | Check | Status | Confirmed evidence |
 |---|---|---|
 | Avatar browser upload/replacement | FAIL deployed / PASS local fix | `53dc719` opens the picker but `fetch(blob:)` is blocked by `connect-src`. Local fix uses Camera FileReader data URL on web, decodes bytes without fetch, retains native URI handling and unchanged CSP. Actual PNG upload, display and replacement passed on localhost with Staging backend. |
-| Avatar deletion / replacement cleanup | FAIL | No remove-avatar control exists in Profile UI. Replacing the avatar leaves the previous public Storage object. No automatic retention/deletion policy was inferred. |
+| Avatar deletion / replacement cleanup | PASS local / BLOCKED hosted | Replacement now persists the new reference before old-object cleanup, removes an upload orphan on profile-save failure, reports cleanup failures, and exposes an accessible Remove avatar action. Hosted Staging verification still required. |
 | Private Memory browser upload/replacement | PASS | Real native file picker, save through app, loaded private signed image, edit/remove old attachment/add replacement/save all passed. Tested using synthetic PNGs only. |
-| Private Memory physical deletion | FAIL | Removing photo and saving removes `memories.images` reference and rendered image, but both old/replacement objects remain in private Storage. Existing `deleteMemoryImageObjects` helper is explicitly not wired into Notes lifecycle. UI removal must not be described as physical deletion. |
+| Private Memory physical deletion | PASS local / BLOCKED hosted | Update/delete now snapshot prior images, unlink first, remove only owner paths no longer referenced by any owned memory, and surface Storage failures. Hosted Staging verification still required. |
 | Other-user / anonymous access | PASS | B cannot read/sign private A image, replace/delete either A media object, or read A Memory row. Owner download remains successful after rejected B deletion. Public avatar read is intentional. Separate Android account gets `Person not found` for A contact. |
 | iPhone viewport smoke | PASS | DevTools iPhone 16, actual DOM `393×852`: login, onboarding→Home, People/create contact, Calendar/create event/day view, Memory signed image, Gifts, EN→UK/reload. Inspected layouts have document width equal to viewport. Browser viewport override alone did not work; native DevTools did. |
 | Android viewport smoke | PASS | Pixel 9, actual DOM `412×924`: login, complete onboarding→Home; Home, People, Calendar, Memories, Gifts and UK→EN/reload. This is Chromium responsive/device emulation, not real iOS Safari or Android hardware testing. Temporary emulation restored to desktop. |
@@ -19,7 +19,7 @@
 
 ## Minimal fix and validation
 
-`src/hooks/useAvatarUpload.ts`: web uses `CameraResultType.DataUrl`/FileReader and converts base64 to Blob directly. Native keeps `Uri` and bridge fetch. No CSP/header/permission/RLS/provider change. Browser picker used the OS file dialog, so extension file-URL access remained disabled.
+`src/hooks/useAvatarUpload.ts`: web uses `CameraResultType.DataUrl`/FileReader and converts base64 to Blob directly. Native keeps `Uri` and bridge fetch. Replacement persistence precedes old-object cleanup with orphan cleanup on failure; Profile exposes removal. `memoryRepository.ts` now performs owner/reference-aware physical cleanup and reports failures. No CSP/header/permission/RLS/provider change.
 
 Targeted avatar and HTTP security-header tests: 8 pass; ESLint and TypeScript passed. Web regression failed before the fix, passes after; exact file bytes and native URI path are checked. No dependency change, npm audit, full build, native build or full gate was run in this continuation.
 

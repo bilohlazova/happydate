@@ -290,22 +290,27 @@ export async function deleteMemoryImageObjects(
     return { deleted: [], ignored, failed: [] };
   }
 
+  const { data: rows, error: referenceError } = await supabase.from("memories").select("images").eq("user_id", user.id);
+  if (referenceError) return { deleted: [], ignored, failed: acceptedPaths.map((objectPath) => ({ objectPath, error: referenceError.message })) };
+  const referenced = new Set((rows ?? []).flatMap((row) => Array.isArray(row.images) ? getOwnedMemoryImagePaths(row.images, user.id).acceptedPaths : []));
+  const removable = acceptedPaths.filter((path) => !referenced.has(path));
+  if (removable.length === 0) return { deleted: [], ignored, failed: [] };
   const { error } = await supabase.storage
     .from(MEMORY_IMAGES_BUCKET)
-    .remove(acceptedPaths);
+    .remove(removable);
 
   if (error) {
     return {
       deleted: [],
       ignored,
-      failed: acceptedPaths.map((objectPath) => ({
+      failed: removable.map((objectPath) => ({
         objectPath,
         error: error.message,
       })),
     };
   }
 
-  return { deleted: acceptedPaths, ignored, failed: [] };
+  return { deleted: removable, ignored, failed: [] };
 }
 
 /**
@@ -338,6 +343,8 @@ export async function updateNotesMemory(
   memoryId: string,
   input: UpdateNotesMemoryInput
 ): Promise<void> {
+  const { data: before, error: beforeError } = await supabase.from("memories").select("images").eq("id", memoryId).maybeSingle();
+  if (beforeError) throw beforeError;
   const safeInput =
     input.images === undefined
       ? input
@@ -355,11 +362,25 @@ export async function updateNotesMemory(
     ...(safeInput.images !== undefined ? { images: safeInput.images } : {}),
     ...(safeInput.audioUrl !== undefined ? { audioUrl: safeInput.audioUrl } : {}),
   });
+  const previous = Array.isArray(before?.images) ? before.images : [];
+  const next = Array.isArray(safeInput.images) ? safeInput.images : [];
+  const removed = previous.filter((value) => !next.includes(value));
+  if (removed.length) {
+    const cleanup = await deleteMemoryImageObjects(removed);
+    if (cleanup.failed.length) throw new Error(`Memory image cleanup failed: ${cleanup.failed.map((item) => item.error).join("; ")}`);
+  }
 }
 
 /**
  * Hard-delete a memory, preserving the existing Notes behavior.
  */
 export async function deleteMemory(memoryId: string): Promise<void> {
+  const { data: before, error: beforeError } = await supabase.from("memories").select("images").eq("id", memoryId).maybeSingle();
+  if (beforeError) throw beforeError;
   await deleteKnowledge(memoryId);
+  const previous = Array.isArray(before?.images) ? before.images : [];
+  if (previous.length) {
+    const cleanup = await deleteMemoryImageObjects(previous);
+    if (cleanup.failed.length) throw new Error(`Memory image cleanup failed: ${cleanup.failed.map((item) => item.error).join("; ")}`);
+  }
 }

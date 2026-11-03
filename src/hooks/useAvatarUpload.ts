@@ -4,10 +4,9 @@
  * Stable iOS Capacitor avatar upload hook.
  *
  * FLOW:
- *   1. Camera.getPhoto() — native iOS picker (Camera | Gallery | Files)
- *   2. fetch(webPath)    — convert capacitor:// URI → browser-safe Response
- *   3. response.blob()   — extract raw binary (never upload a local path)
- *   4. supabase.storage.upload(blob) — standard upload
+ *   1. Camera.getPhoto() — native prompt or web file picker
+ *   2. Native: fetch(webPath). Web: decode FileReader data URL locally.
+ *   3. supabase.storage.upload(file) — upload bytes, never a local path
  *
  * WHY NOT <input type="file">:
  *   Plain HTML file inputs are unstable in WKWebView / Capacitor iOS:
@@ -27,6 +26,7 @@
 
 import { useState } from "react";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/lib/supabaseClient";
 
 export type UploadState =
@@ -51,6 +51,7 @@ export function useAvatarUpload({ userId, onSuccess, onError }: UseAvatarUploadO
     setState({ status: "loading" });
 
     try {
+      const native = Capacitor.isNativePlatform();
       // ── Step 1: Native iOS picker ─────────────────────────────
       // CameraSource.Prompt shows the iOS native action sheet:
       // "Take Photo" | "Photo Library" | "Files"
@@ -58,31 +59,37 @@ export function useAvatarUpload({ userId, onSuccess, onError }: UseAvatarUploadO
       const photo = await Camera.getPhoto({
         quality: 88,
         allowEditing: true,
-        resultType: CameraResultType.Uri,  // returns a webPath, never a raw path
+        // Web uses FileReader inside Camera: fetching a blob URL is blocked by
+        // our connect-src policy. Native keeps the Capacitor URI bridge.
+        resultType: native ? CameraResultType.Uri : CameraResultType.DataUrl,
         source: CameraSource.Prompt,
         // Web has no registered PWA action sheet; native platforms ignore this
         // web-only option and retain their existing Camera/Gallery prompt.
         webUseInput: true,
       });
 
-      // User cancelled → photo.webPath is undefined
-      if (!photo.webPath) {
+      if (native ? !photo.webPath : !photo.dataUrl) {
         setState({ status: "idle" });
         return;
       }
 
-      // ── Step 2: Resolve capacitor:// URI → Blob ───────────────
-      // Direct use of photo.path / photo.dataUrl is unreliable in
-      // WKWebView. fetch(webPath) goes through Capacitor's bridge
-      // and returns a proper Response that we can blob().
-      const response = await fetch(photo.webPath);
-      if (!response.ok) throw new Error("Nie udało się odczytać zdjęcia.");
-
-      const blob = await response.blob();
+      // Native uses the Capacitor URI bridge. Web decodes the selected file
+      // without fetching blob:/data: URLs or broadening connect-src.
+      let blob: Blob;
+      if (native) {
+        const response = await fetch(photo.webPath!);
+        if (!response.ok) throw new Error("Nie udało się odczytać zdjęcia.");
+        blob = await response.blob();
+      } else {
+        const data = /^data:(image\/[a-z0-9.+-]+);base64,([A-Za-z0-9+/=\r\n]+)$/i.exec(photo.dataUrl!);
+        if (!data) throw new Error("Nie udało się odczytać zdjęcia.");
+        const bytes = Uint8Array.from(atob(data[2]), char => char.charCodeAt(0));
+        blob = new Blob([bytes], { type: data[1] });
+      }
 
       // ── Step 3: Determine extension from MIME ────────────────
       // photo.format is "jpeg" | "png" | "webp" (no dot prefix)
-      const ext      = photo.format ?? "jpeg";
+      const ext      = blob.type.startsWith("image/") ? blob.type.slice(6).replace("jpeg", "jpg") : photo.format ?? "jpeg";
       const mimeType = blob.type || `image/${ext}`;
       const filePath = `${userId}/${Date.now()}.${ext}`;
 

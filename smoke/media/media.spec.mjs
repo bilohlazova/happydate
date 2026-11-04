@@ -71,6 +71,7 @@ test('avatar + Memory lifecycle and two-account RLS',async({browser})=>{
    await expect(page.locator('.hd-card-images img').first()).toBeVisible();
    await expect.poll(()=>page.locator('.hd-card-images img').evaluateAll(imgs=>imgs.length===2&&imgs.every(img=>img.complete&&img.naturalWidth>0))).toBeTruthy();
    await expect.poll(async()=>(await objects('memory-images',user.id)).length).toBe(2);
+   console.log('PASS Memory upload: two private objects persisted and both images decoded in Chromium');
   }
   for(let i=0;i<2;i++){
    const own=state.users[i],other=state.users[1-i],client=clients[i];
@@ -97,17 +98,25 @@ test('avatar + Memory lifecycle and two-account RLS',async({browser})=>{
   }
   for(let i=0;i<2;i++){
    const user=state.users[i],page=pages[i];
-   await page.locator('.hd-card-menu-btn').click();
-   await page.getByRole('menuitem',{name:'Edit',exact:true}).click();
-   await page.getByRole('button',{name:/Remove existing image 1/i}).click();
-   await page.locator('.hd-btn-save').click();
-   await expect.poll(async()=>(await memories(user.id))[0]?.images?.length).toBe(1);
-   await expect.poll(async()=>(await objects('memory-images',user.id)).length).toBe(1);
-   await page.locator('.hd-card-menu-btn').click();
-   await page.getByRole('menuitem',{name:'Delete',exact:true}).click();
-   await expect.poll(async()=>(await memories(user.id)).length).toBe(0);
-   await expect.poll(async()=>(await objects('memory-images',user.id)).length).toBe(0);
-   console.log('PASS Memory upload, rendered private images, edit cleanup and delete cleanup');
+   try{
+    await page.locator('.hd-card-menu-btn').press('Enter');
+    await page.getByRole('menuitem',{name:'Edit',exact:true}).press('Enter');
+    await expect(page.locator('#memory-editor-title-input')).toBeVisible();
+    await page.getByRole('button',{name:/Remove existing image 1/i}).click();
+    await page.locator('.hd-btn-save').click();
+    await expect.poll(async()=>(await memories(user.id))[0]?.images?.length).toBe(1);
+    await expect.poll(async()=>(await objects('memory-images',user.id)).length).toBe(1);
+    console.log('PASS Memory edit: removed image reference and corresponding Storage object');
+   }catch(error){failures.push(`Memory edit lifecycle ${user.id}: ${error.message}`);console.log('FAIL Memory edit lifecycle:',error.message);await page.screenshot({path:`evidence/memory-edit-${user.id}.png`,fullPage:true});}
+   // Independently verify application deletion even if the edit scenario failed.
+   await page.goto('http://127.0.0.1:3000/notes');
+   try{
+    await page.locator('.hd-card-menu-btn').press('Enter');
+    await page.getByRole('menuitem',{name:'Delete',exact:true}).press('Enter');
+    await expect.poll(async()=>(await memories(user.id)).length).toBe(0);
+    await expect.poll(async()=>(await objects('memory-images',user.id)).length).toBe(0);
+    console.log('PASS Memory delete: row and all corresponding Storage objects removed');
+   }catch(error){failures.push(`Memory delete lifecycle ${user.id}: ${error.message}`);console.log('FAIL Memory delete lifecycle:',error.message);await page.screenshot({path:`evidence/memory-delete-${user.id}.png`,fullPage:true});}
   }
  expect(failures,'Pointer accessibility failures; keyboard fallback does not erase them').toEqual([]);
  }catch(error){for(let i=0;i<pages.length;i++){await pages[i].screenshot({path:`evidence/failure-${i}.png`,fullPage:true}).catch(()=>{});console.log('Failure page:',pages[i].url());}throw error;}finally{for(const client of clients)await client.auth.signOut();for(const context of contexts)await context.close();}

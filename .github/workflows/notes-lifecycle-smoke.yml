@@ -3,8 +3,11 @@ on:
   push:
     branches: [codex/media-smoke-72b341b]
     paths: [.github/workflows/notes-lifecycle-smoke.yml, smoke/notes/**]
-permissions: {contents: read}
-concurrency: {group: happydate-notes-staging, cancel-in-progress: false}
+permissions:
+  contents: read
+concurrency:
+  group: happydate-notes-staging
+  cancel-in-progress: false
 jobs:
   browser-smoke:
     runs-on: ubuntu-24.04
@@ -18,11 +21,17 @@ jobs:
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_qwo_FImiLzCpE9f-iGYzrQ_0m4pntJk
     steps:
       - uses: actions/checkout@v4
-        with: {path: harness, persist-credentials: false}
+        with:
+          path: harness
+          persist-credentials: false
       - uses: actions/checkout@v4
-        with: {ref: 27e3f3e70fc0a23c16d89beb8277c6adeea921fa, path: app, persist-credentials: false}
+        with:
+          ref: 27e3f3e70fc0a23c16d89beb8277c6adeea921fa
+          path: app
+          persist-credentials: false
       - uses: actions/setup-node@v4
-        with: {node-version: '24'}
+        with:
+          node-version: '24'
       - name: Assert exact fixed application SHA
         run: test "$(git -C app rev-parse HEAD)" = 27e3f3e70fc0a23c16d89beb8277c6adeea921fa
       - name: Install app and pinned Chromium harness
@@ -32,16 +41,23 @@ jobs:
         run: npm run build -- --webpack
       - name: Create temporary Staging fixtures
         working-directory: harness/smoke/notes
-        env: {HAPPYDATE_STAGING_SERVICE_ROLE_KEY: ${{ secrets.HAPPYDATE_STAGING_SERVICE_ROLE_KEY }}}
+        env:
+          HAPPYDATE_STAGING_SERVICE_ROLE_KEY: ${{ secrets.HAPPYDATE_STAGING_SERVICE_ROLE_KEY }}
         run: node setup.mjs
       - name: Run Notes Chromium smoke (real pointer/touch, no force)
         working-directory: harness/smoke/notes
-        env: {HAPPYDATE_STAGING_SERVICE_ROLE_KEY: ${{ secrets.HAPPYDATE_STAGING_SERVICE_ROLE_KEY }}}
-        run: cd ../../../app && env -u HAPPYDATE_STAGING_SERVICE_ROLE_KEY npm start > "$RUNNER_TEMP/happydate-notes-next.log" 2>&1 & cd ../harness/smoke/notes && npx playwright test notes.spec.mjs --workers=1 --reporter=line
+        env:
+          HAPPYDATE_STAGING_SERVICE_ROLE_KEY: ${{ secrets.HAPPYDATE_STAGING_SERVICE_ROLE_KEY }}
+        run: |
+          cd ../../../app
+          env -u HAPPYDATE_STAGING_SERVICE_ROLE_KEY npm start > "$RUNNER_TEMP/happydate-notes-next.log" 2>&1 &
+          cd ../harness/smoke/notes
+          npx playwright test notes.spec.mjs --workers=1 --reporter=line
       - name: Always remove and verify all run-owned fixtures
         if: ${{ always() }}
         working-directory: harness/smoke/notes
-        env: {HAPPYDATE_STAGING_SERVICE_ROLE_KEY: ${{ secrets.HAPPYDATE_STAGING_SERVICE_ROLE_KEY }}}
+        env:
+          HAPPYDATE_STAGING_SERVICE_ROLE_KEY: ${{ secrets.HAPPYDATE_STAGING_SERVICE_ROLE_KEY }}
         run: if test -f "$RUNNER_TEMP/happydate-notes-state.json"; then node cleanup.mjs; fi
       - name: Record exact scope
         if: ${{ always() }}

@@ -176,9 +176,7 @@
     "offlineAction": "There is no internet connection. Your draft remains in the editor—try again when the connection returns.",
     "loadFailed": "Notes could not be loaded",
     "loadFailedHint": "Check your connection and try again.",
-    "deleteFailed": "The entry could not be deleted. It remains in the list.",
-    "deleteCleanupFailed": "The entry was deleted, but some attached files could not be cleaned up.",
-    "deleteRefreshFailed": "The entry was deleted, but the list could not be refreshed. Reload to verify."
+    "deleteFailed": "The entry could not be deleted. It remains in the list."
   },
   "dates": {
     "today": "Today",

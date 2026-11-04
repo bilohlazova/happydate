@@ -176,9 +176,7 @@
     "offlineAction": "Brak połączenia z internetem. Szkic pozostał w edytorze — spróbuj ponownie po odzyskaniu połączenia.",
     "loadFailed": "Nie udało się wczytać notatek",
     "loadFailedHint": "Sprawdź połączenie i spróbuj ponownie.",
-    "deleteFailed": "Nie udało się usunąć zapisu. Nadal znajduje się na liście.",
-    "deleteCleanupFailed": "Zapis usunięto, ale nie udało się wyczyścić części załączników.",
-    "deleteRefreshFailed": "Zapis usunięto, ale nie udało się odświeżyć listy. Odśwież stronę, aby to sprawdzić."
+    "deleteFailed": "Nie udało się usunąć zapisu. Nadal znajduje się na liście."
   },
   "dates": {
     "today": "Dzisiaj",

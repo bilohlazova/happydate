@@ -391,7 +391,6 @@ export default function NotesPageContent() {
   // ── Delete ──
   async function deleteMemory(memory: NotesMemoryRow) {
     setMenuOpenId(null);
-    if (deletingId) return;
     if (!window.confirm(t("actions.deleteConfirm"))) return;
     if (!navigator.onLine) {
       setMutationError(t("states.offlineAction"));
@@ -400,19 +399,10 @@ export default function NotesPageContent() {
     setDeletingId(memory.id);
     setMutationError(null);
     try {
-      const result = await deleteMemoryRecord(memory.id);
-      // The DB row is gone even when Storage cleanup reports a recoverable
-      // failure. Remove it locally before refreshing so a refresh failure
-      // cannot resurrect stale UI state.
-      setMemories((current) => current.filter((item) => item.id !== memory.id));
-      if (result.cleanupErrors.length) {
-        setMutationError(t("states.deleteCleanupFailed"));
-      }
-      try {
-        await loadMemories();
-      } catch {
-        setMutationError(t("states.deleteRefreshFailed"));
-      }
+      await deleteMemoryRecord(memory.id);
+      if (memory.images?.length) await deleteMemoryImageObjects(memory.images);
+      if (memory.audio_url) await deleteMemoryAudioObject(memory.audio_url);
+      await loadMemories();
     } catch {
       setMutationError(t("states.deleteFailed"));
     } finally {
@@ -554,13 +544,10 @@ export default function NotesPageContent() {
         .hd-card {
           background: #fff;
           border-radius: 18px;
-          overflow: visible;
-          position: relative;
-          z-index: 0;
+          overflow: hidden;
           -webkit-tap-highlight-color: transparent;
           border-left: 3px solid transparent;
         }
-        .hd-card.is-menu-open { z-index: 40; }
         .hd-card-memory { border-left-color: rgba(201,52,44,.28); }
         .hd-card-gift { border-left-color: rgba(168,95,0,.28); }
         .hd-card-journal { border-left-color: rgba(81,79,192,.24); background: #fdfdff; }
@@ -641,7 +628,7 @@ export default function NotesPageContent() {
           background: #fff;
           border-radius: 14px;
           box-shadow: 0 8px 28px rgba(0,0,0,.14);
-          overflow: hidden; z-index: 100; min-width: 150px;
+          overflow: hidden; z-index: 50; min-width: 150px;
           animation: hdPopIn .15s cubic-bezier(.34,1.3,.64,1);
         }
         @keyframes hdPopIn { from { opacity:0; transform: scale(.92) translateY(-4px); } to { opacity:1; transform: scale(1) translateY(0); } }

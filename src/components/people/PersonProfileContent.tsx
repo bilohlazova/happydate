@@ -782,7 +782,7 @@ function AboutPersonSection({ personId, personName, likes, dislikes, interests, 
         <ul className="space-y-1" aria-label={t("profileUi.aboutPerson.listLabel", { name: personName })}>
           {visibleFacts.map((fact) => <li key={fact.id} className="group flex min-h-11 items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-slate-50">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-600">{fact.kind === "like" ? <Heart className="h-4 w-4 text-rose-500" /> : fact.kind === "dislike" ? <Ban className="h-4 w-4" /> : fact.kind === "interest" ? <Target className="h-4 w-4 text-sky-600" /> : <NotebookPen className="h-4 w-4 text-amber-600" />}</span>
-            <span className="min-w-0 flex-1 text-sm font-semibold leading-5 text-slate-700">{factDisplay(fact, t)}</span>
+            <span className="min-w-0 flex-1 text-sm font-semibold leading-5 text-slate-700"><span>{factDisplay(fact, t)}</span><span className="mt-0.5 block text-[0.65rem] font-bold uppercase tracking-wide text-slate-400">{fact.userConfirmed ? t("profileUi.knowledgeSource.confirmedByYou") : t("profileUi.knowledgeSource.known")}</span></span>
             <button type="button" onClick={() => { setFailed(false); setActionFact(fact); }} aria-label={t("profileUi.aboutPerson.factActions", { fact: fact.value })} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500 opacity-100 hover:bg-white hover:text-violet-700 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"><MoreHorizontal className="h-5 w-5" /></button>
           </li>)}
         </ul>

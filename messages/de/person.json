@@ -108,7 +108,7 @@
         "memories": "Erinnerungen"
       }
     },
-    "knowledgeSource": { "confirmedByYou": "Von dir bestätigt" },
+    "knowledgeSource": { "confirmedByYou": "Von dir bestätigt", "known": "Quelle gespeichert" },
     "knowledgeAudit": {
       "add": "Hinzufügen",
       "addPlaceholder": "Neue Information eingeben",

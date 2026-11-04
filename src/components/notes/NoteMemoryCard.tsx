@@ -95,7 +95,7 @@ export default function NoteMemoryCard({
 
   return (
     <article
-      className={`hd-card hd-card-${presentation.displayType}${menuOpen ? " is-menu-open" : ""}`}
+      className={`hd-card hd-card-${presentation.displayType}`}
       onClick={() => {
         if (menuOpen) onMenuClose();
       }}

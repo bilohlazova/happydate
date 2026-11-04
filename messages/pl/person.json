@@ -108,7 +108,7 @@
         "memories": "wspomnienia"
       }
     },
-    "knowledgeSource": { "confirmedByYou": "Potwierdzone przez Ciebie" },
+    "knowledgeSource": { "confirmedByYou": "Potwierdzone przez Ciebie", "known": "Źródło zapisane" },
     "knowledgeAudit": {
       "add": "Dodaj",
       "addPlaceholder": "Wpisz nową informację",

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -790,9 +791,9 @@ function AboutPersonSection({ personId, personName, likes, dislikes, interests, 
       </>}
     </ProfileSection>
 
-    {(actionFact || editor || deleteFact) && <div className="fixed inset-0 z-50">
+    {(actionFact || editor || deleteFact) && createPortal(<div className="fixed inset-0 z-[100]">
       <button type="button" aria-label={t("profileUi.aboutPerson.close")} onClick={() => { setActionFact(null); setEditor(null); setDeleteFact(null); }} className="absolute inset-0 bg-slate-950/25" />
-      <section className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[520px] rounded-t-[1.35rem] bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-18px_60px_rgba(15,23,42,0.22)]" aria-label={deleteFact ? t("profileUi.aboutPerson.deleteTitle") : t("profileUi.aboutPerson.editorTitle", { name: personName })}>
+      <section role="dialog" aria-modal="true" className="absolute inset-x-0 bottom-0 mx-auto max-h-[calc(100dvh-env(safe-area-inset-top))] overflow-y-auto w-full max-w-[520px] rounded-t-[1.35rem] bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-18px_60px_rgba(15,23,42,0.22)]" aria-label={deleteFact ? t("profileUi.aboutPerson.deleteTitle") : t("profileUi.aboutPerson.editorTitle", { name: personName })}>
         <div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-black text-slate-950">{deleteFact ? t("profileUi.aboutPerson.deleteTitle") : actionFact ? factDisplay(actionFact, t) : t("profileUi.aboutPerson.editorTitle", { name: personName })}</h2><button type="button" onClick={() => { setActionFact(null); setEditor(null); setDeleteFact(null); }} className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-50 text-slate-500"><X className="h-5 w-5" /></button></div>
         {actionFact ? <div className="grid gap-2"><button type="button" onClick={() => { const fact = actionFact; setActionFact(null); openEdit(fact); }} className="flex min-h-11 items-center gap-2 rounded-xl bg-violet-50 px-3 text-sm font-extrabold text-violet-700"><Pencil className="h-4 w-4" />{t("profileUi.aboutPerson.edit")}</button><button type="button" onClick={() => { setDeleteFact(actionFact); setActionFact(null); }} className="flex min-h-11 items-center gap-2 rounded-xl bg-rose-50 px-3 text-sm font-extrabold text-rose-600"><Trash2 className="h-4 w-4" />{t("profileUi.aboutPerson.delete")}</button></div> : deleteFact ? <><p className="rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{t("profileUi.aboutPerson.deleteConfirm", { fact: deleteFact.value })}</p>{failed && <p role="alert" className="mt-2 text-xs font-bold text-rose-600">{t("profileUi.aboutPerson.error")}</p>}<div className="mt-3 grid grid-cols-2 gap-2"><button type="button" disabled={busy} onClick={() => setDeleteFact(null)} className="min-h-11 rounded-xl bg-slate-50 text-sm font-extrabold text-slate-600">{t("profileUi.aboutPerson.cancel")}</button><button type="button" disabled={busy} onClick={() => void remove()} className="min-h-11 rounded-xl bg-rose-600 text-sm font-extrabold text-white">{busy ? t("profileUi.aboutPerson.deleting") : t("profileUi.aboutPerson.delete")}</button></div></> : <>
           <label htmlFor="about-person-value" className="text-sm font-extrabold text-slate-700">{t("profileUi.aboutPerson.question", { name: personName })}</label><textarea id="about-person-value" autoFocus rows={3} maxLength={500} value={value} onChange={(event) => setValue(event.target.value)} placeholder={t("profileUi.aboutPerson.placeholder", { name: personName })} className="mt-2 w-full resize-none rounded-xl border border-violet-200 p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-violet-200" />
@@ -801,7 +802,7 @@ function AboutPersonSection({ personId, personName, likes, dislikes, interests, 
           {editor !== "new" && <button type="button" disabled={busy} onClick={() => { setDeleteFact(editor); setEditor(null); setFailed(false); }} className="mt-3 min-h-11 w-full rounded-xl text-sm font-extrabold text-rose-600">{t("profileUi.aboutPerson.delete")}</button>}
         </>}
       </section>
-    </div>}
+    </div>, document.body)}
   </>;
 }
 

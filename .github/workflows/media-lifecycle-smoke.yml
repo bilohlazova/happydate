@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   browser-smoke:
-    if: ${{ !startsWith(github.event.head_commit.message, 'test(notes)') }}
+    if: ${{ !contains(github.event.head_commit.message, '(notes)') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     environment: happydate-media-staging

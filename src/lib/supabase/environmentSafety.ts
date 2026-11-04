@@ -5,9 +5,11 @@ export const STAGING_SUPABASE_HOST = "xgelazzdgluuenqkymox.supabase.co";
 const PRODUCTION_SUPABASE_HOST = "yzcvdspiiiaidsdripxr.supabase.co";
 export const PR14_BRANCH = "fix/onboarding-survey-safe-ui";
 export const PR14_POLICY_MARKER = "pr14-staging-v1";
+const RELEASE_PREVIEW_BRANCHES = new Set(["fix/assistant-owned-person-over-100", "codex/release-readiness-audit"]);
 
 export type EnvironmentSafetyStatus =
   | "pr14-preview-isolated"
+  | "release-preview-isolated"
   | "other-preview-unverified"
   | "production-config-checked"
   | "local-unverified";
@@ -85,7 +87,12 @@ export function assertEnvironmentSafety(env: Environment): EnvironmentSafetyStat
   // A branch-scoped policy marker independently enforces the strict policy.
   // It is not permission to use providers and never overrides contradictory context.
   if (!branch && !marker) invalid("VERCEL_GIT_COMMIT_REF", "preview_branch_missing");
-  if (branch !== PR14_BRANCH && !marker) return "other-preview-unverified";
+  // Apply before any branch exemption, including DNS's equivalent trailing dot.
+  if (parsed?.hostname.replace(/\.$/, "") === PRODUCTION_SUPABASE_HOST) {
+    invalid("NEXT_PUBLIC_SUPABASE_URL", "production_endpoint_forbidden_in_preview");
+  }
+  const releasePreview = Boolean(branch && RELEASE_PREVIEW_BRANCHES.has(branch));
+  if (branch !== PR14_BRANCH && !marker && !releasePreview) return "other-preview-unverified";
 
   if (!parsed || parsed.protocol !== "https:" || parsed.hostname !== STAGING_SUPABASE_HOST
     || parsed.username || parsed.password || parsed.search || parsed.hash || parsed.port
@@ -102,5 +109,5 @@ export function assertEnvironmentSafety(env: Environment): EnvironmentSafetyStat
   for (const name of ["SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY", "OPENAI_API_KEY", "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN", "RESEND_API_KEY", "REPLICATE_API_TOKEN"]) {
     if (env[name]?.trim()) invalid(name, "preview_integration_must_be_disabled");
   }
-  return "pr14-preview-isolated";
+  return releasePreview ? "release-preview-isolated" : "pr14-preview-isolated";
 }

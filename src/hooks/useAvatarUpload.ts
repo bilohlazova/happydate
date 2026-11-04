@@ -4,10 +4,9 @@
  * Stable iOS Capacitor avatar upload hook.
  *
  * FLOW:
- *   1. Camera.getPhoto() — native iOS picker (Camera | Gallery | Files)
- *   2. fetch(webPath)    — convert capacitor:// URI → browser-safe Response
- *   3. response.blob()   — extract raw binary (never upload a local path)
- *   4. supabase.storage.upload(blob) — standard upload
+ *   1. Camera.getPhoto() — native prompt or web file picker
+ *   2. Native: fetch(webPath). Web: decode FileReader data URL locally.
+ *   3. supabase.storage.upload(file) — upload bytes, never a local path
  *
  * WHY NOT <input type="file">:
  *   Plain HTML file inputs are unstable in WKWebView / Capacitor iOS:
@@ -27,7 +26,25 @@
 
 import { useState } from "react";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/lib/supabaseClient";
+
+/** Remove one avatar object and verify that the Storage index no longer lists it. */
+export async function removeAvatarObject(path: string) {
+  const objectKey = path.replace(/^avatars\//, "");
+  const bucket = supabase.storage.from("avatars");
+  const { error } = await bucket.remove([objectKey]);
+  if (error) throw error;
+
+  const separator = objectKey.lastIndexOf("/");
+  const folder = separator === -1 ? "" : objectKey.slice(0, separator);
+  const name = separator === -1 ? objectKey : objectKey.slice(separator + 1);
+  const { data, error: verifyError } = await bucket.list(folder, { search: name, limit: 100 });
+  if (verifyError) throw verifyError;
+  if (data?.some((entry) => entry.name === name)) {
+    throw new Error("Avatar cleanup verification failed: object is still present");
+  }
+}
 
 export type UploadState =
   | { status: "idle" }
@@ -37,13 +54,14 @@ export type UploadState =
 
 interface UseAvatarUploadOptions {
   userId: string;
+  currentPath?: string | null;
   /** Called after successful upload so parent can persist avatarPath */
-  onSuccess: (filePath: string) => void;
+  onSuccess: (filePath: string) => void | Promise<void>;
   /** Called on any error so parent can surface a message */
   onError: (message: string) => void;
 }
 
-export function useAvatarUpload({ userId, onSuccess, onError }: UseAvatarUploadOptions) {
+export function useAvatarUpload({ userId, currentPath, onSuccess, onError }: UseAvatarUploadOptions) {
   const [state, setState] = useState<UploadState>({ status: "idle" });
 
   const pickAndUpload = async () => {
@@ -51,6 +69,7 @@ export function useAvatarUpload({ userId, onSuccess, onError }: UseAvatarUploadO
     setState({ status: "loading" });
 
     try {
+      const native = Capacitor.isNativePlatform();
       // ── Step 1: Native iOS picker ─────────────────────────────
       // CameraSource.Prompt shows the iOS native action sheet:
       // "Take Photo" | "Photo Library" | "Files"
@@ -58,28 +77,37 @@ export function useAvatarUpload({ userId, onSuccess, onError }: UseAvatarUploadO
       const photo = await Camera.getPhoto({
         quality: 88,
         allowEditing: true,
-        resultType: CameraResultType.Uri,  // returns a webPath, never a raw path
+        // Web uses FileReader inside Camera: fetching a blob URL is blocked by
+        // our connect-src policy. Native keeps the Capacitor URI bridge.
+        resultType: native ? CameraResultType.Uri : CameraResultType.DataUrl,
         source: CameraSource.Prompt,
+        // Web has no registered PWA action sheet; native platforms ignore this
+        // web-only option and retain their existing Camera/Gallery prompt.
+        webUseInput: true,
       });
 
-      // User cancelled → photo.webPath is undefined
-      if (!photo.webPath) {
+      if (native ? !photo.webPath : !photo.dataUrl) {
         setState({ status: "idle" });
         return;
       }
 
-      // ── Step 2: Resolve capacitor:// URI → Blob ───────────────
-      // Direct use of photo.path / photo.dataUrl is unreliable in
-      // WKWebView. fetch(webPath) goes through Capacitor's bridge
-      // and returns a proper Response that we can blob().
-      const response = await fetch(photo.webPath);
-      if (!response.ok) throw new Error("Nie udało się odczytać zdjęcia.");
-
-      const blob = await response.blob();
+      // Native uses the Capacitor URI bridge. Web decodes the selected file
+      // without fetching blob:/data: URLs or broadening connect-src.
+      let blob: Blob;
+      if (native) {
+        const response = await fetch(photo.webPath!);
+        if (!response.ok) throw new Error("Nie udało się odczytać zdjęcia.");
+        blob = await response.blob();
+      } else {
+        const data = /^data:(image\/[a-z0-9.+-]+);base64,([A-Za-z0-9+/=\r\n]+)$/i.exec(photo.dataUrl!);
+        if (!data) throw new Error("Nie udało się odczytać zdjęcia.");
+        const bytes = Uint8Array.from(atob(data[2]), char => char.charCodeAt(0));
+        blob = new Blob([bytes], { type: data[1] });
+      }
 
       // ── Step 3: Determine extension from MIME ────────────────
       // photo.format is "jpeg" | "png" | "webp" (no dot prefix)
-      const ext      = photo.format ?? "jpeg";
+      const ext      = blob.type.startsWith("image/") ? blob.type.slice(6).replace("jpeg", "jpg") : photo.format ?? "jpeg";
       const mimeType = blob.type || `image/${ext}`;
       const filePath = `${userId}/${Date.now()}.${ext}`;
 
@@ -93,9 +121,33 @@ export function useAvatarUpload({ userId, onSuccess, onError }: UseAvatarUploadO
 
       if (uploadError) throw new Error(uploadError.message);
 
-      // ── Step 5: Notify parent ─────────────────────────────────
+      // Persist the new reference before touching the old object. The callback
+      // owns the profile update and may throw; in that case remove only the
+      // newly-created orphan and retain the old avatar.
+      try {
+        await onSuccess(filePath);
+      } catch (persistError) {
+        let orphanError: Error | null = null;
+        try {
+          await removeAvatarObject(filePath);
+        } catch (error) {
+          orphanError = error instanceof Error ? error : new Error(String(error));
+        }
+        const detail = persistError instanceof Error ? persistError.message : "Avatar save failed";
+        if (orphanError) throw new Error(`${detail}; cleanup failed: ${orphanError.message}`);
+        throw persistError;
+      }
+
+      if (currentPath && currentPath !== filePath) {
+        try {
+          await removeAvatarObject(currentPath);
+        } catch (cleanupError) {
+          const detail = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+          throw new Error(`Avatar saved, but old avatar cleanup failed: ${detail}`);
+        }
+      }
+
       setState({ status: "success", filePath });
-      onSuccess(filePath);
 
     } catch (err: unknown) {
       // Graceful handling — app must NEVER crash here

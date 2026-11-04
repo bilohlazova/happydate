@@ -164,3 +164,10 @@ export function mapLegacyMemoriesToKnowledge(
 ): KnowledgeItem[] {
   return rows.map(mapLegacyMemoryToKnowledge);
 }
+
+/** Global Notes shows authored notes/experiences, not person assertions. */
+export function isGlobalNotesKnowledgeItem(item: KnowledgeItem): boolean {
+  // Keep gifts, wishes, journals and unknown legacy notes visible. Exclude
+  // only semantic facts and preferences from the global timeline.
+  return item.kind !== "fact" && item.kind !== "preference";
+}

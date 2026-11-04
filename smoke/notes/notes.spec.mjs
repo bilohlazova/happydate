@@ -66,7 +66,7 @@ test('Knowledge separation: person facts stay in People while real memories stay
   if(await search.count()) { await search.fill('coffee'); await expect(desktop.page.getByText(fact,{exact:true})).toHaveCount(0); await search.fill(''); }
   await desktop.page.locator('#notes-person-filter').selectOption(personId);
   await expect(desktop.page.getByText(fact,{exact:true})).toHaveCount(0);
-  await desktop.page.locator('#notes-person-filter').selectOption('');
+  await desktop.page.locator('#notes-person-filter').selectOption('all');
 
   await desktop.page.locator('.hd-add-btn').click();
   await desktop.page.locator('.hd-type-option').filter({hasText:'Keep an important moment'}).click();

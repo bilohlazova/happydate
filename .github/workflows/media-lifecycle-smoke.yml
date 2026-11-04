@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   browser-smoke:
-    if: ${{ !startsWith(github.event.head_commit.message, 'test(notes)') }}
+    if: false
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     environment: happydate-media-staging
@@ -88,7 +88,6 @@ jobs:
           echo 'Application: 1caee102e9542a28dc8d0a5813775b07af54a2e2; Chromium on Linux; local optimized build with HappyDate Staging. This does not verify a deployed Vercel Preview, its routing or Deployment Protection. No Production credentials or bypass used.' >> "$GITHUB_STEP_SUMMARY"
 
   notes-browser-smoke:
-    if: ${{ startsWith(github.event.head_commit.message, 'test(notes)') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     environment: happydate-media-staging

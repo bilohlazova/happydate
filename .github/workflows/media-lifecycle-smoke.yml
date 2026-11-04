@@ -73,6 +73,14 @@ jobs:
           HAPPYDATE_STAGING_SERVICE_ROLE_KEY: ${{ secrets.HAPPYDATE_STAGING_SERVICE_ROLE_KEY }}
         run: |
           if test -f "$RUNNER_TEMP/happydate-media-state.json"; then node cleanup.mjs; fi
+      - name: Retain synthetic browser evidence only
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: media-smoke-browser-evidence
+          path: harness/smoke/media/evidence/*.png
+          if-no-files-found: ignore
+          retention-days: 3
       - name: Record test scope
         if: ${{ always() }}
         run: |

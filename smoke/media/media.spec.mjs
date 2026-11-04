@@ -1,6 +1,6 @@
 import {test,expect as baseExpect} from '@playwright/test';
 import {createClient} from '@supabase/supabase-js';
-import {readFile} from 'node:fs/promises';
+import {readFile,mkdir} from 'node:fs/promises';
 import {admin,checked,stateFile,url,anon,ref} from './admin.mjs';
 test.setTimeout(240000);
 const expect=baseExpect.configure({timeout:20000});
@@ -11,7 +11,8 @@ async function profile(id){return checked(await ownerClients.get(id).from('profi
 async function memories(id){return checked(await ownerClients.get(id).from('memories').select('id,images,title').eq('user_id',id));}
 test('avatar + Memory lifecycle and two-account RLS',async({browser})=>{
  const state=JSON.parse(await readFile(stateFile,'utf8'));
- const contexts=[]; const clients=[];const pages=[];
+ const contexts=[]; const clients=[];const pages=[]; const failures=[];
+ await mkdir('evidence',{recursive:true});
  try{
   for(const user of state.users){
    const client=createClient(url,anon,{auth:{persistSession:false,autoRefreshToken:false}});
@@ -25,14 +26,26 @@ test('avatar + Memory lifecycle and two-account RLS',async({browser})=>{
     const host=new URL(route.request().url()).hostname;
     return host.endsWith('.supabase.co')&&host!==`${ref}.supabase.co`?route.abort():route.continue();
    });
-   const page=await context.newPage();pages.push(page);
+   const page=await context.newPage();pages.push(page);page.setDefaultTimeout(15000);
    page.on('dialog',dialog=>dialog.accept());
    await expect(async()=>{const r=await page.goto('http://127.0.0.1:3000/profile');expect(r.status()).toBe(200);}).toPass({timeout:60000});
    for(let i=0;i<2;i++){
     const previous=(await profile(user.id)).avatar_url;
-    const chooser=page.waitForEvent('filechooser');
-    await page.getByRole('button',{name:'Change profile photo',exact:true}).click();
-    await (await chooser).setFiles({...image,name:`avatar-${i}.png`});
+    const button=page.getByRole('button',{name:'Change profile photo',exact:true});
+    console.log(`Avatar ${user.id} iteration ${i}: opening picker`);
+    let chooser;
+    try {
+     [chooser]=await Promise.all([page.waitForEvent('filechooser',{timeout:15000}),button.click({timeout:12000})]);
+    } catch(error) {
+     failures.push(`Avatar pointer picker iteration ${i}: ${error.message}`);
+     console.log(`FAIL avatar pointer picker iteration ${i}: ${error.message}`);
+     await page.screenshot({path:`evidence/avatar-pointer-${user.id}-${i}.png`,fullPage:true});
+     console.log('Picker DOM diagnostic:',await page.locator('.pr-avatar-wrap').evaluate(el=>[...el.querySelectorAll('button')].map(b=>{const r=b.getBoundingClientRect();const top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {label:b.getAttribute('aria-label'),disabled:b.disabled,topLabel:top?.closest('button')?.getAttribute('aria-label')};})));
+     // A real keyboard path allows remaining lifecycle assertions to run.
+     // The pointer failure remains a final FAIL and is never hidden.
+     [chooser]=await Promise.all([page.waitForEvent('filechooser',{timeout:15000}),button.press('Enter')]);
+    }
+    await chooser.setFiles({...image,name:`avatar-${i}.png`});
     await expect.poll(async()=>(await profile(user.id)).avatar_url).not.toBe(previous);
     await expect.poll(async()=>(await objects('avatars',user.id)).length).toBe(1);
     await expect(page.getByAltText('Profile photo')).toBeVisible();
@@ -41,7 +54,7 @@ test('avatar + Memory lifecycle and two-account RLS',async({browser})=>{
    await page.getByRole('button',{name:'Remove avatar',exact:true}).click();
    await expect.poll(async()=>(await profile(user.id)).avatar_url).toBeNull();
    await expect.poll(async()=>(await objects('avatars',user.id)).length).toBe(0);
-   console.log('PASS avatar upload, replacement, rendered photo and removal');
+   console.log('PASS avatar upload, replacement via available input path, rendered photo and removal');
    await page.goto('http://127.0.0.1:3000/notes');
    await page.locator('.hd-add-btn').click();
    await page.locator('.hd-type-option').filter({hasText:'Keep an important moment'}).click();
@@ -85,5 +98,6 @@ test('avatar + Memory lifecycle and two-account RLS',async({browser})=>{
    await expect.poll(async()=>(await objects('memory-images',user.id)).length).toBe(0);
    console.log('PASS Memory upload, rendered private images, edit cleanup and delete cleanup');
   }
- }finally{for(const client of clients)await client.auth.signOut();for(const context of contexts)await context.close();}
+ expect(failures,'Pointer accessibility failures; keyboard fallback does not erase them').toEqual([]);
+ }catch(error){for(let i=0;i<pages.length;i++){await pages[i].screenshot({path:`evidence/failure-${i}.png`,fullPage:true}).catch(()=>{});console.log('Failure page:',pages[i].url());}throw error;}finally{for(const client of clients)await client.auth.signOut();for(const context of contexts)await context.close();}
 });

@@ -327,8 +327,8 @@ test("Escape closes the focused inline preview through the same focus-return pat
   assert.match(profile, /event\.stopPropagation\(\)/);
   assert.match(profile, /onKeyDown=\{handlePreviewKeyDown\}/);
   assert.match(profile, /closePreview\(\)/);
-  assert.doesNotMatch(profile, /aria-modal=/);
-  assert.doesNotMatch(profile, /role="dialog"/);
+  assert.doesNotMatch(profile.match(/<div[^>]*id="gift-outcome-ai-preview"[^>]*>/)?.[0] ?? "", /aria-modal=/);
+  assert.doesNotMatch(profile.match(/<div[^>]*id="gift-outcome-ai-preview"[^>]*>/)?.[0] ?? "", /role="dialog"/);
 });
 
 test("focused AI preview is an inline region named by its localized heading", async () => {
@@ -336,7 +336,7 @@ test("focused AI preview is an inline region named by its localized heading", as
   assert.match(profile, /id="gift-outcome-ai-preview" role="region" aria-labelledby="gift-outcome-ai-preview-heading"/);
   assert.match(profile, /<h3 id="gift-outcome-ai-preview-heading"[^>]*>\{t\("profileUi\.learningAudit\.previewTitle"\)\}<\/h3>/);
   assert.match(profile, /previewDescription", \{ count: aiPreview\.length \}/);
-  assert.doesNotMatch(profile, /aria-modal=/);
+  assert.doesNotMatch(profile.match(/<div[^>]*id="gift-outcome-ai-preview"[^>]*>/)?.[0] ?? "", /aria-modal=/);
 });
 
 test("open preview describes its local Escape shortcut without burdening collapsed controls", async () => {

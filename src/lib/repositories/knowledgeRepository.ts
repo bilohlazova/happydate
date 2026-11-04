@@ -565,11 +565,16 @@ export async function reviewOwnedPersonKnowledge(input: MutateOwnedPersonKnowled
 /** Permanently delete one owned Knowledge record through the canonical RLS client. */
 export async function deleteKnowledge(memoryId: string): Promise<void> {
   const userId = await requireKnowledgeUserId();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("memories")
     .delete()
     .eq("id", memoryId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .select("id")
+    .returns<Array<{ id: string }>>();
 
   if (error) throw repositoryError("deleteKnowledge", error.message);
+  if (!data || data.length !== 1) {
+    throw repositoryError("deleteKnowledge", "Record not found or already deleted");
+  }
 }

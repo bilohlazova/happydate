@@ -176,7 +176,9 @@
     "offlineAction": "Keine Internetverbindung. Dein Entwurf bleibt im Editor — versuche es nach Wiederherstellung der Verbindung erneut.",
     "loadFailed": "Notizen konnten nicht geladen werden",
     "loadFailedHint": "Prüfe deine Verbindung und versuche es erneut.",
-    "deleteFailed": "Der Eintrag konnte nicht gelöscht werden. Er bleibt in der Liste."
+    "deleteFailed": "Der Eintrag wurde gelöscht, aber einige Anhänge konnten nicht bereinigt werden.",
+    "deleteCleanupFailed": "Der Eintrag wurde gelöscht, aber einige Anhänge konnten nicht bereinigt werden.",
+    "deleteRefreshFailed": "Der Eintrag wurde gelöscht, aber die Liste konnte nicht aktualisiert werden. Bitte neu laden."
   },
   "dates": {
     "today": "Heute",

@@ -2,7 +2,7 @@ name: HappyDate Media Lifecycle exact SHA smoke
 on:
   push:
     branches: [codex/media-smoke-72b341b]
-    paths: [.github/workflows/media-lifecycle-smoke.yml, smoke/media/**]
+    paths: [.github/workflows/media-lifecycle-smoke.yml, smoke/media/**, smoke/notes/**]
 permissions:
   contents: read
 concurrency:

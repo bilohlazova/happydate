@@ -29,6 +29,7 @@ test('avatar + Memory lifecycle and two-account RLS',async({browser})=>{
    const page=await context.newPage();pages.push(page);page.setDefaultTimeout(15000);
    page.on('dialog',dialog=>dialog.accept());
    await expect(async()=>{const r=await page.goto('http://127.0.0.1:3000/profile');expect(r.status()).toBe(200);}).toPass({timeout:60000});
+   try{
    for(let i=0;i<2;i++){
     const previous=(await profile(user.id)).avatar_url;
     const button=page.getByRole('button',{name:'Change profile photo',exact:true});
@@ -55,6 +56,7 @@ test('avatar + Memory lifecycle and two-account RLS',async({browser})=>{
    await expect.poll(async()=>(await profile(user.id)).avatar_url).toBeNull();
    await expect.poll(async()=>(await objects('avatars',user.id)).length).toBe(0);
    console.log('PASS avatar upload, replacement via available input path, rendered photo and removal');
+   }catch(error){failures.push(`Avatar lifecycle: ${error.message}`);console.log('FAIL avatar lifecycle:',error.message);await page.screenshot({path:`evidence/avatar-failure-${user.id}.png`,fullPage:true});}
    await page.goto('http://127.0.0.1:3000/notes');
    await page.locator('.hd-add-btn').click();
    await page.locator('.hd-type-option').filter({hasText:'Keep an important moment'}).click();

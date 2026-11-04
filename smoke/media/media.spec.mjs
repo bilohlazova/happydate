@@ -69,7 +69,7 @@ test('avatar + Memory lifecycle and two-account RLS',async({browser})=>{
    await expect.poll(async()=>(await memories(user.id)).length).toBe(1);
    await expect.poll(async()=>(await memories(user.id))[0]?.images?.length).toBe(2);
    await expect(page.locator('.hd-card-images img').first()).toBeVisible();
-   expect(await page.locator('.hd-card-images img').first().evaluate(img=>img.complete&&img.naturalWidth>0)).toBeTruthy();
+   await expect.poll(()=>page.locator('.hd-card-images img').evaluateAll(imgs=>imgs.length===2&&imgs.every(img=>img.complete&&img.naturalWidth>0))).toBeTruthy();
    await expect.poll(async()=>(await objects('memory-images',user.id)).length).toBe(2);
   }
   for(let i=0;i<2;i++){
@@ -84,7 +84,16 @@ test('avatar + Memory lifecycle and two-account RLS',async({browser})=>{
    await client.storage.from('memory-images').remove([path]);
    expect((await objects('memory-images',other.id)).some(x=>path.endsWith('/'+x.name))).toBeTruthy();
    expect((await memories(other.id))[0].title).toBe(foreign.title);
-   console.log('PASS cross-account Memory read/update/delete and private Storage read/sign/upload/delete isolation');
+   const avatarPath=`${own.id}/rls-${state.run}.png`;
+   checked(await client.storage.from('avatars').upload(avatarPath,image.buffer,{contentType:'image/png'}));
+   const foreignClient=clients[1-i];
+   expect((await foreignClient.storage.from('avatars').upload(`${own.id}/forbidden.png`,image.buffer,{contentType:'image/png'})).error).toBeTruthy();
+   expect((await foreignClient.storage.from('avatars').update(avatarPath,image.buffer,{contentType:'image/png'})).error).toBeTruthy();
+   await foreignClient.storage.from('avatars').remove([avatarPath]);
+   expect((await objects('avatars',own.id)).some(x=>avatarPath.endsWith('/'+x.name))).toBeTruthy();
+   expect(checked(await foreignClient.from('profiles').update({avatar_url:'forbidden'}).eq('id',own.id).select('id'))).toEqual([]);
+   checked(await client.storage.from('avatars').remove([avatarPath]));
+   console.log('PASS cross-account Memory read/update/delete, private Storage read/sign/upload/delete, avatar insert/update/delete and profile update isolation');
   }
   for(let i=0;i<2;i++){
    const user=state.users[i],page=pages[i];

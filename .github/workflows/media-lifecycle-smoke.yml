@@ -104,14 +104,14 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
-          ref: 27e3f3e70fc0a23c16d89beb8277c6adeea921fa
+          ref: 20c03e87b81b0ae5da5e9062cf86418af880ffb0
           path: app
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
       - name: Assert exact fixed application SHA
-        run: test "$(git -C app rev-parse HEAD)" = 27e3f3e70fc0a23c16d89beb8277c6adeea921fa
+        run: test "$(git -C app rev-parse HEAD)" = 20c03e87b81b0ae5da5e9062cf86418af880ffb0
       - name: Install app and pinned Chromium harness
         run: |
           cd app
@@ -146,4 +146,4 @@ jobs:
       - name: Record exact Notes scope
         if: ${{ always() }}
         run: |
-          echo 'Notes-only smoke: fixed app SHA 27e3f3e70fc0a23c16d89beb8277c6adeea921fa; Linux Chromium local build with HappyDate Staging; Media job skipped for this Notes commit; no Production, bypass or Deployment Protection changes.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Notes-only smoke: fixed app SHA 20c03e87b81b0ae5da5e9062cf86418af880ffb0; Linux Chromium local build with HappyDate Staging; Media job skipped for this Notes commit; no Production, bypass or Deployment Protection changes.' >> "$GITHUB_STEP_SUMMARY"

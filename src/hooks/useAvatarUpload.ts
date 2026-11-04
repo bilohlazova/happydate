@@ -29,6 +29,23 @@ import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/lib/supabaseClient";
 
+/** Remove one avatar object and verify that the Storage index no longer lists it. */
+export async function removeAvatarObject(path: string) {
+  const objectKey = path.replace(/^avatars\//, "");
+  const bucket = supabase.storage.from("avatars");
+  const { error } = await bucket.remove([objectKey]);
+  if (error) throw error;
+
+  const separator = objectKey.lastIndexOf("/");
+  const folder = separator === -1 ? "" : objectKey.slice(0, separator);
+  const name = separator === -1 ? objectKey : objectKey.slice(separator + 1);
+  const { data, error: verifyError } = await bucket.list(folder, { search: name, limit: 100 });
+  if (verifyError) throw verifyError;
+  if (data?.some((entry) => entry.name === name)) {
+    throw new Error("Avatar cleanup verification failed: object is still present");
+  }
+}
+
 export type UploadState =
   | { status: "idle" }
   | { status: "loading" }
@@ -110,16 +127,24 @@ export function useAvatarUpload({ userId, currentPath, onSuccess, onError }: Use
       try {
         await onSuccess(filePath);
       } catch (persistError) {
-        const { error: orphanError } = await supabase.storage.from("avatars").remove([filePath]);
+        let orphanError: Error | null = null;
+        try {
+          await removeAvatarObject(filePath);
+        } catch (error) {
+          orphanError = error instanceof Error ? error : new Error(String(error));
+        }
         const detail = persistError instanceof Error ? persistError.message : "Avatar save failed";
         if (orphanError) throw new Error(`${detail}; cleanup failed: ${orphanError.message}`);
         throw persistError;
       }
 
       if (currentPath && currentPath !== filePath) {
-        const oldKey = currentPath.replace(/^avatars\//, "");
-        const { error: cleanupError } = await supabase.storage.from("avatars").remove([oldKey]);
-        if (cleanupError) throw new Error(`Avatar saved, but old avatar cleanup failed: ${cleanupError.message}`);
+        try {
+          await removeAvatarObject(currentPath);
+        } catch (cleanupError) {
+          const detail = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+          throw new Error(`Avatar saved, but old avatar cleanup failed: ${detail}`);
+        }
       }
 
       setState({ status: "success", filePath });

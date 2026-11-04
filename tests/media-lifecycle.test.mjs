@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 test("avatar replacement persists before old-object cleanup and exposes removal", async () => {
   const source = await readFile(new URL("../src/hooks/useAvatarUpload.ts", import.meta.url), "utf8");
   assert.ok(source.indexOf("await onSuccess(filePath)") < source.indexOf("old avatar cleanup failed"));
-  assert.match(source, /remove\(\[filePath\]\)/);
+  assert.match(source, /removeAvatarObject\(filePath\)/);
   const profile = await readFile(new URL("../src/app/(app)/profile/page.tsx", import.meta.url), "utf8");
   assert.match(profile, /aria-label="Remove avatar"/);
 });

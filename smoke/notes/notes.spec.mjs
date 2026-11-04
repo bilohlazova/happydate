@@ -89,9 +89,9 @@ test('Knowledge separation: person facts stay in People while real memories stay
   await iphone.page.goto(`${personUrl}?view=about`);
   await expect(iphone.page.getByText(editedFact,{exact:true})).toBeVisible();
   await iphone.page.getByRole('button',{name:`Actions for “${editedFact}”`}).click();
-  await iphone.page.getByRole('button',{name:'Delete',exact:true}).first().click();
-  await expect(iphone.page.getByRole('heading',{name:'Delete fact'})).toBeVisible();
-  await iphone.page.getByRole('button',{name:'Delete',exact:true}).last().click();
+  await iphone.page.locator('button:visible').filter({hasText:'Delete'}).first().click();
+  await expect(iphone.page.getByText('Delete fact',{exact:true}).first()).toBeVisible();
+  await iphone.page.locator('button:visible').filter({hasText:'Delete'}).last().click();
   await expect.poll(async()=>checked(await admin.from('memories').select('id').eq('user_id',owner.id).eq('value_text',editedFact))).toHaveLength(0);
   await iphone.page.reload();
   await expect(iphone.page.getByText(editedFact,{exact:true})).toHaveCount(0);

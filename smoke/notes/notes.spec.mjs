@@ -52,7 +52,7 @@ test('Knowledge separation: person facts stay in People while real memories stay
   await expect(desktop.page).toHaveURL(/\/people\/[^/?#]+/);
   const personUrl=desktop.page.url().replace(/\?.*$/,'');
   await desktop.page.goto(`${personUrl}?view=about`);
-  await expect(desktop.page.getByText('About Anna',{exact:true})).toBeVisible();
+  await expect(desktop.page.getByText('About Anna',{exact:true}).first()).toBeVisible();
   await desktop.page.getByRole('button',{name:'Add',exact:true}).click();
   await desktop.page.locator('#about-person-value').fill(fact);
   await desktop.page.getByRole('button',{name:'Save',exact:true}).click();

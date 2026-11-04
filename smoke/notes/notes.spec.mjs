@@ -58,7 +58,7 @@ test('Knowledge separation: person facts stay in People while real memories stay
   await desktop.page.getByRole('button',{name:'Save',exact:true}).click();
   await expect(desktop.page.getByText(fact,{exact:true})).toBeVisible();
   const personId=personUrl.split('/').pop();
-  await expect.poll(async()=>checked(await admin.from('memories').select('id,type,person_id,value_text,content').eq('user_id',owner.id).eq('person_id',personId))).toHaveLength(1);
+  await expect.poll(async()=>checked(await admin.from('memories').select('id,type,person_id,value_text,title').eq('user_id',owner.id).eq('person_id',personId))).toHaveLength(1);
 
   await desktop.page.goto('http://127.0.0.1:3000/notes');
   await expect(desktop.page.getByText(fact,{exact:true})).toHaveCount(0);

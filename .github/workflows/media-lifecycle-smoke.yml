@@ -26,7 +26,7 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
-          ref: 72b341b44cb00963be11b640310bcf73373387df
+          ref: 1caee102e9542a28dc8d0a5813775b07af54a2e2
           path: app
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -34,7 +34,7 @@ jobs:
           node-version: '24'
       - name: Assert exact application SHA and Staging configuration
         run: |
-          test "$(git -C app rev-parse HEAD)" = 72b341b44cb00963be11b640310bcf73373387df
+          test "$(git -C app rev-parse HEAD)" = 1caee102e9542a28dc8d0a5813775b07af54a2e2
           test -n "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
       - name: Install app and isolated pinned Playwright harness
         run: |
@@ -84,4 +84,4 @@ jobs:
       - name: Record test scope
         if: ${{ always() }}
         run: |
-          echo 'Application: 72b341b44cb00963be11b640310bcf73373387df; Chromium on Linux; local optimized build with HappyDate Staging. This does not verify a deployed Vercel Preview, its routing or Deployment Protection. No Production credentials or bypass used.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Application: 1caee102e9542a28dc8d0a5813775b07af54a2e2; Chromium on Linux; local optimized build with HappyDate Staging. This does not verify a deployed Vercel Preview, its routing or Deployment Protection. No Production credentials or bypass used.' >> "$GITHUB_STEP_SUMMARY"

@@ -1,6 +1,6 @@
 # Exact-SHA Staging media smoke
 
-The workflow only runs on `codex/media-smoke-72b341b` pushes affecting this harness. It checks out the unchanged application at `72b341b44cb00963be11b640310bcf73373387df`, builds it on Ubuntu, and uses real Chromium against localhost with HappyDate Staging. It does not repeat the full quality gate. It does not certify a deployed Preview or Vercel routing/protection.
+The workflow only runs on `codex/media-smoke-72b341b` pushes affecting this harness. It checks out the Draft PR #20 avatar fix at `1caee102e9542a28dc8d0a5813775b07af54a2e2`, builds it on Ubuntu, and uses real Chromium against localhost with HappyDate Staging. It does not repeat the full quality gate. It does not certify a deployed Preview or Vercel routing/protection.
 
 Only the Staging service-role JWT is supplied from the branch-restricted GitHub Environment `happydate-media-staging`. The public key is the existing reviewed Staging browser key. The secret is scoped to fixture, test assertion and cleanup steps, excluded from the application server environment and never supplied to browser code. Two isolated browser contexts receive ordinary user sessions. No auth bypass endpoint is added.
 

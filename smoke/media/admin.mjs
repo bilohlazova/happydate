@@ -29,7 +29,6 @@ export async function cleanup(){
     await removePrefix(user.id);
     assert.equal(checked(await admin.storage.from(bucket).list(user.id)).length,0);
    }
-   checked(await admin.from('memories').delete().eq('user_id',user.id));
    checked(await admin.auth.admin.deleteUser(user.id));
    const result=await admin.auth.admin.getUserById(user.id);
    assert(!result.data?.user,'User remains after cleanup');

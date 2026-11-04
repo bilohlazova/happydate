@@ -6,8 +6,9 @@ test.setTimeout(240000);
 const expect=baseExpect.configure({timeout:20000});
 const image={name:'smoke.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=','base64')};
 async function objects(bucket,id){return checked(await admin.storage.from(bucket).list(id,{limit:100}));}
-async function profile(id){return checked(await admin.from('profiles').select('avatar_url').eq('id',id).single());}
-async function memories(id){return checked(await admin.from('memories').select('id,images,title').eq('user_id',id));}
+const ownerClients=new Map();
+async function profile(id){return checked(await ownerClients.get(id).from('profiles').select('avatar_url').eq('id',id).single());}
+async function memories(id){return checked(await ownerClients.get(id).from('memories').select('id,images,title').eq('user_id',id));}
 test('avatar + Memory lifecycle and two-account RLS',async({browser})=>{
  const state=JSON.parse(await readFile(stateFile,'utf8'));
  const contexts=[]; const clients=[];const pages=[];
@@ -15,7 +16,7 @@ test('avatar + Memory lifecycle and two-account RLS',async({browser})=>{
   for(const user of state.users){
    const client=createClient(url,anon,{auth:{persistSession:false,autoRefreshToken:false}});
    const {session}=checked(await client.auth.signInWithPassword({email:user.email,password:user.password}));
-   clients.push(client);
+   clients.push(client);ownerClients.set(user.id,client);
    const context=await browser.newContext({locale:'en-US'});contexts.push(context);
    await context.addCookies([{name:'happydate_locale',value:'en',url:'http://127.0.0.1:3000'}]);
    await context.addInitScript(({ref,session})=>{localStorage.setItem(`sb-${ref}-auth-token`,JSON.stringify(session));},{ref,session});

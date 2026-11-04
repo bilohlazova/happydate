@@ -44,6 +44,11 @@ jobs:
           npm init -y
           npm install --save-exact @playwright/test@1.56.1 @supabase/supabase-js@2.112.0
           npx playwright install --with-deps chromium
+      - name: Probe exact-SHA Preview without changing protection
+        run: |
+          code=$(curl --silent --show-error --max-time 30 --output /dev/null --write-out '%{http_code}' 'https://happydate-9wmaypyb5-bilohlazovamari-gmailcoms-projects.vercel.app/profile')
+          echo "Exact-SHA deployed Preview unauthenticated HTTP: $code" >> "$GITHUB_STEP_SUMMARY"
+          echo "Using the unchanged local Linux build with Staging; no deployment protection or bypass is modified." >> "$GITHUB_STEP_SUMMARY"
       - name: Build unchanged exact SHA (no full CI)
         working-directory: app
         run: npm run build -- --webpack

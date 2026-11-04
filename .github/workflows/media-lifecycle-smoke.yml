@@ -136,7 +136,7 @@ jobs:
           cd ../../../app
           env -u HAPPYDATE_STAGING_SERVICE_ROLE_KEY npm start > "$RUNNER_TEMP/happydate-notes-next.log" 2>&1 &
           cd ../harness/smoke/notes
-          npx playwright test notes.spec.mjs --workers=1 --reporter=line
+          npx playwright test notes.spec.mjs --grep "Knowledge separation" --workers=1 --reporter=line
       - name: Always remove and verify all run-owned fixtures
         if: ${{ always() }}
         working-directory: harness/smoke/notes

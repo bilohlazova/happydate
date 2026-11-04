@@ -79,6 +79,11 @@ export interface MemoryAudioUploadResult {
   error: string | null;
 }
 
+export interface DeleteMemoryResult {
+  deleted: boolean;
+  cleanupErrors: string[];
+}
+
 /**
  * Return the currently authenticated user's id for client-side memory flows.
  */
@@ -158,11 +163,7 @@ export async function deleteMemoryAudioObject(storedValue: string | null): Promi
 export async function listMemories({
   userId,
 }: ListMemoriesInput): Promise<NotesMemoryRow[]> {
-  try {
-    return await listNotesKnowledgeProjection({ userId });
-  } catch {
-    return [];
-  }
+  return listNotesKnowledgeProjection({ userId });
 }
 
 /**
@@ -378,15 +379,19 @@ export async function updateNotesMemory(
 /**
  * Hard-delete a memory, preserving the existing Notes behavior.
  */
-export async function deleteMemory(memoryId: string): Promise<void> {
+export async function deleteMemory(memoryId: string): Promise<DeleteMemoryResult> {
   const beforeRows = await listNotesKnowledgeProjection({ userId: (await getCurrentMemoryUserId()) ?? "" });
   const before = beforeRows.find((row) => row.id === memoryId);
-  const beforeError = null;
-  if (beforeError) throw beforeError;
   await deleteKnowledge(memoryId);
+  const cleanupErrors: string[] = [];
   const previous = Array.isArray(before?.images) ? before.images : [];
   if (previous.length) {
     const cleanup = await deleteMemoryImageObjects(previous);
-    if (cleanup.failed.length) throw new Error(`Memory image cleanup failed: ${cleanup.failed.map((item) => item.error).join("; ")}`);
+    cleanupErrors.push(...cleanup.failed.map((item) => item.error));
   }
+  if (before?.audio_url) {
+    const removed = await deleteMemoryAudioObject(before.audio_url);
+    if (!removed) cleanupErrors.push("Memory audio cleanup failed");
+  }
+  return { deleted: true, cleanupErrors };
 }

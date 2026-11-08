@@ -1,5 +1,17 @@
 # HappyDate security audit — 2026-10-28
 
+> Historical report. The dated inventories below describe their original
+> observations, not current environment settings. See the 2026-11-08 update in
+> [release readiness](release-readiness.md) for the current alias, candidate,
+> verification evidence, and unresolved credential-history gate.
+
+Current candidate policy rejects the Production Supabase hostname on every
+Preview branch. PR14 and the three release branches (`fix/assistant-owned-person-over-100`,
+`codex/release-readiness-audit`, `codex/knowledge-separation`) additionally require
+the verified Staging public configuration and disabled privileged integrations.
+Other named Preview branches remain explicitly unverified. Configuration guards
+cannot revoke credentials already included in historical immutable deployments.
+
 ## Current required-context policy — final pre-push correction
 
 This section supersedes c114231's absence-based local classification and marker semantics in the historical sections below.

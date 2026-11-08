@@ -4,8 +4,8 @@ Source tests and TypeScript cannot prove that the optimized application starts,
 serves pages and applies runtime headers. After building, run:
 
 ```bash
-npx next build --webpack
-npm run smoke:production
+HAPPYDATE_LOCAL_EXECUTION=1 npm run build -- --webpack
+HAPPYDATE_LOCAL_EXECUTION=1 npm run smoke:production
 ```
 
 The smoke runner starts `next start` on an ephemeral loopback port and verifies:
@@ -21,3 +21,7 @@ It never connects to Supabase, OpenAI, email providers or stores, and it does no
 create or delete user data. Authentication, physical-device permissions, real
 push delivery and destructive account deletion still require separate controlled
 end-to-end scenarios.
+
+Use synthetic public configuration for this local gate. Never add the local
+execution opt-in to Vercel. This command verifies an optimized local HTTP server,
+not the deployed domain, authenticated CRUD, SMTP delivery, or native devices.

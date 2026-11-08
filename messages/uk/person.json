@@ -112,7 +112,7 @@
         "memories": "спогади"
       }
     },
-    "knowledgeSource": { "confirmedByYou": "Підтверджено вами" },
+    "knowledgeSource": { "confirmedByYou": "Підтверджено вами", "known": "Джерело збережено" },
     "knowledgeAudit": {
       "add": "Додати",
       "addPlaceholder": "Введіть нову інформацію",

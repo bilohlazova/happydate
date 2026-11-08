@@ -6,6 +6,11 @@ then turn that context into a calm next caring action.
 
 Live web version: <https://happydate.vercel.app>
 
+Repository implementation, verification evidence, and Production deployment are
+separate states. The dated [release readiness report](docs/release-readiness.md)
+records the last inspected Production SHA and unresolved release gates. Features
+on an open pull request are not automatically available on the live site.
+
 ## Product status
 
 Implemented foundations include:

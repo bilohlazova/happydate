@@ -4,6 +4,7 @@ import {
   buildKnowledgeSnapshot,
   buildPersonKnowledgeProfile,
   getPersonKnowledge,
+  isGlobalNotesKnowledgeItem,
   mapLegacyMemoriesToKnowledge,
   mapLegacyMemoryToKnowledge,
   selectKnowledgeContext,
@@ -343,7 +344,7 @@ export async function listNotesKnowledgeProjection({
   userId,
 }: ListKnowledgeInput): Promise<NotesMemoryRow[]> {
   const rows = await listKnowledgeRowsWithClient(supabase, { userId, includeArchived: true });
-  return rows.map((row) => ({
+  return rows.filter((row) => isGlobalNotesKnowledgeItem(mapLegacyMemoryToKnowledge(row))).map((row) => ({
     id: row.id,
     content_text: row.content_text,
     created_at: row.created_at ?? "",

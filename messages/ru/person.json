@@ -108,7 +108,7 @@
         "memories": "воспоминания"
       }
     },
-    "knowledgeSource": { "confirmedByYou": "Подтверждено вами" },
+    "knowledgeSource": { "confirmedByYou": "Подтверждено вами", "known": "Источник сохранён" },
     "knowledgeAudit": {
       "add": "Добавить",
       "addPlaceholder": "Введите новую информацию",

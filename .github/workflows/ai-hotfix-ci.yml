@@ -23,6 +23,7 @@ jobs:
         with:
           repository: bilohlazova/happydate
           ref: 4d46e4b0f818a612c0baff1eb421d930350af6e4
+          fetch-depth: 2
           persist-credentials: false
       - name: Assert exact application commit
         run: |

@@ -5,7 +5,7 @@ export const STAGING_SUPABASE_HOST = "xgelazzdgluuenqkymox.supabase.co";
 const PRODUCTION_SUPABASE_HOST = "yzcvdspiiiaidsdripxr.supabase.co";
 export const PR14_BRANCH = "fix/onboarding-survey-safe-ui";
 export const PR14_POLICY_MARKER = "pr14-staging-v1";
-const RELEASE_PREVIEW_BRANCHES = new Set(["fix/assistant-owned-person-over-100", "codex/release-readiness-audit", "codex/knowledge-separation"]);
+const RELEASE_PREVIEW_BRANCHES = new Set(["fix/assistant-owned-person-over-100", "codex/release-readiness-audit", "codex/knowledge-separation", "codex/fix-ai-structured-outputs"]);
 
 export type EnvironmentSafetyStatus =
   | "pr14-preview-isolated"

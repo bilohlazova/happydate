@@ -6,12 +6,24 @@ import type { OccasionRescueProvider } from "./occasionRescue.types.ts";
 const schema = {
   name: "happy_occasion_rescue", strict: true,
   schema: { type: "object", additionalProperties: false, required: ["suggestions"], properties: {
-    suggestions: { type: "array", minItems: 3, maxItems: 5, items: { type: "object", additionalProperties: false, required: ["category", "title", "description"], properties: {
+    suggestions: { type: "array", minItems: 3, maxItems: 5, items: { type: "object", additionalProperties: false, required: ["category", "title", "description", "whyItFits"], properties: {
       category: { type: "string", enum: ["quick_gift", "digital", "voucher", "experience", "greeting", "plan_b", "delayed_gift"] },
-      title: { type: "string", maxLength: 160 }, description: { type: "string", maxLength: 600 }, whyItFits: { type: "string", maxLength: 300 },
+      title: { type: "string", maxLength: 160 }, description: { type: "string", maxLength: 600 }, whyItFits: { type: ["string", "null"], maxLength: 300 },
     } } },
   } },
 } as const;
+
+function normalizeOptionalExplanations(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const output = value as Record<string, unknown>;
+  if (!Array.isArray(output.suggestions)) return value;
+  return { ...output, suggestions: output.suggestions.map((item: unknown) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+    const suggestion = { ...item } as Record<string, unknown>;
+    if (suggestion.whyItFits === null) delete suggestion.whyItFits;
+    return suggestion;
+  }) };
+}
 
 /** The only production AI adapter for Rescue. It receives verified, bounded facts. */
 export function createOpenAiOccasionRescueProvider(apiKey = process.env.OPENAI_API_KEY?.trim()): OccasionRescueProvider {
@@ -23,6 +35,6 @@ export function createOpenAiOccasionRescueProvider(apiKey = process.env.OPENAI_A
       instructions, input: JSON.stringify(input), text: { format: { type: "json_schema", ...schema } },
     }, { signal: input.signal });
     if (!response.output_text) throw Object.assign(new Error("invalid provider output"), { code: "invalid_provider_output" });
-    try { return JSON.parse(response.output_text) as unknown; } catch { throw Object.assign(new Error("invalid provider output"), { code: "invalid_provider_output" }); }
+    try { return normalizeOptionalExplanations(JSON.parse(response.output_text)); } catch { throw Object.assign(new Error("invalid provider output"), { code: "invalid_provider_output" }); }
   };
 }

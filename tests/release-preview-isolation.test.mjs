@@ -4,7 +4,7 @@ import { inspect } from "node:util";
 import { assertEnvironmentSafety } from "../src/lib/supabase/environmentSafety.ts";
 const jwt = (ref) => `e30.${Buffer.from(JSON.stringify({ role: "anon", ref })).toString("base64url")}.synthetic`;
 const staging = { VERCEL_ENV: "preview", NEXT_PUBLIC_SUPABASE_URL: "https://xgelazzdgluuenqkymox.supabase.co", NEXT_PUBLIC_SUPABASE_ANON_KEY: jwt("xgelazzdgluuenqkymox") };
-const strictBranches = ["fix/assistant-owned-person-over-100", "codex/release-readiness-audit", "codex/knowledge-separation"];
+const strictBranches = ["fix/assistant-owned-person-over-100", "codex/release-readiness-audit", "codex/knowledge-separation", "codex/fix-ai-structured-outputs"];
 test("every Preview branch rejects Production Supabase, including normalized URL forms", () => {
   for (const branch of [...strictBranches, "other", "codex/staging-block-b"]) {
     for (const url of ["https://yzcvdspiiiaidsdripxr.supabase.co", "https://YZCVDSPIIIAIDSDRIPXR.supabase.co", "https://yzcvdspiiiaidsdripxr.supabase.co/", "https://yzcvdspiiiaidsdripxr.supabase.co./"]) {

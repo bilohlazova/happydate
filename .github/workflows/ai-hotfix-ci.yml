@@ -1,0 +1,40 @@
+name: HappyDate isolated AI hotfix verification
+on:
+  push:
+    branches: [codex/ci-ai-hotfix-4d46e4b]
+    paths: [.github/workflows/ai-hotfix-ci.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: happydate-ai-hotfix-4d46e4b
+  cancel-in-progress: false
+jobs:
+  exact-hotfix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: bilohlazova/happydate
+          ref: 4d46e4b0f818a612c0baff1eb421d930350af6e4
+          persist-credentials: false
+      - name: Assert exact application commit
+        run: |
+          test "$(git rev-parse HEAD)" = '4d46e4b0f818a612c0baff1eb421d930350af6e4'
+          test "$(git rev-parse HEAD^)" = '6f193f601f7e1640c20f6529f883bd933b088a16'
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run verify
+      - name: Targeted strict schema and provenance regressions
+        run: node --test tests/happy-agent-api.test.mjs tests/occasion-rescue.test.mjs
+      - run: npm run build -- --webpack
+      - run: npm run smoke:production

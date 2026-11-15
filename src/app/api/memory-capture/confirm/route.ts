@@ -11,13 +11,20 @@ import { createKnowledgeOnServer } from "@/lib/repositories/knowledgeRepository"
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const tokenSecret = process.env.HAPPY_LEARNING_TOKEN_SECRET?.trim();
+  if (!tokenSecret) {
+    return Response.json({ ok: false, error: "save_failed" }, {
+      status: 503,
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
   const limiter = createConfiguredAssistantRateLimiter();
   return createHappyLearningConfirmV2Response(request, {
     authenticate: authenticateHappyLearningRequest,
     findOwnedPerson: findOwnedHappyLearningPerson,
     loadKnowledge: loadOwnedHappyLearningKnowledge,
     persist: createKnowledgeOnServer,
-    tokenSecret: process.env.HAPPY_LEARNING_TOKEN_SECRET?.trim() ?? "",
+    tokenSecret: tokenSecret,
     checkRateLimit: async (userId) => {
       if (!limiter) return false;
       const key = createHash("sha256").update(`happy-learning-confirm:${userId}`).digest("hex");

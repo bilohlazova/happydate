@@ -1,0 +1,13 @@
+✔ gifts missing or invalid bearer cannot reach paid provider (23.662209ms)
+✔ learning missing or invalid bearer cannot reach paid provider (5.083ms)
+✔ agent missing or invalid bearer cannot reach paid provider (42.091792ms)
+✔ tasks missing or invalid bearer cannot reach paid provider (13.760875ms)
+✔ rescue missing or invalid bearer cannot reach paid provider (0.688ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 482.103958

@@ -1,0 +1,11 @@
+✔ agent actual SDK denies unavailable/exhausted budget and disables hidden retries (17.725417ms)
+✔ rescue actual SDK denies unavailable/exhausted budget and disables hidden retries (1.518417ms)
+✔ learning actual SDK denies unavailable/exhausted budget and disables hidden retries (0.986625ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 147.377083

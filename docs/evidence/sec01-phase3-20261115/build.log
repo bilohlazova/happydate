@@ -1,0 +1,106 @@
+
+> happydate@0.1.0 build
+> next build --webpack
+
+▲ Next.js 16.4.3 (webpack)
+⚠ Warning: Next.js ignored package-lock.json in /Users/mariabilohlazova/Documents/ChatGPT/toto because it is outside the current Git repository (/Users/mariabilohlazova/Documents/ChatGPT/toto/artifacts/staging-lifecycle-hotfix).
+ To use this directory, set `outputFileTracingRoot` in your Next.js config.
+
+✓ Running next.config.ts took 1167ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 11.8s
+  Running TypeScript ...
+  Finished TypeScript in 8.6s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/55) ...
+  Generating static pages using 7 workers (13/55) 
+  Generating static pages using 7 workers (27/55) 
+  Generating static pages using 7 workers (41/55) 
+✓ Generating static pages using 7 workers (55/55) in 371ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /about
+├ ƒ /api/account/delete
+├ ƒ /api/ai-chat
+├ ƒ /api/ai/gift-suggestions
+├ ƒ /api/auto-release
+├ ƒ /api/calendar/observances
+├ ƒ /api/good-deed
+├ ƒ /api/happy/actions/[id]/approve
+├ ƒ /api/happy/actions/[id]/reject
+├ ƒ /api/happy/agent
+├ ƒ /api/happy/ideas/[id]/[response]
+├ ƒ /api/happy/notifications
+├ ƒ /api/happy/notifications/[id]/open
+├ ƒ /api/happy/notifications/[id]/read
+├ ƒ /api/happy/occasions/[occurrenceKey]/[disposition]
+├ ƒ /api/happy/occasions/[occurrenceKey]/lead-time
+├ ƒ /api/happy/occasions/[occurrenceKey]/outcome
+├ ƒ /api/happy/occasions/[occurrenceKey]/person
+├ ƒ /api/happy/occasions/[occurrenceKey]/rescue
+├ ƒ /api/happy/preferences/occasion-country
+├ ƒ /api/happy/preferences/proactivity
+├ ƒ /api/happy/proactive/[id]/[disposition]
+├ ƒ /api/happy/tasks/[id]/continue
+├ ƒ /api/happy/tasks/[id]/decisions
+├ ƒ /api/happy/tasks/[id]/gift-choice
+├ ƒ /api/happy/tasks/birthday-preparation
+├ ƒ /api/heaven-messages
+├ ƒ /api/memory-capture/confirm
+├ ƒ /api/memory-capture/detect
+├ ƒ /api/notify-gift
+├ ƒ /api/replicate/webhook
+├ ƒ /api/telemetry/error
+├ ƒ /auth/callback
+├ ƒ /auth/login
+├ ƒ /auth/register
+├ ƒ /auth/reset
+├ ƒ /auth/update-password
+├ ƒ /care
+├ ƒ /care/add-memory
+├ ƒ /contact
+├ ƒ /dashboard
+├ ƒ /events/[id]
+├ ƒ /gift/start
+├ ƒ /notes
+├ ƒ /onboarding-preview
+├ ƒ /people
+├ ƒ /people/[id]
+├ ƒ /people/add
+├ ƒ /privacy
+├ ƒ /profile
+├ ƒ /regulamin
+├ ƒ /regulamin-zwrotow
+├ ƒ /reviews
+├ ƒ /services
+├ ƒ /services/asystent-ai
+├ ƒ /services/podaruj-dobro
+├ ƒ /services/wiadomosc-grupowa
+├ ƒ /services/wiadomosc-z-nieba
+├ ƒ /services/wiadomosc-z-nieba/order
+├ ƒ /services/wiadomosc-z-nieba/plans/[slug]
+├ ƒ /services/wysluchaj-mnie
+├ ƒ /services/zrzutka
+├ ƒ /settings
+├ ƒ /settings/[section]
+├ ƒ /settings/delete-account
+├ ƒ /settings/export
+├ ƒ /settings/occasions
+├ ƒ /settings/proactivity
+├ ƒ /settings/reminders
+├ ƒ /settings/sessions
+└ ƒ /survey
+
+
+ƒ  (Dynamic)  server-rendered on demand
+
+npm notice
+npm notice New major version of npm available! 10.9.3 -> 12.2.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2
+npm notice To update run: npm install -g npm@12.2.2
+npm notice

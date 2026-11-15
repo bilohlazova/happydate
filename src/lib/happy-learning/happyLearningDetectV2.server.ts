@@ -1,3 +1,5 @@
+import { withAiExecutionScope } from "../assistant/aiExecution.server.ts";
+import { AiExecutionError } from "../assistant/aiExecutionError.ts";
 import { createHash } from "node:crypto";
 import type { AssistantChatLocale } from "../assistant/chatContract.ts";
 import { extractHappyLearningCandidates } from "./extractHappyLearningCandidates.server.ts";
@@ -90,11 +92,17 @@ export async function createHappyLearningDetectV2Response(
   }
   if (!person) return Response.json(EMPTY, { status: 404, headers: { "Cache-Control": "no-store" } });
 
-  const result = await extractHappyLearningCandidates({
+  let result;
+  try {
+  result = await withAiExecutionScope({ kind: "authenticated", key: auth.userId }, () => extractHappyLearningCandidates({
     userMessage: body.userMessage,
     locale: body.locale,
     resolvedPerson: person,
-  }, dependencies.provider);
+  }, dependencies.provider));
+  } catch (error) {
+    if (error instanceof AiExecutionError) return Response.json(EMPTY, { status: error.status, headers: { "Cache-Control": "no-store", ...(error.retryAfterSeconds ? { "Retry-After": String(error.retryAfterSeconds) } : {}) } });
+    return Response.json(EMPTY, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
   if (!result.candidates.length) {
     return Response.json(EMPTY, { status: 200, headers: { "Cache-Control": "no-store" } });
   }

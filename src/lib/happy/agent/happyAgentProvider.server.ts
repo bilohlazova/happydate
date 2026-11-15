@@ -1,5 +1,6 @@
 import "server-only";
 import OpenAI from "openai";
+import { runMeteredAiCall, parseOpenAiUsage } from "../../assistant/aiExecution.server.ts";
 import { ASSISTANT_CHAT_CONFIG } from "../../assistant/chatConfig.ts";
 import { buildHappyAgentPrompt } from "./happyAgentPrompt.ts";
 import type { HappyAgentProvider, HappyAgentProviderInput } from "./happyAgent.types";
@@ -53,7 +54,11 @@ export function createOpenAiHappyAgentProvider(apiKey = process.env.OPENAI_API_K
     if (!apiKey) throw Object.assign(new Error("provider unavailable"), { code: "missing_api_key" });
     const prompt = buildHappyAgentPrompt(input);
     const instructions = input.intent === "birthday_gift" ? `${prompt.instructions} Cite an idea with reasonSources from the supplied context only. Use null for an absent message or idea. If no source supports an idea, return a message with idea null.` : prompt.instructions;
-    const response = await new OpenAI({ apiKey }).responses.create({ model: ASSISTANT_CHAT_CONFIG.model, temperature: 0.2, max_output_tokens: 700, store: false, instructions, input: prompt.input, text: { format: { type: "json_schema", ...schemaFor(input) } } }, { signal: input.signal });
+    const params = { model: ASSISTANT_CHAT_CONFIG.model, temperature: 0.2, max_output_tokens: 700, store: false, instructions, input: prompt.input, text: { format: { type: "json_schema" as const, ...schemaFor(input) } } };
+    const response = await runMeteredAiCall({ feature: "happy-agent", model: params.model, payload: params, maxOutputTokens: params.max_output_tokens,
+      call: () => new OpenAI({ apiKey, maxRetries: 0 }).responses.create(params, { signal: input.signal ?? AbortSignal.timeout(30_000) }),
+      usage: value => parseOpenAiUsage(value.usage, "responses"),
+    });
     if (!response.output_text) throw Object.assign(new Error("empty provider output"), { code: "invalid_provider_output" });
     try {
       const value: unknown = JSON.parse(response.output_text);

@@ -25,6 +25,7 @@ export function createBirthdayTaskContinuationHandler(dependencies: Dependencies
     const identity = await authenticate(request);
     if (identity.kind !== "authenticated" || !identity.userId) return Response.json({ error: "unauthorized" }, { status: 401, headers });
     const result: ContinueBirthdayTaskResult = await run({ userId: identity.userId, taskId: id, locale: "en", timezone: "UTC", provider: dependencies.provider() });
+    if(result.kind==="rate_limited"||result.kind==="budget_exceeded")return Response.json(result,{status:429,headers:{...headers,"Retry-After":String(result.retryAfterSeconds)}});
     const status = result.kind === "not_found" ? 404 : result.kind === "invalid_state" ? 409 : result.kind === "provider_unavailable" ? 502 : result.kind === "unavailable" ? 503 : 200;
     return Response.json(result, { status, headers });
   };

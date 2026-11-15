@@ -1,3 +1,5 @@
+import { withAiExecutionScope } from "../../src/lib/assistant/aiExecution.server.ts";
+import { MemoryAiBudget } from "../../src/lib/assistant/aiBudget.ts";
 import assert from "node:assert/strict";
 
 export function assertStrictObjectSchemas(schema) {
@@ -23,6 +25,6 @@ export async function withOpenAiOutput(output, run) {
       output: [{ type: "message", role: "assistant", content: [{ type: "output_text", text: JSON.stringify(output), annotations: [] }] }],
     });
   };
-  try { return { value: await run(), requests }; }
+  try { return { value: await withAiExecutionScope({kind:"authenticated",key:"synthetic-schema-test"},run,{budget:new MemoryAiBudget(2),limiter:{check:async()=>({allowed:true,remaining:10,resetAt:Date.now()+1000})}}), requests }; }
   finally { globalThis.fetch = originalFetch; }
 }

@@ -106,7 +106,9 @@ test("Happy Agent route is authenticated, bounded, RLS-scoped and read-only", as
   assert.match(route, /createAssistantRlsClient/);
   assert.match(route, /buildHappyAgentContext/);
   assert.match(route, /selectHappyAgentContextForIntent/);
-  assert.match(route, /createConfiguredAssistantRateLimiter/);
-  assert.match(route, /createConfiguredAiBudget/);
+  assert.match(route, /withAiExecutionScope/);
+  const guard = await readFile("src/lib/assistant/aiExecution.server.ts", "utf8");
+  assert.match(guard, /createConfiguredAssistantRateLimiter/);
+  assert.match(guard, /createConfiguredAiBudget/);
   assert.doesNotMatch(route, /service_role|\.from\([^)]*\)\.(?:insert|update|delete)\(/);
 });

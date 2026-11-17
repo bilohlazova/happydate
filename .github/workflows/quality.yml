@@ -100,6 +100,28 @@ jobs:
         shell: bash
         run: supabase stop --no-backup || true
 
+  redis-session-security:
+    name: Redis hosted session / atomic lifecycle
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      redis:
+        image: redis:8.2.3-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Execute real Redis Lua and REST contract bridge
+        env:
+          LOCAL_REDIS_CONTAINER: ${{ job.services.redis.id }}
+        run: node --test tests/hosted-session-redis.integration.mjs
+
   android-debug:
     name: Android debug shell
     needs: web-quality

@@ -1,3 +1,4 @@
+import { reserveHostedTestSession } from "./hostedTestSession.server.ts";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash } from "node:crypto";
 import { AI_COST_POLICY, createConfiguredAiBudget, type AiBudget, type AiTokenUsage } from "./aiBudget.ts";
@@ -68,7 +69,8 @@ async function reserve(input: Pick<Call<unknown>, "feature" | "model" | "payload
     }
     const result = await budget.reserve(estimateAiPayloadTokens(input.payload), input.maxOutputTokens);
     if (!result.allowed) throw new AiExecutionError("daily_ai_budget_exceeded", 429, result.retryAfterSeconds);
-    return { reservation: result.reservation, release };
+    const session = await reserveHostedTestSession(estimateAiPayloadTokens(input.payload), input.maxOutputTokens);
+    return { reservation: result.reservation, release, session };
   } catch (error) {
     await release?.().catch(() => undefined);
     if (error instanceof AiExecutionError) throw error;
@@ -78,18 +80,21 @@ async function reserve(input: Pick<Call<unknown>, "feature" | "model" | "payload
 
 async function settle(reservation: Awaited<ReturnType<typeof reserve>>["reservation"], usage: AiTokenUsage | null) {
   // Missing/malformed usage and ambiguous failures retain the full reservation. Never refund a guess.
-  if (!usage) return;
-  try { await reservation.settle(usage); }
-  catch { logOperationalWarning("ai-budget", "settlement-retained"); }
+  if (!usage) return false;
+  try { await reservation.settle(usage); return true; }
+  catch { logOperationalWarning("ai-budget", "settlement-retained"); return false; }
 }
 
 export async function runMeteredAiCall<T>(input: Call<T>): Promise<T> {
   const gate = await reserve(input);
   try {
     const result = await input.call();
-    await settle(gate.reservation, input.usage(result));
+    const usage = input.usage(result);
+    const dailySettled = await settle(gate.reservation, usage);
+    await gate.session?.finish(usage, dailySettled);
     return result;
   } catch (error) {
+    await gate.session?.finish(null, false).catch(() => undefined);
     if (error instanceof AiExecutionError) throw error;
     throw new AiExecutionError("provider_unavailable", 502);
   } finally { await gate.release?.().catch(() => undefined); }
@@ -100,7 +105,7 @@ export async function runMeteredAiStream<T>(input: Omit<Call<AsyncIterable<T>>, 
   const gate = await reserve(input);
   let stream: AsyncIterable<T>;
   try { stream = await input.call(); }
-  catch { await gate.release?.().catch(() => undefined); throw new AiExecutionError("provider_unavailable", 502); }
+  catch { await gate.session?.finish(null, false).catch(() => undefined); await gate.release?.().catch(() => undefined); throw new AiExecutionError("provider_unavailable", 502); }
   return (async function* () {
     let measured: AiTokenUsage | null = null;
     let completed = false;
@@ -108,8 +113,10 @@ export async function runMeteredAiStream<T>(input: Omit<Call<AsyncIterable<T>>, 
       for await (const chunk of stream) { measured = input.usage(chunk); yield chunk; }
       completed = true;
     } finally {
-      if (completed) await settle(gate.reservation, measured);
-      await gate.release?.().catch(() => undefined);
+      try {
+        const dailySettled = completed ? await settle(gate.reservation, measured) : false;
+        await gate.session?.finish(completed ? measured : null, dailySettled);
+      } finally { await gate.release?.().catch(() => undefined); }
     }
   })();
 }

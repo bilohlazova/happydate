@@ -58,7 +58,7 @@ jobs:
           retention-days: 7
 
   web-quality:
-    name: Verify, build and runtime smoke
+    name: Application quality / build / HTTP smoke
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -240,7 +240,8 @@ jobs:
           build
 
   release-quality-gate:
-    name: Release security and quality gate
+    # Preserve the existing required-check context while diagnostics run independently.
+    name: Verify, build and runtime smoke
     if: always()
     needs: [dependency-security, web-quality, database-security, redis-session-security, android-debug, ios-simulator]
     runs-on: ubuntu-latest

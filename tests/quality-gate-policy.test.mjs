@@ -17,5 +17,5 @@ test('release aggregate requires success from every security and diagnostic job'
 test('security audit and native diagnostics are independent without lowering audit threshold',()=>{
  assert.match(workflow,/npm audit --audit-level=low --json/);assert.match(workflow,/npm audit --omit=dev --audit-level=low --json/);
  assert.doesNotMatch(workflow,/continue-on-error|needs: web-quality/);
- assert.match(workflow,/release-quality-gate:[\s\S]*if: always\(\)/);
+ assert.match(workflow,/release-quality-gate:[\s\S]*name: Verify, build and runtime smoke[\s\S]*if: always\(\)/);
 });

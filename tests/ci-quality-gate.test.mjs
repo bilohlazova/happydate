@@ -18,18 +18,20 @@ test("CI quality gate runs for pull requests and main without write permissions"
   assert.match(source, /cancel-in-progress:\s*true/);
 });
 
-test("CI installs exactly from lockfile and executes every quality boundary in order", async () => {
+test("CI keeps strict audit mandatory and orders web checks within an independent job", async () => {
   const source = await workflow();
+  const web = source.split("  web-quality:")[1].split("  database-security:")[0];
+  assert.match(source, /dependency-security:[\s\S]*npm audit --audit-level=low/);
+  assert.match(source, /needs: \[dependency-security, web-quality, database-security, redis-session-security, android-debug, ios-simulator\]/);
   const commands = [
     "npm ci",
-    "npm audit --audit-level=low",
     "npm run verify",
     "npm run build -- --webpack",
     "npm run smoke:production",
   ];
   let previous = -1;
   for (const command of commands) {
-    const index = source.indexOf(`run: ${command}`);
+    const index = web.indexOf(`run: ${command}`);
     assert.ok(index > previous, `${command} must appear after the preceding gate`);
     previous = index;
   }
@@ -51,10 +53,11 @@ test("CI uses placeholders rather than production secrets and pins the Node cont
   assert.doesNotMatch(source, /\$\{\{\s*secrets\./);
 });
 
-test("native shell jobs wait for web quality and compile without store signing", async () => {
+test("native shell jobs diagnose independently and compile without store signing", async () => {
   const source = await workflow();
-  assert.match(source, /android-debug:[\s\S]*?needs: web-quality[\s\S]*?runs-on: ubuntu-latest/);
-  assert.match(source, /ios-simulator:[\s\S]*?needs: web-quality[\s\S]*?runs-on: macos-15/);
+  assert.match(source, /android-debug:[\s\S]*?runs-on: ubuntu-latest/);
+  assert.doesNotMatch(source, /needs: web-quality/);
+  assert.match(source, /ios-simulator:[\s\S]*?runs-on: macos-15/);
   assert.match(source, /npx cap sync android/);
   assert.match(source, /\.\/gradlew assembleDebug --no-daemon/);
   assert.match(source, /distribution: temurin[\s\S]*?java-version: "21"/);

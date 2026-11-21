@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { AiExecutionError } from './aiExecutionError.ts';
+import { logOperationalWarning } from '../observability/safeLogger.ts';
 import { costUnits, type AiTokenUsage } from './aiBudget.ts';
 
 // Seed/ACK are operator-only operations; the application never initializes or resets a session.
@@ -33,6 +34,10 @@ redis.call('SET',KEYS[1],cjson.encode(s),'KEEPTTL'); return 1
 
 type Environment = Partial<Record<'NODE_ENV' | 'HAPPYDATE_AI_TEST_SESSION_ID' | 'VERCEL' | 'VERCEL_ENV' | 'VERCEL_TARGET_ENV' | 'VERCEL_GIT_COMMIT_SHA' | 'UPSTASH_REDIS_REST_URL' | 'UPSTASH_REDIS_REST_TOKEN', string>>;
 export type HostedSessionPermit = { finish(usage: AiTokenUsage | null, dailySettled: boolean): Promise<void> };
+export function isAiEgressDenied(): boolean {
+  return process.env.SEC01_DENY_AI_EGRESS === '1';
+}
+
 const unavailable = () => new AiExecutionError('service_unavailable', 503);
 
 /** Deployment identity comes from server configuration, never request headers or payload. */
@@ -74,7 +79,12 @@ export async function reserveHostedTestSession(inputTokens: number, maxOutputTok
   }
   const nonce = randomUUID();
   const attempt = await command(SESSION_RESERVE_LUA, [sha, inputTokens + 4 * maxOutputTokens, nonce]);
-  if (attempt < 1 || attempt > 8) throw unavailable();
+  if (attempt < 1 || attempt > 8) {
+    if (attempt === 0 && isAiEgressDenied()) {
+      logOperationalWarning('ai-session', 'redis-session-denied-with-egress-disabled');
+    }
+    throw unavailable();
+  }
   let finished = false;
   return { finish: async (usage, dailySettled) => {
     if (finished) return;

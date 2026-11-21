@@ -67,7 +67,6 @@ export function createOpenAiHappyLearningProvider({
 } = {}): HappyLearningStructuredProvider {
   return async (input) => {
     if (!apiKey) throw new Error("provider_unavailable");
-    const openai = new OpenAI({ apiKey, maxRetries: 0 });
     const params = {
       model: ASSISTANT_CHAT_CONFIG.model,
       temperature: 0,
@@ -89,7 +88,7 @@ export function createOpenAiHappyLearningProvider({
       ],
     };
     const response = await runMeteredAiCall({ feature: "learning", model: params.model, payload: params, maxOutputTokens: params.max_completion_tokens,
-      call: () => openai.chat.completions.create(params, { signal: AbortSignal.timeout(timeoutMs) }),
+      call: () => new OpenAI({ apiKey, maxRetries: 0 }).chat.completions.create(params, { signal: AbortSignal.timeout(timeoutMs) }),
       usage: value => parseOpenAiUsage(value.usage, "chat"),
     });
     const content = response.choices[0]?.message?.content;

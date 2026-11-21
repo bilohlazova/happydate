@@ -79,7 +79,6 @@ export async function POST(request: Request) {
     body,
     async (messages: AssistantProviderMessage[], signal?: AbortSignal) => {
       if (!apiKey) throw Object.assign(new Error("OpenAI is not configured"), { code: "missing_api_key" });
-      const openai = new OpenAI({ apiKey, maxRetries: 0 });
       const proposalToolEnabled = verifiedContextReady && verifiedScope?.type !== "global" && Boolean(verifiedScope?.personId);
       const params: ChatCompletionCreateParamsStreaming = {
           model: ASSISTANT_CHAT_CONFIG.model,
@@ -111,7 +110,7 @@ export async function POST(request: Request) {
       };
       const stream = await withAiExecutionScope(identity, () => runMeteredAiStream({
         feature: "chat", model: params.model, payload: params, maxOutputTokens: ASSISTANT_CHAT_CONFIG.maxOutputTokens,
-        call: () => openai.chat.completions.create(params, { signal }),
+        call: () => new OpenAI({ apiKey, maxRetries: 0 }).chat.completions.create(params, { signal }),
         usage: chunk => parseOpenAiUsage(chunk.usage, "chat"),
       }));
 

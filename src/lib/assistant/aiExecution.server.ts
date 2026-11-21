@@ -1,4 +1,4 @@
-import { readHostedSessionConfig, reserveHostedTestSession } from "./hostedTestSession.server.ts";
+import { isAiEgressDenied, readHostedSessionConfig, reserveHostedTestSession } from "./hostedTestSession.server.ts";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash } from "node:crypto";
 import { AI_COST_POLICY, createConfiguredAiBudget, type AiBudget, type AiTokenUsage } from "./aiBudget.ts";
@@ -71,6 +71,11 @@ async function reserve(input: Pick<Call<unknown>, "feature" | "model" | "payload
     const result = await budget.reserve(estimateAiPayloadTokens(input.payload), input.maxOutputTokens);
     if (!result.allowed) throw new AiExecutionError("daily_ai_budget_exceeded", 429, result.retryAfterSeconds);
     const session = await reserveHostedTestSession(estimateAiPayloadTokens(input.payload), input.maxOutputTokens);
+    // Check after the session guard so a missing or rejected session retains its own denial.
+    if (isAiEgressDenied()) {
+      await session?.finish(null, false).catch(() => undefined);
+      throw new AiExecutionError("service_unavailable", 503);
+    }
     return { reservation: result.reservation, release, session };
   } catch (error) {
     await release?.().catch(() => undefined);

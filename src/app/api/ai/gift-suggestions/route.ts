@@ -90,7 +90,6 @@ async function generateGiftRecommendations(
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) throw Object.assign(new Error("provider unavailable"), { code: "missing_api_key" });
   const serializedPayload = JSON.stringify(payload);
-  const openai = new OpenAI({ apiKey, maxRetries: 0 });
   const params = {
     model: "gpt-4.1-mini",
     temperature: 0.8,
@@ -107,7 +106,7 @@ async function generateGiftRecommendations(
     },
   };
   const ai = await runMeteredAiCall({ feature: "gifts", model: params.model, payload: params, maxOutputTokens: params.max_output_tokens,
-    call: () => openai.responses.create(params, { signal }),
+    call: () => new OpenAI({ apiKey, maxRetries: 0 }).responses.create(params, { signal }),
     usage: value => parseOpenAiUsage(value.usage, "responses"),
   });
 

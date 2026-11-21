@@ -36,7 +36,6 @@ if (process.env.RUN_LIVE_ASSISTANT_EVALS !== "1") {
 
 const apiKey = process.env.OPENAI_API_KEY?.trim();
 if (!apiKey) throw new Error("OPENAI_API_KEY is required for live evaluations");
-const openai = new OpenAI({ apiKey, maxRetries: 0 });
 process.stdout.write(`Evaluating ${ASSISTANT_BEHAVIOR_MANIFEST.behaviorVersion} with ${ASSISTANT_BEHAVIOR_MANIFEST.model}.\n`);
 let failed = 0;
 for (const scenario of scenarios) {
@@ -61,7 +60,7 @@ for (const scenario of scenarios) {
   };
   const completion = await withAiExecutionScope({ kind: "background", key: "assistant-live-evaluation" }, () => runMeteredAiCall({
     feature: "evaluation", model: params.model, payload: params, maxOutputTokens: params.max_completion_tokens,
-    call: () => openai.chat.completions.create(params, { signal: AbortSignal.timeout(30_000) }),
+    call: () => new OpenAI({ apiKey, maxRetries: 0 }).chat.completions.create(params, { signal: AbortSignal.timeout(30_000) }),
     usage: value => parseOpenAiUsage(value.usage, "chat"),
   }));
   const response = completion.choices[0]?.message?.content ?? "";

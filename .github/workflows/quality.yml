@@ -14,8 +14,51 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  dependency-security:
+    name: Dependency security audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install locked dependencies
+        id: install
+        run: npm ci
+      - name: Strict complete dependency audit
+        shell: bash
+        run: |
+          if npm audit --audit-level=low --json > audit-full.json; then
+            cat audit-full.json
+          else
+            cat audit-full.json
+            exit 1
+          fi
+      - name: Production dependency audit (independent evidence)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        shell: bash
+        run: |
+          if npm audit --omit=dev --audit-level=low --json > audit-production.json; then
+            cat audit-production.json
+          else
+            cat audit-production.json
+            exit 1
+          fi
+      - name: Preserve dependency audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-audit-${{ github.event.pull_request.head.sha || github.sha }}
+          path: audit-*.json
+          if-no-files-found: warn
+          retention-days: 7
+
   web-quality:
-    name: Verify, build and runtime smoke
+    name: Application quality / build / HTTP smoke
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -26,6 +69,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Use Node.js 24
         uses: actions/setup-node@v4
@@ -35,9 +80,6 @@ jobs:
 
       - name: Install locked dependencies
         run: npm ci
-
-      - name: Audit dependency vulnerabilities
-        run: npm audit --audit-level=low
 
       - name: Lint, typecheck and test
         run: npm run verify
@@ -50,7 +92,6 @@ jobs:
 
   database-security:
     name: Database security / RLS isolation
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -60,6 +101,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Use Node.js 24
         uses: actions/setup-node@v4
@@ -100,9 +143,32 @@ jobs:
         shell: bash
         run: supabase stop --no-backup || true
 
+  redis-session-security:
+    name: Redis hosted session / atomic lifecycle
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      redis:
+        image: redis:8.2.3-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Execute real Redis Lua and REST contract bridge
+        env:
+          LOCAL_REDIS_CONTAINER: ${{ job.services.redis.id }}
+        run: node --test tests/hosted-session-redis.integration.mjs
+
   android-debug:
     name: Android debug shell
-    needs: web-quality
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -111,6 +177,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Use Node.js 24
         uses: actions/setup-node@v4
@@ -137,7 +205,6 @@ jobs:
 
   ios-simulator:
     name: iOS Simulator shell
-    needs: web-quality
     runs-on: macos-15
     timeout-minutes: 30
     env:
@@ -146,6 +213,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Use Node.js 24
         uses: actions/setup-node@v4
@@ -169,3 +238,26 @@ jobs:
           -derivedDataPath ios/DerivedData
           CODE_SIGNING_ALLOWED=NO
           build
+
+  release-quality-gate:
+    # Preserve the existing required-check context while diagnostics run independently.
+    name: Verify, build and runtime smoke
+    if: always()
+    needs: [dependency-security, web-quality, database-security, redis-session-security, android-debug, ios-simulator]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every diagnostic gate
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node - <<'JS'
+          const jobs = JSON.parse(process.env.RESULTS);
+          let failed = false;
+          const required = ['dependency-security', 'web-quality', 'database-security', 'redis-session-security', 'android-debug', 'ios-simulator'];
+          for (const name of required) {
+            const job = jobs[name] ?? {result: 'missing'};
+            console.log(`${name}: ${job.result}`);
+            if (job.result !== 'success') failed = true;
+          }
+          if (failed) process.exit(1);
+          JS

@@ -1,3 +1,4 @@
+import { aiExecutionFailureResponse } from "./aiExecutionError.ts";
 import { ASSISTANT_CHAT_CONFIG, type AssistantIdentityKind } from "./chatConfig.ts";
 import type { AssistantChatRequest, AssistantConversationItem } from "./chatContract.ts";
 import { buildAssistantSystemPrompt, formatAssistantContext, formatAssistantPetContext, parseAssistantChatRequest } from "./chatContract.ts";
@@ -323,6 +324,8 @@ export async function createAssistantChatResponse(
     abort.cleanup();
     await release?.();
     if (options.signal?.aborted) return new Response(null, { status: 499 });
+    const guarded = aiExecutionFailureResponse(error);
+    if (guarded) return guarded;
     const diagnostic = classifyAssistantProviderError(error, abort.timedOut());
     logger("provider request failed", diagnostic);
     return providerFailureResponse(diagnostic);

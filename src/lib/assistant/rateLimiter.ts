@@ -62,6 +62,7 @@ export class UpstashAssistantRateLimiter implements AssistantRateLimiter {
       headers: { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json" },
       body: JSON.stringify(command),
       cache: "no-store",
+      signal: AbortSignal.timeout(5_000),
     });
     if (!response.ok) throw new Error("rate_limiter_unavailable");
     const body = await response.json() as UpstashResult;
@@ -72,9 +73,13 @@ export class UpstashAssistantRateLimiter implements AssistantRateLimiter {
   async check(key: string, kind: AssistantIdentityKind): Promise<AssistantRateLimitResult> {
     const policy = ASSISTANT_RATE_LIMITS[kind];
     const bucket = `assistant:rate:${key}:${Math.floor(Date.now() / (policy.windowSeconds * 1_000))}`;
-    const count = Number(await this.command(["INCR", bucket]));
+    const rawCount = await this.command(["INCR", bucket]);
+    if (typeof rawCount !== "number" || !Number.isSafeInteger(rawCount) || rawCount < 1) throw new Error("rate_limiter_unavailable");
+    const count = rawCount;
     if (count === 1) await this.command(["EXPIRE", bucket, policy.windowSeconds]);
-    const ttl = Math.max(1, Number(await this.command(["TTL", bucket])) || policy.windowSeconds);
+    const rawTtl = await this.command(["TTL", bucket]);
+    if (typeof rawTtl !== "number" || !Number.isSafeInteger(rawTtl) || rawTtl < 0) throw new Error("rate_limiter_unavailable");
+    const ttl = Math.max(1, rawTtl);
     return {
       allowed: count <= policy.requests,
       remaining: Math.max(0, policy.requests - count),

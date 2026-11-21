@@ -22,16 +22,17 @@ test("every active private JSON API has an explicit byte limit", async () => {
 test("Gift AI fails closed around identity, rate limits, concurrency and provider time", async () => {
   const route = await source("src/app/api/ai/gift-suggestions/route.ts");
   const ownership = route.indexOf("resolveGiftAccess(");
-  const limiter = route.indexOf("limiter.check(");
-  const provider = route.indexOf("generateGiftRecommendations(", limiter);
-  assert.ok(ownership > 0 && limiter > ownership && provider > limiter);
-  assert.match(route, /createConfiguredAssistantRateLimiter/);
-  assert.match(route, /createConfiguredAiBudget/);
-  assert.match(route, /budget\.reserve/);
-  assert.match(route, /daily_ai_budget_exceeded/);
+  const generation = route.indexOf("const parsed = await withAiExecutionScope");
+  assert.ok(ownership > 0 && generation > ownership);
+  assert.match(route, /runMeteredAiCall/);
+  assert.match(route, /parseOpenAiUsage/);
+  const guard = await source("src/lib/assistant/aiExecution.server.ts");
+  assert.match(guard, /createConfiguredAssistantRateLimiter/);
+  assert.match(guard, /createConfiguredAiBudget/);
+  assert.match(guard, /budget\.reserve/);
+  assert.match(guard, /limiter\.acquire/);
+  assert.match(guard, /daily_ai_budget_exceeded/);
   assert.match(route, /max_output_tokens: GIFT_AI_MAX_OUTPUT_TOKENS/);
-  assert.match(route, /ai\.usage\.input_tokens/);
-  assert.match(route, /limiter\.acquire/);
   assert.match(route, /AbortSignal\.timeout\(GIFT_AI_TIMEOUT_MS\)/);
   assert.match(route, /Retry-After/);
   assert.match(route, /Cache-Control.*no-store/);

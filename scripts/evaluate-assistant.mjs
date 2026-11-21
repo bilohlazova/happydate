@@ -1,3 +1,4 @@
+import { withAiExecutionScope, runMeteredAiCall, parseOpenAiUsage } from "../src/lib/assistant/aiExecution.server.ts";
 import { readFile } from "node:fs/promises";
 import OpenAI from "openai";
 import { ASSISTANT_CHAT_CONFIG } from "../src/lib/assistant/chatConfig.ts";
@@ -35,7 +36,6 @@ if (process.env.RUN_LIVE_ASSISTANT_EVALS !== "1") {
 
 const apiKey = process.env.OPENAI_API_KEY?.trim();
 if (!apiKey) throw new Error("OPENAI_API_KEY is required for live evaluations");
-const openai = new OpenAI({ apiKey });
 process.stdout.write(`Evaluating ${ASSISTANT_BEHAVIOR_MANIFEST.behaviorVersion} with ${ASSISTANT_BEHAVIOR_MANIFEST.model}.\n`);
 let failed = 0;
 for (const scenario of scenarios) {
@@ -45,7 +45,7 @@ for (const scenario of scenarios) {
   });
   const outcomes = formatAssistantGiftOutcomeContext(scenario.serverGiftOutcomes ?? []);
   const savedGiftLinks = formatAssistantSavedGiftLinkContext(scenario.serverSavedGiftLinks ?? []);
-  const completion = await openai.chat.completions.create({
+  const params = {
     model: ASSISTANT_CHAT_CONFIG.model,
     temperature: ASSISTANT_CHAT_CONFIG.temperature,
     max_completion_tokens: ASSISTANT_CHAT_CONFIG.maxOutputTokens,
@@ -57,7 +57,12 @@ for (const scenario of scenarios) {
       ...scenario.request.conversation,
       { role: "user", content: scenario.request.message },
     ],
-  });
+  };
+  const completion = await withAiExecutionScope({ kind: "background", key: "assistant-live-evaluation" }, () => runMeteredAiCall({
+    feature: "evaluation", model: params.model, payload: params, maxOutputTokens: params.max_completion_tokens,
+    call: () => new OpenAI({ apiKey, maxRetries: 0 }).chat.completions.create(params, { signal: AbortSignal.timeout(30_000) }),
+    usage: value => parseOpenAiUsage(value.usage, "chat"),
+  }));
   const response = completion.choices[0]?.message?.content ?? "";
   const failures = evaluateAssistantResponse(scenario, response);
   if (failures.length) failed += 1;

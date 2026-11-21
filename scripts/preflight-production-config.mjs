@@ -4,9 +4,13 @@ import {
 } from "../src/lib/assistant/chatEnvironment.ts";
 
 const status = getAssistantEnvironmentStatus();
-const missing = getMissingAssistantConfiguration();
+const learningConfigured = Boolean(process.env.HAPPY_LEARNING_TOKEN_SECRET?.trim());
+const missing = [
+  ...getMissingAssistantConfiguration(),
+  ...(!learningConfigured ? ["happy_learning_token_secret_missing"] : []),
+];
 
-if (!status.productionReady) {
+if (!status.productionReady || !learningConfigured) {
   process.stderr.write("Production AI configuration preflight: FAIL\n");
   process.stderr.write(`Missing configuration categories: ${missing.join(", ")}\n`);
   process.stderr.write("Secret values are not inspected or printed.\n");

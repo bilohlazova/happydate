@@ -1,3 +1,5 @@
+import { withAiExecutionScope } from "../../assistant/aiExecution.server";
+import { AiExecutionError } from "../../assistant/aiExecutionError";
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readSupabasePublicConfig } from "@/lib/supabase/publicConfig";
@@ -14,7 +16,8 @@ export type ContinueBirthdayTaskResult =
  | { kind:"generated" | "greeting_generated"; taskId:string; ui: unknown[] }
  | { kind:"waiting_user"; taskId:string; step:"choose_gift" }
  | { kind:"paused" | "terminal" | "already_running"; taskId:string }
- | { kind:"not_found" | "invalid_state" | "unavailable" | "provider_unavailable" };
+ | { kind:"not_found" | "invalid_state" | "unavailable" | "provider_unavailable" }
+ | { kind:"rate_limited" | "budget_exceeded"; retryAfterSeconds:number };
 
 function admin(): SupabaseClient | null { const config=readSupabasePublicConfig(); const key=process.env.SUPABASE_SERVICE_ROLE_KEY?.trim(); return config&&key ? createClient(config.url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}) : null; }
 function version(v: unknown): unknown { return v && typeof v === "object" ? (v as {templateVersion?:unknown}).templateVersion : null; }
@@ -55,7 +58,7 @@ export async function continueBirthdayTask(input:{userId:string;taskId:string;lo
    const context=await buildHappyAgentContext({client,userId:input.userId,locale:input.locale,timezone:input.timezone,personId:task.person_id,eventId:task.event_id,taskId:task.id});
    const selected=context.kind==="ok"?selectHappyAgentContextForIntent(context.context,"write_greeting"):null;
    if(!selected||selected.kind!=="ok"){await transition(client,step,"active","pending");return {kind:"invalid_state"};}
-   try{const response=await createHappyAgentResponse({intent:"write_greeting",context:selected.context,provider:input.provider??createOpenAiHappyAgentProvider(),signal:AbortSignal.timeout(30_000)});const {data:done}=await client.rpc("complete_birthday_greeting_v1",{p_user_id:input.userId,p_task_id:task.id,p_step_id:step.id,p_content:response.message});if(done!==true){await transition(client,step,"active","pending");return {kind:"already_running",taskId:task.id};}return {kind:"greeting_generated",taskId:task.id,ui:[]};}catch{await transition(client,step,"active","pending");return {kind:"provider_unavailable"};}
+   try{const response=await withAiExecutionScope({kind:"authenticated",key:input.userId},()=>createHappyAgentResponse({intent:"write_greeting",context:selected.context,provider:input.provider??createOpenAiHappyAgentProvider(),signal:AbortSignal.timeout(30_000)}));const {data:done}=await client.rpc("complete_birthday_greeting_v1",{p_user_id:input.userId,p_task_id:task.id,p_step_id:step.id,p_content:response.message});if(done!==true){await transition(client,step,"active","pending");return {kind:"already_running",taskId:task.id};}return {kind:"greeting_generated",taskId:task.id,ui:[]};}catch(error){await transition(client,step,"active","pending");return taskProviderFailure(error);}
   }
   // Claim exactly one generative step before constructing any provider input.
   if(!await transition(client,step,"pending","active")) continue;
@@ -63,14 +66,23 @@ export async function continueBirthdayTask(input:{userId:string;taskId:string;lo
   const selected=context.kind==="ok" ? selectHappyAgentContextForIntent(context.context,"birthday_gift") : null;
   if(!selected||selected.kind!=="ok") { await transition(client,step,"active","pending"); return {kind:"invalid_state"}; }
   try {
-   const response=await createHappyAgentResponse({intent:"birthday_gift",context:selected.context,provider:input.provider??createOpenAiHappyAgentProvider(),signal:AbortSignal.timeout(30_000)});
+   const response=await withAiExecutionScope({kind:"authenticated",key:input.userId},()=>createHappyAgentResponse({intent:"birthday_gift",context:selected.context,provider:input.provider??createOpenAiHappyAgentProvider(),signal:AbortSignal.timeout(30_000)}));
    const recommendation = await persistBirthdayRecommendation(client, task, response.ui ?? []);
    if (!recommendation) { await transition(client,step,"active","pending"); return {kind:"provider_unavailable"}; }
    const choose=steps.find((s)=>s.type==="choose_gift"); if(!choose)return {kind:"invalid_state"};
    const {data:completed,error:completionError}=await client.rpc("complete_birthday_gift_generation_v1",{p_task_id:task.id,p_generate_step_id:step.id,p_choose_step_id:choose.id});
    if(completionError||completed!==true) { await transition(client,step,"active","pending"); return {kind:"already_running",taskId:task.id}; }
    return {kind:"generated",taskId:task.id,ui:recommendation.ui};
-  } catch { await transition(client,step,"active","pending"); return {kind:"provider_unavailable"}; }
+  } catch (error) { await transition(client,step,"active","pending"); return taskProviderFailure(error); }
  }
  return {kind:"already_running",taskId:input.taskId};
+}
+
+function taskProviderFailure(error: unknown): ContinueBirthdayTaskResult {
+ if(error instanceof AiExecutionError){
+  if(error.code==="daily_ai_budget_exceeded")return {kind:"budget_exceeded",retryAfterSeconds:error.retryAfterSeconds??60};
+  if(error.code==="rate_limited")return {kind:"rate_limited",retryAfterSeconds:error.retryAfterSeconds??60};
+  if(error.code==="service_unavailable")return {kind:"unavailable"};
+ }
+ return {kind:"provider_unavailable"};
 }

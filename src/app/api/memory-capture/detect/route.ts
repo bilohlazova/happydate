@@ -16,6 +16,13 @@ function rateLimitKey(userId: string): string {
 }
 
 export async function POST(request: Request) {
+  const tokenSecret = process.env.HAPPY_LEARNING_TOKEN_SECRET?.trim();
+  if (!tokenSecret) {
+    return Response.json({ candidates: [] }, {
+      status: 503,
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
   const limiter = createConfiguredAssistantRateLimiter();
   return createHappyLearningDetectV2Response(request, {
     authenticate: authenticateHappyLearningRequest,
@@ -25,7 +32,7 @@ export async function POST(request: Request) {
     issueDetectionToken: (userId, candidate) => issueHappyLearningDetectionToken({
       userId,
       candidate,
-      secret: process.env.HAPPY_LEARNING_TOKEN_SECRET?.trim() ?? "",
+      secret: tokenSecret,
     }),
     checkRateLimit: async (userId) => {
       if (!limiter) throw new Error("rate_limiter_unavailable");

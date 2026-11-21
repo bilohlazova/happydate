@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { createHash } from "node:crypto";
 import {
   getCachedGiftIdeas,
   findOwnedGiftPerson,
@@ -33,17 +32,16 @@ import {
   type GiftRecommendationAiPayload,
 } from "@/lib/gift-intelligence";
 import { DEFAULT_LOCALE, normalizeLocale } from "@/i18n/config";
-import { createConfiguredAssistantRateLimiter } from "@/lib/assistant/rateLimiter";
 import { classifyAssistantProviderError } from "@/lib/assistant/chatServer";
 import { readBoundedJson } from "@/lib/server/readBoundedJson";
-import { logAiUsageEvent, logOperationalError, logOperationalWarning } from "@/lib/observability/safeLogger";
+import { logAiUsageEvent, logOperationalError } from "@/lib/observability/safeLogger";
 import {
   AI_COST_POLICY,
-  createConfiguredAiBudget,
-  estimateInputTokens,
   estimatedUsd,
-  type AiBudget,
 } from "@/lib/assistant/aiBudget";
+
+import { withAiExecutionScope, runMeteredAiCall, parseOpenAiUsage } from "@/lib/assistant/aiExecution.server";
+import { aiExecutionFailureResponse } from "@/lib/assistant/aiExecutionError";
 
 /* ================= TYPES ================= */
 
@@ -84,31 +82,15 @@ function boundedString(value: unknown, maxLength: number): string | null {
     : null;
 }
 
-function giftRateLimitKey(userId: string): string {
-  return createHash("sha256").update(`gift-ai:${userId}`).digest("hex");
-}
-
 async function generateGiftRecommendations(
   payload: unknown,
   instructions: string,
   signal: AbortSignal,
-  budget: AiBudget,
 ): Promise<GiftRecommendationAiResponse> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) throw Object.assign(new Error("provider unavailable"), { code: "missing_api_key" });
   const serializedPayload = JSON.stringify(payload);
-  const budgetResult = await budget.reserve(
-    estimateInputTokens([{ content: instructions }, { content: serializedPayload }]),
-    GIFT_AI_MAX_OUTPUT_TOKENS,
-  );
-  if (!budgetResult.allowed) {
-    throw Object.assign(new Error("daily AI budget exceeded"), {
-      code: "daily_ai_budget_exceeded",
-      retryAfter: budgetResult.retryAfterSeconds,
-    });
-  }
-  const openai = new OpenAI({ apiKey });
-  const ai = await openai.responses.create({
+  const params = {
     model: "gpt-4.1-mini",
     temperature: 0.8,
     max_output_tokens: GIFT_AI_MAX_OUTPUT_TOKENS,
@@ -116,19 +98,20 @@ async function generateGiftRecommendations(
     input: serializedPayload,
     text: {
       format: {
-        type: "json_schema",
+        type: "json_schema" as const,
         name: "gift_recommendations",
         strict: true,
         schema: giftRecommendationJsonSchema,
       },
     },
-  }, { signal });
+  };
+  const ai = await runMeteredAiCall({ feature: "gifts", model: params.model, payload: params, maxOutputTokens: params.max_output_tokens,
+    call: () => new OpenAI({ apiKey, maxRetries: 0 }).responses.create(params, { signal }),
+    usage: value => parseOpenAiUsage(value.usage, "responses"),
+  });
 
-  if (ai.usage) {
-    const usage = { inputTokens: ai.usage.input_tokens, outputTokens: ai.usage.output_tokens };
-    await budgetResult.reservation.settle(usage).catch(() => {
-      logOperationalWarning("ai-budget", "settlement-skipped", { category: "upstash_unavailable" });
-    });
+  const usage = parseOpenAiUsage(ai.usage, "responses");
+  if (usage) {
     logAiUsageEvent({
       feature: "gift-recommendations",
       ...usage,
@@ -153,7 +136,6 @@ async function generateGiftRecommendations(
 /* ================= ROUTE ================= */
 
 export async function POST(req: Request) {
-  let release: (() => Promise<void>) | undefined;
   try {
     const parsedBody = await readBoundedJson(req, MAX_GIFT_REQUEST_BYTES);
     if (!parsedBody.ok) return json({ ideas: [], error: parsedBody.error }, parsedBody.status);
@@ -208,26 +190,6 @@ export async function POST(req: Request) {
       });
     }
 
-    const limiter = createConfiguredAssistantRateLimiter();
-    if (!limiter) return json({ ideas: [], error: "service_unavailable" }, 503);
-    const rateKey = giftRateLimitKey(ownedPerson.userId);
-    let limit;
-    try {
-      limit = await limiter.check(rateKey, "authenticated");
-    } catch {
-      return json({ ideas: [], error: "service_unavailable" }, 503);
-    }
-    if (!limit.allowed) {
-      const retryAfter = Math.max(1, Math.min(600, Math.ceil((limit.resetAt - Date.now()) / 1_000)));
-      return json({ ideas: [], error: "rate_limited", retryAfter }, 429, { "Retry-After": String(retryAfter) });
-    }
-    if (limiter.acquire) {
-      release = await limiter.acquire(rateKey) ?? undefined;
-      if (!release) return json({ ideas: [], error: "too_many_concurrent_requests" }, 429, { "Retry-After": "5" });
-    }
-    const aiBudget = createConfiguredAiBudget();
-    if (!aiBudget) return json({ ideas: [], error: "service_unavailable" }, 503);
-
     /* ================= LOAD PERSON ================= */
 
     const baseGiftRecommendationContext = buildGiftRecommendationContext({
@@ -278,12 +240,11 @@ export async function POST(req: Request) {
     /* ================= OPENAI ================= */
 
     const providerSignal = AbortSignal.timeout(GIFT_AI_TIMEOUT_MS);
-    const parsed = await generateGiftRecommendations(
+    const parsed = await withAiExecutionScope({ kind: "authenticated", key: ownedPerson.userId }, () => generateGiftRecommendations(
       giftRecommendationPayload,
       buildGiftRecommendationInstructions(giftRecommendationContext, giftDiscoveryPromptInput),
       providerSignal,
-      aiBudget,
-    );
+    ));
     let validated = validateGiftRecommendations(parsed, giftRecommendationContext, {
       discoverySession: giftDiscoverySession,
     });
@@ -294,12 +255,11 @@ export async function POST(req: Request) {
         validationErrors: validated.validationErrors,
         validSuggestions: validated.suggestions,
       };
-      const repaired = await generateGiftRecommendations(
+      const repaired = await withAiExecutionScope({ kind: "authenticated", key: ownedPerson.userId }, () => generateGiftRecommendations(
         repairInput,
         buildGiftRepairInstructions(giftRecommendationContext),
         providerSignal,
-        aiBudget,
-      );
+      ));
       const repairedValidated = validateGiftRecommendations(
         {
           suggestions: [...validated.suggestions, ...repaired.suggestions],
@@ -355,6 +315,8 @@ export async function POST(req: Request) {
       cached: false,
     });
   } catch (error) {
+    const guarded = aiExecutionFailureResponse(error);
+    if (guarded) return guarded;
     if (error && typeof error === "object" && "code" in error && error.code === "daily_ai_budget_exceeded") {
       const retryAfter = "retryAfter" in error && typeof error.retryAfter === "number" ? error.retryAfter : 3600;
       return json(
@@ -370,7 +332,5 @@ export async function POST(req: Request) {
       { ideas: [], error: providerFailure ? "provider_unavailable" : "request_failed" },
       providerFailure ? 503 : 500,
     );
-  } finally {
-    await release?.();
   }
 }

@@ -9,7 +9,8 @@ export type HappyLearningConfirmationCandidate = Pick<
 >;
 
 type DetectionTokenClaims = {
-  v: 1;
+  v: 2;
+  aud: "happy-learning-confirm";
   userId: string;
   personId: string;
   candidateHash: string;
@@ -57,7 +58,8 @@ export function issueHappyLearningDetectionToken(input: {
   const iat = Math.floor((input.now ?? Date.now()) / 1_000);
   const candidateHash = digest(canonicalCandidate(input.candidate));
   const claims: DetectionTokenClaims = {
-    v: 1,
+    v: 2,
+    aud: "happy-learning-confirm",
     userId: input.userId,
     personId: input.candidate.personId,
     candidateHash,
@@ -88,7 +90,7 @@ export function verifyHappyLearningDetectionToken(input: {
 }): DetectionTokenVerification {
   if (!input.secret || input.token.length > 4_096) return { ok: false, error: "invalid_token" };
   const [encoded, encodedSignature, extra] = input.token.split(".");
-  if (!encoded || !encodedSignature || extra) return { ok: false, error: "invalid_token" };
+  if (!encoded || !/^[A-Za-z0-9_-]+$/.test(encoded) || !encodedSignature || !/^[A-Za-z0-9_-]{43}$/.test(encodedSignature) || extra) return { ok: false, error: "invalid_token" };
   let supplied: Buffer;
   let claims: DetectionTokenClaims;
   try {
@@ -98,10 +100,10 @@ export function verifyHappyLearningDetectionToken(input: {
     return { ok: false, error: "invalid_token" };
   }
   const expected = signature(encoded, input.secret);
-  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return { ok: false, error: "invalid_token" };
-  if (!claims || claims.v !== 1 || (claims.source !== "chat_message" && claims.source !== "gift_discovery")) return { ok: false, error: "invalid_token" };
+  if (supplied.toString("base64url") !== encodedSignature || supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return { ok: false, error: "invalid_token" };
+  if (!claims || claims.v !== 2 || claims.aud !== "happy-learning-confirm" || typeof claims.userId !== "string" || !claims.userId || (claims.source !== "chat_message" && claims.source !== "gift_discovery")) return { ok: false, error: "invalid_token" };
   const now = Math.floor((input.now ?? Date.now()) / 1_000);
-  if (!Number.isInteger(claims.iat) || !Number.isInteger(claims.exp) || claims.exp <= now || claims.iat > now + 60) {
+  if (!Number.isInteger(claims.iat) || !Number.isInteger(claims.exp) || claims.exp <= now || claims.iat > now + 60 || claims.exp <= claims.iat || claims.exp - claims.iat > HAPPY_LEARNING_TOKEN_TTL_SECONDS) {
     return { ok: false, error: "expired_token" };
   }
   const candidateHash = digest(canonicalCandidate(input.candidate));

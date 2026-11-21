@@ -1,3 +1,4 @@
+import { logHostedAiAttestation, readHostedSessionConfig } from "@/lib/assistant/hostedTestSession.server";
 import OpenAI from "openai";
 import { ASSISTANT_CHAT_CONFIG } from "@/lib/assistant/chatConfig";
 import { getAssistantEnvironmentStatus } from "@/lib/assistant/chatEnvironment";
@@ -12,7 +13,9 @@ import { readBoundedJson } from "@/lib/server/readBoundedJson";
 import { logOperationalError, logOperationalWarning } from "@/lib/observability/safeLogger";
 import { getHomeRepositoryData } from "@/lib/repositories/home/home.repository";
 import { buildGuestAssistantRequest, buildVerifiedAssistantRequest } from "@/lib/assistant/verifiedAssistantContext.server";
-import { createConfiguredAiBudget, type AiTokenUsage } from "@/lib/assistant/aiBudget";
+import { type AiTokenUsage } from "@/lib/assistant/aiBudget";
+import { withAiExecutionScope, runMeteredAiStream, parseOpenAiUsage } from "@/lib/assistant/aiExecution.server";
+import type { ChatCompletionCreateParamsStreaming } from "openai/resources/chat/completions";
 import { loadAssistantPersonSymbol } from "@/lib/assistant/personSymbolContext.server";
 import { buildPersonMemoryProfile, formatPersonMemoryProfileForAssistant } from "@/lib/memory-engine";
 import { loadPersonHappyConversationHistory, savePersonHappyConversation } from "@/lib/assistant/happyConversationHistory.server";
@@ -34,6 +37,7 @@ export async function POST(request: Request) {
 
   const parsed = parseAssistantChatRequest(body);
   if (!parsed.success) {
+    logHostedAiAttestation(body);
     return Response.json({ error: "invalid_request" }, { status: 400 });
   }
 
@@ -63,18 +67,21 @@ export async function POST(request: Request) {
       return Response.json({ error: "service_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
     }
   }
+  // Chat has a route-level limiter before the shared provider boundary.
+  try {
+    readHostedSessionConfig();
+  } catch {
+    return Response.json({ error: "service_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
   const rateLimiter = createConfiguredAssistantRateLimiter();
-  const budget = createConfiguredAiBudget();
   const apiKey = process.env.OPENAI_API_KEY?.trim();
 
   return createAssistantChatResponse(
     body,
     async (messages: AssistantProviderMessage[], signal?: AbortSignal) => {
       if (!apiKey) throw Object.assign(new Error("OpenAI is not configured"), { code: "missing_api_key" });
-      const openai = new OpenAI({ apiKey });
       const proposalToolEnabled = verifiedContextReady && verifiedScope?.type !== "global" && Boolean(verifiedScope?.personId);
-      const stream = await openai.chat.completions.create(
-        {
+      const params: ChatCompletionCreateParamsStreaming = {
           model: ASSISTANT_CHAT_CONFIG.model,
           temperature: ASSISTANT_CHAT_CONFIG.temperature,
           max_completion_tokens: ASSISTANT_CHAT_CONFIG.maxOutputTokens,
@@ -101,9 +108,12 @@ export async function POST(request: Request) {
             }],
             tool_choice: "auto" as const,
           } : {}),
-        },
-        { signal },
-      );
+      };
+      const stream = await withAiExecutionScope(identity, () => runMeteredAiStream({
+        feature: "chat", model: params.model, payload: params, maxOutputTokens: ASSISTANT_CHAT_CONFIG.maxOutputTokens,
+        call: () => new OpenAI({ apiKey, maxRetries: 0 }).chat.completions.create(params, { signal }),
+        usage: chunk => parseOpenAiUsage(chunk.usage, "chat"),
+      }));
 
       let resolveUsage: (usage: AiTokenUsage | null) => void = () => undefined;
       let resolveMemoryProposal: (proposal: unknown) => void = () => undefined;
@@ -148,7 +158,6 @@ export async function POST(request: Request) {
       signal: request.signal,
       identity,
       rateLimiter,
-      budget,
       onCompleted: async (preparedRequest, responseText, memoryProposal) => {
         if (identity.kind !== "authenticated" || !identity.userId) return;
         if (verifiedContextReady && verifiedScope) {

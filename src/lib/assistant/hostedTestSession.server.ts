@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { AiExecutionError } from './aiExecutionError.ts';
-import { logOperationalWarning } from '../observability/safeLogger.ts';
+import { logOperationalWarning, logSec01HostedAiAttestation } from '../observability/safeLogger.ts';
 import { costUnits, type AiTokenUsage } from './aiBudget.ts';
 
 // Seed/ACK are operator-only operations; the application never initializes or resets a session.
@@ -48,13 +48,13 @@ export function logHostedAiAttestation(body: unknown, env: Environment = process
   if (typeof expectedSha !== 'string' || !/^[a-f0-9]{40}$/.test(expectedSha) || /^0+$/.test(expectedSha)) return;
 
   const id = env.HAPPYDATE_AI_TEST_SESSION_ID;
-  console.info('sec01-hosted-ai-attestation', JSON.stringify({
+  logSec01HostedAiAttestation({
     egressDenied: isAiEgressDenied(env),
     preview: true,
     shaMatches: env.VERCEL_GIT_COMMIT_SHA === expectedSha,
     sessionIdValid: typeof id === 'string' && SESSION_ID_PATTERN.test(id),
     redisConfigured: Boolean(env.UPSTASH_REDIS_REST_URL?.trim() && env.UPSTASH_REDIS_REST_TOKEN?.trim()),
-  }));
+  });
 }
 
 const SESSION_ID_PATTERN = /^sec01-[a-z0-9-]{16,80}$/;

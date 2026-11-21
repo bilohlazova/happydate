@@ -140,7 +140,10 @@ test('egress deny runs after Redis session authorization and blocks both provide
 test('only an invalid attestation envelope logs Preview runtime booleans', () => {
  const entries = [];
  const info = console.info;
- console.info = (event, fields) => entries.push([event, JSON.parse(fields)]);
+ console.info = message => {
+  const {event, ...checks} = JSON.parse(message);
+  entries.push([event, checks]);
+ };
  try {
   const body = {sec01AttestDeploymentSha:env.VERCEL_GIT_COMMIT_SHA};
   assert.equal(parseAssistantChatRequest(body).success,false);

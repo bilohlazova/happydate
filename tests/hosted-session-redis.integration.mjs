@@ -10,7 +10,7 @@ test('real Redis hosted session lifecycle (no skipped fallback)',async t=>{
  const container=process.env.LOCAL_REDIS_CONTAINER;
  assert.ok(/^happydate-sec01-redis-[a-z0-9-]+$/.test(container??'') || (process.env.GITHUB_ACTIONS==='true' && /^[a-f0-9]{64}$/.test(container??'')), 'isolated Redis container is required');
  const cmd=async args=>JSON.parse((await exec('docker',['exec',container,'redis-cli','--json',...args.map(String)])).stdout);
- const env={HAPPYDATE_AI_TEST_SESSION_ID:'sec01-ci-integration-12345678',VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_SHA:'a'.repeat(40),UPSTASH_REDIS_REST_URL:'https://isolated-ci.invalid',UPSTASH_REDIS_REST_TOKEN:'synthetic-contract-token'};
+ const env={HAPPYDATE_AI_TEST_SESSION_ID:'sec01-ci-integration-12345678',NODE_ENV:'production',VERCEL:'1',VERCEL_TARGET_ENV:'preview',VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_SHA:'a'.repeat(40),UPSTASH_REDIS_REST_URL:'https://isolated-ci.invalid',UPSTASH_REDIS_REST_TOKEN:'synthetic-contract-token'};
  const key='sec01:session:'+env.HAPPYDATE_AI_TEST_SESSION_ID;
  const seed=async overrides=>cmd(['SET',key,JSON.stringify({version:1,sha:env.VERCEL_GIT_COMMIT_SHA,deadline:Date.now()+60000,status:'active',calls:0,units:0,pending:false,...overrides}),'PX',60000]);
  const state=async()=>JSON.parse(await cmd(['GET',key]));

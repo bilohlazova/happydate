@@ -2,12 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {reserveHostedTestSession, SESSION_RESERVE_LUA} from '../src/lib/assistant/hostedTestSession.server.ts';
 import {withAiExecutionScope,runMeteredAiCall,runMeteredAiStream} from '../src/lib/assistant/aiExecution.server.ts';
-const env={HAPPYDATE_AI_TEST_SESSION_ID:'sec01-synthetic-session-123456',VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_SHA:'a'.repeat(40),UPSTASH_REDIS_REST_URL:'https://synthetic.invalid',UPSTASH_REDIS_REST_TOKEN:'synthetic-not-a-credential'};
+const env={HAPPYDATE_AI_TEST_SESSION_ID:'sec01-synthetic-session-123456',NODE_ENV:'production',VERCEL:'1',VERCEL_TARGET_ENV:'preview',VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_SHA:'a'.repeat(40),UPSTASH_REDIS_REST_URL:'https://synthetic.invalid',UPSTASH_REDIS_REST_TOKEN:'synthetic-not-a-credential'};
 const saved={...process.env};
 test.afterEach(()=>{for(const k of Object.keys(env)){if(saved[k]===undefined)delete process.env[k];else process.env[k]=saved[k];}});
 test('disabled has no network; incomplete/production config fails closed',async()=>{
  await reserveHostedTestSession(100,700,{});
- await assert.rejects(reserveHostedTestSession(100,700,{VERCEL_ENV:'preview'}),e=>e.status===503);
+ await assert.rejects(reserveHostedTestSession(100,700,{NODE_ENV:'production',VERCEL:'1',VERCEL_TARGET_ENV:'preview',VERCEL_ENV:'preview'}),e=>e.status===503);
  for(const change of [{VERCEL_ENV:'production'},{HAPPYDATE_AI_TEST_SESSION_ID:''},{VERCEL_GIT_COMMIT_SHA:''},{UPSTASH_REDIS_REST_URL:'http://synthetic.invalid'}])await assert.rejects(reserveHostedTestSession(100,700,{...env,...change}),e=>e.status===503);
 });
 test('REST protocol and all denial/error/malformed results fail closed',async()=>{
@@ -46,4 +46,55 @@ test('provider error and streaming cancellation record ambiguous blocked outcome
  for await(const unused of stream){void unused;break;}
  assert.equal(commands.at(-1)[5],-1);assert.equal(commands.at(-1)[6],'0');
  }finally{globalThis.fetch=old;}
+});
+
+test('call and streaming deny before provider when hosted identity or Redis state is invalid', async () => {
+ const invalid = [
+  ['missing id', {...env, HAPPYDATE_AI_TEST_SESSION_ID: undefined}, null],
+  ['unknown production deployment', {NODE_ENV:'production'}, null],
+  ['malformed id', {...env, HAPPYDATE_AI_TEST_SESSION_ID:'bad'}, null],
+  ['production with id', {...env, VERCEL_ENV:'production', VERCEL_TARGET_ENV:'production'}, null],
+  ['target mismatch', {...env, VERCEL_TARGET_ENV:'production'}, null],
+  ['production label alone', {NODE_ENV:'production', VERCEL_ENV:'production'}, null],
+  ['missing SHA', {...env, VERCEL_GIT_COMMIT_SHA:undefined}, null],
+  ['malformed SHA', {...env, VERCEL_GIT_COMMIT_SHA:'bad'}, null],
+  ['missing Redis credentials', {...env, UPSTASH_REDIS_REST_TOKEN:undefined}, null],
+  ['Redis unavailable', env, 'error'],
+  ['session missing or bound to a different SHA', env, 'denial'],
+ ];
+ const originalFetch = globalThis.fetch;
+ try {
+  for (const [label, config, redis] of invalid) {
+   for (const run of [runMeteredAiCall, runMeteredAiStream]) {
+    for (const key of Object.keys(env)) {
+     if (config[key] === undefined) delete process.env[key];
+     else process.env[key] = config[key];
+    }
+    let calls = 0, metering = 0, redisCalls = 0;
+    globalThis.fetch = async (_url, init) => {
+     redisCalls++;
+     assert.equal(JSON.parse(init.body)[1], SESSION_RESERVE_LUA);
+     if (redis === 'error') throw Error('offline');
+     return Response.json({result:0});
+    };
+    const controls = {
+     limiter:{check:async()=>{metering++;return {allowed:true};}},
+     budget:{reserve:async()=>{metering++;return {allowed:true,reservation:{}};}},
+    };
+    await assert.rejects(withAiExecutionScope({kind:'guest',key:'synthetic'}, () => run({
+     feature:'chat', model:'gpt-4.1-mini', payload:{}, maxOutputTokens:700,
+     call:async()=>{calls++;}, usage:()=>null,
+    }), controls), e => e.status===503 && e.code==='service_unavailable', label);
+    assert.equal(calls,0,label);
+    assert.equal(redisCalls,redis ? 1 : 0,label);
+    if (!redis) assert.equal(metering,0,label);
+   }
+  }
+ } finally {globalThis.fetch=originalFetch;}
+});
+
+test('consistent Vercel Production identity keeps existing metering without test session', async () => {
+ assert.equal(await reserveHostedTestSession(100,700,{
+  NODE_ENV:'production',VERCEL:'1',VERCEL_ENV:'production',VERCEL_TARGET_ENV:'production',VERCEL_GIT_COMMIT_SHA:'a'.repeat(40),
+ }), null);
 });

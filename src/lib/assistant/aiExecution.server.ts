@@ -1,4 +1,4 @@
-import { reserveHostedTestSession } from "./hostedTestSession.server.ts";
+import { readHostedSessionConfig, reserveHostedTestSession } from "./hostedTestSession.server.ts";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash } from "node:crypto";
 import { AI_COST_POLICY, createConfiguredAiBudget, type AiBudget, type AiTokenUsage } from "./aiBudget.ts";
@@ -53,6 +53,7 @@ async function reserve(input: Pick<Call<unknown>, "feature" | "model" | "payload
   const scope = scopes.getStore();
   if (!scope?.identity.key?.trim() || scope.identity.key.length > 256 || !["authenticated", "guest", "background"].includes(scope.identity.kind) || (scope.identity.kind === "guest" && input.feature !== "chat")) throw new AiExecutionError("unauthorized", 401);
   if (!Number.isSafeInteger(input.maxOutputTokens) || input.maxOutputTokens <= 0) throw new AiExecutionError("service_unavailable", 503);
+  readHostedSessionConfig();
   const mode = scope.identity.kind === "background" ? "production" : process.env.NODE_ENV;
   const environment = { UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN, OPENAI_DAILY_BUDGET_USD: process.env.OPENAI_DAILY_BUDGET_USD };
   const limiter = scope.controls.limiter === undefined ? createConfiguredAssistantRateLimiter(environment, mode) : scope.controls.limiter;

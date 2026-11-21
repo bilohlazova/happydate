@@ -1,3 +1,4 @@
+import { readHostedSessionConfig } from "@/lib/assistant/hostedTestSession.server";
 import OpenAI from "openai";
 import { ASSISTANT_CHAT_CONFIG } from "@/lib/assistant/chatConfig";
 import { getAssistantEnvironmentStatus } from "@/lib/assistant/chatEnvironment";
@@ -64,6 +65,12 @@ export async function POST(request: Request) {
       logOperationalWarning("assistant-chat", "scope-resolution-failed", { category: error instanceof Error ? error.name : "unknown" });
       return Response.json({ error: "service_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
     }
+  }
+  // Chat has a route-level limiter before the shared provider boundary.
+  try {
+    readHostedSessionConfig();
+  } catch {
+    return Response.json({ error: "service_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
   const rateLimiter = createConfiguredAssistantRateLimiter();
   const apiKey = process.env.OPENAI_API_KEY?.trim();

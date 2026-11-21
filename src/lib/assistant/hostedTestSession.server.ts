@@ -31,22 +31,41 @@ if s.calls>=8 then s.status='closed' else s.pending=false end
 redis.call('SET',KEYS[1],cjson.encode(s),'KEEPTTL'); return 1
 `;
 
-type Environment = Partial<Record<'HAPPYDATE_AI_TEST_SESSION_ID' | 'VERCEL_ENV' | 'VERCEL_GIT_COMMIT_SHA' | 'UPSTASH_REDIS_REST_URL' | 'UPSTASH_REDIS_REST_TOKEN', string>>;
+type Environment = Partial<Record<'NODE_ENV' | 'HAPPYDATE_AI_TEST_SESSION_ID' | 'VERCEL' | 'VERCEL_ENV' | 'VERCEL_TARGET_ENV' | 'VERCEL_GIT_COMMIT_SHA' | 'UPSTASH_REDIS_REST_URL' | 'UPSTASH_REDIS_REST_TOKEN', string>>;
 export type HostedSessionPermit = { finish(usage: AiTokenUsage | null, dailySettled: boolean): Promise<void> };
 const unavailable = () => new AiExecutionError('service_unavailable', 503);
+
+/** Deployment identity comes from server configuration, never request headers or payload. */
+export function readHostedSessionConfig(env: Environment = process.env as Environment) {
+  const { NODE_ENV, VERCEL, VERCEL_ENV, VERCEL_TARGET_ENV, VERCEL_GIT_COMMIT_SHA: sha, HAPPYDATE_AI_TEST_SESSION_ID: id } = env;
+  // vercel dev and local tooling may use local controls, but partial hosted identity cannot.
+  if (NODE_ENV !== 'production' && id === undefined && (
+    [VERCEL, VERCEL_ENV, VERCEL_TARGET_ENV, sha].every(value => value === undefined) ||
+    (NODE_ENV === 'development' && VERCEL_ENV === 'development' && VERCEL_TARGET_ENV === 'development' && (VERCEL === undefined || VERCEL === '1'))
+  )) return null;
+
+  if (NODE_ENV !== 'production' || VERCEL !== '1' || VERCEL_TARGET_ENV !== VERCEL_ENV ||
+      !sha || !/^[a-f0-9]{40}$/.test(sha) || /^0+$/.test(sha)) throw unavailable();
+  if (VERCEL_ENV === 'production' && id === undefined) return null;
+  if (VERCEL_ENV !== 'preview' || !id || !/^sec01-[a-z0-9-]{16,80}$/.test(id)) throw unavailable();
+
+  const token = env.UPSTASH_REDIS_REST_TOKEN?.trim();
+  if (!token || !env.UPSTASH_REDIS_REST_URL) throw unavailable();
+  let url: URL;
+  try { url = new URL(env.UPSTASH_REDIS_REST_URL); }
+  catch { throw unavailable(); }
+  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) throw unavailable();
+  return { key: `sec01:session:${id}`, sha, token, url };
+}
+
 export async function reserveHostedTestSession(inputTokens: number, maxOutputTokens: number, env: Environment = process.env as Environment): Promise<HostedSessionPermit | null> {
-  const id = env.HAPPYDATE_AI_TEST_SESSION_ID;
-  if (id === undefined) {
-    if (env.VERCEL_ENV === 'preview') throw unavailable();
-    return null; // Existing Production/local behavior unchanged; Preview never bypasses a missing ID.
-  }
-  if (!/^sec01-[a-z0-9-]{16,80}$/.test(id) || env.VERCEL_ENV !== 'preview' || !/^[a-f0-9]{40}$/.test(env.VERCEL_GIT_COMMIT_SHA ?? '') || !env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN || !Number.isSafeInteger(inputTokens) || inputTokens < 1 || inputTokens > 20480 || !Number.isSafeInteger(maxOutputTokens) || maxOutputTokens < 1 || maxOutputTokens > 2000) throw unavailable();
-  const key = `sec01:session:${id}`;
+  const config = readHostedSessionConfig(env);
+  if (!config) return null;
+  if (!Number.isSafeInteger(inputTokens) || inputTokens < 1 || inputTokens > 20480 || !Number.isSafeInteger(maxOutputTokens) || maxOutputTokens < 1 || maxOutputTokens > 2000) throw unavailable();
+  const { key, sha, token, url } = config;
   async function command(script: string, args: (string | number)[]) {
     try {
-      const url = new URL(env.UPSTASH_REDIS_REST_URL!);
-      if (url.protocol !== 'https:' || url.username || url.password) throw unavailable();
-      const response = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(['EVAL', script, 1, key, ...args]), signal: AbortSignal.timeout(5000), cache: 'no-store' });
+      const response = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(['EVAL', script, 1, key, ...args]), signal: AbortSignal.timeout(5000), cache: 'no-store' });
       if (!response.ok) throw unavailable();
       const body = await response.json() as { result?: unknown; error?: unknown };
       if (body.error || !Number.isSafeInteger(body.result)) throw unavailable();
@@ -54,7 +73,7 @@ export async function reserveHostedTestSession(inputTokens: number, maxOutputTok
     } catch { throw unavailable(); }
   }
   const nonce = randomUUID();
-  const attempt = await command(SESSION_RESERVE_LUA, [env.VERCEL_GIT_COMMIT_SHA!, inputTokens + 4 * maxOutputTokens, nonce]);
+  const attempt = await command(SESSION_RESERVE_LUA, [sha, inputTokens + 4 * maxOutputTokens, nonce]);
   if (attempt < 1 || attempt > 8) throw unavailable();
   let finished = false;
   return { finish: async (usage, dailySettled) => {

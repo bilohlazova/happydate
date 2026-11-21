@@ -32,12 +32,32 @@ if s.calls>=8 then s.status='closed' else s.pending=false end
 redis.call('SET',KEYS[1],cjson.encode(s),'KEEPTTL'); return 1
 `;
 
-type Environment = Partial<Record<'NODE_ENV' | 'HAPPYDATE_AI_TEST_SESSION_ID' | 'VERCEL' | 'VERCEL_ENV' | 'VERCEL_TARGET_ENV' | 'VERCEL_GIT_COMMIT_SHA' | 'UPSTASH_REDIS_REST_URL' | 'UPSTASH_REDIS_REST_TOKEN', string>>;
+type Environment = Partial<Record<'SEC01_DENY_AI_EGRESS' | 'NODE_ENV' | 'HAPPYDATE_AI_TEST_SESSION_ID' | 'VERCEL' | 'VERCEL_ENV' | 'VERCEL_TARGET_ENV' | 'VERCEL_GIT_COMMIT_SHA' | 'UPSTASH_REDIS_REST_URL' | 'UPSTASH_REDIS_REST_TOKEN', string>>;
 export type HostedSessionPermit = { finish(usage: AiTokenUsage | null, dailySettled: boolean): Promise<void> };
-export function isAiEgressDenied(): boolean {
-  return process.env.SEC01_DENY_AI_EGRESS === '1';
+export function isAiEgressDenied(env: Environment = process.env as Environment): boolean {
+  return env.SEC01_DENY_AI_EGRESS === '1';
 }
 
+/** Called only on Chat's invalid request path. The expected SHA comes from operator deployment metadata. */
+export function logHostedAiAttestation(body: unknown, env: Environment = process.env as Environment): void {
+  if (env.NODE_ENV !== 'production' || env.VERCEL !== '1' ||
+      env.VERCEL_ENV !== 'preview' || env.VERCEL_TARGET_ENV !== 'preview') return;
+  if (!body || typeof body !== 'object' || Object.keys(body).length !== 1 ||
+      !('sec01AttestDeploymentSha' in body)) return;
+  const expectedSha = body.sec01AttestDeploymentSha;
+  if (typeof expectedSha !== 'string' || !/^[a-f0-9]{40}$/.test(expectedSha) || /^0+$/.test(expectedSha)) return;
+
+  const id = env.HAPPYDATE_AI_TEST_SESSION_ID;
+  console.info('sec01-hosted-ai-attestation', JSON.stringify({
+    egressDenied: isAiEgressDenied(env),
+    preview: true,
+    shaMatches: env.VERCEL_GIT_COMMIT_SHA === expectedSha,
+    sessionIdValid: typeof id === 'string' && SESSION_ID_PATTERN.test(id),
+    redisConfigured: Boolean(env.UPSTASH_REDIS_REST_URL?.trim() && env.UPSTASH_REDIS_REST_TOKEN?.trim()),
+  }));
+}
+
+const SESSION_ID_PATTERN = /^sec01-[a-z0-9-]{16,80}$/;
 const unavailable = () => new AiExecutionError('service_unavailable', 503);
 
 /** Deployment identity comes from server configuration, never request headers or payload. */
@@ -52,7 +72,7 @@ export function readHostedSessionConfig(env: Environment = process.env as Enviro
   if (NODE_ENV !== 'production' || VERCEL !== '1' || VERCEL_TARGET_ENV !== VERCEL_ENV ||
       !sha || !/^[a-f0-9]{40}$/.test(sha) || /^0+$/.test(sha)) throw unavailable();
   if (VERCEL_ENV === 'production' && id === undefined) return null;
-  if (VERCEL_ENV !== 'preview' || !id || !/^sec01-[a-z0-9-]{16,80}$/.test(id)) throw unavailable();
+  if (VERCEL_ENV !== 'preview' || !id || !SESSION_ID_PATTERN.test(id)) throw unavailable();
 
   const token = env.UPSTASH_REDIS_REST_TOKEN?.trim();
   if (!token || !env.UPSTASH_REDIS_REST_URL) throw unavailable();

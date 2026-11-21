@@ -1,4 +1,4 @@
-import { readHostedSessionConfig } from "@/lib/assistant/hostedTestSession.server";
+import { logHostedAiAttestation, readHostedSessionConfig } from "@/lib/assistant/hostedTestSession.server";
 import OpenAI from "openai";
 import { ASSISTANT_CHAT_CONFIG } from "@/lib/assistant/chatConfig";
 import { getAssistantEnvironmentStatus } from "@/lib/assistant/chatEnvironment";
@@ -37,6 +37,7 @@ export async function POST(request: Request) {
 
   const parsed = parseAssistantChatRequest(body);
   if (!parsed.success) {
+    logHostedAiAttestation(body);
     return Response.json({ error: "invalid_request" }, { status: 400 });
   }
 

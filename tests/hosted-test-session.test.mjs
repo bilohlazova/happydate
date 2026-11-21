@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {reserveHostedTestSession, SESSION_RESERVE_LUA} from '../src/lib/assistant/hostedTestSession.server.ts';
+import {logHostedAiAttestation, reserveHostedTestSession, SESSION_RESERVE_LUA} from '../src/lib/assistant/hostedTestSession.server.ts';
 import {withAiExecutionScope,runMeteredAiCall,runMeteredAiStream} from '../src/lib/assistant/aiExecution.server.ts';
+import {parseAssistantChatRequest} from '../src/lib/assistant/chatContract.ts';
 const env={SEC01_DENY_AI_EGRESS:undefined,HAPPYDATE_AI_TEST_SESSION_ID:'sec01-synthetic-session-123456',NODE_ENV:'production',VERCEL:'1',VERCEL_TARGET_ENV:'preview',VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_SHA:'a'.repeat(40),UPSTASH_REDIS_REST_URL:'https://synthetic.invalid',UPSTASH_REDIS_REST_TOKEN:'synthetic-not-a-credential'};
 const runtimeEnv={...env, SEC01_DENY_AI_EGRESS:'0'};
 const saved={...process.env};
@@ -134,4 +135,23 @@ test('egress deny runs after Redis session authorization and blocks both provide
   globalThis.fetch=originalFetch;
   console.warn=originalWarn;
  }
+});
+
+test('only an invalid attestation envelope logs Preview runtime booleans', () => {
+ const entries = [];
+ const info = console.info;
+ console.info = (event, fields) => entries.push([event, JSON.parse(fields)]);
+ try {
+  const body = {sec01AttestDeploymentSha:env.VERCEL_GIT_COMMIT_SHA};
+  assert.equal(parseAssistantChatRequest(body).success,false);
+  logHostedAiAttestation(body,{...env,SEC01_DENY_AI_EGRESS:'1'});
+  logHostedAiAttestation(body,{...env,VERCEL_ENV:'production',VERCEL_TARGET_ENV:'production'});
+  logHostedAiAttestation(body,{...env,VERCEL_TARGET_ENV:undefined});
+  logHostedAiAttestation({...body,message:'private text'},env);
+  logHostedAiAttestation(body,{...env,VERCEL_GIT_COMMIT_SHA:'b'.repeat(40),HAPPYDATE_AI_TEST_SESSION_ID:'bad',UPSTASH_REDIS_REST_TOKEN:undefined});
+  assert.deepEqual(entries,[
+   ['sec01-hosted-ai-attestation',{egressDenied:true,preview:true,shaMatches:true,sessionIdValid:true,redisConfigured:true}],
+   ['sec01-hosted-ai-attestation',{egressDenied:false,preview:true,shaMatches:false,sessionIdValid:false,redisConfigured:false}],
+  ]);
+ } finally {console.info=info;}
 });

@@ -114,10 +114,12 @@ export function validateGiftOffers(input: OfferValidationInput): OfferValidation
       ? Math.round(raw.price * 100) / 100
       : null;
     const currency = clean(raw.currency, 12)?.toLocaleUpperCase() ?? null;
-    if (
-      price !== null && input.budget.amount !== null && price > input.budget.amount * 1.15 &&
-      (!currency || !input.budget.currency || currency === input.budget.currency)
-    ) { rejected += 1; continue; }
+    if (price !== null && input.budget.amount !== null) {
+      // The user's budget is a ceiling, not a hint: no tolerance. A price in a different currency cannot be
+      // checked against it (49 EUR may be over 200 PLN), so such an offer is not shown at all.
+      const sameCurrency = !currency || !input.budget.currency || currency === input.budget.currency;
+      if (!sameCurrency || price > input.budget.amount) { rejected += 1; continue; }
+    }
     byIdeaKey.set(key, {
       productName, merchant, url, price, currency, sourceVerified,
       checkedAt: (input.now ?? new Date()).toISOString(),

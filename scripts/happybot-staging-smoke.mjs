@@ -118,7 +118,8 @@ try {
   const freshKeys = ideas2.map((i) => i.title_key).filter((key) => !before.has(key));
   record("gifts: second batch brings new ideas, none duplicated", g2.status === 200 && freshKeys.length >= 1 && new Set(ideas2.map((i) => i.title_key)).size === ideas2.length, `new=${freshKeys.length}`);
   const priced = ideas2.filter((i) => i.estimated_price !== null);
-  record("gifts: every stated price is within 200 and in PLN", priced.every((i) => Number(i.estimated_price) <= 200 && (i.currency === null || /^(PLN|zł|zl)$/i.test(i.currency))), `priced=${priced.length}/${ideas2.length}`);
+  const overBudget = priced.filter((i) => !(Number(i.estimated_price) <= 200 && (i.currency === null || /^(PLN|zł|zl)$/i.test(i.currency))));
+  record("gifts: every stated price is within 200 and in PLN", overBudget.length === 0, `priced=${priced.length}/${ideas2.length}` + overBudget.map((i) => ` [${i.estimated_price} ${i.currency ?? "-"} offer=${Boolean(i.offer_url)}]`).join(""));
 
   const offers = ideas2.filter((i) => i.offer_url);
   if (PRODUCT_SEARCH) {

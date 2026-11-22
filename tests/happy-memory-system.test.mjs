@@ -69,12 +69,16 @@ test("product offers must be real https pages for shown ideas, in budget and fro
     offer({ url: "https://192.168.1.2/x" }),
     offer({ ideaTitle: "Something never shown" }),
     offer({ price: 999 }),
+    offer({ price: 205 }), // no +15% tolerance over the stated ceiling
+    offer({ price: 49, currency: "EUR" }), // a different currency cannot be verified against a PLN budget
     offer({ url: "https://user:pass@shop.example.com/voucher" }),
     offer({ url: "https://other.example.org/x" }),
   ]) {
     assert.equal(validateGiftOffers({ ...input, offers: [bad] }).byIdeaKey.size, 0, JSON.stringify(bad));
   }
   assert.equal(validateGiftOffers({ ...input, offers: [offer(), offer({ url: "https://shop.example.com/second" })] }).byIdeaKey.size, 1, "one offer per idea");
+  assert.equal(validateGiftOffers({ ...input, offers: [offer({ price: 200 })] }).byIdeaKey.size, 1, "exactly the ceiling is allowed");
+  assert.equal(validateGiftOffers({ ...input, offers: [offer({ price: null, currency: null })] }).byIdeaKey.size, 1, "unknown price is shown as unknown, not guessed");
   // When the API exposes no sources the offer is kept but not marked verified.
   const unverified = validateGiftOffers({ ideaTitles: ["Ceramics workshop"], budget, citedUrls: [], offers: [offer()] });
   assert.equal([...unverified.byIdeaKey.values()][0].sourceVerified, false);

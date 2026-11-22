@@ -27,12 +27,19 @@ const results = [];
 const record = (name, ok, detail = "") => { results.push({ name, ok }); console.log(`${ok ? "PASS" : "FAIL"} ${name}${detail ? ` — ${detail}` : ""}`); };
 let chatCalls = 0;
 
-async function rest(path, init = {}, key = SRV) {
-  const res = await fetch(`${SB}${path}`, { ...init, signal: AbortSignal.timeout(20_000), headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=representation", ...(init.headers ?? {}) } });
+async function rest(path, init = {}, key = SRV, bearer = key) {
+  const res = await fetch(`${SB}${path}`, { ...init, signal: AbortSignal.timeout(20_000), headers: { apikey: key, Authorization: `Bearer ${bearer}`, "Content-Type": "application/json", Prefer: "return=representation", ...(init.headers ?? {}) } });
   const text = await res.text();
   return { status: res.status, body: text ? JSON.parse(text) : null };
 }
 const redis = async (...command) => (await (await fetch(REDIS_REST, { method: "POST", headers: { Authorization: `Bearer ${REDIS_TOKEN}` }, body: JSON.stringify(command), signal: AbortSignal.timeout(5000) })).json()).result;
+
+// People are created as the user (service_role has SELECT only on people by design).
+async function createPerson(user, name) {
+  const res = await rest("/rest/v1/people", { method: "POST", body: JSON.stringify({ user_id: user.id, name }) }, PUB, user.token);
+  assert(res.status === 201 && Array.isArray(res.body) && res.body[0]?.id, `create person failed: status=${res.status} code=${res.body?.code ?? "n/a"}`);
+  return res.body[0].id;
+}
 
 async function createUser(tag) {
   const email = `happybot-smoke-${tag}-${Date.now()}@example.test`;
@@ -62,8 +69,8 @@ const countRows = async (table, userId) => (await rest(`/rest/v1/${table}?user_i
 try {
   const a = await createUser("a"); ids.push(a.id);
   const b = await createUser("b"); ids.push(b.id);
-  const pa = (await rest("/rest/v1/people", { method: "POST", body: JSON.stringify({ user_id: a.id, name: "Smoke Husband" }) })).body[0].id;
-  const pb = (await rest("/rest/v1/people", { method: "POST", body: JSON.stringify({ user_id: b.id, name: "Smoke Other" }) })).body[0].id;
+  const pa = await createPerson(a, "Smoke Husband");
+  const pb = await createPerson(b, "Smoke Other");
 
   // --- No-cost checks: validation, auth, API-level isolation -------------------------------
   const invalid = await fetch(`${BASE}/api/ai-chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: 42 }) });

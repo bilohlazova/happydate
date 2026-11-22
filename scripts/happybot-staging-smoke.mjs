@@ -93,7 +93,12 @@ try {
   const statuses = settled.map((r) => r.status).sort();
   record("concurrency: at most 2 of 3 simultaneous AI requests proceed", statuses.filter((s) => s === 200).length <= 2 && statuses.includes(429), statuses.join(","));
   record(`lease: lock held during the request with TTL <= ${LEASE_SECONDS}s`, lockKeys.length >= 1 && ttls.every((t) => t > 0 && t <= LEASE_SECONDS), `locks=${lockKeys.length} ttl=${ttls.join("/")}`);
-  record("lease: locks released after the requests finish", ((await redis("KEYS", "assistant:active:*")) ?? []).length === 0);
+  // Release runs in the stream's finally block and may land just after the HTTP body ends; it must
+  // still happen within seconds, far below the 75 s lease, or a user would be locked out.
+  const releaseStart = Date.now();
+  let remaining = (await redis("KEYS", "assistant:active:*")) ?? [];
+  while (remaining.length && Date.now() - releaseStart < 10_000) { await new Promise((resolve) => setTimeout(resolve, 500)); remaining = (await redis("KEYS", "assistant:active:*")) ?? []; }
+  record("lease: locks released within 10s after the requests finish", remaining.length === 0, `${Date.now() - releaseStart}ms`);
   record("natural reply is plain text without internals", settled.some((r) => r.status === 200 && r.text.length > 0 && !/system prompt|"role"\s*:/i.test(r.text)));
 
   // --- Memory ------------------------------------------------------------------------------

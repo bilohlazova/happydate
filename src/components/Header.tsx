@@ -7,9 +7,9 @@ import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabaseClient";
 import { BOTTOM_NAV_ITEMS, HEADER_NAV_ITEMS, isAppShellPath } from "@/i18n/shellNavigation";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
-import { getLocaleCookie, setLocaleCookie } from "@/i18n/localeCookie";
-import { shouldSynchronizeProfileLocale } from "@/i18n/profileLocaleSync";
-import { getPreferredLocaleForUser } from "@/lib/repositories/profile/profileLocale.repository";
+import { getLocaleCookie, getStoredLocale, setLocaleCookie } from "@/i18n/localeCookie";
+import { shouldBackfillProfileLocale, shouldSynchronizeProfileLocale } from "@/i18n/profileLocaleSync";
+import { getPreferredLocaleForUser, updateCurrentUserPreferredLocale } from "@/lib/repositories/profile/profileLocale.repository";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationInbox from "@/components/notifications/NotificationInbox";
 import { shouldRestoreProfileFocus } from "@/components/profileMenuBehavior";
@@ -45,6 +45,15 @@ export default function Header() {
   }, [pathname]);
 
   useEffect(() => {
+    // Native webviews can lose cookies between launches: restore the manual choice once.
+    const storedLocale = getStoredLocale();
+    if (storedLocale && !getLocaleCookie()) {
+      setLocaleCookie(storedLocale);
+      router.refresh();
+    }
+  }, [router]);
+
+  useEffect(() => {
     let cancelled = false;
     const applyLocale = async () => {
       if (cancelled || !user) {
@@ -56,7 +65,15 @@ export default function Header() {
       synchronizedProfileRef.current = loadingKey;
       try {
         const preferredLocale = await getPreferredLocaleForUser(user.id);
-        if (cancelled || !preferredLocale) return;
+        if (cancelled) return;
+        if (!preferredLocale) {
+          // Manual choice made before the profile had one: persist it for future sign-ins.
+          const savedLocale = getLocaleCookie();
+          if (shouldBackfillProfileLocale(preferredLocale, savedLocale)) {
+            await updateCurrentUserPreferredLocale(savedLocale);
+          }
+          return;
+        }
         const synchronizationKey = `${user.id}:${preferredLocale}`;
         synchronizedProfileRef.current = synchronizationKey;
         if (shouldSynchronizeProfileLocale(preferredLocale, getLocaleCookie())) {

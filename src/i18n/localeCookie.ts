@@ -27,6 +27,23 @@ export function buildLocaleCookie(locale: AppLocale, secure: boolean): string {
   ].filter(Boolean).join("; ");
 }
 
+export const LOCALE_STORAGE_KEY = "happydate_locale";
+
+/** Same-module fallback for native webviews that may drop cookies between launches. */
+export function getStoredLocale(): AppLocale | null {
+  try {
+    const value = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+    return isSupportedLocale(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 export function setLocaleCookie(locale: AppLocale): void {
   document.cookie = buildLocaleCookie(locale, process.env.NODE_ENV === "production");
+  try {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+  } catch {
+    // Storage may be unavailable (private mode); the cookie still applies.
+  }
 }

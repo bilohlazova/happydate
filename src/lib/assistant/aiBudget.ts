@@ -42,6 +42,7 @@ export function estimateInputTokens(messages: readonly { content: string }[]): n
 }
 
 export function costUnits({ inputTokens, outputTokens }: AiTokenUsage): number {
+  if (![inputTokens, outputTokens].every(value => Number.isSafeInteger(value) && value >= 0 && value <= 10_000_000)) throw new Error("invalid_ai_usage");
   return Math.max(0, Math.ceil(inputTokens))
     + Math.max(0, Math.ceil(outputTokens)) * AI_COST_POLICY.outputWeight;
 }
@@ -91,9 +92,10 @@ export class MemoryAiBudget implements AiBudget {
       reservation: {
         reservedCostUnits,
         settle: async (usage) => {
-          if (settled) return;
+          const actualCost = costUnits(usage);
+          if (settled || this.day !== day) return;
           settled = true;
-          this.used = Math.max(0, this.used + costUnits(usage) - reservedCostUnits);
+          this.used = Math.max(0, this.used + actualCost - reservedCostUnits);
         },
       },
     };
@@ -126,6 +128,7 @@ export class UpstashAiBudget implements AiBudget {
       headers: { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json" },
       body: JSON.stringify(command),
       cache: "no-store",
+      signal: AbortSignal.timeout(5_000),
     });
     if (!response.ok) throw new Error("ai_budget_unavailable");
     const body = await response.json() as UpstashResult;
@@ -147,7 +150,8 @@ export class UpstashAiBudget implements AiBudget {
       dailyCostUnitLimit(this.dailyUsd),
       ttl,
     ]);
-    if (!Array.isArray(result) || Number(result[0]) !== 1) {
+    if (!Array.isArray(result) || (result[0] !== 0 && result[0] !== 1) || !Number.isSafeInteger(result[1]) || Number(result[1]) < 0) throw new Error("ai_budget_unavailable");
+    if (result[0] !== 1) {
       return { allowed: false, retryAfterSeconds: secondsUntilNextUtcDay(now) };
     }
     let settled = false;
@@ -156,13 +160,14 @@ export class UpstashAiBudget implements AiBudget {
       reservation: {
         reservedCostUnits,
         settle: async (usage) => {
+          const actualCost = costUnits(usage);
           if (settled) return;
           settled = true;
-          const delta = costUnits(usage) - reservedCostUnits;
+          const delta = actualCost - reservedCostUnits;
           if (delta === 0) return;
           await this.command([
             "EVAL",
-            "local c=tonumber(redis.call('get',KEYS[1]) or '0'); local d=tonumber(ARGV[1]); local n=c+d; if n<0 then n=0 end; redis.call('set',KEYS[1],n,'KEEPTTL'); return n",
+            "if redis.call('exists',KEYS[1]) == 0 then return 0 end; local c=tonumber(redis.call('get',KEYS[1]) or '0'); local d=tonumber(ARGV[1]); local n=c+d; if n<0 then n=0 end; redis.call('set',KEYS[1],n,'KEEPTTL'); return n",
             1,
             key,
             delta,

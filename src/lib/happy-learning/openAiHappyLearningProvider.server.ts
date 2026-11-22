@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { runMeteredAiCall, parseOpenAiUsage } from "../assistant/aiExecution.server.ts";
 import { ASSISTANT_CHAT_CONFIG } from "../assistant/chatConfig.ts";
 import { HAPPY_LEARNING_CAPTURE_TYPES, type HappyLearningStructuredProvider } from "./happyLearning.types.ts";
 import { SEMANTIC_MEMORY_TAGS } from "../semantic-memory/index.ts";
@@ -66,16 +67,15 @@ export function createOpenAiHappyLearningProvider({
 } = {}): HappyLearningStructuredProvider {
   return async (input) => {
     if (!apiKey) throw new Error("provider_unavailable");
-    const openai = new OpenAI({ apiKey });
-    const response = await openai.chat.completions.create({
+    const params = {
       model: ASSISTANT_CHAT_CONFIG.model,
       temperature: 0,
       max_completion_tokens: 700,
-      response_format: { type: "json_schema", json_schema: RESPONSE_SCHEMA },
+      response_format: { type: "json_schema" as const, json_schema: RESPONSE_SCHEMA },
       messages: [
-        { role: "system", content: SYSTEM_INSTRUCTION },
+        { role: "system" as const, content: SYSTEM_INSTRUCTION },
         {
-          role: "user",
+          role: "user" as const,
           content: JSON.stringify({
             locale: input.locale,
             resolvedPersonName: input.resolvedPersonName,
@@ -86,7 +86,11 @@ export function createOpenAiHappyLearningProvider({
           }),
         },
       ],
-    }, { signal: AbortSignal.timeout(timeoutMs) });
+    };
+    const response = await runMeteredAiCall({ feature: "learning", model: params.model, payload: params, maxOutputTokens: params.max_completion_tokens,
+      call: () => new OpenAI({ apiKey, maxRetries: 0 }).chat.completions.create(params, { signal: AbortSignal.timeout(timeoutMs) }),
+      usage: value => parseOpenAiUsage(value.usage, "chat"),
+    });
     const content = response.choices[0]?.message?.content;
     if (!content) return { candidates: [] };
     return JSON.parse(content) as unknown;

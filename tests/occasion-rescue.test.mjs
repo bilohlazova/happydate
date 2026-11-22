@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
+import "./server-test-loader.mjs";
+import { assertStrictObjectSchemas, withOpenAiOutput } from "./helpers/openaiStructuredOutputHarness.mjs";
+
+const { createOpenAiOccasionRescueProvider } = await import("../src/lib/occasions/occasionRescueProvider.server.ts");
 
 const rescue = await import("../src/lib/occasions/occasionRescue.ts");
 const { toRescueSignal, buildExistingHomeSignals } = await import("../src/lib/happy/signals/happySignalAdapters.ts");
@@ -8,6 +12,37 @@ const { selectPrimaryHappySignal } = await import("../src/lib/happy/signals/happ
 
 const base = { occurrenceKey: "occasion:pl_boys_day:2026", personId: "person-a", recipientResolution: "resolved", phase: "urgent", readiness: { kind: "needs_action", missing: ["gift", "greeting"] } };
 const eligible = () => rescue.resolveOccasionRescueEligibility(base);
+
+const resolved = { kind: "eligible", occasionKey: "pl_boys_day", occurrenceKey: base.occurrenceKey, person: { id: "11111111-1111-4111-8111-111111111111", name: "Synthetic Person", relationKey: null }, phase: "today", missing: ["gift", "greeting"] };
+const suggestionOutput = { suggestions: [
+  { category: "quick_gift", title: "A small item", description: "Consider a simple personal item", whyItFits: "A possible gesture" },
+  { category: "digital", title: "Digital option", description: "Consider a digital gift", whyItFits: null },
+  { category: "greeting", title: "A greeting", description: "Write a personal greeting", whyItFits: null },
+] };
+const callRescueProvider = async () => rescue.rescueResultSchema.parse(await createOpenAiOccasionRescueProvider("synthetic-key")({ ...resolved, locale: "en" }));
+
+test("actual Rescue SDK schema requires every nested property including nullable whyItFits", async () => {
+  const { value, requests } = await withOpenAiOutput(suggestionOutput, callRescueProvider);
+  assert.equal(requests.length, 1);
+  assertStrictObjectSchemas(requests[0].text.format.schema);
+  assert.deepEqual(requests[0].text.format.schema.properties.suggestions.items.properties.whyItFits.type, ["string", "null"]);
+  assert.equal(rescue.rescueResultSchema.safeParse(value).success, true);
+});
+
+test("Rescue boundary preserves explanations and removes only null optional explanations", async () => {
+  const { value } = await withOpenAiOutput(suggestionOutput, callRescueProvider);
+  assert.equal(value.suggestions[0].whyItFits, "A possible gesture");
+  assert.equal(Object.hasOwn(value.suggestions[1], "whyItFits"), false);
+  assert.equal(Object.hasOwn(value.suggestions[2], "whyItFits"), false);
+});
+
+test("Rescue provider output still rejects unknown categories, excessive lengths and write fields", async () => {
+  for (const invalid of [
+    { suggestions: [{ ...suggestionOutput.suggestions[0], category: "stock" }, ...suggestionOutput.suggestions.slice(1)] },
+    { suggestions: [{ ...suggestionOutput.suggestions[0], title: "x".repeat(161) }, ...suggestionOutput.suggestions.slice(1)] },
+    { ...suggestionOutput, action: { type: "send_message" } },
+  ]) await assert.rejects(() => withOpenAiOutput(invalid, callRescueProvider));
+});
 
 test("Rescue eligibility is deterministic and narrow", () => {
   assert.equal(eligible().kind, "eligible");

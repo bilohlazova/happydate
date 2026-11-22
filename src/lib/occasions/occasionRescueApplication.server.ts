@@ -1,3 +1,5 @@
+import { withAiExecutionScope } from "../assistant/aiExecution.server.ts";
+import { aiExecutionFailureResponse } from "../assistant/aiExecutionError.ts";
 import "server-only";
 import { createAssistantRlsClient, getAssistantRequestIdentity } from "../assistant/chatIdentity.ts";
 import { resolveOccasionRescueForUser, generateOccasionRescue } from "./occasionRescue.server.ts";
@@ -22,9 +24,11 @@ export function createOccasionRescueHandler(dependencies: { provider: OccasionRe
       const resolved = await resolveOccasionRescueForUser({ client: rls.client, userId: identity.userId, occurrenceKey, now: dependencies.now?.() });
       if (resolved.kind === "not_found") return json({ error: "not_found" }, 404);
       if (resolved.kind !== "eligible") return json({ error: "ineligible" }, 409);
-      const response = await generateOccasionRescue({ resolved, locale: localeFrom(request), provider: dependencies.provider, signal: AbortSignal.any([request.signal, AbortSignal.timeout(30_000)]) });
+      const response = await withAiExecutionScope({ kind: "authenticated", key: identity.userId }, () => generateOccasionRescue({ resolved, locale: localeFrom(request), provider: dependencies.provider, signal: AbortSignal.any([request.signal, AbortSignal.timeout(30_000)]) }));
       return json(response);
-    } catch {
+    } catch (error) {
+      const guarded = aiExecutionFailureResponse(error);
+      if (guarded) return guarded;
       // Provider/database detail is intentionally not exposed and generation has no writes.
       return json({ error: "provider_unavailable" }, 502);
     }

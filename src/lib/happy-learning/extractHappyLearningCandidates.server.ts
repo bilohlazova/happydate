@@ -1,3 +1,4 @@
+import { AiExecutionError } from "../assistant/aiExecutionError.ts";
 import { SEMANTIC_MEMORY_TAGS } from "../semantic-memory/index.ts";
 import { HAPPY_LEARNING_CAPTURE_TYPES, type HappyLearningExtractionResult, type HappyLearningExtractorInput, type HappyLearningStructuredProvider } from "./happyLearning.types.ts";
 import { HAPPY_LEARNING_LIMITS, parseHappyLearningProviderOutput } from "./happyLearningSchema.ts";
@@ -21,7 +22,8 @@ export async function extractHappyLearningCandidates(
       maxCandidates: HAPPY_LEARNING_LIMITS.maxCandidates,
     });
     return parseHappyLearningProviderOutput(output, input.userMessage);
-  } catch {
+  } catch (error) {
+    if (error instanceof AiExecutionError) throw error;
     return EMPTY;
   }
 }

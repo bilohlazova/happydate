@@ -117,3 +117,18 @@ export function logAiUsageEvent(input: {
     occurredAt: new Date().toISOString(),
   }));
 }
+
+/** Fixed fields only: runtime values and operator inputs are never emitted. */
+export function logSec01HostedAiAttestation(checks: {
+  egressDenied: boolean;
+  preview: boolean;
+  shaMatches: boolean;
+  sessionIdValid: boolean;
+  redisConfigured: boolean;
+}): void {
+  const { egressDenied, preview, shaMatches, sessionIdValid, redisConfigured } = checks;
+  console.info(JSON.stringify({
+    event: "sec01-hosted-ai-attestation",
+    egressDenied, preview, shaMatches, sessionIdValid, redisConfigured,
+  }));
+}

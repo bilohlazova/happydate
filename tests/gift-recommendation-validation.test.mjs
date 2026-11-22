@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { buildGiftDiscoverySession } from "../src/lib/gift-discovery/index.ts";
@@ -9,6 +8,7 @@ import {
   mapSuggestionsToLegacyIdeas,
   validateGiftRecommendations,
 } from "../src/lib/gift-intelligence/index.ts";
+import { readGiftPipelineSource } from "./helpers/giftPipelineSource.mjs";
 
 function context(overrides = {}) {
   return {
@@ -182,7 +182,7 @@ test("prompt contract forbids fabricated facts and preserves locale and canonica
     locale: "de",
     missingSignals: ["missing_budget"],
   }));
-  assert.match(instructions, /structured AI payload: context and discovery/);
+  assert.match(instructions, /structured AI payload: context, discovery and profile/);
   assert.match(instructions, /Do not invent missing facts/);
   assert.match(instructions, /Treat missingSignals as unknown information, not negative information/);
   assert.match(instructions, /strictly in context\.locale/);
@@ -280,10 +280,7 @@ test("discovery follow-up validation excludes answered and known context questio
 
 test("repair behavior is bounded to one server-side attempt", async () => {
   const repair = buildGiftRepairInstructions(context());
-  const route = await readFile(
-    new URL("../src/app/api/ai/gift-suggestions/route.ts", import.meta.url),
-    "utf8",
-  );
+  const route = await readGiftPipelineSource();
   assert.match(repair, /only repair attempt/);
   assert.match(route, /buildGiftRepairInstructions\(giftRecommendationContext\)/);
   assert.match(repair, /strictly in uk/);
@@ -301,10 +298,7 @@ test("diagnostics preserve locale without logging personal content", async () =>
   assert.equal(result.diagnostics.generatedCount, 1);
   assert.equal(JSON.stringify(result.diagnostics).includes("Trip to Gdańsk"), false);
 
-  const route = await readFile(
-    new URL("../src/app/api/ai/gift-suggestions/route.ts", import.meta.url),
-    "utf8",
-  );
+  const route = await readGiftPipelineSource();
   assert.doesNotMatch(route, /console\.log\([\s\S]*giftRecommendationContext/);
   assert.doesNotMatch(route, /console\.log\([\s\S]*knowledge/);
 });

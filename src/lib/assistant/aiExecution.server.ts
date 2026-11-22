@@ -44,15 +44,20 @@ type Call<T> = {
   model: string;
   payload: unknown;
   maxOutputTokens: number;
+  /** Extra input-token units reserved up front for provider fees that are not tokens (e.g. web search calls). */
+  reservedInputOverhead?: number;
   call: () => Promise<T>;
   usage: (result: T) => AiTokenUsage | null;
 };
 
-async function reserve(input: Pick<Call<unknown>, "feature" | "model" | "payload" | "maxOutputTokens">) {
+async function reserve(input: Pick<Call<unknown>, "feature" | "model" | "payload" | "maxOutputTokens" | "reservedInputOverhead">) {
   assertPricedAiModel(input.model);
   const scope = scopes.getStore();
   if (!scope?.identity.key?.trim() || scope.identity.key.length > 256 || !["authenticated", "guest", "background"].includes(scope.identity.kind) || (scope.identity.kind === "guest" && input.feature !== "chat")) throw new AiExecutionError("unauthorized", 401);
   if (!Number.isSafeInteger(input.maxOutputTokens) || input.maxOutputTokens <= 0) throw new AiExecutionError("service_unavailable", 503);
+  const overhead = input.reservedInputOverhead ?? 0;
+  if (!Number.isSafeInteger(overhead) || overhead < 0 || overhead > 1_000_000) throw new AiExecutionError("service_unavailable", 503);
+  const estimatedInput = estimateAiPayloadTokens(input.payload) + overhead;
   readHostedSessionConfig();
   const mode = scope.identity.kind === "background" ? "production" : process.env.NODE_ENV;
   const environment = { UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN, OPENAI_DAILY_BUDGET_USD: process.env.OPENAI_DAILY_BUDGET_USD };
@@ -68,9 +73,9 @@ async function reserve(input: Pick<Call<unknown>, "feature" | "model" | "payload
       release = await limiter.acquire(key) ?? undefined;
       if (!release) throw new AiExecutionError("rate_limited", 429, 5);
     }
-    const result = await budget.reserve(estimateAiPayloadTokens(input.payload), input.maxOutputTokens);
+    const result = await budget.reserve(estimatedInput, input.maxOutputTokens);
     if (!result.allowed) throw new AiExecutionError("daily_ai_budget_exceeded", 429, result.retryAfterSeconds);
-    const session = await reserveHostedTestSession(estimateAiPayloadTokens(input.payload), input.maxOutputTokens);
+    const session = await reserveHostedTestSession(estimatedInput, input.maxOutputTokens);
     // Check after the session guard so a missing or rejected session retains its own denial.
     if (isAiEgressDenied()) {
       await session?.finish(null, false).catch(() => undefined);

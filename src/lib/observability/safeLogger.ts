@@ -9,7 +9,7 @@ type SafeDiagnostic = {
 const SAFE_VALUE = /^[a-zA-Z0-9._:-]{1,80}$/;
 const ORCHESTRATION_REASONS = new Set(["home_daily_context"]);
 const ORCHESTRATION_ACTIONS = new Set(["open_gift_assistant"]);
-const ASSISTANT_BEHAVIOR_VERSIONS = new Set(["assistant-2026-08-23.1", "assistant-2026-08-29.1", "assistant-2026-09-07.1"]);
+const ASSISTANT_BEHAVIOR_VERSIONS = new Set(["assistant-2026-08-23.1", "assistant-2026-08-29.1", "assistant-2026-09-07.1", "assistant-2026-09-16.1", "assistant-2026-11-22.3"]);
 const AI_PRICING_VERSIONS = new Set(["gpt-4.1-mini-standard-2026-08-16"]);
 
 type OrchestrationTraceInput = {
@@ -90,7 +90,7 @@ function tokenBucket(value: number): "0" | "1-500" | "501-2k" | "2k-10k" | "10k+
 }
 
 export function logAiUsageEvent(input: {
-  feature: "assistant" | "gift-recommendations";
+  feature: "assistant" | "gift-recommendations" | "gift-product-search";
   inputTokens: number;
   outputTokens: number;
   estimatedUsd: number;
@@ -131,4 +131,10 @@ export function logSec01HostedAiAttestation(checks: {
     event: "sec01-hosted-ai-attestation",
     egressDenied, preview, shaMatches, sessionIdValid, redisConfigured,
   }));
+}
+
+/** Counters only: never titles, URLs, prices or merchant names. */
+export function logProductOffersEvent(input: { ideas: number; found: number; rejected: number; rejectedCurrency: number; rejectedOverBudget: number; searchCalls: number }): void {
+  const n = (value: number) => Number.isFinite(value) ? Math.max(0, Math.min(1000, Math.trunc(value))) : 0;
+  console.info(JSON.stringify({ level: "info", service: "happydate", scope: "gift-ai", event: "product-offers", ideas: n(input.ideas), found: n(input.found), rejected: n(input.rejected), rejectedCurrency: n(input.rejectedCurrency), rejectedOverBudget: n(input.rejectedOverBudget), searchCalls: n(input.searchCalls), occurredAt: new Date().toISOString() }));
 }

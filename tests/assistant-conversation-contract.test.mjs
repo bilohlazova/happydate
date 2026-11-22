@@ -32,16 +32,17 @@ test("conversation prompt protects Happy identity, tone and concise response con
   const prompt = englishPrompt();
   assert.match(prompt, /calm personal relationship and gift assistant inside HappyDate/);
   assert.match(prompt, /important people, dates, preferences, memories, and gift intentions/);
-  assert.match(prompt, /concise, warm, calm, practical, trustworthy, non-judgmental, and never patronizing/);
+  assert.match(prompt, /warm, calm, practical, trustworthy, non-judgmental, and never patronizing/);
   assert.match(prompt, /do not over-dramatize ordinary facts/);
-  assert.match(prompt, /Default to 2–4 short sentences or a compact list/);
+  assert.match(prompt, /Let the length and depth follow the request/);
+  assert.match(prompt, /thoughtful, well-informed friend/);
 });
 
 test("conversation prompt requires known facts before asking and limits follow-up questions", () => {
   const prompt = englishPrompt();
   assert.match(prompt, /Use known facts before asking/);
-  assert.match(prompt, /ask at most one focused follow-up question/);
-  assert.match(prompt, /only when the answer changes the next useful action/);
+  assert.match(prompt, /ask a focused follow-up question/);
+  assert.match(prompt, /only when the answer would genuinely change your advice/);
   assert.match(prompt, /recommend first and optionally ask one refining question/);
 });
 

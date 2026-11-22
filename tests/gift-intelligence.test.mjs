@@ -10,6 +10,7 @@ import { buildGiftRecommendationInstructions } from "../src/lib/gift-intelligenc
 import { mapLegacyMemoryToKnowledge } from "../src/lib/knowledge/compatibilityMapper.ts";
 import { resolveGiftAccess } from "../src/lib/gifts/giftApiSecurity.ts";
 import { mapOwnedGiftPersonRow } from "../src/lib/repositories/giftPersonMapper.ts";
+import { readGiftPipelineSource } from "./helpers/giftPipelineSource.mjs";
 
 function item(overrides = {}) {
   const row = {
@@ -81,10 +82,7 @@ test("empty and missing-person contexts remain safe", () => {
 });
 
 test("production Gift AI has no direct Supabase or legacy model dependency", async () => {
-  const route = await readFile(
-    new URL("../src/app/api/ai/gift-suggestions/route.ts", import.meta.url),
-    "utf8",
-  );
+  const route = await readGiftPipelineSource();
   for (const forbidden of [
     "@supabase/supabase-js", "supabaseClient", ".from(\"notes\")",
     ".from(\"memories\")", "MemoryRow", "BrainMemory", "NotesMemoryRow",
@@ -110,9 +108,9 @@ test("production Gift AI has no direct Supabase or legacy model dependency", asy
     },
     duplicateAvoidance: { previousGiftValues: [] },
     missingSignals: [],
-  }), /structured AI payload: context and discovery/);
-  assert.match(route, /model: "gpt-4\.1-mini"/);
-  assert.match(route, /temperature: 0\.8/);
+  }), /structured AI payload: context, discovery and profile/);
+  assert.match(route, /model: ASSISTANT_CHAT_CONFIG\.giftModel/);
+  assert.match(route, /temperature: 0\.9/);
 });
 
 test("authenticated user can access an owned person", async () => {
@@ -206,9 +204,7 @@ test("unauthenticated request is rejected before ownership or data reads", async
 });
 
 test("ownership verification precedes cache and every protected read", async () => {
-  const route = await readFile(
-    new URL("../src/app/api/ai/gift-suggestions/route.ts", import.meta.url), "utf8",
-  );
+  const route = await readGiftPipelineSource();
   const access = route.indexOf("resolveGiftAccess(");
   assert.ok(access >= 0);
   for (const operation of [

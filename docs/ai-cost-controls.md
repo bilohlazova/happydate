@@ -26,3 +26,20 @@ the OpenAI billing dashboard remains authoritative for invoices.
 Cost telemetry contains only feature, coarse input/output buckets, a cost band,
 and allowlisted behavior/pricing versions. It contains no prompt, response,
 person, user, event or memory identifiers.
+
+## HappyBot memory, gift tool and product search
+
+All HappyBot model calls use the shared SEC-01 boundary (`runMeteredAiCall` /
+`runMeteredAiStream`) with the server-verified identity, so each call is
+rate-limited, concurrency-leased, reserved against the daily budget and
+attributed to the hosted test session. A single chat turn can use several
+calls, each metered under its own feature: `chat` (up to two rounds when the
+`suggest_gifts` tool runs), `gifts` (ideas and repair), `gift-search` (live web
+search for product pages) and `chat-summary` (rolling conversation summaries,
+run after the reply). Web search is billed per search call, so the number of
+search calls is added to the settled usage as input-token units; missing or
+malformed usage keeps the full reservation. Every role uses the single priced
+model (`gpt-4.1-mini`); moving a role to another model needs its own reviewed
+pricing policy, otherwise the call fails closed with 503.
+
+Live product search is opt-in: it runs only when `GIFT_PRODUCT_SEARCH=1`. Setting it to anything else (or unsetting it) disables it without a deploy. Each search request is capped at 3 search calls (`max_tool_calls`) and the full fee for all 3 is reserved against the daily budget before the call.

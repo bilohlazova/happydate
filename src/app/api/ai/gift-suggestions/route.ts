@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
 import {
   getCachedGiftIdeas,
   findOwnedGiftPerson,
@@ -10,38 +9,20 @@ import {
   authenticateGiftRequest,
   resolveGiftAccess,
 } from "@/lib/gifts/giftApiSecurity";
-import { mapKnowledgeToGifts } from "@/lib/gifts/gift.mapper";
+import { normalizeGiftDiscoveryRequest } from "@/lib/gift-discovery";
 import {
-  applyGiftDiscoveryAnswersToContext,
-  buildGiftDiscoveryPromptInput,
-  buildGiftDiscoverySession,
-  normalizeGiftDiscoveryRequest,
-  type GiftDiscoveryPromptInput,
-} from "@/lib/gift-discovery";
-import { buildMemoryCaptureCandidates } from "@/lib/memory-capture";
-import { authorizeGiftMemoryCandidates } from "@/lib/memory-capture/authorizeGiftMemoryCandidates.server";
-import {
-  buildGiftRecommendationContext,
-  buildGiftRecommendationInstructions,
-  buildGiftRepairInstructions,
-  applyGiftOutcomeRecommendationPolicy,
-  giftRecommendationJsonSchema,
-  mapSuggestionsToLegacyIdeas,
-  validateGiftRecommendations,
-  type GiftRecommendationAiResponse,
-  type GiftRecommendationAiPayload,
-} from "@/lib/gift-intelligence";
+  boundedString,
+  GIFT_AI_TIMEOUT_MS,
+  runGiftRecommendationPipeline,
+} from "@/lib/gift-intelligence/giftRecommendationService.server";
 import { DEFAULT_LOCALE, normalizeLocale } from "@/i18n/config";
 import { classifyAssistantProviderError } from "@/lib/assistant/chatServer";
 import { readBoundedJson } from "@/lib/server/readBoundedJson";
-import { logAiUsageEvent, logOperationalError } from "@/lib/observability/safeLogger";
-import {
-  AI_COST_POLICY,
-  estimatedUsd,
-} from "@/lib/assistant/aiBudget";
-
-import { withAiExecutionScope, runMeteredAiCall, parseOpenAiUsage } from "@/lib/assistant/aiExecution.server";
+import { logOperationalError } from "@/lib/observability/safeLogger";
 import { aiExecutionFailureResponse } from "@/lib/assistant/aiExecutionError";
+
+// Explicit so the limit is validated by the Vercel build, not inferred from plan defaults.
+export const maxDuration = 300;
 
 /* ================= TYPES ================= */
 
@@ -66,8 +47,6 @@ type GiftRequestBody = {
 /* ================= ENV ================= */
 
 const MAX_GIFT_REQUEST_BYTES = 32 * 1024;
-const GIFT_AI_TIMEOUT_MS = 30_000;
-const GIFT_AI_MAX_OUTPUT_TOKENS = 2_000;
 
 function json(body: unknown, status = 200, headers?: HeadersInit) {
   return NextResponse.json(body, {
@@ -76,62 +55,7 @@ function json(body: unknown, status = 200, headers?: HeadersInit) {
   });
 }
 
-function boundedString(value: unknown, maxLength: number): string | null {
-  return typeof value === "string" && value.trim().length <= maxLength
-    ? value.trim()
-    : null;
-}
 
-async function generateGiftRecommendations(
-  payload: unknown,
-  instructions: string,
-  signal: AbortSignal,
-): Promise<GiftRecommendationAiResponse> {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) throw Object.assign(new Error("provider unavailable"), { code: "missing_api_key" });
-  const serializedPayload = JSON.stringify(payload);
-  const params = {
-    model: "gpt-4.1-mini",
-    temperature: 0.8,
-    max_output_tokens: GIFT_AI_MAX_OUTPUT_TOKENS,
-    instructions,
-    input: serializedPayload,
-    text: {
-      format: {
-        type: "json_schema" as const,
-        name: "gift_recommendations",
-        strict: true,
-        schema: giftRecommendationJsonSchema,
-      },
-    },
-  };
-  const ai = await runMeteredAiCall({ feature: "gifts", model: params.model, payload: params, maxOutputTokens: params.max_output_tokens,
-    call: () => new OpenAI({ apiKey, maxRetries: 0 }).responses.create(params, { signal }),
-    usage: value => parseOpenAiUsage(value.usage, "responses"),
-  });
-
-  const usage = parseOpenAiUsage(ai.usage, "responses");
-  if (usage) {
-    logAiUsageEvent({
-      feature: "gift-recommendations",
-      ...usage,
-      estimatedUsd: estimatedUsd(usage),
-      pricingVersion: AI_COST_POLICY.version,
-    });
-  }
-
-  const output = ai.output_text;
-
-  if (!output) {
-    throw new Error("Empty AI output");
-  }
-
-  try {
-    return JSON.parse(output) as GiftRecommendationAiResponse;
-  } catch {
-    throw new Error("Invalid JSON from AI");
-  }
-}
 
 /* ================= ROUTE ================= */
 
@@ -190,112 +114,20 @@ export async function POST(req: Request) {
       });
     }
 
-    /* ================= LOAD PERSON ================= */
+    /* ================= SHARED PIPELINE ================= */
 
-    const baseGiftRecommendationContext = buildGiftRecommendationContext({
-      person: {
-        id: person.id,
-        name: person.name,
-        relationKey: person.relationKey,
-        relationship: person.relation,
-        gender: person.gender,
-        birthday: person.birthday,
-      },
-      event: {
-        id: boundedString(body.event?.id, 128),
-        category: boundedString(body.event?.category, 80) ?? occasion,
-        date: boundedString(body.event?.date, 40),
-        personId: boundedString(body.event?.personId, 128) ?? person.id,
-      },
-      knowledge,
-      gifts: mapKnowledgeToGifts(knowledge),
-      outcomeLearningEnabled,
-      confirmedGiftOutcomes,
-      budget: body.budget ? {
-        amount: typeof body.budget.amount === "number" && Number.isFinite(body.budget.amount)
-          && body.budget.amount >= 0 && body.budget.amount <= 1_000_000_000
-            ? body.budget.amount
-            : null,
-        currency: boundedString(body.budget.currency, 12),
-      } : null,
+    const result = await runGiftRecommendationPipeline({
+      ownedPerson,
+      source: { person, knowledge, outcomeLearningEnabled, confirmedGiftOutcomes },
       locale,
+      occasion,
+      event: body.event,
+      budget: body.budget,
+      discoveryRequest,
+      surface: "page",
+      signal: AbortSignal.timeout(GIFT_AI_TIMEOUT_MS),
     });
-    const giftRecommendationContext = applyGiftDiscoveryAnswersToContext(
-      baseGiftRecommendationContext,
-      discoveryRequest.answers,
-    );
-
-    /* ================= PROMPT ================= */
-    const giftDiscoverySession = buildGiftDiscoverySession({
-      context: giftRecommendationContext,
-      answeredQuestions: discoveryRequest.answeredQuestions,
-      skippedQuestions: discoveryRequest.skippedQuestionIds,
-    });
-    const giftDiscoveryPromptInput = buildGiftDiscoveryPromptInput(giftDiscoverySession);
-    const giftRecommendationPayload = {
-      context: giftRecommendationContext,
-      discovery: giftDiscoveryPromptInput,
-    } satisfies GiftRecommendationAiPayload<GiftDiscoveryPromptInput>;
-
-    /* ================= OPENAI ================= */
-
-    const providerSignal = AbortSignal.timeout(GIFT_AI_TIMEOUT_MS);
-    const parsed = await withAiExecutionScope({ kind: "authenticated", key: ownedPerson.userId }, () => generateGiftRecommendations(
-      giftRecommendationPayload,
-      buildGiftRecommendationInstructions(giftRecommendationContext, giftDiscoveryPromptInput),
-      providerSignal,
-    ));
-    let validated = validateGiftRecommendations(parsed, giftRecommendationContext, {
-      discoverySession: giftDiscoverySession,
-    });
-
-    if (validated.suggestions.length < 5 && validated.validationErrors.length > 0) {
-      const repairInput = {
-        ...giftRecommendationPayload,
-        validationErrors: validated.validationErrors,
-        validSuggestions: validated.suggestions,
-      };
-      const repaired = await withAiExecutionScope({ kind: "authenticated", key: ownedPerson.userId }, () => generateGiftRecommendations(
-        repairInput,
-        buildGiftRepairInstructions(giftRecommendationContext),
-        providerSignal,
-      ));
-      const repairedValidated = validateGiftRecommendations(
-        {
-          suggestions: [...validated.suggestions, ...repaired.suggestions],
-          followUpQuestions: validated.followUpQuestions.length
-            ? validated.followUpQuestions
-            : repaired.followUpQuestions,
-        },
-        giftRecommendationContext,
-        {
-          repairAttempted: true,
-          discoverySession: giftDiscoverySession,
-        },
-      );
-      validated = repairedValidated;
-    }
-    validated = {
-      ...validated,
-      suggestions: applyGiftOutcomeRecommendationPolicy(
-        validated.suggestions,
-        giftRecommendationContext.outcomeLearning.evidence,
-        giftRecommendationContext.outcomeLearning.enabled,
-      ),
-    };
-    const legacyIdeas = mapSuggestionsToLegacyIdeas(validated.suggestions);
-    const legacyMemoryCandidates = buildMemoryCaptureCandidates({
-      context: giftRecommendationContext,
-      discoveryAnswers: discoveryRequest.answers,
-      aiResponse: parsed,
-    });
-    const memoryCandidates = authorizeGiftMemoryCandidates({
-      userId: ownedPerson.userId,
-      person: { id: person.id, name: person.name?.trim() || "Contact" },
-      knowledge,
-      candidates: legacyMemoryCandidates,
-      tokenSecret: process.env.HAPPY_LEARNING_TOKEN_SECRET?.trim() ?? "",
-    });
+    const legacyIdeas = result.ideas;
 
     /* ================= SAVE CACHE ================= */
 
@@ -307,14 +139,16 @@ export async function POST(req: Request) {
 
     return json({
       ideas: legacyIdeas,
-      suggestions: validated.suggestions,
-      followUpQuestions: validated.followUpQuestions,
-      discovery: giftDiscoveryPromptInput,
-      memoryCandidates,
-      diagnostics: validated.diagnostics,
+      suggestions: result.suggestions,
+      followUpQuestions: result.followUpQuestions,
+      discovery: result.discovery,
+      memoryCandidates: result.memoryCandidates,
+      diagnostics: result.diagnostics,
       cached: false,
     });
   } catch (error) {
+    // Rate limit, concurrency, daily budget and hosted-session denials all come
+    // from the shared SEC-01 provider boundary.
     const guarded = aiExecutionFailureResponse(error);
     if (guarded) return guarded;
     if (error && typeof error === "object" && "code" in error && error.code === "daily_ai_budget_exceeded") {

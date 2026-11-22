@@ -1,0 +1,131 @@
+name: HappyBot staging smoke (paid, manual)
+
+# Manual only (workflow_dispatch). Never triggered by pull_request/pull_request_target, so PR code
+# can never reach these secrets. Runs one exact, reviewed commit against the STAGING Supabase
+# project with a throw-away Redis. Real spend ceilings: the app's own SEC-01 daily budget
+# (OPENAI_DAILY_BUDGET_USD=0.10 on that empty Redis) AND the spend limit of the dedicated
+# OpenAI Project whose key is stored in the protected Environment. See docs/happybot-staging-smoke.md.
+
+on:
+  # Runs from the release branch without merging this workflow into main: pushing a change to the
+  # request file below starts a run that still waits for Environment reviewer approval.
+  push:
+    branches: ["codex/happydate-production-release-20261122"]
+    paths: [".github/happybot-smoke-request.json"]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Exact 40-char commit SHA to test (must be on main or the release branch)"
+        required: false
+        type: string
+      product_search:
+        description: "Also test web_search product offers (GIFT_PRODUCT_SEARCH=1)"
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: happybot-staging-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    # The real gate is the protected Environment (required reviewer, release branch only).
+    if: github.event_name == 'push' || github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Protected environment: configure Required reviewers + deployment branches there.
+    environment: happybot-staging-smoke
+    permissions:
+      contents: read
+    services:
+      redis:
+        image: redis:8.2.3-alpine
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      TARGET_SHA: ${{ inputs.sha || github.sha }}
+    steps:
+      - name: Check out the exact SHA only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify the SHA is exactly what was requested and is reviewed history
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = push ]; then [ "$GITHUB_REF" = refs/heads/codex/happydate-production-release-20261122 ] || { echo "push runs only from the release branch"; exit 1; }; fi
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "sha must be 40 lowercase hex chars"; exit 1; }
+          [ "$(git rev-parse HEAD)" = "$TARGET_SHA" ] || { echo "checked-out HEAD differs from requested sha"; exit 1; }
+          git branch -r --contains "$TARGET_SHA" | grep -Eq '^\s*origin/(main|codex/happydate-production-release-20261122)$' \
+            || { echo "sha is not on main or the release branch"; exit 1; }
+          echo "Testing $TARGET_SHA"
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Read the run request
+        id: req
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = push ]; then v="$(jq -r '.product_search == true' .github/happybot-smoke-request.json)"; else v="${{ inputs.product_search }}"; fi
+          echo "product_search=$v" >> "$GITHUB_OUTPUT"
+          echo "product_search=$v"
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Start local Redis REST bridge (in-repo, no third-party image)
+        env:
+          REDIS_CLI: docker exec ${{ job.services.redis.id }} redis-cli
+        run: |
+          set -euo pipefail
+          token="$(openssl rand -hex 24)"
+          echo "::add-mask::$token"
+          echo "BRIDGE_TOKEN=$token" >> "$GITHUB_ENV"
+          BRIDGE_TOKEN="$token" BRIDGE_PORT=8079 REDIS_CLI="$REDIS_CLI" nohup node scripts/redis-rest-bridge.mjs > bridge.log 2>&1 &
+          for i in $(seq 1 20); do curl -fs -o /dev/null -X POST -H "Authorization: Bearer $token" -d '["PING"]' http://127.0.0.1:8079/ && exit 0; sleep 1; done
+          echo "bridge did not start"; exit 1
+
+      # NOTE: next dev, not next start. SEC-01 deliberately fails closed for NODE_ENV=production outside
+      # Vercel (readHostedSessionConfig), and we do not fake VERCEL=1 to get around it. Development mode
+      # still uses the real Upstash-protocol budget and rate limiter (the Redis bridge), real OpenAI and
+      # real staging Supabase. Production-mode gating is covered by unit tests and the real production smoke.
+      - name: Start app (secrets only in this step)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.HAPPYBOT_SMOKE_OPENAI_API_KEY }}
+          OPENAI_DAILY_BUDGET_USD: "0.10"
+          UPSTASH_REDIS_REST_URL: http://127.0.0.1:8079
+          UPSTASH_REDIS_REST_TOKEN: ${{ env.BRIDGE_TOKEN }}
+          GIFT_PRODUCT_SEARCH: ${{ steps.req.outputs.product_search == 'true' && '1' || '0' }}
+        run: |
+          nohup npx next dev --webpack --hostname 127.0.0.1 --port 3000 > app.log 2>&1 &
+          for i in $(seq 1 60); do curl -fs -o /dev/null http://127.0.0.1:3000/ && exit 0; sleep 2; done
+          echo "app did not start (log not printed to avoid leaking values)"; exit 1
+
+      - name: HappyBot smoke
+        env:
+          STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          STAGING_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}
+          STAGING_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          UPSTASH_REDIS_REST_URL: http://127.0.0.1:8079
+          UPSTASH_REDIS_REST_TOKEN: ${{ env.BRIDGE_TOKEN }}
+          GIFT_PRODUCT_SEARCH: ${{ steps.req.outputs.product_search == 'true' && '1' || '0' }}
+        run: node scripts/happybot-staging-smoke.mjs
+
+      - name: Sanitized application error events (only on failure)
+        if: failure()
+        run: |
+          # Structured events from the app's safe logger only; secret values are masked by GitHub and
+          # never part of these events. Plain stack traces are not printed.
+          echo "log lines: $(wc -l < app.log)"
+          grep -oE '"(level|scope|event|category|code)":"[A-Za-z0-9_.:-]{1,60}"|"(ideas|found|rejected|rejectedCurrency|rejectedOverBudget|searchCalls)":[0-9]+' app.log | paste -sd' ' | sed -E 's/"level"/\n"level"/g' | sort | uniq -c | sort -rn | head -30 || true

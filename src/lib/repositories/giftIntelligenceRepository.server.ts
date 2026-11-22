@@ -146,3 +146,26 @@ export async function saveGiftIdeas(
     { onConflict: "person_id,occasion,locale" },
   );
 }
+
+/** Titles of unexpired ideas already shown to the user for this person (any occasion). */
+export async function listRecentShownGiftIdeaTitles(person: { id: string; userId: string }, limit = 12): Promise<string[]> {
+  const owned = await adminClient().from("people").select("id").eq("id", person.id).eq("user_id", person.userId).maybeSingle();
+  if (owned.error || !owned.data) return [];
+  const { data, error } = await adminClient()
+    .from("ai_gift_cache")
+    .select("ideas")
+    .eq("person_id", person.id)
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(3);
+  if (error || !data) return [];
+  const titles: string[] = [];
+  for (const row of data) {
+    if (!Array.isArray(row.ideas)) continue;
+    for (const idea of row.ideas as Array<{ title?: unknown }>) {
+      const title = typeof idea?.title === "string" ? idea.title.replace(/\s+/g, " ").trim().slice(0, 160) : "";
+      if (title && !titles.includes(title)) titles.push(title);
+    }
+  }
+  return titles.slice(0, limit);
+}

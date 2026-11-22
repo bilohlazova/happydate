@@ -5,6 +5,7 @@ import {
   applyGiftOutcomeRecommendationPolicy,
 } from "../src/lib/gift-intelligence/giftOutcomeRecommendationPolicy.ts";
 import { classifyGiftFeedbackCategory } from "../src/lib/gift-intelligence/giftFeedbackCategory.ts";
+import { readGiftPipelineSource } from "./helpers/giftPipelineSource.mjs";
 
 function suggestion(title, category = "other") {
   return {
@@ -98,7 +99,7 @@ test("outcome learning consent is owner-controlled and invalidates stale recomme
     new URL("../supabase/migrations/20260808165317_add_gift_outcome_learning_preference.sql", import.meta.url),
     "utf8",
   );
-  const route = await readFile(new URL("../src/app/api/ai/gift-suggestions/route.ts", import.meta.url), "utf8");
+  const route = await readGiftPipelineSource();
   const settings = await readFile(new URL("../src/app/(app)/settings/page.tsx", import.meta.url), "utf8");
   assert.match(migration, /gift_outcome_learning_enabled boolean not null default true/i);
   assert.match(migration, /grant update[\s\S]*gift_outcome_learning_enabled[\s\S]*to authenticated/i);

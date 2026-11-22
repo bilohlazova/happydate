@@ -12,6 +12,7 @@ import {
   buildGiftRepairInstructions,
 } from "../src/lib/gift-intelligence/index.ts";
 import { mapKnowledgeToGifts } from "../src/lib/gifts/gift.mapper.ts";
+import { readGiftPipelineSource } from "./helpers/giftPipelineSource.mjs";
 
 function knowledge(overrides = {}) {
   return {
@@ -40,10 +41,7 @@ function knowledge(overrides = {}) {
 }
 
 test("Gift AI route uses context and discovery as the single structured model payload", async () => {
-  const route = await readFile(
-    new URL("../src/app/api/ai/gift-suggestions/route.ts", import.meta.url),
-    "utf8",
-  );
+  const route = await readGiftPipelineSource();
 
   assert.match(route, /buildGiftRecommendationContext\(\{/);
   assert.match(route, /applyGiftDiscoveryAnswersToContext/);
@@ -51,7 +49,7 @@ test("Gift AI route uses context and discovery as the single structured model pa
   assert.match(route, /answeredQuestions: discoveryRequest\.answeredQuestions/);
   assert.match(route, /skippedQuestions: discoveryRequest\.skippedQuestionIds/);
   assert.match(route, /buildGiftDiscoveryPromptInput\(giftDiscoverySession\)/);
-  assert.match(route, /const giftRecommendationPayload = \{\s*context: giftRecommendationContext,\s*discovery: giftDiscoveryPromptInput,\s*\}/);
+  assert.match(route, /const giftRecommendationPayload = \{\s*context: giftRecommendationContext,\s*discovery: giftDiscoveryPromptInput,\s*profile: personProfile,\s*\}/);
   assert.match(route, /const serializedPayload = JSON\.stringify\(payload\)/);
   assert.match(route, /input: serializedPayload/);
   assert.match(route, /generateGiftRecommendations\(\s*giftRecommendationPayload,/);
@@ -62,10 +60,7 @@ test("Gift AI route uses context and discovery as the single structured model pa
 });
 
 test("Gift AI route passes canonical context inputs and does not leak raw repository objects to OpenAI", async () => {
-  const route = await readFile(
-    new URL("../src/app/api/ai/gift-suggestions/route.ts", import.meta.url),
-    "utf8",
-  );
+  const route = await readGiftPipelineSource();
   const openAiStart = route.indexOf("openai.responses.create");
   const openAiEnd = route.indexOf("const output = ai.output_text", openAiStart);
   const openAiCall = route.slice(openAiStart, openAiEnd);
@@ -172,7 +167,7 @@ test("Gift AI instructions preserve locale, duplicate avoidance and missing-data
   const instructions = buildGiftRecommendationInstructions(promptContext);
   const repairInstructions = buildGiftRepairInstructions(promptContext);
 
-  assert.match(instructions, /structured AI payload: context and discovery/);
+  assert.match(instructions, /structured AI payload: context, discovery and profile/);
   assert.match(instructions, /Do not invent missing facts/);
   assert.match(instructions, /missingSignals/);
   assert.match(instructions, /completionScore/);
@@ -193,10 +188,7 @@ test("Gift recommendation cache is partitioned by active application locale", as
     new URL("../src/lib/repositories/giftIntelligenceRepository.server.ts", import.meta.url),
     "utf8",
   );
-  const route = await readFile(
-    new URL("../src/app/api/ai/gift-suggestions/route.ts", import.meta.url),
-    "utf8",
-  );
+  const route = await readGiftPipelineSource();
 
   assert.match(repository, /\.eq\("locale", locale\)/);
   assert.match(repository, /onConflict: "person_id,occasion,locale"/);

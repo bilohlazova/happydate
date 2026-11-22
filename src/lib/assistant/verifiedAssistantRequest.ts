@@ -8,6 +8,8 @@ import type {
 export type VerifiedAssistantProjection = {
   currentDate: string | null;
   userName: string | null;
+  /** Server-derived Care Brain highlight; never client supplied. */
+  insight?: AssistantChatRequest["context"]["insight"];
   events: AssistantEventContext[];
   people: AssistantPersonContext[];
   memories: AssistantMemoryGroupContext[];
@@ -35,7 +37,7 @@ export function replaceAssistantContext(
     context: {
       currentDate: verified.currentDate,
       userName: verified.userName,
-      insight: null,
+      insight: verified.insight ?? null,
       events: verified.events,
       people: verified.people,
       memories: verified.memories,

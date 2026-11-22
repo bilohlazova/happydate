@@ -93,7 +93,9 @@ test("route accepts structured provider output but never parses assistant text",
   const route = await read("src/app/api/ai-chat/route.ts");
   assert.match(server, /memoryProposal\?: unknown/);
   assert.match(server, /onCompleted\?\.\(request, responseText, structuredProposal\)/);
-  assert.match(route, /createMemoryProposalFromCandidate/);
+  assert.match(route, /queueKnowledgeCandidate/);
+  const queue = await read("src/lib/happy/learning/knowledgeQueue.server.ts");
+  assert.match(queue, /createMemoryProposalFromCandidate/);
   assert.doesNotMatch(route, /responseText.*match|regex|RegExp/);
 });
 
@@ -103,13 +105,23 @@ test("the real chat provider uses one same-turn structured propose_memory tool",
   assert.match(route, /tool_choice: "auto"/);
   assert.match(route, /toolArguments/);
   assert.match(route, /JSON\.parse\(first\.arguments\)/);
-  assert.doesNotMatch(route, /await openai\.chat\.completions\.create[\s\S]*await openai\.chat\.completions\.create/);
+  // Memory proposals never cost an extra provider call. The only second round is
+  // the gift tool follow-up, inside the verified gift branch, and every round goes
+  // through the SEC-01 metered boundary (no direct provider client in the route).
+  const firstCall = route.indexOf("await meteredRound(params)");
+  const giftBranch = route.indexOf("if (giftCall && toolPersonId");
+  const secondCall = route.indexOf("await meteredRound(followUpParams)");
+  assert.ok(firstCall > 0 && giftBranch > firstCall && secondCall > giftBranch);
+  assert.equal(route.indexOf("await meteredRound(", secondCall + 1), -1);
+  assert.equal(route.split("chat.completions.create(").length - 1, 1, "one provider call site, inside meteredRound");
+  assert.match(route, /runMeteredAiStream\(\{\s*feature: "chat"/);
+  assert.match(route, /withAiExecutionScope\(identity,/);
 });
 
 test("proposal is fail-closed when verified context is unavailable", async () => {
   const route = await read("src/app/api/ai-chat/route.ts");
   assert.match(route, /let verifiedContextReady = false/);
-  assert.match(route, /if \(verifiedContextReady && verifiedScope\)/);
+  assert.match(route, /verifiedContextReady && verifiedScope && memoryProposal !== undefined/);
   assert.match(route, /verifiedContextReady = false/);
 });
 

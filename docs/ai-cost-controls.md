@@ -42,4 +42,4 @@ malformed usage keeps the full reservation. Every role uses the single priced
 model (`gpt-4.1-mini`); moving a role to another model needs its own reviewed
 pricing policy, otherwise the call fails closed with 503.
 
-`GIFT_PRODUCT_SEARCH=0` disables live product search without a deploy.
+Live product search is opt-in: it runs only when `GIFT_PRODUCT_SEARCH=1`. Setting it to anything else (or unsetting it) disables it without a deploy. Each search request is capped at 3 search calls (`max_tool_calls`) and the full fee for all 3 is reserved against the daily budget before the call.

@@ -21,6 +21,9 @@ import { readBoundedJson } from "@/lib/server/readBoundedJson";
 import { logOperationalError } from "@/lib/observability/safeLogger";
 import { aiExecutionFailureResponse } from "@/lib/assistant/aiExecutionError";
 
+// Explicit so the limit is validated by the Vercel build, not inferred from plan defaults.
+export const maxDuration = 300;
+
 /* ================= TYPES ================= */
 
 type GiftRequestBody = {

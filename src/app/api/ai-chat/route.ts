@@ -31,6 +31,10 @@ import { ChatScopeNotFoundError, resolveVerifiedChatScope } from "@/lib/assistan
 import { getActiveTaskDecisions } from "@/lib/happy/taskDecisions.server";
 
 export const runtime = "nodejs";
+// Explicit so the limit is validated by the Vercel build, not inferred from plan defaults.
+// Longest chain (chat round + gifts + search + chat round) stays well under it; every single
+// provider call is aborted at <= 60 s, which is below the 75 s concurrency lease.
+export const maxDuration = 300;
 
 export async function POST(request: Request) {
   const parsedBody = await readBoundedJson(request, 64 * 1024);

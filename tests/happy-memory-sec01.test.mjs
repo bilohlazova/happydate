@@ -91,3 +91,27 @@ test("unpriced models fail closed: HappyBot roles all use the priced model", asy
     feature: "gifts", model: "gpt-4.1", payload: {}, maxOutputTokens: 10, call: async () => ({}), usage: () => null,
   }), { limiter: null, budget: null }), (error) => error.status === 503);
 });
+
+test("search fee is reserved up front: an over-budget search is rejected before any provider call", async () => {
+  const budget = new MemoryAiBudget(0.1, () => new Date("2026-11-22T12:00:00Z"));
+  let providerCalls = 0;
+  const run = (overhead) => withAiExecutionScope({ kind: "authenticated", key: "u1" }, () => runMeteredAiCall({
+    feature: "gift-search", model: "gpt-4.1-mini", payload: { a: 1 }, maxOutputTokens: 100, reservedInputOverhead: overhead,
+    call: async () => { providerCalls += 1; return { usage: { input_tokens: 10, output_tokens: 1 } }; },
+    usage: (value) => parseOpenAiUsage(value.usage, "responses"),
+  }), { budget, limiter: null === 1 ? null : { check: async () => ({ allowed: true, remaining: 1, resetAt: Date.now() + 1000 }) } });
+  // $0.10 budget = 250 000 units; three searches at ~25 000 units each fit, a 300 000-unit reserve must not.
+  await assert.rejects(run(300_000), (error) => error.code === "daily_ai_budget_exceeded" || error.status === 429);
+  assert.equal(providerCalls, 0);
+  await run(75_000);
+  assert.equal(providerCalls, 1);
+  await assert.rejects(run(-1), (error) => error.status === 503);
+});
+
+test("product search is opt-in, capped by max_tool_calls and reserves the full search fee", async () => {
+  const source = await readFile(join(root, "src/lib/gift-intelligence/giftProductSearch.server.ts"), "utf8");
+  assert.match(source, /GIFT_PRODUCT_SEARCH\?\.trim\(\) === "1"/);
+  assert.match(source, /max_tool_calls: PRODUCT_SEARCH_MAX_TOOL_CALLS/);
+  assert.match(source, /reservedInputOverhead: SEARCH_CALL_COST_UNITS \* PRODUCT_SEARCH_MAX_TOOL_CALLS/);
+  assert.doesNotMatch(source, /GIFT_PRODUCT_SEARCH\?\.trim\(\) !== "0"/);
+});

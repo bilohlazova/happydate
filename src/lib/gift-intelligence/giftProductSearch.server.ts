@@ -17,9 +17,12 @@ export const PRODUCT_SEARCH_TIMEOUT_MS = 40_000;
 const PRODUCT_SEARCH_MAX_OUTPUT_TOKENS = 1_500;
 /** OpenAI bills web search per call (about $0.01); expressed in input-token units of the cost policy. */
 const SEARCH_CALL_COST_UNITS = Math.ceil(0.01 / (AI_COST_POLICY.inputUsdPerMillion / 1_000_000));
+/** Hard provider-side cap on search calls per request; the full fee for all of them is reserved up front. */
+export const PRODUCT_SEARCH_MAX_TOOL_CALLS = 3;
 
 export function isProductSearchEnabled(env: Record<string, string | undefined> = process.env): boolean {
-  return env.GIFT_PRODUCT_SEARCH?.trim() !== "0";
+  // Opt-in: paid web search is only on when explicitly enabled.
+  return env.GIFT_PRODUCT_SEARCH?.trim() === "1";
 }
 
 function collectUrls(output: unknown): { urls: string[]; searchCalls: number } {
@@ -82,6 +85,7 @@ export async function attachProductOffers(input: {
     const params = {
       model: ASSISTANT_CHAT_CONFIG.giftModel,
       max_output_tokens: PRODUCT_SEARCH_MAX_OUTPUT_TOKENS,
+      max_tool_calls: PRODUCT_SEARCH_MAX_TOOL_CALLS,
       store: false,
       tools: [{ type: "web_search" as const, ...(country ? { user_location: { type: "approximate" as const, country } } : {}) }],
       include: ["web_search_call.action.sources" as const],
@@ -94,6 +98,7 @@ export async function attachProductOffers(input: {
     // Missing or malformed usage keeps the full reservation (never refunded).
     const response = await runMeteredAiCall({
       feature: "gift-search", model: params.model, payload: params, maxOutputTokens: params.max_output_tokens,
+      reservedInputOverhead: SEARCH_CALL_COST_UNITS * PRODUCT_SEARCH_MAX_TOOL_CALLS,
       call: () => new OpenAI({ apiKey, maxRetries: 0 }).responses.create(params, { signal }),
       usage: value => {
         const tokens = parseOpenAiUsage(value.usage, "responses");

@@ -2,7 +2,8 @@ export const SUPPORTED_LOCALES = ["pl", "uk", "en", "ru", "de"] as const;
 
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
 
-export const DEFAULT_LOCALE: AppLocale = "pl";
+/** Fallback when neither a saved choice nor the device language is supported. */
+export const DEFAULT_LOCALE: AppLocale = "en";
 export const LOCALE_COOKIE_NAME = "happydate_locale";
 
 export function isSupportedLocale(value: unknown): value is AppLocale {

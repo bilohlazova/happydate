@@ -4,9 +4,9 @@ import path from "node:path";
 import test from "node:test";
 
 import { changeApplicationLocale } from "../src/i18n/changeApplicationLocale.ts";
-import { buildLocaleCookie, getLocaleCookie } from "../src/i18n/localeCookie.ts";
+import { buildLocaleCookie, getLocaleCookie, getStoredLocale, setLocaleCookie } from "../src/i18n/localeCookie.ts";
 import { LANGUAGE_OPTIONS } from "../src/i18n/localeOptions.ts";
-import { resolveAuthenticatedLocale, shouldSynchronizeProfileLocale } from "../src/i18n/profileLocaleSync.ts";
+import { resolveAuthenticatedLocale, shouldBackfillProfileLocale, shouldSynchronizeProfileLocale } from "../src/i18n/profileLocaleSync.ts";
 import { buildPreferredLocaleUpdate, parsePreferredLocale } from "../src/lib/repositories/profile/profile.types.ts";
 
 const root = process.cwd();
@@ -23,8 +23,8 @@ test("browser wins when profile and cookie are absent", () => {
   assert.equal(resolveAuthenticatedLocale(null, null, "ru"), "ru");
 });
 
-test("Polish is the final authenticated fallback", () => {
-  assert.equal(resolveAuthenticatedLocale(null, null, null), "pl");
+test("English is the final authenticated fallback", () => {
+  assert.equal(resolveAuthenticatedLocale(null, null, null), "en");
 });
 
 test("invalid profile locale is ignored", () => {
@@ -156,4 +156,38 @@ test("German compact trigger and Header breakpoints are protected", async () => 
   assert.match(css, /@media \(max-width: 374px\)[\s\S]*min-width: 56px/);
   assert.match(header, /hd-mobile-menu-button/);
   assert.match(header, /<LanguageSwitcher isAuthenticated=\{isLoggedIn\}/);
+});
+
+test("manual cookie choice is backfilled to a profile without locale", () => {
+  assert.equal(shouldBackfillProfileLocale(null, "de"), true);
+  assert.equal(shouldBackfillProfileLocale(null, null), false);
+  assert.equal(shouldBackfillProfileLocale("uk", "de"), false);
+});
+
+test("setLocaleCookie mirrors the manual choice to storage for webviews", () => {
+  const store = new Map();
+  globalThis.document = { cookie: "" };
+  globalThis.window = { localStorage: { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) } };
+  try {
+    setLocaleCookie("ru");
+    assert.equal(getStoredLocale(), "ru");
+    store.set("happydate_locale", "fr");
+    assert.equal(getStoredLocale(), null);
+  } finally {
+    delete globalThis.document;
+    delete globalThis.window;
+  }
+});
+
+test("Header backfills profile locale and restores a dropped cookie", async () => {
+  const source = await readFile(path.join(root, "src/components/Header.tsx"), "utf8");
+  assert.match(source, /shouldBackfillProfileLocale/);
+  assert.match(source, /getStoredLocale\(\)/);
+});
+
+test("first launch uses the device language and falls back to English", async () => {
+  const { resolveRequestLocale } = await import("../src/i18n/config.ts");
+  assert.equal(resolveRequestLocale(undefined, "de-DE,de;q=0.9"), "de");
+  assert.equal(resolveRequestLocale(undefined, "fr-FR,fr;q=0.9"), "en");
+  assert.equal(resolveRequestLocale("pl", "de-DE"), "pl");
 });

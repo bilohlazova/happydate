@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 
 import { changeApplicationLocale } from "@/i18n/changeApplicationLocale";
-import { isSupportedLocale, type AppLocale } from "@/i18n/config";
+import { DEFAULT_LOCALE, isSupportedLocale, type AppLocale } from "@/i18n/config";
 import { setLocaleCookie } from "@/i18n/localeCookie";
 import { getLanguageOption, LANGUAGE_OPTIONS } from "@/i18n/localeOptions";
 import { updateCurrentUserPreferredLocale } from "@/lib/repositories/profile/profileLocale.repository";
@@ -21,7 +21,7 @@ export default function LanguageSwitcher({
   variant = "header",
 }: LanguageSwitcherProps) {
   const localeValue = useLocale();
-  const locale: AppLocale = isSupportedLocale(localeValue) ? localeValue : "pl";
+  const locale: AppLocale = isSupportedLocale(localeValue) ? localeValue : DEFAULT_LOCALE;
   const translate = useTranslations("common.language");
   const profileTranslate = useTranslations("profile.settings.language");
   const router = useRouter();

@@ -50,7 +50,7 @@ function keyPaths(value, prefix = "") {
 
 test("supported locales and default locale are exact", () => {
   assert.deepEqual(SUPPORTED_LOCALES, ["pl", "uk", "en", "ru", "de"]);
-  assert.equal(DEFAULT_LOCALE, "pl");
+  assert.equal(DEFAULT_LOCALE, "en");
   assert.equal(LOCALE_COOKIE_NAME, "happydate_locale");
   assert.equal(isSupportedLocale("de"), true);
   assert.equal(isSupportedLocale("fr"), false);
@@ -83,9 +83,9 @@ test("invalid cookie uses highest-quality supported browser language", () => {
   );
 });
 
-test("unsupported locale values fall back to Polish", () => {
-  assert.equal(resolveRequestLocale("fr", "es-MX,fr;q=0.9"), "pl");
-  assert.equal(resolveRequestLocale(undefined, undefined), "pl");
+test("unsupported locale values fall back to English", () => {
+  assert.equal(resolveRequestLocale("fr", "es-MX,fr;q=0.9"), "en");
+  assert.equal(resolveRequestLocale(undefined, undefined), "en");
 });
 
 test("every supported locale has exactly the Polish common key structure", async () => {

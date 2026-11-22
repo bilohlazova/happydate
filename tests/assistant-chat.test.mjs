@@ -70,10 +70,10 @@ test("gift response plan avoids gender stereotypes and explains evidence-led adv
   assert.match(plan, /saved preference context is available/);
 });
 
-test("unknown locale safely falls back to Polish", () => {
+test("unknown locale safely falls back to English", () => {
   const result = parseAssistantChatRequest(validRequest({ locale: "fr" }));
   assert.equal(result.success, true);
-  if (result.success) assert.equal(result.data.locale, "pl");
+  if (result.success) assert.equal(result.data.locale, "en");
 });
 
 test("conversation count, character budget and roles are validated", () => {

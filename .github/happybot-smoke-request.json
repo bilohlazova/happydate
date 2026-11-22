@@ -1,0 +1,4 @@
+{
+  "product_search": false,
+  "note": "Changing this file on the release branch starts the staging smoke; it still needs Environment reviewer approval."
+}

@@ -48,3 +48,10 @@ Actions → «HappyBot staging smoke (paid, manual)» → Run workflow → Branc
 `product_search` увімкненим. Після завершення видаліть OpenAI-ключ.
 
 Скрипт сам видаляє створених тестових користувачів і перевіряє, що вони й усі їхні рядки зникли.
+
+## Запуск без merge у main
+
+Workflow-файл не лежить на default branch, тому кнопки «Run workflow» (`workflow_dispatch`) немає: GitHub повертає 404.
+Замість неї запуск іде з release-гілки: **push зміни файлу `.github/happybot-smoke-request.json`** стартує run
+(`"product_search": false` для першого прогону, `true` для другого). Run чекає у «Review deployments».
+Тестується саме SHA цього push; він має бути на release-гілці.

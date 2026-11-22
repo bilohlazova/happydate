@@ -7,11 +7,16 @@ name: HappyBot staging smoke (paid, manual)
 # OpenAI Project whose key is stored in the protected Environment. See docs/happybot-staging-smoke.md.
 
 on:
+  # Runs from the release branch without merging this workflow into main: pushing a change to the
+  # request file below starts a run that still waits for Environment reviewer approval.
+  push:
+    branches: ["codex/happydate-production-release-20261122"]
+    paths: [".github/happybot-smoke-request.json"]
   workflow_dispatch:
     inputs:
       sha:
         description: "Exact 40-char commit SHA to test (must be on main or the release branch)"
-        required: true
+        required: false
         type: string
       product_search:
         description: "Also test web_search product offers (GIFT_PRODUCT_SEARCH=1)"
@@ -26,7 +31,8 @@ concurrency:
 
 jobs:
   smoke:
-    if: github.actor == github.repository_owner
+    # The real gate is the protected Environment (required reviewer, release branch only).
+    if: github.event_name == 'push' || github.actor == github.repository_owner
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # Protected environment: configure Required reviewers + deployment branches there.
@@ -40,18 +46,19 @@ jobs:
           --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
     env:
       NEXT_TELEMETRY_DISABLED: "1"
-      TARGET_SHA: ${{ inputs.sha }}
+      TARGET_SHA: ${{ inputs.sha || github.sha }}
     steps:
       - name: Check out the exact SHA only
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.sha }}
+          ref: ${{ inputs.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Verify the SHA is exactly what was requested and is reviewed history
         run: |
           set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = push ]; then [ "$GITHUB_REF" = refs/heads/codex/happydate-production-release-20261122 ] || { echo "push runs only from the release branch"; exit 1; }; fi
           [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "sha must be 40 lowercase hex chars"; exit 1; }
           [ "$(git rev-parse HEAD)" = "$TARGET_SHA" ] || { echo "checked-out HEAD differs from requested sha"; exit 1; }
           git branch -r --contains "$TARGET_SHA" | grep -Eq '^\s*origin/(main|codex/happydate-production-release-20261122)$' \
@@ -62,6 +69,14 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+
+      - name: Read the run request
+        id: req
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = push ]; then v="$(jq -r '.product_search == true' .github/happybot-smoke-request.json)"; else v="${{ inputs.product_search }}"; fi
+          echo "product_search=$v" >> "$GITHUB_OUTPUT"
+          echo "product_search=$v"
 
       - name: Install locked dependencies
         run: npm ci
@@ -93,7 +108,7 @@ jobs:
           OPENAI_DAILY_BUDGET_USD: "0.10"
           UPSTASH_REDIS_REST_URL: http://127.0.0.1:8079
           UPSTASH_REDIS_REST_TOKEN: ${{ env.BRIDGE_TOKEN }}
-          GIFT_PRODUCT_SEARCH: ${{ inputs.product_search && '1' || '0' }}
+          GIFT_PRODUCT_SEARCH: ${{ steps.req.outputs.product_search == 'true' && '1' || '0' }}
         run: |
           nohup npx next start --hostname 127.0.0.1 --port 3000 > app.log 2>&1 &
           for i in $(seq 1 40); do curl -fs -o /dev/null http://127.0.0.1:3000/ && exit 0; sleep 2; done
@@ -106,5 +121,5 @@ jobs:
           STAGING_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
           UPSTASH_REDIS_REST_URL: http://127.0.0.1:8079
           UPSTASH_REDIS_REST_TOKEN: ${{ env.BRIDGE_TOKEN }}
-          GIFT_PRODUCT_SEARCH: ${{ inputs.product_search && '1' || '0' }}
+          GIFT_PRODUCT_SEARCH: ${{ steps.req.outputs.product_search == 'true' && '1' || '0' }}
         run: node scripts/happybot-staging-smoke.mjs

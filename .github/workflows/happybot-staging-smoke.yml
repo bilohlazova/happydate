@@ -123,3 +123,10 @@ jobs:
           UPSTASH_REDIS_REST_TOKEN: ${{ env.BRIDGE_TOKEN }}
           GIFT_PRODUCT_SEARCH: ${{ steps.req.outputs.product_search == 'true' && '1' || '0' }}
         run: node scripts/happybot-staging-smoke.mjs
+
+      - name: Sanitized application error events (only on failure)
+        if: failure()
+        run: |
+          # Structured events from the app's safe logger only; secret values are masked by GitHub and
+          # never part of these events. Plain stack traces are not printed.
+          grep -E '^\{"level":"(error|warn)"' app.log 2>/dev/null | cut -c1-400 | sort | uniq -c | sort -rn | head -30 || true

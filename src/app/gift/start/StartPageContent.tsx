@@ -570,6 +570,20 @@ export default function GiftStartPage({
                           suggestion={suggestion}
                           actions={
                             <div className="flex flex-col gap-2 sm:flex-row">
+                              {suggestion.offer && /^https:\/\//i.test(suggestion.offer.url) && (
+                                <div className="flex flex-col gap-1">
+                                  <a
+                                    href={suggestion.offer.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer nofollow"
+                                    className={`${MobileUI.button} border border-sky-100 bg-sky-50 px-4 text-sky-800 hover:bg-sky-100`}
+                                  >
+                                    {t("recommendations.viewOffer", { merchant: suggestion.offer.merchant })}
+                                    {suggestion.offer.price !== null && ` · ${suggestion.offer.price}${suggestion.offer.currency ? ` ${suggestion.offer.currency}` : ""}`}
+                                  </a>
+                                  <span className="text-[11px] text-slate-500">{t("recommendations.offerCheck")}</span>
+                                </div>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => void saveSuggestion(suggestion.title, suggestion.category)}

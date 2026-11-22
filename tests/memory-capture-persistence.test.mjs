@@ -8,6 +8,7 @@ import {
 } from "../src/lib/memory-capture/index.ts";
 import { authorizeGiftMemoryCandidates } from "../src/lib/memory-capture/authorizeGiftMemoryCandidates.server.ts";
 import { verifyHappyLearningDetectionToken } from "../src/lib/happy-learning/happyLearningDetectionToken.server.ts";
+import { readGiftPipelineSource } from "./helpers/giftPipelineSource.mjs";
 
 const root = process.cwd();
 
@@ -72,10 +73,7 @@ test("normalization prevents case, punctuation and diacritic duplicates", () => 
 });
 
 test("Gift suggestions response signs canonical memory candidates without parsing prose", async () => {
-  const route = await readFile(
-    path.join(root, "src/app/api/ai/gift-suggestions/route.ts"),
-    "utf8",
-  );
+  const route = await readGiftPipelineSource();
 
   assert.match(route, /buildMemoryCaptureCandidates/);
   assert.match(route, /authorizeGiftMemoryCandidates/);

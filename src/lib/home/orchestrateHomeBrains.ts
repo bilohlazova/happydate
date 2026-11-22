@@ -1,6 +1,8 @@
 import { buildAssistantMemoryContextFromSemanticMemory } from "@/lib/assistant/assistantSemanticMemoryAdapter";
 import { buildAssistantPeopleContext } from "@/lib/assistant/peopleContext";
 import { buildInsights } from "@/lib/brain/buildInsights";
+import { selectInsights } from "@/lib/brain/selectInsights";
+import { mapInsightToAssistant } from "@/lib/brain/mapInsightToAssistant";
 import type { EventEngineParams } from "@/lib/brain/engines/eventEngine";
 import { buildAllPeopleKnowledge } from "@/lib/brain/engines/personKnowledgeEngine";
 import type { BrainEvent } from "@/lib/brain/types";
@@ -73,9 +75,15 @@ export function orchestrateHomeBrains(
         ],
       };
     },
-    conversationBrain({ memory }) {
+    conversationBrain({ memory, care }) {
+      // The same top insight the Home screen shows today, so the chat knows what
+      // Happy has already told the user instead of starting from a blank slate.
+      const topInsight = mapInsightToAssistant(selectInsights(care.brainInsights)[0] ?? null);
       return {
         conversation: {
+          careInsight: topInsight
+            ? { title: topInsight.title, description: topInsight.description || null, state: topInsight.state }
+            : null,
           assistantPeople: memory.assistantPeople,
           assistantMemories: buildAssistantMemoryContextFromSemanticMemory({
             people: memory.assistantPeople,

@@ -5,6 +5,7 @@ import test from "node:test";
 import { createTranslator } from "next-intl";
 
 import { GIFT_DISCOVERY_QUESTION_TYPES } from "../src/lib/gift-discovery/index.ts";
+import { readGiftPipelineSource } from "./helpers/giftPipelineSource.mjs";
 
 const root = process.cwd();
 const locales = ["pl", "uk", "en", "ru", "de"];
@@ -88,7 +89,7 @@ test("Gift Workspace integrates GiftDiscoveryPanel without parsing visible follo
   const [content, client, route] = await Promise.all([
     source("src/app/gift/start/StartPageContent.tsx"),
     source("src/lib/gifts/giftRecommendationClient.ts"),
-    source("src/app/api/ai/gift-suggestions/route.ts"),
+    readGiftPipelineSource(),
   ]);
   assert.match(content, /<GiftDiscoveryPanel/);
   assert.match(content, /visibleDiscoveryQuestions\(recommendations\.discovery\?\.remainingQuestions\)/);

@@ -8,6 +8,7 @@ import {
   mapKnowledgeToGiftLifecycle,
   mapKnowledgeToGifts,
 } from "../src/lib/gifts/gift.mapper.ts";
+import { readGiftPipelineSource } from "./helpers/giftPipelineSource.mjs";
 
 function item(overrides = {}) {
   return {
@@ -87,7 +88,7 @@ test("Gift Workspace exposes lifecycle, relations and future recommendation cont
 
 test("AI Gift Cache compatibility paths remain present and unchanged", async () => {
   const repository = await readFile(new URL("../src/lib/repositories/giftIntelligenceRepository.server.ts", import.meta.url), "utf8");
-  const route = await readFile(new URL("../src/app/api/ai/gift-suggestions/route.ts", import.meta.url), "utf8");
+  const route = await readGiftPipelineSource();
   for (const api of ["getCachedGiftIdeas", "saveGiftIdeas", "loadGiftIntelligenceSource"]) {
     assert.match(repository, new RegExp(`export async function ${api}`));
   }

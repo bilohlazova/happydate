@@ -60,6 +60,8 @@ type ChatResponseOptions = {
   serverSavedGiftLinks?: readonly AssistantSavedGiftLinkContext[];
   serverPets?: readonly AssistantPetContext[];
   serverPersonMemoryProfile?: string | null;
+  serverShownGiftIdeasContext?: string | null;
+  serverConversationMemory?: string | null;
   onCompleted?: (request: AssistantChatRequest, responseText: string, memoryProposal?: unknown) => Promise<void>;
   prepareRequest?: (request: AssistantChatRequest) => Promise<{
     request: AssistantChatRequest;
@@ -67,6 +69,8 @@ type ChatResponseOptions = {
     serverSavedGiftLinks?: readonly AssistantSavedGiftLinkContext[];
     serverPets?: readonly AssistantPetContext[];
     serverPersonMemoryProfile?: string | null;
+    serverShownGiftIdeasContext?: string | null;
+    serverConversationMemory?: string | null;
   }>;
   budget?: AiBudget | null;
 };
@@ -199,6 +203,8 @@ export async function createAssistantChatResponse(
   let serverSavedGiftLinks = options.serverSavedGiftLinks ?? [];
   let serverPets = options.serverPets ?? [];
   let serverPersonMemoryProfile = options.serverPersonMemoryProfile ?? null;
+  let serverShownGiftIdeasContext = options.serverShownGiftIdeasContext ?? null;
+  let serverConversationMemory = options.serverConversationMemory ?? null;
   if (options.prepareRequest) {
     try {
       const prepared = await options.prepareRequest(request);
@@ -207,6 +213,8 @@ export async function createAssistantChatResponse(
       serverSavedGiftLinks = prepared.serverSavedGiftLinks ?? [];
       serverPets = prepared.serverPets ?? [];
       serverPersonMemoryProfile = prepared.serverPersonMemoryProfile ?? null;
+      serverShownGiftIdeasContext = prepared.serverShownGiftIdeasContext ?? null;
+      serverConversationMemory = prepared.serverConversationMemory ?? null;
     } catch {
       await release?.();
       logger("verified context unavailable", { category: "verified_context_unavailable" });
@@ -216,7 +224,17 @@ export async function createAssistantChatResponse(
       );
     }
   }
-  const context = formatAssistantContext(request.context);
+  // When the canonical PERSON MEMORY PROFILE is present it already contains the
+  // active person's memories; sending them a second time as a separate MEMORIES
+  // block wastes tokens and lets the two copies drift apart.
+  const activeForProfile = request.context.personResolutionStatus === "resolved" ? request.context.activePerson : null;
+  const contextForPrompt = serverPersonMemoryProfile && activeForProfile
+    ? {
+        ...request.context,
+        memories: request.context.memories.filter((group) => group.personName !== activeForProfile.name),
+      }
+    : request.context;
+  const context = formatAssistantContext(contextForPrompt);
   const giftOutcomeContext = formatAssistantGiftOutcomeContext(serverGiftOutcomes);
   const savedGiftLinkContext = formatAssistantSavedGiftLinkContext(serverSavedGiftLinks);
   const petContext = formatAssistantPetContext(serverPets);
@@ -231,6 +249,8 @@ export async function createAssistantChatResponse(
     ...(savedGiftLinkContext ? [{ role: "system" as const, content: savedGiftLinkContext }] : []),
     ...(petContext ? [{ role: "system" as const, content: petContext }] : []),
     ...(serverPersonMemoryProfile ? [{ role: "system" as const, content: serverPersonMemoryProfile }] : []),
+    ...(serverShownGiftIdeasContext ? [{ role: "system" as const, content: serverShownGiftIdeasContext }] : []),
+    ...(serverConversationMemory ? [{ role: "system" as const, content: serverConversationMemory }] : []),
     ...request.conversation,
     { role: "user", content: request.message },
   ];

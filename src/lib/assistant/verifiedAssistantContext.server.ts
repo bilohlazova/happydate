@@ -95,6 +95,9 @@ export function buildVerifiedAssistantRequest(
   return replaceAssistantContext(scopedRequest, {
     currentDate: today,
     userName: resolveHomeUserName(data),
+    // Care Brain highlight only for the global conversation; scoped person/event/task
+    // chats must not be widened with unrelated Home context.
+    insight: isExplicitScope ? null : brains.conversation.careInsight,
     events,
     people,
     memories,

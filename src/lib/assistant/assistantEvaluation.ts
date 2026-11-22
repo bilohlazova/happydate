@@ -49,6 +49,9 @@ export const REQUIRED_ASSISTANT_EVALUATION_SCENARIO_IDS = Object.freeze([
   "conflicted-outcome-is-not-generalized",
   "answered-question-is-not-repeated",
   "day-plan-uses-only-todays-events",
+  "repeated-question-acknowledges-earlier-answer",
+  "no-invented-price-or-link",
+  "new-ideas-differ-from-shown",
 ] as const);
 
 export function missingRequiredAssistantEvaluationScenarios(

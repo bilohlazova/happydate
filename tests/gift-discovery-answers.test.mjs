@@ -8,6 +8,7 @@ import {
   buildGiftDiscoverySession,
   normalizeGiftDiscoveryRequest,
 } from "../src/lib/gift-discovery/index.ts";
+import { readGiftPipelineSource } from "./helpers/giftPipelineSource.mjs";
 
 const root = process.cwd();
 
@@ -220,10 +221,7 @@ test("answered and skipped questions disappear, but skipped questions do not inc
 });
 
 test("Gift API accepts discovery answers, bypasses session cache and returns discovery projection", async () => {
-  const route = await readFile(
-    path.join(root, "src/app/api/ai/gift-suggestions/route.ts"),
-    "utf8",
-  );
+  const route = await readGiftPipelineSource();
 
   assert.match(route, /discoveryAnswers\?: unknown/);
   assert.match(route, /skippedDiscoveryQuestions\?: unknown/);

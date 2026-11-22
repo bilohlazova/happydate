@@ -246,6 +246,8 @@ export interface GiftRecommendationSuggestion {
   personalizationSignals: GiftPersonalizationSignal[];
   cautions: GiftRecommendationCaution[];
   learningEvidence?: GiftRecommendationLearningEvidence[];
+  /** Real product page found by live search; absent when none was verified. */
+  offer?: import("./giftOffers.ts").GiftProductOffer;
 }
 
 export interface GiftRecommendationAiResponse {
@@ -253,9 +255,15 @@ export interface GiftRecommendationAiResponse {
   followUpQuestions: string[];
 }
 
-export interface GiftRecommendationAiPayload<Discovery = unknown> {
+export interface GiftRecommendationAiPayload<Discovery = unknown, Profile = unknown> {
   context: GiftRecommendationContext;
   discovery: Discovery;
+  /**
+   * Canonical person profile shared with Happy Chat (name, pets, notes, facts,
+   * the user's own meaning and recent user statements). Optional so callers
+   * that cannot load it keep working.
+   */
+  profile?: Profile | null;
 }
 
 export interface GiftRecommendationValidationDiagnostics {

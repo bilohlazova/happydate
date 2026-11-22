@@ -468,7 +468,7 @@ test("saved gift link loader is server-only, bounded and owner-person scoped", a
   assert.match(loader, /ASSISTANT_SAVED_GIFT_LINK_LIMIT = 8/);
   assert.match(loader, /parsed\.protocol === "https:"/);
   assert.match(route, /personResolutionStatus === "resolved"/);
-  assert.match(route, /return \{ request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks, serverPets, serverPersonMemoryProfile \}/);
+  assert.match(route, /return \{\s*request: verifiedRequest,\s*serverGiftOutcomes,\s*serverSavedGiftLinks,\s*serverPets,\s*serverPersonMemoryProfile,/);
 });
 
 test("gift outcome loader is server-only, consent-aware and owner-scoped", async () => {
@@ -482,7 +482,7 @@ test("gift outcome loader is server-only, consent-aware and owner-scoped", async
   assert.match(loader, /ASSISTANT_GIFT_OUTCOME_LIMIT/);
   assert.match(route, /identity\.userId/);
   assert.match(route, /personResolutionStatus === "resolved"/);
-  assert.match(route, /return \{ request: verifiedRequest, serverGiftOutcomes, serverSavedGiftLinks, serverPets, serverPersonMemoryProfile \}/);
+  assert.match(route, /return \{\s*request: verifiedRequest,\s*serverGiftOutcomes,\s*serverSavedGiftLinks,\s*serverPets,\s*serverPersonMemoryProfile,/);
   assert.match(route, /prepareRequest: async/);
 });
 
@@ -626,8 +626,12 @@ test("a partial stream is preserved before a provider stream error", async () =>
 });
 
 test("chat cost and validation limits remain centralized", () => {
+  // SEC-01: only the priced model is allowed; every role shares it.
   assert.equal(ASSISTANT_CHAT_CONFIG.model, "gpt-4.1-mini");
+  assert.equal(ASSISTANT_CHAT_CONFIG.giftModel, "gpt-4.1-mini");
+  assert.equal(ASSISTANT_CHAT_CONFIG.utilityModel, "gpt-4.1-mini");
   assert.equal(ASSISTANT_CHAT_CONFIG.maxOutputTokens, 700);
+  assert.ok(ASSISTANT_CHAT_CONFIG.concurrentLeaseSeconds > ASSISTANT_CHAT_CONFIG.requestTimeoutMs / 1_000, "lease must outlive the request timeout");
   assert.equal(ASSISTANT_CHAT_LIMITS.messageLength, ASSISTANT_CHAT_CONFIG.maxMessageLength);
   assert.equal(ASSISTANT_CHAT_LIMITS.conversationItems, ASSISTANT_CHAT_CONFIG.maxConversationMessages);
   assert.equal(ASSISTANT_CHAT_LIMITS.events, ASSISTANT_CHAT_CONFIG.maxEvents);

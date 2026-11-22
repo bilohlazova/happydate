@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { readGiftPipelineSource } from "./helpers/giftPipelineSource.mjs";
 
 async function source(path) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
@@ -20,12 +21,17 @@ test("every active private JSON API has an explicit byte limit", async () => {
 });
 
 test("Gift AI fails closed around identity, rate limits, concurrency and provider time", async () => {
-  const route = await source("src/app/api/ai/gift-suggestions/route.ts");
+  const route = await readGiftPipelineSource();
   const ownership = route.indexOf("resolveGiftAccess(");
-  const generation = route.indexOf("const parsed = await withAiExecutionScope");
+  const generation = route.indexOf("runGiftRecommendationPipeline(", ownership);
   assert.ok(ownership > 0 && generation > ownership);
+  // Every provider call in the shared pipeline (ideas, repair, product search)
+  // goes through the SEC-01 boundary under the server-verified owner identity.
   assert.match(route, /runMeteredAiCall/);
   assert.match(route, /parseOpenAiUsage/);
+  assert.match(route, /withAiExecutionScope\(\{ kind: "authenticated", key: input\.ownedPerson\.userId \}/);
+  assert.match(route, /aiExecutionFailureResponse/);
+  assert.doesNotMatch(route, /\.reserve\(/, "no route or service may reserve budget outside the shared boundary");
   const guard = await source("src/lib/assistant/aiExecution.server.ts");
   assert.match(guard, /createConfiguredAssistantRateLimiter/);
   assert.match(guard, /createConfiguredAiBudget/);

@@ -1,5 +1,5 @@
 {
-  "product_search": false,
-  "attempt": 6,
+  "product_search": true,
+  "attempt": 7,
   "note": "Changing this file on the release branch starts the staging smoke."
 }

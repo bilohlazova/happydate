@@ -7,6 +7,15 @@
 ## 0. Одноразово: міграція на staging
 Застосувати `supabase/migrations/20261122120000_create_happy_conversation_memory.sql` до **staging** (`happydate-staging`, ref `xgelazzdgluuenqkymox`), НЕ до prod. Без неї пам'ять розмов і «показані ідеї» мовчки не працюють (чат при цьому відповідає).
 
+## Xcode одним скриптом (рекомендовано)
+Після кроку 0 (міграція на staging) достатньо:
+```bash
+bash ~/Desktop/toto/_happybot-integration/xcode-test.sh                      # iOS Simulator
+bash ~/Desktop/toto/_happybot-integration/xcode-test.sh http://<IP Mac>:3000  # фізичний iPhone
+```
+Скрипт сам бере гілку з bundle в окремий worktree `../toto-happybot`, ставить залежності, створює `.env.local` для STAGING (просить вставити 2 ключі), тимчасово патчить `capacitor.config.ts` (і `next.config.ts` для iPhone по Wi-Fi) **лише в цьому worktree**, робить `cap sync ios` і відкриває Xcode. Production-конфіг у репозиторії лишається незмінним (його стереже тест `native-release-hardening`). Прибрати патчі: `xcode-test.sh --revert`.
+iOS: HTTP до `localhost` та IP-адрес дозволений ATS без змін Info.plist.
+
 ## 1. Отримати гілку
 ```bash
 cd ~/Desktop/toto

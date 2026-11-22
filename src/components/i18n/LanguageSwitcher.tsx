@@ -6,9 +6,10 @@ import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 
 import { changeApplicationLocale } from "@/i18n/changeApplicationLocale";
-import { isSupportedLocale, type AppLocale } from "@/i18n/config";
-import { setLocaleCookie } from "@/i18n/localeCookie";
+import { DEFAULT_LOCALE, isSupportedLocale, type AppLocale } from "@/i18n/config";
+import { markLocaleSynced, setLocaleCookie } from "@/i18n/localeCookie";
 import { getLanguageOption, LANGUAGE_OPTIONS } from "@/i18n/localeOptions";
+import { useAuth } from "@/components/AuthProvider";
 import { updateCurrentUserPreferredLocale } from "@/lib/repositories/profile/profileLocale.repository";
 
 type LanguageSwitcherProps = {
@@ -20,8 +21,10 @@ export default function LanguageSwitcher({
   isAuthenticated,
   variant = "header",
 }: LanguageSwitcherProps) {
+  const { user } = useAuth();
+  const ownerId = isAuthenticated ? user?.id ?? null : null;
   const localeValue = useLocale();
-  const locale: AppLocale = isSupportedLocale(localeValue) ? localeValue : "pl";
+  const locale: AppLocale = isSupportedLocale(localeValue) ? localeValue : DEFAULT_LOCALE;
   const translate = useTranslations("common.language");
   const profileTranslate = useTranslations("profile.settings.language");
   const router = useRouter();
@@ -83,8 +86,9 @@ export default function LanguageSwitcher({
     setSyncFailed(false);
     const result = await changeApplicationLocale(nextLocale, {
       isAuthenticated,
-      setCookie: setLocaleCookie,
+      setCookie: (next) => setLocaleCookie(next, ownerId, ownerId !== null),
       updateProfile: updateCurrentUserPreferredLocale,
+      markSynced: () => { if (ownerId) markLocaleSynced(ownerId); },
       refresh: router.refresh,
     });
     setSyncFailed(result.profileSyncFailed);

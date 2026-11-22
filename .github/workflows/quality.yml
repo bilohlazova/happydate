@@ -63,6 +63,13 @@ jobs:
       - name: Lint, typecheck and test
         run: npm run verify
 
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
       - name: Build optimized application
         run: npm run build -- --webpack
 
@@ -77,6 +84,7 @@ jobs:
     env:
       CI: "true"
       RUN_LOCAL_SUPABASE_RLS_TESTS: "1"
+      RUN_LOCAL_SUPABASE_SCHEMA_TESTS: "1"
       LOCAL_SUPABASE_DB_CONTAINER: supabase_db_happydate
     steps:
       - name: Check out repository
@@ -114,7 +122,8 @@ jobs:
         run: |
           set -euo pipefail
           test "${RUN_LOCAL_SUPABASE_RLS_TESTS:-}" = "1"
-          node --test tests/local-rls-owner-isolation.test.mjs
+          test "${RUN_LOCAL_SUPABASE_SCHEMA_TESTS:-}" = "1"
+          node --test tests/local-rls-owner-isolation.test.mjs tests/local-runtime-schema-contract.test.mjs tests/staging-release-repair.test.mjs
 
       - name: Stop temporary Supabase stack
         if: always()
@@ -123,7 +132,6 @@ jobs:
 
   android-debug:
     name: Android debug shell
-    needs: web-quality
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -158,7 +166,6 @@ jobs:
 
   ios-simulator:
     name: iOS Simulator shell
-    needs: web-quality
     runs-on: macos-15
     timeout-minutes: 30
     env:

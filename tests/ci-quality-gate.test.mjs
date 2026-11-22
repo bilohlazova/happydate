@@ -51,10 +51,11 @@ test("CI uses placeholders rather than production secrets and pins the Node cont
   assert.doesNotMatch(source, /\$\{\{\s*secrets\./);
 });
 
-test("native shell jobs wait for web quality and compile without store signing", async () => {
+test("independent native shell jobs compile in parallel without store signing", async () => {
   const source = await workflow();
-  assert.match(source, /android-debug:[\s\S]*?needs: web-quality[\s\S]*?runs-on: ubuntu-latest/);
-  assert.match(source, /ios-simulator:[\s\S]*?needs: web-quality[\s\S]*?runs-on: macos-15/);
+  assert.match(source, /android-debug:[\s\S]*?runs-on: ubuntu-latest/);
+  assert.match(source, /ios-simulator:[\s\S]*?runs-on: macos-15/);
+  assert.doesNotMatch(source, /needs: web-quality/);
   assert.match(source, /npx cap sync android/);
   assert.match(source, /\.\/gradlew assembleDebug --no-daemon/);
   assert.match(source, /distribution: temurin[\s\S]*?java-version: "21"/);

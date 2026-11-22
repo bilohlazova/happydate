@@ -31,9 +31,11 @@ export async function updateCurrentUserPreferredLocale(locale: AppLocale): Promi
   const { data, error: authError } = await supabase.auth.getUser();
   if (authError || !data.user) throw new ProfileLocaleError();
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("profiles")
     .update(payload)
-    .eq("id", data.user.id);
-  if (error) throw new ProfileLocaleError();
+    .eq("id", data.user.id)
+    .select("id");
+  // RLS can filter the row without an error; only a returned row confirms the write.
+  if (error || !updated?.length) throw new ProfileLocaleError();
 }

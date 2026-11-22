@@ -19,11 +19,6 @@ export default function AvatarUploader({ userId, currentPath }: Props) {
       setBusy(true);
       setError(null);
 
-      if (currentPath) {
-        const oldKey = currentPath.replace(/^avatars\//, "");
-        await supabase.storage.from("avatars").remove([oldKey]);
-      }
-
       const ext = file.name.split(".").pop() || "png";
       const objectKey = `${userId}/${Date.now()}.${ext}`;
 
@@ -41,7 +36,16 @@ export default function AvatarUploader({ userId, currentPath }: Props) {
         .update({ avatar_url: objectKey })
         .eq("id", userId);
 
-      if (updErr) throw updErr;
+      if (updErr) {
+        const { error: cleanupError } = await supabase.storage.from("avatars").remove([objectKey]);
+        throw new Error(cleanupError ? `${updErr.message}; cleanup failed: ${cleanupError.message}` : updErr.message);
+      }
+
+      if (currentPath && currentPath !== objectKey) {
+        const oldKey = currentPath.replace(/^avatars\//, "");
+        const { error: cleanupError } = await supabase.storage.from("avatars").remove([oldKey]);
+        if (cleanupError) throw new Error(`Avatar saved, but old avatar cleanup failed: ${cleanupError.message}`);
+      }
 
       // 🔥 замість onUploaded — кидаємо подію
       window.dispatchEvent(
@@ -75,6 +79,16 @@ export default function AvatarUploader({ userId, currentPath }: Props) {
           {error}
         </span>
       )}
+      {currentPath && <button type="button" className="text-sm font-semibold" disabled={busy} aria-label="Remove avatar" onClick={async () => {
+        setBusy(true); setError(null);
+        const oldKey = currentPath.replace(/^avatars\//, "");
+        const { error: profileError } = await supabase.from("profiles").update({ avatar_url: null }).eq("id", userId);
+        if (profileError) { setError(profileError.message); setBusy(false); return; }
+        const { error: removeError } = await supabase.storage.from("avatars").remove([oldKey]);
+        if (removeError) setError(`Avatar removed from profile; storage cleanup failed: ${removeError.message}`);
+        window.dispatchEvent(new CustomEvent("happydate:avatar-updated", { detail: null }));
+        setBusy(false);
+      }}>Remove avatar</button>}
     </div>
   );
 }

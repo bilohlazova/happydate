@@ -5,6 +5,8 @@ export type LocaleChangeDependencies = {
   setCookie: (locale: AppLocale) => void;
   updateProfile: (locale: AppLocale) => Promise<void>;
   refresh: () => void;
+  /** Called only after the profile write was confirmed. */
+  markSynced?: () => void;
 };
 
 export type LocaleChangeResult = { profileSyncFailed: boolean };
@@ -20,6 +22,7 @@ export async function changeApplicationLocale(
   if (dependencies.isAuthenticated) {
     try {
       await dependencies.updateProfile(locale);
+      dependencies.markSynced?.();
     } catch {
       profileSyncFailed = true;
     }

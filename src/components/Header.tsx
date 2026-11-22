@@ -7,9 +7,9 @@ import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabaseClient";
 import { BOTTOM_NAV_ITEMS, HEADER_NAV_ITEMS, isAppShellPath } from "@/i18n/shellNavigation";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
-import { getLocaleCookie, setLocaleCookie } from "@/i18n/localeCookie";
-import { shouldSynchronizeProfileLocale } from "@/i18n/profileLocaleSync";
-import { getPreferredLocaleForUser } from "@/lib/repositories/profile/profileLocale.repository";
+import { clearLocaleChoice, getLocaleCookie, getLocaleMeta, getStoredLocale, markLocaleSynced, setLocaleCookie } from "@/i18n/localeCookie";
+import { resolveLoginLocaleAction } from "@/i18n/profileLocaleSync";
+import { getPreferredLocaleForUser, updateCurrentUserPreferredLocale } from "@/lib/repositories/profile/profileLocale.repository";
 import { useAuth } from "@/components/AuthProvider";
 import NotificationInbox from "@/components/notifications/NotificationInbox";
 import { shouldRestoreProfileFocus } from "@/components/profileMenuBehavior";
@@ -45,6 +45,16 @@ export default function Header() {
   }, [pathname]);
 
   useEffect(() => {
+    // Native webviews can lose cookies between launches: restore the manual choice once.
+    const storedLocale = getStoredLocale();
+    if (storedLocale && !getLocaleCookie()) {
+      const meta = getLocaleMeta();
+      setLocaleCookie(storedLocale, meta?.ownerId ?? null, meta?.pending ?? false);
+      router.refresh();
+    }
+  }, [router]);
+
+  useEffect(() => {
     let cancelled = false;
     const applyLocale = async () => {
       if (cancelled || !user) {
@@ -52,20 +62,35 @@ export default function Header() {
         return;
       }
       const loadingKey = `loading:${user.id}`;
-      if (synchronizedProfileRef.current === loadingKey) return;
+      const failedKey = `failed:${user.id}`;
+      // A failed attempt is retried on the next load, never in a loop.
+      if (synchronizedProfileRef.current === loadingKey || synchronizedProfileRef.current === failedKey) return;
       synchronizedProfileRef.current = loadingKey;
       try {
-        const preferredLocale = await getPreferredLocaleForUser(user.id);
-        if (cancelled || !preferredLocale) return;
-        const synchronizationKey = `${user.id}:${preferredLocale}`;
-        synchronizedProfileRef.current = synchronizationKey;
-        if (shouldSynchronizeProfileLocale(preferredLocale, getLocaleCookie())) {
-          setLocaleCookie(preferredLocale);
+        const profileLocale = await getPreferredLocaleForUser(user.id);
+        if (cancelled) {
+          if (synchronizedProfileRef.current === loadingKey) synchronizedProfileRef.current = null;
+          return;
+        }
+        const action = resolveLoginLocaleAction(user.id, profileLocale, getLocaleCookie(), getLocaleMeta());
+        if (action.type === "pushToProfile") {
+          // Mark pending first so a failed write is retried instead of rolled back.
+          setLocaleCookie(action.locale, user.id, true);
+          await updateCurrentUserPreferredLocale(action.locale);
+          markLocaleSynced(user.id);
+        } else if (action.type === "applyProfile") {
+          setLocaleCookie(action.locale, user.id, false);
+          router.refresh();
+        } else if (action.type === "claim") {
+          markLocaleSynced(user.id);
+        } else if (action.type === "discardCookie") {
+          clearLocaleChoice();
           router.refresh();
         }
+        synchronizedProfileRef.current = `${user.id}:done`;
       } catch {
-        synchronizedProfileRef.current = null;
-        // Authentication and navigation remain usable if preference loading fails.
+        synchronizedProfileRef.current = failedKey;
+        // Authentication and navigation remain usable if preference sync fails.
       }
     };
     void applyLocale();

@@ -140,8 +140,8 @@ test("authenticated shell keeps app navigation and profile actions", async () =>
   assert.match(deleteAccount, /settings\/delete-account|settingsT\("title"\)/);
 });
 
-test("invalid locale still resolves to Polish", () => {
-  assert.equal(resolveRequestLocale("invalid", "fr-FR"), "pl");
+test("invalid locale still resolves to English", () => {
+  assert.equal(resolveRequestLocale("invalid", "fr-FR"), "en");
 });
 
 test("non-Polish shell dictionaries do not accidentally copy Polish copy", async () => {

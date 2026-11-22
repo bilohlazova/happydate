@@ -136,7 +136,7 @@ export function parseAssistantChatRequest(value: unknown): ValidationResult {
   const locale: AssistantChatLocale = typeof value.locale === "string"
     && ASSISTANT_LOCALES.includes(value.locale as AssistantChatLocale)
       ? value.locale as AssistantChatLocale
-      : "pl";
+      : "en";
   // Omitting scope is the one backwards-compatible legacy shape: global only.
   // Resource scopes must always use the strict canonical contract.
   const parsedScope = value.scope === undefined

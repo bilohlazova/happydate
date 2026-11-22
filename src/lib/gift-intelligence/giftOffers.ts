@@ -85,6 +85,8 @@ export type OfferValidationResult = {
   /** Offer per idea, keyed by normalized idea title. */
   byIdeaKey: Map<string, GiftProductOffer>;
   rejected: number;
+  rejectedCurrency: number;
+  rejectedOverBudget: number;
 };
 
 /**
@@ -98,6 +100,8 @@ export function validateGiftOffers(input: OfferValidationInput): OfferValidation
   const citedExact = new Set(input.citedUrls.map((url) => normalizeGiftHttpsUrl(url)).filter((url): url is string => Boolean(url)));
   const byIdeaKey = new Map<string, GiftProductOffer>();
   let rejected = 0;
+  let rejectedCurrency = 0;
+  let rejectedOverBudget = 0;
   for (const raw of input.offers) {
     const ideaTitle = clean(raw.ideaTitle, 200);
     const key = ideaTitle ? normalizeGiftTitle(ideaTitle) : "";
@@ -118,14 +122,15 @@ export function validateGiftOffers(input: OfferValidationInput): OfferValidation
       // The user's budget is a ceiling, not a hint: no tolerance. A price in a different currency cannot be
       // checked against it (49 EUR may be over 200 PLN), so such an offer is not shown at all.
       const sameCurrency = !currency || !input.budget.currency || currency === input.budget.currency;
-      if (!sameCurrency || price > input.budget.amount) { rejected += 1; continue; }
+      if (!sameCurrency) { rejected += 1; rejectedCurrency += 1; continue; }
+      if (price > input.budget.amount) { rejected += 1; rejectedOverBudget += 1; continue; }
     }
     byIdeaKey.set(key, {
       productName, merchant, url, price, currency, sourceVerified,
       checkedAt: (input.now ?? new Date()).toISOString(),
     });
   }
-  return { byIdeaKey, rejected };
+  return { byIdeaKey, rejected, rejectedCurrency, rejectedOverBudget };
 }
 
 /** Search-tool market hint from the budget currency, falling back to the UI locale. */

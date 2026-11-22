@@ -132,3 +132,9 @@ export function logSec01HostedAiAttestation(checks: {
     egressDenied, preview, shaMatches, sessionIdValid, redisConfigured,
   }));
 }
+
+/** Counters only: never titles, URLs, prices or merchant names. */
+export function logProductOffersEvent(input: { ideas: number; found: number; rejected: number; rejectedCurrency: number; rejectedOverBudget: number; searchCalls: number }): void {
+  const n = (value: number) => Number.isFinite(value) ? Math.max(0, Math.min(1000, Math.trunc(value))) : 0;
+  console.info(JSON.stringify({ level: "info", service: "happydate", scope: "gift-ai", event: "product-offers", ideas: n(input.ideas), found: n(input.found), rejected: n(input.rejected), rejectedCurrency: n(input.rejectedCurrency), rejectedOverBudget: n(input.rejectedOverBudget), searchCalls: n(input.searchCalls), occurredAt: new Date().toISOString() }));
+}

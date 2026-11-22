@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import { ASSISTANT_CHAT_CONFIG } from "@/lib/assistant/chatConfig";
 import { estimatedUsd, AI_COST_POLICY } from "@/lib/assistant/aiBudget";
 import { runMeteredAiCall, parseOpenAiUsage } from "@/lib/assistant/aiExecution.server";
-import { logAiUsageEvent, logOperationalWarning } from "@/lib/observability/safeLogger";
+import { logAiUsageEvent, logOperationalWarning, logProductOffersEvent } from "@/lib/observability/safeLogger";
 import type { GiftRecommendationSuggestion } from "./giftIntelligence.types";
 import { normalizeGiftTitle } from "./giftRecommendationValidation";
 import {
@@ -121,12 +121,13 @@ export async function attachProductOffers(input: {
     } catch {
       return { ...unchanged, skipped: false };
     }
-    const { byIdeaKey, rejected } = validateGiftOffers({
+    const { byIdeaKey, rejected, rejectedCurrency, rejectedOverBudget } = validateGiftOffers({
       offers: raw,
       ideaTitles: input.suggestions.map((idea) => idea.title),
       budget: input.budget,
       citedUrls: urls,
     });
+    logProductOffersEvent({ ideas: input.suggestions.length, found: byIdeaKey.size, rejected, rejectedCurrency, rejectedOverBudget, searchCalls });
     const suggestions = input.suggestions.map((idea) => {
       const offer = byIdeaKey.get(normalizeGiftTitle(idea.title));
       if (!offer) return idea;

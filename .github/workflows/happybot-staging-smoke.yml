@@ -81,12 +81,6 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
-      - name: Build (public staging values only, no secrets)
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}
-        run: npm run build -- --webpack
-
       - name: Start local Redis REST bridge (in-repo, no third-party image)
         env:
           REDIS_CLI: docker exec ${{ job.services.redis.id }} redis-cli
@@ -99,6 +93,10 @@ jobs:
           for i in $(seq 1 20); do curl -fs -o /dev/null -X POST -H "Authorization: Bearer $token" -d '["PING"]' http://127.0.0.1:8079/ && exit 0; sleep 1; done
           echo "bridge did not start"; exit 1
 
+      # NOTE: next dev, not next start. SEC-01 deliberately fails closed for NODE_ENV=production outside
+      # Vercel (readHostedSessionConfig), and we do not fake VERCEL=1 to get around it. Development mode
+      # still uses the real Upstash-protocol budget and rate limiter (the Redis bridge), real OpenAI and
+      # real staging Supabase. Production-mode gating is covered by unit tests and the real production smoke.
       - name: Start app (secrets only in this step)
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
@@ -110,8 +108,8 @@ jobs:
           UPSTASH_REDIS_REST_TOKEN: ${{ env.BRIDGE_TOKEN }}
           GIFT_PRODUCT_SEARCH: ${{ steps.req.outputs.product_search == 'true' && '1' || '0' }}
         run: |
-          nohup npx next start --hostname 127.0.0.1 --port 3000 > app.log 2>&1 &
-          for i in $(seq 1 40); do curl -fs -o /dev/null http://127.0.0.1:3000/ && exit 0; sleep 2; done
+          nohup npx next dev --webpack --hostname 127.0.0.1 --port 3000 > app.log 2>&1 &
+          for i in $(seq 1 60); do curl -fs -o /dev/null http://127.0.0.1:3000/ && exit 0; sleep 2; done
           echo "app did not start (log not printed to avoid leaking values)"; exit 1
 
       - name: HappyBot smoke

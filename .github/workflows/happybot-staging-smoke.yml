@@ -1,0 +1,68 @@
+name: HappyBot staging smoke (paid, manual)
+
+# Manual only. Runs a locally built app against the STAGING Supabase project with a
+# throw-away Redis, so the app's own SEC-01 daily budget (OPENAI_DAILY_BUDGET_USD=0.10)
+# is the real spend ceiling. Secrets live in the protected GitHub Environment
+# "happybot-staging-smoke" (set required reviewers there). No secret is printed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      product_search:
+        description: "Also test web_search product offers (GIFT_PRODUCT_SEARCH=1)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: happybot-staging-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: happybot-staging-smoke
+    services:
+      redis:
+        image: redis:8.2.3-alpine
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+      redis-rest:
+        image: hiett/serverless-redis-http:latest
+        ports: ["8079:80"]
+        env:
+          SRH_MODE: env
+          SRH_TOKEN: ci-local-token
+          SRH_CONNECTION_STRING: redis://redis:6379
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+      OPENAI_API_KEY: ${{ secrets.HAPPYBOT_SMOKE_OPENAI_API_KEY }}
+      OPENAI_DAILY_BUDGET_USD: "0.10"
+      UPSTASH_REDIS_REST_URL: http://127.0.0.1:8079
+      UPSTASH_REDIS_REST_TOKEN: ci-local-token
+      GIFT_PRODUCT_SEARCH: ${{ inputs.product_search && '1' || '0' }}
+      STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+      STAGING_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}
+      STAGING_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Build
+        run: npm run build -- --webpack
+      - name: Start app
+        run: |
+          nohup npx next start --hostname 127.0.0.1 --port 3000 > app.log 2>&1 &
+          for i in $(seq 1 40); do curl -fs http://127.0.0.1:3000/ >/dev/null && exit 0; sleep 2; done
+          echo "app did not start"; tail -n 30 app.log | sed -E 's/(sk-|eyJ)[A-Za-z0-9._-]+/[redacted]/g'; exit 1
+      - name: HappyBot smoke
+        run: node scripts/happybot-staging-smoke.mjs

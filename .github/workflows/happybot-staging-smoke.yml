@@ -129,4 +129,5 @@ jobs:
         run: |
           # Structured events from the app's safe logger only; secret values are masked by GitHub and
           # never part of these events. Plain stack traces are not printed.
-          grep -E '^\{"level":"(error|warn)"' app.log 2>/dev/null | cut -c1-400 | sort | uniq -c | sort -rn | head -30 || true
+          echo "log lines: $(wc -l < app.log)"
+          grep -oE '"(level|scope|event|category|code)":"[A-Za-z0-9_.:-]{1,60}"' app.log | paste -sd' ' | sed -E 's/"level"/\n"level"/g' | sort | uniq -c | sort -rn | head -30 || true

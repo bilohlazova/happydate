@@ -6,7 +6,7 @@ import { buildAssistantMemoryContext } from "../src/lib/assistant/memoryContext.
 import { buildMemoryInsightForPerson } from "../src/lib/brain/engines/memoryInsightEngine.ts";
 import { buildPersonKnowledge } from "../src/lib/brain/engines/personKnowledgeEngine.ts";
 import { planReminders } from "../src/lib/brain/engines/reminderPlanningEngine.ts";
-import { mapLegacyMemoryToKnowledge } from "../src/lib/knowledge/compatibilityMapper.ts";
+import { isGlobalNotesKnowledgeItem, mapLegacyMemoryToKnowledge } from "../src/lib/knowledge/compatibilityMapper.ts";
 
 function legacyMemory(overrides = {}) {
   return {
@@ -53,6 +53,13 @@ function toRow(memory) {
 function canonical(memory) {
   return mapLegacyMemoryToKnowledge(toRow(memory));
 }
+
+test("global Notes excludes personal facts/preferences but keeps memories and unknown notes", () => {
+  assert.equal(isGlobalNotesKnowledgeItem(canonical({ type: "personal_fact", value: "Anna likes coffee" })), false);
+  assert.equal(isGlobalNotesKnowledgeItem(canonical({ type: "coffee", value: "Flat White" })), false);
+  assert.equal(isGlobalNotesKnowledgeItem(canonical({ type: "memory", value: "Lake trip" })), true);
+  assert.equal(isGlobalNotesKnowledgeItem(canonical({ type: "legacy_future_type", value: "Old note" })), true);
+});
 
 test("Brain insights are identical after Memory-to-Knowledge migration", () => {
   const legacy = legacyMemory({ type: "gift", value: "LEGO" });

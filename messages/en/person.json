@@ -108,7 +108,7 @@
         "memories": "memories"
       }
     },
-    "knowledgeSource": { "confirmedByYou": "Confirmed by you" },
+    "knowledgeSource": { "confirmedByYou": "Confirmed by you", "known": "Source recorded" },
     "knowledgeAudit": {
       "add": "Add",
       "addPlaceholder": "Enter new information",

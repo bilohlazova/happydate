@@ -1,5 +1,6 @@
 import "@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "@supabase/server";
+import { verifyCronAuthorization } from "./cron-auth.ts";
 import {
   PROACTIVE_LOOKAHEAD_DAYS,
   PROACTIVE_MAX_CANDIDATES,
@@ -117,7 +118,20 @@ async function runOccasionProactive(admin: any, now: Date) {
 }
 
 const happyProactive = {
-  fetch: withSupabase({ auth: "secret" }, async (request, ctx) => {
+  // Authorization is the dedicated cron secret, checked before anything else.
+  // `auth: "none"` only skips the platform key check; ctx.supabaseAdmin is the
+  // platform-managed client and is not reachable without passing the check below.
+  fetch: withSupabase({ auth: "none" }, async (request, ctx) => {
+    const authorization = await verifyCronAuthorization(
+      request.headers.get("authorization"),
+      Deno.env.get("HAPPY_PROACTIVE_CRON_SECRET"),
+    );
+    if (authorization === "misconfigured") {
+      console.error("happy_proactive_cron_secret_not_configured");
+      return Response.json({ error: "unavailable" }, { status: 503 });
+    }
+    if (authorization !== "ok") return Response.json({ error: "unauthorized" }, { status: 401 });
+
     if (request.method !== "POST") return Response.json({ error: "method_not_allowed" }, { status: 405 });
     const contentLength = Number(request.headers.get("content-length") ?? "0");
     if (!Number.isFinite(contentLength) || contentLength > 2) {

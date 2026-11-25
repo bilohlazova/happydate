@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
+import { verifyCronAuthorization } from "../supabase/functions/happy-proactive/cron-auth.ts";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+const stripComments = (sql) => sql.replace(/--[^\n]*/g, "");
 
 async function latestInvokerMigration() {
   const files = (await readdir(new URL("../supabase/migrations/", import.meta.url))).sort();
@@ -14,32 +16,76 @@ async function latestInvokerMigration() {
   return latest;
 }
 
-test("happy-proactive Edge Function accepts the secret key and the platform JWT check is off", async () => {
+const SECRET = "Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MGFiY2RlZmdoaWo=";
+
+test("cron secret check: only the exact bearer secret passes", async () => {
+  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET}`, SECRET), "ok");
+  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET}x`, SECRET), "unauthorized");
+  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET.slice(0, -1)}`, SECRET), "unauthorized");
+  assert.equal(await verifyCronAuthorization(SECRET, SECRET), "unauthorized");
+  assert.equal(await verifyCronAuthorization(`bearer ${SECRET}`, SECRET), "unauthorized");
+  assert.equal(await verifyCronAuthorization(`Bearer  ${SECRET}`, SECRET), "unauthorized");
+  assert.equal(await verifyCronAuthorization("Bearer ", SECRET), "unauthorized");
+  assert.equal(await verifyCronAuthorization("", SECRET), "unauthorized");
+  assert.equal(await verifyCronAuthorization(null, SECRET), "unauthorized");
+});
+
+test("cron secret check fails closed when the secret is missing or weak", async () => {
+  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET}`, undefined), "misconfigured");
+  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET}`, ""), "misconfigured");
+  assert.equal(await verifyCronAuthorization("Bearer short", "short"), "misconfigured");
+  assert.equal(await verifyCronAuthorization("Bearer ", ""), "misconfigured");
+});
+
+test("an ordinary user JWT or a platform API key does not authorize the cron endpoint", async () => {
+  assert.equal(await verifyCronAuthorization("Bearer eyJhbGciOiJIUzI1NiJ9.e30.signature", SECRET), "unauthorized");
+  assert.equal(await verifyCronAuthorization("Bearer sb_publishable_example", SECRET), "unauthorized");
+});
+
+test("happy-proactive verifies the cron secret before method, body or database work", async () => {
   const config = await read("supabase/config.toml");
   const section = config.match(/\[functions\.happy-proactive\][^[]*/)?.[0] ?? "";
   assert.match(section, /verify_jwt\s*=\s*false/);
   assert.match(section, /entrypoint\s*=\s*"\.\/functions\/happy-proactive\/index\.ts"/);
+
   const edge = await read("supabase/functions/happy-proactive/index.ts");
-  assert.match(edge, /withSupabase\(\{ auth: "secret" \}/);
+  assert.match(edge, /withSupabase\(\{ auth: "none" \}/);
+  assert.doesNotMatch(edge, /auth:\s*"secret"/);
+  const handler = edge.slice(edge.indexOf("const happyProactive")).replace(/\/\/[^\n]*/g, "");
+  const authAt = handler.indexOf("verifyCronAuthorization(");
+  assert.ok(authAt > 0, "handler must call verifyCronAuthorization");
+  for (const later of ['request.method', 'request.headers.get("content-length")', "ctx.supabaseAdmin", "request.json", "request.text"]) {
+    const at = handler.indexOf(later);
+    assert.ok(at === -1 || at > authAt, `${later} must come after the cron authorization`);
+  }
+  assert.match(handler, /HAPPY_PROACTIVE_CRON_SECRET/);
+  assert.match(handler, /status:\s*401/);
+  assert.match(handler, /status:\s*503/);
 });
 
-test("cron sends the secret on the apikey header, which is the only header secret mode reads", async () => {
+test("cron sends the dedicated secret on Authorization and never a platform key header", async () => {
   const latest = await latestInvokerMigration();
   assert.ok(latest, "an invoke_happy_proactive migration must exist");
-  assert.match(latest.sql, /'apikey',\s*secret_key/);
-  assert.doesNotMatch(latest.sql.replace(/--[^\n]*/g, ""), /'Authorization'/);
+  const sql = stripComments(latest.sql);
+  assert.match(sql, /'Authorization',\s*'Bearer '\s*\|\|\s*cron_secret/);
+  assert.doesNotMatch(sql, /'apikey'/);
+  assert.match(sql, /timeout_milliseconds\s*:=\s*30000/);
 });
 
-test("cron wrapper still fails loudly and is not callable by API roles", async () => {
+test("cron wrapper validates URL and secret shape, fails loudly and is not callable by API roles", async () => {
   const { sql } = await latestInvokerMigration();
   assert.match(sql, /happy_proactive_cron_configuration_missing/);
   assert.match(sql, /happy_proactive_cron_function_url_invalid/);
+  assert.match(sql, /happy_proactive_cron_secret_invalid/);
+  assert.ok(sql.includes("^https://[a-z]{20}\\.supabase\\.co/functions/v1/happy-proactive$"));
+  assert.ok(sql.includes("'^(sb_|eyJ)'"));
+  assert.ok(sql.includes("'^[A-Za-z0-9+/=_-]{32,}$'"));
   assert.match(sql, /revoke all on function private\.invoke_happy_proactive\(\)\s+from public, anon, authenticated/i);
   assert.match(sql, /security definer\s+set search_path = ''/i);
 });
 
 test("the proactive path stays deterministic: no AI, Redis or push provider imports", async () => {
-  for (const file of ["index.ts", "proactive-rules.ts", "occasion-rules.ts", "occasion-domain.ts", "proactivity-policy.ts"]) {
+  for (const file of ["index.ts", "cron-auth.ts", "proactive-rules.ts", "occasion-rules.ts", "occasion-domain.ts", "proactivity-policy.ts"]) {
     const source = await read(`supabase/functions/happy-proactive/${file}`);
     assert.doesNotMatch(source, /openai|anthropic|upstash|redis|fcm|apns|fetch\(/i, file);
   }
@@ -50,4 +96,6 @@ test("Vault secret names are the documented pair and no secret value is in sourc
   assert.match(sql, /'happy_proactive_function_url'/);
   assert.match(sql, /'happy_proactive_cron_authorization'/);
   assert.doesNotMatch(sql, /sb_secret_[A-Za-z0-9_]{8,}/);
+  const edge = await read("supabase/functions/happy-proactive/index.ts");
+  assert.doesNotMatch(edge, /sb_secret_[A-Za-z0-9_]{8,}/);
 });

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
-import { verifyCronAuthorization } from "../supabase/functions/happy-proactive/cron-auth.ts";
+import { projectRefFromSupabaseUrl, verifyCronAuthorization } from "../supabase/functions/happy-proactive/cron-auth.ts";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const stripComments = (sql) => sql.replace(/--[^\n]*/g, "");
@@ -16,30 +16,46 @@ async function latestInvokerMigration() {
   return latest;
 }
 
-const SECRET = "Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MGFiY2RlZmdoaWo=";
+const REF = "abcdefghijklmnopqrst";
+const OTHER_REF = "tsrqponmlkjihgfedcba";
+const TOKEN = "Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MGFiY2RlZmdoaWo";
+const SECRET = `${REF}.${TOKEN}`;
 
 test("cron secret check: only the exact bearer secret passes", async () => {
-  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET}`, SECRET), "ok");
-  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET}x`, SECRET), "unauthorized");
-  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET.slice(0, -1)}`, SECRET), "unauthorized");
-  assert.equal(await verifyCronAuthorization(SECRET, SECRET), "unauthorized");
-  assert.equal(await verifyCronAuthorization(`bearer ${SECRET}`, SECRET), "unauthorized");
-  assert.equal(await verifyCronAuthorization(`Bearer  ${SECRET}`, SECRET), "unauthorized");
-  assert.equal(await verifyCronAuthorization("Bearer ", SECRET), "unauthorized");
-  assert.equal(await verifyCronAuthorization("", SECRET), "unauthorized");
-  assert.equal(await verifyCronAuthorization(null, SECRET), "unauthorized");
+  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET}`, SECRET, REF), "ok");
+  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET}x`, SECRET, REF), "unauthorized");
+  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET.slice(0, -1)}`, SECRET, REF), "unauthorized");
+  assert.equal(await verifyCronAuthorization(SECRET, SECRET, REF), "unauthorized");
+  assert.equal(await verifyCronAuthorization(`bearer ${SECRET}`, SECRET, REF), "unauthorized");
+  assert.equal(await verifyCronAuthorization(`Bearer  ${SECRET}`, SECRET, REF), "unauthorized");
+  assert.equal(await verifyCronAuthorization("Bearer ", SECRET, REF), "unauthorized");
+  assert.equal(await verifyCronAuthorization("", SECRET, REF), "unauthorized");
+  assert.equal(await verifyCronAuthorization(null, SECRET, REF), "unauthorized");
 });
 
-test("cron secret check fails closed when the secret is missing or weak", async () => {
-  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET}`, undefined), "misconfigured");
-  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET}`, ""), "misconfigured");
-  assert.equal(await verifyCronAuthorization("Bearer short", "short"), "misconfigured");
-  assert.equal(await verifyCronAuthorization("Bearer ", ""), "misconfigured");
+test("cron secret check fails closed when the secret is missing, weak or built for another environment", async () => {
+  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET}`, undefined, REF), "misconfigured");
+  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET}`, "", REF), "misconfigured");
+  assert.equal(await verifyCronAuthorization("Bearer short", "short", REF), "misconfigured");
+  assert.equal(await verifyCronAuthorization(`Bearer ${TOKEN}`, TOKEN, REF), "misconfigured");
+  assert.equal(await verifyCronAuthorization(`Bearer ${REF}.short`, `${REF}.short`, REF), "misconfigured");
+  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET}`, SECRET, null), "misconfigured");
+  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET}`, SECRET, OTHER_REF), "misconfigured");
+  assert.equal(await verifyCronAuthorization(`Bearer ${SECRET}`, `sb_secret_${TOKEN}${TOKEN}`, REF), "misconfigured");
 });
 
 test("an ordinary user JWT or a platform API key does not authorize the cron endpoint", async () => {
-  assert.equal(await verifyCronAuthorization("Bearer eyJhbGciOiJIUzI1NiJ9.e30.signature", SECRET), "unauthorized");
-  assert.equal(await verifyCronAuthorization("Bearer sb_publishable_example", SECRET), "unauthorized");
+  assert.equal(await verifyCronAuthorization("Bearer eyJhbGciOiJIUzI1NiJ9.e30.signature", SECRET, REF), "unauthorized");
+  assert.equal(await verifyCronAuthorization("Bearer sb_publishable_example", SECRET, REF), "unauthorized");
+  assert.equal(await verifyCronAuthorization(`Bearer ${OTHER_REF}.${TOKEN}`, SECRET, REF), "unauthorized");
+});
+
+test("the project ref is read only from a canonical https Supabase URL", () => {
+  assert.equal(projectRefFromSupabaseUrl(`https://${REF}.supabase.co`), REF);
+  assert.equal(projectRefFromSupabaseUrl(`https://${REF}.supabase.co/`), REF);
+  for (const bad of [undefined, "", `http://${REF}.supabase.co`, `https://${REF}.supabase.co.evil.com`, `https://x.${REF}.supabase.co`, "http://127.0.0.1:54321", `https://${REF}.supabase.co:8443`]) {
+    assert.equal(projectRefFromSupabaseUrl(bad), null, String(bad));
+  }
 });
 
 test("happy-proactive verifies the cron secret before method, body or database work", async () => {
@@ -59,6 +75,7 @@ test("happy-proactive verifies the cron secret before method, body or database w
     assert.ok(at === -1 || at > authAt, `${later} must come after the cron authorization`);
   }
   assert.match(handler, /HAPPY_PROACTIVE_CRON_SECRET/);
+  assert.match(handler, /projectRefFromSupabaseUrl\(Deno\.env\.get\("SUPABASE_URL"\)\)/);
   assert.match(handler, /status:\s*401/);
   assert.match(handler, /status:\s*503/);
 });
@@ -78,8 +95,8 @@ test("cron wrapper validates URL and secret shape, fails loudly and is not calla
   assert.match(sql, /happy_proactive_cron_function_url_invalid/);
   assert.match(sql, /happy_proactive_cron_secret_invalid/);
   assert.ok(sql.includes("^https://[a-z]{20}\\.supabase\\.co/functions/v1/happy-proactive$"));
-  assert.ok(sql.includes("'^(sb_|eyJ)'"));
-  assert.ok(sql.includes("'^[A-Za-z0-9+/=_-]{32,}$'"));
+  assert.ok(sql.includes("'^[a-z]{20}\\.[A-Za-z0-9_-]{32,}$'"));
+  assert.match(sql, /split_part\(cron_secret, '\.', 1\) <> url_ref/);
   assert.match(sql, /revoke all on function private\.invoke_happy_proactive\(\)\s+from public, anon, authenticated/i);
   assert.match(sql, /security definer\s+set search_path = ''/i);
 });

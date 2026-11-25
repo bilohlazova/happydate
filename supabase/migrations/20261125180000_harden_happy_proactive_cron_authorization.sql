@@ -7,11 +7,14 @@
 -- Forward-only replacement of private.invoke_happy_proactive(). Vault names are
 -- unchanged; values are never stored in source:
 --   happy_proactive_function_url        -> https://<20-letter-project-ref>.supabase.co/functions/v1/happy-proactive
---   happy_proactive_cron_authorization  -> random secret, >= 32 characters, never a platform API key
+--   happy_proactive_cron_authorization  -> <same project ref>.<random token>, never a platform API key
 --
--- The same random value must be set in the Edge Function secret
--- HAPPY_PROACTIVE_CRON_SECRET. Use a different value for each environment, so a
--- value pasted into the wrong environment is rejected (401) instead of working.
+-- The same value must be set in the Edge Function secret
+-- HAPPY_PROACTIVE_CRON_SECRET. Use a different value for each environment. The
+-- secret embeds the project ref: this invoker refuses to send it unless the ref
+-- matches the URL, and the Edge Function refuses it unless the ref matches its
+-- own platform-provided SUPABASE_URL. A database cannot read its own project
+-- ref, so the binding is enforced from both sides instead of by hand.
 --
 -- `Authorization` is used on purpose: libcurl drops it when a redirect changes
 -- host, whereas custom headers are forwarded. pg_net follows redirects.
@@ -27,6 +30,7 @@ as $function$
 declare
   function_url text;
   cron_secret text;
+  url_ref text;
   request_id bigint;
 begin
   select decrypted_secret into function_url
@@ -51,10 +55,11 @@ begin
       message = 'happy_proactive_cron_function_url_invalid';
   end if;
 
-  -- Reject Supabase API keys (admin, publishable, legacy JWT) and anything that
-  -- is not a plain random token, so an admin key can never end up in a header.
-  if cron_secret ~ '^(sb_|eyJ)'
-    or cron_secret !~ '^[A-Za-z0-9+/=_-]{32,}$' then
+  -- The secret must look like <ref>.<random token> with the SAME ref as the URL.
+  -- Supabase API keys (sb_..., eyJ...) can never match this shape.
+  url_ref := substring(function_url from '^https://([a-z]{20})\.supabase\.co/');
+  if cron_secret !~ '^[a-z]{20}\.[A-Za-z0-9_-]{32,}$'
+    or split_part(cron_secret, '.', 1) <> url_ref then
     raise exception using
       errcode = 'P0001',
       message = 'happy_proactive_cron_secret_invalid';

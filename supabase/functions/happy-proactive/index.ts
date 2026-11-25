@@ -1,6 +1,6 @@
 import "@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "@supabase/server";
-import { verifyCronAuthorization } from "./cron-auth.ts";
+import { projectRefFromSupabaseUrl, verifyCronAuthorization } from "./cron-auth.ts";
 import {
   PROACTIVE_LOOKAHEAD_DAYS,
   PROACTIVE_MAX_CANDIDATES,
@@ -125,6 +125,7 @@ const happyProactive = {
     const authorization = await verifyCronAuthorization(
       request.headers.get("authorization"),
       Deno.env.get("HAPPY_PROACTIVE_CRON_SECRET"),
+      projectRefFromSupabaseUrl(Deno.env.get("SUPABASE_URL")),
     );
     if (authorization === "misconfigured") {
       console.error("happy_proactive_cron_secret_not_configured");

@@ -2,6 +2,7 @@ import type { RefObject } from "react";
 import { Check, ExternalLink, LoaderCircle, Save } from "lucide-react";
 import Link from "next/link";
 import { HappyLearningCard } from "@/components/memory/HappyLearningCard";
+import LinkifiedText from "./LinkifiedText";
 import { extractAssistantGiftLinks, giftLinkHost } from "@/lib/gifts/assistantGiftLinks";
 import type { HappyLearningDetectionCandidate } from "@/lib/happy-learning/happyLearningDetectV2.types";
 import type { ChatMessage } from "./types";
@@ -89,7 +90,7 @@ export default function ConversationView({
                   {assistantName}
                 </span>
               )}
-              {message.content || (message.status === "error"
+              {message.content ? (message.role === "assistant" ? <LinkifiedText text={message.content} /> : message.content) : (message.status === "error"
                 ? message.errorCode === "daily_ai_budget_exceeded" ? dailyBudgetLabel : message.errorCode === "rate_limited" ? rateLimitLabel : errorLabel
                 : "")}
               {message.role === "assistant" && message.status === "error" && (

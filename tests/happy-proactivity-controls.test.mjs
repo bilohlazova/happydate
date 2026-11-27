@@ -69,7 +69,7 @@ test("durable controls are owner-scoped and quiet writes are server-derived", ()
 });
 
 test("proactive path remains deterministic and provider-free", async () => {
-  const source = await readFile(path.join(root, "supabase/functions/happy-proactive/index.ts"), "utf8");
+  const source = (await Promise.all(["index.ts", "birthday-scan.ts", "batching.ts"].map((name) => readFile(path.join(root, "supabase/functions/happy-proactive", name), "utf8")))).join("\n");
   assert.doesNotMatch(source, /openai|happyAgentProvider|\/api\/happy\/agent/i);
   assert.match(source, /happy_proactivity_preferences/);
   assert.match(source, /happy_proactive_quiet/);

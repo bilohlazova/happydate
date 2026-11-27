@@ -32,3 +32,15 @@ which never leaves the Edge runtime.
   (`sb_…`, `eyJ…`) are rejected by the invoker.
 
 Use a different secret for each environment. Never commit either value.
+
+## Scan limits (HD-PR-007)
+
+PostgREST receives `.in()` filters in the request URL. The scan therefore:
+
+- reads upcoming birthdays in keyset-ordered pages of `PROACTIVE_MAX_CANDIDATES` (100) events, ordered by `(date, id)`, and processes every page of the 30-day window;
+- sends every `.in()` list (event ids, user ids, task ids, idea keys, quiet keys) in chunks of at most 6 000 encoded characters and 100 items (`batching.ts`);
+- treats a response of exactly 1 000 rows (the API's silent row cap) as an error instead of a result;
+- stops after `PROACTIVE_MAX_PAGES_PER_RUN` pages (10 000 events) or `PROACTIVE_RUN_TIME_BUDGET_MS` (100 s) and reports `scan.truncated: true` in the response and in the completion log. A truncated run is a monitoring signal: the remaining events are picked up only if earlier ones are already done, because the scan restarts from the first page on the next run;
+- reports a failed read as `500 {"error":"proactive_read_failed"}` and a failed write as `500 {"error":"proactive_write_failed"}`; pages completed before the failure stay written (writes are idempotent), and the failure log carries only counts and a generic error code.
+
+Authorization (`cron-auth.ts` and the block before the first database access in `index.ts`) is unchanged by this fix and is pinned by a hash in `tests/happy-proactive-scan.test.mjs`.

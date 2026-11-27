@@ -726,6 +726,13 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
             giftLinkSaveLabel={(name) => t("giftLinks.save", { name })}
             giftLinkSavingLabel={t("giftLinks.saving")}
             giftLinkSavedLabel={t("giftLinks.saved")}
+            giftLinkOriginLabels={{
+              user_provided: t("giftLinks.origin.userProvided"),
+              saved_unverified: t("giftLinks.origin.savedUnverified"),
+              search_sourced: t("giftLinks.origin.searchSourced"),
+              unknown: t("giftLinks.origin.unknown"),
+            }}
+            giftLinkUnverifiedNote={t("giftLinks.unverifiedNote")}
             giftLinkViewSavedLabel={(name) => t("giftLinks.viewSaved", { name })}
             giftLinkErrorLabel={t("giftLinks.error")}
             onSaveGiftLink={saveAssistantGiftLink}

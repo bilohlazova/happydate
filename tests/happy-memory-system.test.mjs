@@ -73,15 +73,17 @@ test("product offers must be real https pages for shown ideas, in budget and fro
     offer({ price: 49, currency: "EUR" }), // a different currency cannot be verified against a PLN budget
     offer({ url: "https://user:pass@shop.example.com/voucher" }),
     offer({ url: "https://other.example.org/x" }),
+    offer({ url: "https://shop.example.com/invented-path" }), // cited domain, uncited path: a domain never confirms a URL
   ]) {
     assert.equal(validateGiftOffers({ ...input, offers: [bad] }).byIdeaKey.size, 0, JSON.stringify(bad));
   }
   assert.equal(validateGiftOffers({ ...input, offers: [offer(), offer({ url: "https://shop.example.com/second" })] }).byIdeaKey.size, 1, "one offer per idea");
   assert.equal(validateGiftOffers({ ...input, offers: [offer({ price: 200 })] }).byIdeaKey.size, 1, "exactly the ceiling is allowed");
   assert.equal(validateGiftOffers({ ...input, offers: [offer({ price: null, currency: null })] }).byIdeaKey.size, 1, "unknown price is shown as unknown, not guessed");
-  // When the API exposes no sources the offer is kept but not marked verified.
-  const unverified = validateGiftOffers({ ideaTitles: ["Ceramics workshop"], budget, citedUrls: [], offers: [offer()] });
-  assert.equal([...unverified.byIdeaKey.values()][0].sourceVerified, false);
+  // HD-LINK-002: a URL with no search source is model-only output and is never shown as an offer.
+  const unsourced = validateGiftOffers({ ideaTitles: ["Ceramics workshop"], budget, citedUrls: [], offers: [offer()] });
+  assert.equal(unsourced.byIdeaKey.size, 0);
+  assert.equal(unsourced.rejectedUnsourced, 1);
   assert.equal(giftOffersJsonSchema.properties.offers.maxItems, 5);
   assert.equal(marketCountryFor("PLN", "en"), "PL");
   assert.equal(marketCountryFor(null, "uk"), "UA");

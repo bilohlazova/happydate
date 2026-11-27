@@ -44,6 +44,7 @@
       "linkGiftLabel": "Gift idea for this link",
       "moveLinkLabel": "Move saved link to another gift",
       "linkWithoutGift": "Without a specific gift",
+      "linkUnverified": "Saved by you — availability, product and price not checked",
       "giftLinks": "{count, plural, one {# saved option} other {# saved options}}",
       "unassignedLinks": "Without a specific gift",
       "emptyUnassignedLinks": "All saved links are organized under gift ideas.",

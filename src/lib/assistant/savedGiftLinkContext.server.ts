@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { provenanceFor, type UrlProvenance } from "../gift-intelligence/urlProvenance.ts";
 
 export const ASSISTANT_SAVED_GIFT_LINK_LIMIT = 8;
 
@@ -8,6 +9,11 @@ export type AssistantSavedGiftLinkContext = {
   merchant: string | null;
   isPreferred: boolean;
   decisionNote: string | null;
+  /**
+   * HD-LINK-002 Phase 0: gift_links has no provenance column yet, so every
+   * stored row is `saved_unverified` — saved by the user, never checked.
+   */
+  provenance?: UrlProvenance;
 };
 
 function boundedText(value: unknown, maxLength: number): string | null {
@@ -53,7 +59,20 @@ export async function loadAssistantSavedGiftLinkContext({
     .limit(ASSISTANT_SAVED_GIFT_LINK_LIMIT);
   if (error) return [];
 
-  return (data ?? []).flatMap((row) => {
+  return mapSavedGiftLinkRows(data ?? []);
+}
+
+type SavedGiftLinkRow = {
+  url?: unknown; title?: unknown; merchant?: unknown; is_preferred?: unknown; decision_note?: unknown;
+};
+
+/**
+ * Pure row → context mapping. Only these columns are read, so nothing a row (or
+ * a client) could claim about itself can influence provenance: every stored
+ * link is `saved_unverified`.
+ */
+export function mapSavedGiftLinkRows(rows: readonly SavedGiftLinkRow[]): AssistantSavedGiftLinkContext[] {
+  return rows.flatMap((row) => {
     const url = safeHttpsUrl(row.url);
     if (!url) return [];
     return [{
@@ -62,6 +81,7 @@ export async function loadAssistantSavedGiftLinkContext({
       merchant: boundedText(row.merchant, 160),
       isPreferred: row.is_preferred === true,
       decisionNote: boundedText(row.decision_note, 500),
+      provenance: provenanceFor("saved_unverified"),
     }];
   });
 }

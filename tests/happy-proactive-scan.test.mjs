@@ -30,7 +30,7 @@ function createDatabase({ urlLimit = 8_000, maxRows = 1_000 } = {}) {
     events: [], people: [], profiles: [], preferences: [], tasks: [], steps: [], gifts: [], quiet: [],
     ideas: new Map(), notifications: new Map(),
     requests: [], longestUrl: 0, rpcCalls: 0,
-    faults: { failRpcAfter: Infinity, failTableOnce: null, failTableAlways: null },
+    faults: { failRpcAfter: Infinity, failTableOnce: null, failTableAlways: null, failTableNth: null, tableRequests: {} },
   };
   db.fetch = async (input, init = {}) => {
     const url = new URL(typeof input === "string" ? input : input.url);
@@ -56,6 +56,8 @@ function createDatabase({ urlLimit = 8_000, maxRows = 1_000 } = {}) {
       db.notifications.set(key, { user: body.p_user_id, event: body.p_event_id });
       return json(200, true);
     }
+    db.faults.tableRequests[name] = (db.faults.tableRequests[name] ?? 0) + 1;
+    if (db.faults.failTableNth && db.faults.failTableNth.table === name && db.faults.tableRequests[name] === db.faults.failTableNth.nth) return json(500, { message: "injected_read_failure" });
     if (db.faults.failTableAlways === name || db.faults.failTableOnce === name) {
       if (db.faults.failTableOnce === name) db.faults.failTableOnce = null;
       return json(500, { message: "injected_read_failure" });
@@ -323,4 +325,136 @@ test("read and write failures are reported with distinct, generic error codes an
   assert.match(index, /proactive_write_failed/);
   const failureLog = index.slice(index.indexOf('event: "happy_proactive_failed"'), index.indexOf("return Response.json({ error: readFailure"));
   assert.doesNotMatch(failureLog, /error\.message|stack|user_id|email|name:/);
+});
+
+// --- partial failures: every failure position, then a rerun -------------------
+test("rerun after a write failure at EVERY RPC position completes without gaps or duplicates", async () => {
+  const probe = createDatabase();
+  seed(probe, 45);
+  await scan.scanBirthdays(probe.admin, NOW);
+  const totalRpc = probe.rpcCalls;
+  assert.ok(totalRpc > 30, `expected a meaningful number of writes, got ${totalRpc}`);
+  for (let failAfter = 0; failAfter < totalRpc; failAfter++) {
+    const db = createDatabase();
+    seed(db, 45);
+    const want = expected(db);
+    db.faults.failRpcAfter = failAfter;
+    await assert.rejects(scan.scanBirthdays(db.admin, NOW), (error) => error.name === "BirthdayScanError" && !(error.cause instanceof batching.ProactiveReadError), `failure after ${failAfter} writes is reported`);
+    assert.ok(db.ideas.size + db.notifications.size <= failAfter, "nothing is written past the failure");
+    db.faults.failRpcAfter = Infinity;
+    const rerun = await scan.scanBirthdays(db.admin, NOW);
+    assertComplete(db, want);
+    assert.equal(rerun.truncated, false);
+  }
+});
+
+test("rerun after a read failure of EACH table, on the first and on the second page, completes", async () => {
+  for (const table of ["events", "happy_tasks", "gifts", "profiles", "happy_proactivity_preferences", "happy_ideas", "happy_proactive_quiet"]) {
+    for (const nth of [1, 2]) {
+      const db = createDatabase();
+      seed(db, 140); // two pages of in-window events
+      const want = expected(db);
+      assert.ok(want.candidates > rules.PROACTIVE_MAX_CANDIDATES);
+      db.faults.failTableNth = { table, nth };
+      await assert.rejects(scan.scanBirthdays(db.admin, NOW), (error) => error.name === "BirthdayScanError" && error.cause.name === "ProactiveReadError" && error.cause.table === table, `${table} request ${nth}`);
+      if (nth === 2 && table !== "happy_tasks") { /* page one was fully processed before the failure */ }
+      db.faults.failTableNth = null;
+      await scan.scanBirthdays(db.admin, NOW);
+      assertComplete(db, want);
+    }
+  }
+});
+
+test("partial failure in the middle of a candidate (idea written, notification not) is completed by the next run", async () => {
+  const db = createDatabase();
+  seed(db, 31); // offsets 0..30
+  const want = expected(db);
+  // Fail on the notification RPC only.
+  const originalFetch = db.fetch;
+  let failed = 0;
+  db.admin = new PostgrestClient("http://emulator/rest/v1", { fetch: async (input, init) => {
+    if (String(typeof input === "string" ? input : input.url).includes("gift_missing_notification") && failed++ === 0) return new Response(JSON.stringify({ message: "x" }), { status: 500, headers: { "content-type": "application/json" } });
+    return originalFetch(input, init);
+  } });
+  await assert.rejects(scan.scanBirthdays(db.admin, NOW), (error) => error.name === "BirthdayScanError");
+  assert.ok(db.ideas.size > 0 && db.notifications.size < want.notifications.size);
+  db.admin = new PostgrestClient("http://emulator/rest/v1", { fetch: originalFetch });
+  await scan.scanBirthdays(db.admin, NOW);
+  assertComplete(db, want);
+});
+
+// --- keyset pagination: no event is skipped or read twice ---------------------
+function trackedClient(db, hooks = {}) {
+  const pages = [];
+  const client = new PostgrestClient("http://emulator/rest/v1", { fetch: async (input, init) => {
+    const url = new URL(typeof input === "string" ? input : input.url);
+    const isEvents = url.pathname.endsWith("/events");
+    if (isEvents) hooks.beforeEventPage?.(pages.length + 1);
+    const response = await db.fetch(input, init);
+    if (isEvents) pages.push((await response.clone().json()).map((row) => row.id));
+    return response;
+  } });
+  return { client, pages };
+}
+
+test("keyset pagination reads every in-window event exactly once, with random ids and heavy date ties", async () => {
+  const { randomUUID } = await import("node:crypto");
+  for (const shape of ["all-same-date", "few-dates", "spread"]) {
+    const db = createDatabase();
+    db.profiles.push({ id: uuid("a", 0), preferred_locale: "en" });
+    for (let i = 0; i < 1_037; i++) {
+      const person = randomUUID();
+      db.people.push({ id: person, user_id: uuid("a", 0) });
+      const offset = shape === "all-same-date" ? 9 : shape === "few-dates" ? i % 3 : i % 31;
+      const date = new Date(Date.UTC(2026, 10, 27 + offset)).toISOString().slice(0, 10);
+      db.events.push({ id: randomUUID(), user_id: uuid("a", 0), person_id: person, date, category: "birthday" });
+    }
+    const { client, pages } = trackedClient(db);
+    const summary = await scan.scanBirthdays(client, NOW);
+    const seen = pages.flat();
+    assert.equal(new Set(seen).size, seen.length, `${shape}: no event is read twice`);
+    assert.deepEqual([...seen].sort(), db.events.map((e) => e.id).sort(), `${shape}: no event is skipped`);
+    assert.equal(summary.result.scannedCandidates, 1_037);
+    assert.equal(pages.length, 11, "10 full pages, then a last page of 37");
+    // pages are globally ordered by (date, id)
+    const order = seen.map((id) => db.events.find((e) => e.id === id)).map((e) => `${e.date}|${e.id}`);
+    assert.deepEqual(order, [...order].sort());
+  }
+});
+
+test("deleting events that were already read does not shift the next page (an offset scan would skip them)", async () => {
+  const db = createDatabase();
+  seed(db, 400);
+  const inWindow = expected(db).candidates;
+  const { client, pages } = trackedClient(db, { beforeEventPage(page) {
+    if (page === 2) { const doomed = new Set(pages[0].slice(0, 60)); db.events = db.events.filter((e) => !doomed.has(e.id)); }
+  } });
+  await scan.scanBirthdays(client, NOW);
+  const seen = pages.flat();
+  assert.equal(new Set(seen).size, seen.length);
+  assert.equal(seen.length, inWindow, "every event that existed at the start was read exactly once");
+});
+
+test("events inserted during a run are never read twice, and events that existed at the start are never skipped", async () => {
+  const db = createDatabase();
+  seed(db, 400);
+  const startIds = new Set(db.events.filter((e) => e.date >= today && e.date <= rules.addUtcCalendarDays(NOW, 30)).map((e) => e.id));
+  let n = 0;
+  const { client, pages } = trackedClient(db, { beforeEventPage(page) {
+    if (page !== 2) return;
+    for (const offset of [0, 1, 15, 30]) { // earlier and later than the cursor
+      const date = new Date(Date.UTC(2026, 10, 27 + offset)).toISOString().slice(0, 10);
+      const person = uuid("d", ++n);
+      db.people.push({ id: person, user_id: uuid("a", 0) });
+      db.events.push({ id: uuid("e", n), user_id: uuid("a", 0), person_id: person, date, category: "birthday" });
+    }
+  } });
+  await scan.scanBirthdays(client, NOW);
+  const seen = pages.flat();
+  assert.equal(new Set(seen).size, seen.length, "no event is read twice");
+  for (const id of startIds) assert.ok(seen.includes(id), "an event that existed at the start was skipped");
+  // The next run picks up whatever the first run could not see.
+  const next = trackedClient(db);
+  await scan.scanBirthdays(next.client, NOW);
+  assert.equal(next.pages.flat().length, expected(db).candidates);
 });

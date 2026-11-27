@@ -1,5 +1,6 @@
 import { normalizeGiftHttpsUrl } from "../gifts/giftLinkUrl.ts";
 import { normalizeGiftTitle } from "./giftRecommendationValidation.ts";
+import { normalizeEvidenceUrl, provenanceFor, type UrlProvenance } from "./urlProvenance.ts";
 
 /**
  * A real product page found by live web search for one gift idea. Offers are
@@ -11,8 +12,14 @@ export type GiftProductOffer = {
   url: string;
   price: number | null;
   currency: string | null;
-  /** True when the URL belongs to a page the search tool actually returned or cited. */
+  /**
+   * True only when this EXACT url (not merely its domain) was returned or cited
+   * by the search tool. It says where the URL came from; it does not say the
+   * page is reachable, is this product, or shows a current price.
+   */
   sourceVerified: boolean;
+  /** Origin and the not-yet-checked dimensions, kept separate on purpose (HD-LINK-002). */
+  provenance: UrlProvenance;
   checkedAt: string;
 };
 
@@ -87,21 +94,29 @@ export type OfferValidationResult = {
   rejected: number;
   rejectedCurrency: number;
   rejectedOverBudget: number;
+  /** Offers whose domain was cited but whose exact URL was not (an invented or altered path). */
+  rejectedHostOnly: number;
+  /** Offers rejected because the search tool exposed no matching source for them. */
+  rejectedUnsourced: number;
 };
 
 /**
- * Keeps at most one offer per idea and only when it is a real https product
- * page on a public host, matches an idea we actually showed, is within budget
- * (+15%) and, when the tool exposed its sources, comes from them.
+ * Keeps at most one offer per idea and only when it is an https product URL on
+ * a public host, matches an idea we actually showed, is within the budget
+ * ceiling and was returned or cited by the search tool as that EXACT url.
+ * A cited domain never confirms a different path, and an offer is never kept
+ * when no source exists: a URL produced only by the model is not evidence.
  */
 export function validateGiftOffers(input: OfferValidationInput): OfferValidationResult {
   const ideaKeys = new Map(input.ideaTitles.map((title) => [normalizeGiftTitle(title), title]));
   const citedHosts = new Set(input.citedUrls.map(hostOf).filter((host): host is string => Boolean(host)));
-  const citedExact = new Set(input.citedUrls.map((url) => normalizeGiftHttpsUrl(url)).filter((url): url is string => Boolean(url)));
+  const citedExact = new Set(input.citedUrls.map((url) => normalizeEvidenceUrl(url)).filter((url): url is string => Boolean(url)));
   const byIdeaKey = new Map<string, GiftProductOffer>();
   let rejected = 0;
   let rejectedCurrency = 0;
   let rejectedOverBudget = 0;
+  let rejectedHostOnly = 0;
+  let rejectedUnsourced = 0;
   for (const raw of input.offers) {
     const ideaTitle = clean(raw.ideaTitle, 200);
     const key = ideaTitle ? normalizeGiftTitle(ideaTitle) : "";
@@ -111,9 +126,13 @@ export function validateGiftOffers(input: OfferValidationInput): OfferValidation
     if (!key || !ideaKeys.has(key) || byIdeaKey.has(key) || !url || !productName || !merchant) { rejected += 1; continue; }
     const host = hostOf(url);
     if (!host || !isPublicHost(host) || hasEmbeddedCredentials(url)) { rejected += 1; continue; }
-    const hasSources = input.citedUrls.length > 0;
-    const sourceVerified = hasSources && (citedExact.has(url) || citedHosts.has(host));
-    if (hasSources && !sourceVerified) { rejected += 1; continue; }
+    const evidenceUrl = normalizeEvidenceUrl(url);
+    const sourceVerified = evidenceUrl !== null && citedExact.has(evidenceUrl);
+    if (!sourceVerified) {
+      rejected += 1;
+      if (citedHosts.has(host)) rejectedHostOnly += 1; else rejectedUnsourced += 1;
+      continue;
+    }
     const price = typeof raw.price === "number" && Number.isFinite(raw.price) && raw.price >= 0
       ? Math.round(raw.price * 100) / 100
       : null;
@@ -127,10 +146,11 @@ export function validateGiftOffers(input: OfferValidationInput): OfferValidation
     }
     byIdeaKey.set(key, {
       productName, merchant, url, price, currency, sourceVerified,
+      provenance: provenanceFor("search_sourced"),
       checkedAt: (input.now ?? new Date()).toISOString(),
     });
   }
-  return { byIdeaKey, rejected, rejectedCurrency, rejectedOverBudget };
+  return { byIdeaKey, rejected, rejectedCurrency, rejectedOverBudget, rejectedHostOnly, rejectedUnsourced };
 }
 
 /** Search-tool market hint from the budget currency, falling back to the UI locale. */

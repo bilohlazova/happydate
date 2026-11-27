@@ -95,7 +95,7 @@ export async function runSuggestGiftsTool(input: {
         confidence: idea.confidence,
         cautions: idea.cautions,
         offer: idea.offer
-          ? { productName: idea.offer.productName, merchant: idea.offer.merchant, url: idea.offer.url, price: idea.offer.price, currency: idea.offer.currency, checkedAt: idea.offer.checkedAt }
+          ? { productName: idea.offer.productName, merchant: idea.offer.merchant, url: idea.offer.url, price: idea.offer.price, currency: idea.offer.currency, checkedAt: idea.offer.checkedAt, urlOrigin: idea.offer.provenance.origin, availability: idea.offer.provenance.availability, productConfirmation: idea.offer.provenance.productConfirmation, priceFreshness: idea.offer.provenance.priceFreshness }
           : null,
       })),
       note: "estimatedPrice is a model estimate. An offer, when present, is a real product page found by live web search at checkedAt: share its link and price, and tell the user to check the current price and stock before buying. Ideas without an offer have no verified product.",

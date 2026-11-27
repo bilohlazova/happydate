@@ -4,6 +4,8 @@ import Link from "next/link";
 import { HappyLearningCard } from "@/components/memory/HappyLearningCard";
 import LinkifiedText from "./LinkifiedText";
 import { extractAssistantGiftLinks, giftLinkHost } from "@/lib/gifts/assistantGiftLinks";
+import { createUrlEvidenceRegistry, type UrlOrigin } from "@/lib/gift-intelligence/urlProvenance";
+import { parseMessageLinks } from "@/lib/assistant/messageLinks";
 import type { HappyLearningDetectionCandidate } from "@/lib/happy-learning/happyLearningDetectV2.types";
 import type { ChatMessage } from "./types";
 
@@ -36,6 +38,9 @@ interface ConversationViewProps {
   giftLinkSaveLabel: (name: string) => string;
   giftLinkSavingLabel: string;
   giftLinkSavedLabel: string;
+  /** HD-LINK-002 Phase 0: display-only origin labels; nothing here is persisted or trusted by the server. */
+  giftLinkOriginLabels: Record<Exclude<UrlOrigin, "product_verified">, string>;
+  giftLinkUnverifiedNote: string;
   giftLinkViewSavedLabel: (name: string) => string;
   giftLinkErrorLabel: string;
   onSaveGiftLink: (messageId: string, personId: string, url: string) => void;
@@ -67,12 +72,21 @@ export default function ConversationView({
   giftLinkSaveLabel,
   giftLinkSavingLabel,
   giftLinkSavedLabel,
+  giftLinkOriginLabels,
+  giftLinkUnverifiedNote,
   giftLinkViewSavedLabel,
   giftLinkErrorLabel,
   onSaveGiftLink,
   onNavigateAway,
   onScroll,
 }: ConversationViewProps) {
+  // Display-only provenance: the user's own messages and links saved in this
+  // session are the only evidence the client has. Everything else is "unknown".
+  const savedThisSession = Object.entries(giftLinkStates).filter(([, state]) => state === "saved").map(([key]) => key.slice(key.indexOf(":") + 1));
+  const evidence = createUrlEvidenceRegistry({
+    userMessages: messages.filter((item) => item.role === "user").map((item) => item.content),
+    savedUrls: savedThisSession,
+  });
   return (
     <div ref={scrollRef} onScroll={onScroll} className="happy-chat-conversation min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-5 sm:px-5" aria-live="polite">
       <div className="space-y-4 motion-safe:animate-[assistant-conversation-in_.22s_ease-out_both]">
@@ -104,6 +118,9 @@ export default function ConversationView({
                 </div>
               )}
             </div>
+            {message.role === "assistant" && message.status === "complete" && parseMessageLinks(message.content).some((segment) => segment.type === "link") && (
+              <p className="mt-1.5 max-w-[85%] px-1 text-[0.7rem] font-medium leading-4 text-slate-500" data-testid="link-unverified-note">{giftLinkUnverifiedNote}</p>
+            )}
             {giftLinkPersonId && giftLinkPersonName && giftLinks.length > 0 && (
               <div className="mt-2 w-full max-w-[92%] space-y-2" aria-label={giftLinkSaveLabel(giftLinkPersonName)}>
                 {giftLinks.map((url) => {
@@ -117,6 +134,9 @@ export default function ConversationView({
                         <span className="sr-only">{giftLinkOpenLabel}</span>
                         <ExternalLink className="h-4 w-4 shrink-0" aria-hidden="true" />
                       </a>
+                      <p className="px-1 text-[0.7rem] font-semibold leading-4 text-amber-800" data-url-origin={evidence.classify(url).origin}>
+                        {giftLinkOriginLabels[evidence.classify(url).origin as Exclude<UrlOrigin, "product_verified">] ?? giftLinkOriginLabels.unknown}
+                      </p>
                       <button type="button" disabled={state === "saving" || state === "saved"} onClick={() => onSaveGiftLink(message.id, giftLinkPersonId, url)} className="mt-1 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-white px-3 text-xs font-extrabold text-amber-800 ring-1 ring-amber-200 transition hover:bg-amber-100 disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400">
                         {state === "saving" ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : state === "saved" ? <Check className="h-4 w-4" aria-hidden="true" /> : <Save className="h-4 w-4" aria-hidden="true" />}
                         {state === "saving" ? giftLinkSavingLabel : state === "saved" ? giftLinkSavedLabel : giftLinkSaveLabel(giftLinkPersonName)}

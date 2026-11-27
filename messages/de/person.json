@@ -44,6 +44,7 @@
       "linkGiftLabel": "Geschenkidee für diesen Link",
       "moveLinkLabel": "Gespeicherten Link zu einem anderen Geschenk verschieben",
       "linkWithoutGift": "Ohne bestimmtes Geschenk",
+      "linkUnverified": "Von dir gespeichert — Verfügbarkeit, Produkt und Preis nicht geprüft",
       "giftLinks": "{count, plural, one {# gespeicherte Option} other {# gespeicherte Optionen}}",
       "unassignedLinks": "Ohne bestimmtes Geschenk",
       "emptyUnassignedLinks": "Alle gespeicherten Links sind Geschenkideen zugeordnet.",

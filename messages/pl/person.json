@@ -44,6 +44,7 @@
       "linkGiftLabel": "Pomysł na prezent dla tego linku",
       "moveLinkLabel": "Przenieś zapisany link do innego prezentu",
       "linkWithoutGift": "Bez konkretnego prezentu",
+      "linkUnverified": "Zapisane przez Ciebie — dostępność, produkt i cena nie były sprawdzane",
       "giftLinks": "{count, plural, one {# zapisana propozycja} few {# zapisane propozycje} many {# zapisanych propozycji} other {# zapisanej propozycji}}",
       "unassignedLinks": "Bez konkretnego prezentu",
       "emptyUnassignedLinks": "Wszystkie zapisane linki są przypisane do pomysłów na prezent.",

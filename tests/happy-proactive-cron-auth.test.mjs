@@ -86,7 +86,7 @@ test("cron sends the dedicated secret on Authorization and never a platform key 
   const sql = stripComments(latest.sql);
   assert.match(sql, /'Authorization',\s*'Bearer '\s*\|\|\s*cron_secret/);
   assert.doesNotMatch(sql, /'apikey'/);
-  assert.match(sql, /timeout_milliseconds\s*:=\s*30000/);
+  assert.match(sql, /timeout_milliseconds\s*:=\s*160000/);
 });
 
 test("cron wrapper validates URL and secret shape, fails loudly and is not callable by API roles", async () => {

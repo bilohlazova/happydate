@@ -21,7 +21,7 @@
 -- logging problem can never block a run); URL/secret guards, the 160 s time-out, security
 -- definer, search_path and privileges are identical to 20261127110406.
 --
--- Rollback: supabase/rollbacks/20261127130000_hd_pr_010_happy_proactive_run_log.rollback.sql
+-- Rollback: supabase/rollbacks/20261127122758_hd_pr_010_happy_proactive_run_log.rollback.sql
 
 -- ---------------------------------------------------------------------------------------
 -- Tables

@@ -16,7 +16,7 @@ const byName = (suffix) => {
 const sql = byName("_hd_pr_010_happy_proactive_run_log.sql");
 const previousInvoker = byName("_hd_pr_009_happy_proactive_invoker_timeout.sql");
 const rollback = readFileSync(
-  join(process.cwd(), "supabase/rollbacks/20261127130000_hd_pr_010_happy_proactive_run_log.rollback.sql"),
+  join(process.cwd(), "supabase/rollbacks/20261127122758_hd_pr_010_happy_proactive_run_log.rollback.sql"),
   "utf8",
 );
 const stripComments = (text) => text.split("\n").filter((line) => !line.trim().startsWith("--")).join("\n");

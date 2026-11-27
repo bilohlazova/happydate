@@ -1,4 +1,4 @@
--- Rollback of 20261127130000_hd_pr_010_happy_proactive_run_log.sql (HD-PR-010).
+-- Rollback of 20261127122758_hd_pr_010_happy_proactive_run_log.sql (HD-PR-010).
 -- NOT a migration: it lives outside supabase/migrations on purpose and is run by hand
 -- (staging only, after export of the log if it is still wanted).
 --

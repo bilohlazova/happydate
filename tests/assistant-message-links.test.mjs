@@ -162,3 +162,44 @@ test("every chat entry point shares the single ChatAssistantModal conversation r
   const modal = await readFile(new URL("../src/components/ChatAssistantModal.tsx", import.meta.url), "utf8");
   assert.match(modal, /<ConversationView/);
 });
+
+test("hardening: long runs of closing brackets after a URL parse in linear time", () => {
+  for (const tail of [")", "]", "}", ".)"]) {
+    const started = Date.now();
+    const segments = parseMessageLinks(`https://a.test/x${tail.repeat(150_000)}`);
+    assert.ok(Date.now() - started < 1_000, `tail ${tail} too slow`);
+    assert.deepEqual(links(segments), [], "oversized candidates are not links");
+  }
+  const started = Date.now();
+  const segments = parseMessageLinks(`https://a.test/x${")".repeat(1_500)}`);
+  assert.ok(Date.now() - started < 500);
+  assert.equal(links(segments)[0].href, "https://a.test/x");
+  assert.equal(plain(segments), ")".repeat(1_500));
+});
+
+test("hardening: a label cannot name a different site than the link target", () => {
+  const shown = (text) => links(parseMessageLinks(text))[0].label;
+  assert.equal(shown("[rozetka.com.ua](https://evil.test/phish)"), "evil.test/phish");
+  assert.equal(shown("[Купити на Rozetka.com.ua](https://evil.test/p)"), "evil.test/p");
+  assert.equal(shown("[https://rozetka.com.ua/x](https://evil.test/phish)"), "evil.test/phish");
+  assert.equal(shown("[www.rozetka.com.ua](https://rozetka.com.ua.evil.test/)"), "rozetka.com.ua.evil.test");
+  assert.equal(shown("[rozetka.com.ua](https://evil-rozetka.com.ua/)"), "evil-rozetka.com.ua");
+  // honest labels are kept
+  assert.equal(shown("[rozetka.com.ua](https://rozetka.com.ua/p1/)"), "rozetka.com.ua");
+  assert.equal(shown("[Rozetka: набір LEGO](https://www.rozetka.com.ua/p1/)"), "Rozetka: набір LEGO");
+  assert.equal(shown("[Набір LEGO Classic](https://rozetka.com.ua/lego/)"), "Набір LEGO Classic");
+  assert.equal(shown("[m.rozetka.com.ua](https://rozetka.com.ua/x)"), "m.rozetka.com.ua");
+});
+
+test("hardening: bidi and invisible characters are stripped from labels", () => {
+  const [link] = links(parseMessageLinks("[\u202Egi\u200Bft sh\u2066op](https://shop.example/a)"));
+  assert.equal(link.label, "gift shop");
+  assert.deepEqual(links(parseMessageLinks("[‮​](https://shop.example/a)")).map((l) => l.label), []);
+  assert.equal(plain(parseMessageLinks("[‮​](https://shop.example/a)")), "[‮​](https://shop.example/a)");
+});
+
+test("hardening: unicode and lone surrogates never produce unsafe or throwing output", () => {
+  const segments = parseMessageLinks("https://uk.wikipedia.org/wiki/Подарунок 😀 https://example.com/\uD800x [a\uDC00](https://example.com/)");
+  assert.equal(links(segments).length, 3);
+  for (const l of links(segments)) assert.match(l.href, /^https:\/\/[\x21-\x7e]+$/);
+});

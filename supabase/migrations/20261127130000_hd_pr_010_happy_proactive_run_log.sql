@@ -269,7 +269,8 @@ begin
         when r.status_code = 200 and r.j is null then 'other'
         when r.status_code = 200 then null
         else private.happy_proactive_error_code(r.j ->> 'error') end,
-      duration_ms = case when r.status_code = 200 then
+      duration_ms = case when r.status_code = 200
+                          and private.happy_proactive_int(r.j, array['durationMs']) is not null then
         least(private.happy_proactive_int(r.j, array['durationMs']), 3600000) end,
       scanned_candidates = case when r.status_code = 200 then
         private.happy_proactive_int(r.j, array['scannedCandidates']) end,

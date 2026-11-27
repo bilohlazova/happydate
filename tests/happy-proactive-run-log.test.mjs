@@ -51,6 +51,11 @@ test("the collector never copies response bodies, headers, messages or error tex
   assert.equal((code.match(/return_message/g) ?? []).length, (code.match(/cron_error_code\(d\.return_message\)/g) ?? []).length);
 });
 
+test("a response without durationMs leaves duration_ms NULL (least() would turn NULL into the cap)", () => {
+  const collector = code.match(/function private\.collect_happy_proactive_run_log\(\)[\s\S]*?\$function\$;/)[0];
+  assert.match(collector, /duration_ms = case when r\.status_code = 200\s+and private\.happy_proactive_int\(r\.j, array\['durationMs'\]\) is not null then/);
+});
+
 test("all three tables use RLS and are closed to every API role", () => {
   for (const table of ["happy_proactive_run_log", "happy_proactive_alerts", "happy_proactive_monitor_state"]) {
     assert.match(code, new RegExp(`alter table private\\.${table} enable row level security;`));

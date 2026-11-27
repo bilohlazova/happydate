@@ -8,7 +8,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const rules = await import("../supabase/functions/happy-proactive/proactive-rules.ts");
 const migration = await readFile(path.join(root, "supabase/migrations/20260928161702_birthday_proactive_intelligence.sql"), "utf8");
 const cronMigration = await readFile(path.join(root, "supabase/migrations/20260928080935_add_happy_proactive_birthday_dedupe_and_cron.sql"), "utf8");
-const functionSource = await readFile(path.join(root, "supabase/functions/happy-proactive/index.ts"), "utf8");
+// HD-PR-007 moved the paginated birthday scan out of index.ts; the executable
+// path is index.ts plus the scan and batching modules it imports.
+const functionDirectory = path.join(root, "supabase/functions/happy-proactive");
+const functionSource = (await Promise.all(["index.ts", "birthday-scan.ts", "batching.ts"].map((name) => readFile(path.join(functionDirectory, name), "utf8")))).join("\n");
 const rulesSource = await readFile(path.join(root, "supabase/functions/happy-proactive/proactive-rules.ts"), "utf8");
 const boundaryDocumentation = await readFile(path.join(root, "supabase/functions/happy-proactive/README.md"), "utf8");
 
@@ -131,7 +134,7 @@ test("owner mismatch and no candidates are safe no-ops", async () => {
     notificationsCreated: { giftMissing: 0 },
     skipped: { giftPrepared: 0, activeTask: 0, greetingPrepared: 0, existingIdea: 0, invalidTarget: 0 },
   });
-  assert.match(functionSource, /scannedCandidates: 0,[\s\S]*ideasCreated: \{ startGiftPlanning: 0, giftHelp: 0, prepareGreeting: 0 \}/);
+  assert.match(functionSource, /export function emptyProactiveResult\(\)[\s\S]*scannedCandidates: 0,[\s\S]*ideasCreated: \{ startGiftPlanning: 0, giftHelp: 0, prepareGreeting: 0 \}/);
 });
 
 test("database RPCs revalidate gift state and protect concurrent inserts", () => {

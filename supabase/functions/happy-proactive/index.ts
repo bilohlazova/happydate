@@ -114,13 +114,15 @@ const happyProactive = {
     }
 
     const now = new Date();
+    const startedAtMs = Date.now();
     const admin = ctx.supabaseAdmin;
     let scan: Awaited<ReturnType<typeof scanBirthdays>> | null = null;
     try {
       scan = await scanBirthdays(admin, now);
       const occasion = await runOccasionProactive(admin, now);
-      console.log(JSON.stringify({ event: "happy_proactive_complete", ...scan.result, occasion, pages: scan.pages, truncated: scan.truncated }));
-      return Response.json({ ...scan.result, occasion, scan: { pages: scan.pages, truncated: scan.truncated } });
+      const durationMs = Date.now() - startedAtMs;
+      console.log(JSON.stringify({ event: "happy_proactive_complete", ...scan.result, occasion, pages: scan.pages, truncated: scan.truncated, durationMs }));
+      return Response.json({ ...scan.result, occasion, scan: { pages: scan.pages, truncated: scan.truncated }, durationMs });
     } catch (error) {
       const cause = error instanceof BirthdayScanError ? error.cause : error;
       const progress = error instanceof BirthdayScanError ? error.progress : scan;

@@ -9,13 +9,6 @@ import { logOperationalError } from "@/lib/observability/safeLogger";
 import { isSupportedLocale } from "@/i18n/config";
 import { canonicalizeGiftPreference, localizeGiftPreferences } from "@/i18n/giftPreferenceCategories";
 
-type SpecialDate = {
-  id?: string;
-  date: string;
-  label: string;
-  kind: "support" | "celebration";
-};
-
 /* Helpers */
 function splitTags(s: string): string[] {
   return s
@@ -26,20 +19,6 @@ function splitTags(s: string): string[] {
 function joinTags(arr: string[]): string {
   return arr.join(", ");
 }
-function toYmd(d: string): string | null {
-  if (!d) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d; // już OK
-  const m = d.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/); // np. 26.09.2025
-  if (m) {
-    const [, dd, mm, yyyy] = m;
-    const pad = (n: string) => n.padStart(2, "0");
-    return `${yyyy}-${pad(mm)}-${pad(dd)}`;
-  }
-  const dt = new Date(d);
-  if (isNaN(+dt)) return null;
-  return dt.toISOString().slice(0, 10);
-}
-
 export default function SurveyPage() {
   const t = useTranslations("static.survey");
   const localeValue = useLocale();
@@ -52,7 +31,6 @@ export default function SurveyPage() {
   const [dislikes, setDislikes] = useState<string[]>([]);
   const [dream, setDream] = useState("");
   const [notes, setNotes] = useState("");
-  const [dates, setDates] = useState<SpecialDate[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -73,7 +51,7 @@ export default function SurveyPage() {
       // Wczytaj ankietę
       const { data: s } = await supabase
         .from("user_survey")
-        .select("likes, dislikes, dream, notes, is_completed, special_date_event_ids")
+        .select("likes, dislikes, dream, notes")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -84,44 +62,12 @@ export default function SurveyPage() {
         setNotes((s.notes as string) ?? "");
       }
 
-      // Special dates are canonical Events; the survey stores only their IDs.
-      const specialDateIds = Array.isArray(s?.special_date_event_ids)
-        ? (s.special_date_event_ids as string[])
-        : [];
-      const { data: ds } = specialDateIds.length
-        ? await supabase
-            .from("events")
-            .select("id, date, title, category")
-            .eq("user_id", user.id)
-            .in("id", specialDateIds)
-            .order("date", { ascending: true })
-        : { data: [] };
-
-      setDates(
-        ((ds ?? []) as Array<{ id: string; date: string; title: string; category: string | null }>).map((row) => ({
-          id: row.id,
-          date: row.date,
-          label: row.title,
-          kind: row.category === "personal_support" ? "support" : "celebration",
-        }))
-      );
       setLoading(false);
     })();
   }, [router]);
 
   const likesText = useMemo(() => joinTags(localizeGiftPreferences(likes, locale)), [likes, locale]);
   const dislikesText = useMemo(() => joinTags(localizeGiftPreferences(dislikes, locale)), [dislikes, locale]);
-
-  const addEmptyDate = () =>
-    setDates((d) => [...d, { date: "", label: "", kind: "support" }]);
-
-  const updateDate = (idx: number, patch: Partial<SpecialDate>) =>
-    setDates((d) =>
-      d.map((row, i) => (i === idx ? { ...row, ...patch } : row))
-    );
-
-  const removeDate = (idx: number) =>
-    setDates((d) => d.filter((_, i) => i !== idx));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,38 +78,13 @@ export default function SurveyPage() {
     setErr(null);
 
     try {
-      // Walidacja i normalizacja dat
-      const normalizedDates = dates
-        .map((d) => {
-          const ymd = toYmd(d.date);
-          return ymd
-            ? {
-                user_id: uid,
-                date: ymd,
-                label: d.label?.trim() || d.kind,
-                kind: d.kind,
-              }
-            : null;
-        })
-        .filter(
-          (
-            d
-          ): d is {
-            user_id: string;
-            date: string;
-            label: string;
-            kind: "support" | "celebration";
-          } => d !== null
-        );
-
-      // One server transaction saves the survey, replaces only its own Events,
-      // and grants the completion reward at most once.
+      // NULL tells the RPC that this legacy page does not edit survey events.
       const { error: sErr } = await supabase.rpc("save_my_onboarding_survey", {
         p_likes: likes,
         p_dislikes: dislikes,
         p_dream: dream,
         p_notes: notes,
-        p_special_dates: normalizedDates.map(({ date, label, kind }) => ({ date, label, kind })),
+        p_special_dates: null,
       });
       if (sErr) throw new Error(`save_my_onboarding_survey: ${sErr.message}`);
 
@@ -259,68 +180,6 @@ export default function SurveyPage() {
               rows={3}
               placeholder={t("notesPlaceholder")}
             />
-          </div>
-
-          {/* Special dates */}
-          <div className="survey-care-question survey-care-dates">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-semibold text-sky-600">
-                {t("dates")}
-              </h2>
-              <button
-                type="button"
-                onClick={addEmptyDate}
-                className={`${MobileUI.button} min-h-9 bg-sky-500 px-3 text-white hover:bg-sky-600`}
-              >
-                + {t("addDate")}
-              </button>
-            </div>
-
-            {dates.length === 0 && (
-              <p className="text-sm text-gray-500">{t("datesEmpty")}</p>
-            )}
-
-            <div className="space-y-3">
-              {dates.map((d, i) => (
-                <div
-                  key={i}
-                  className="grid grid-cols-1 items-center gap-2 rounded-[1rem] border border-slate-200 p-2 sm:grid-cols-4"
-                >
-                  <input
-                    type="date"
-                    value={d.date}
-                    onChange={(e) => updateDate(i, { date: e.target.value })}
-                    className={`${MobileUI.input} col-span-1`}
-                  />
-                  <select
-                    value={d.kind}
-                    onChange={(e) =>
-                      updateDate(i, {
-                        kind: e.target.value as SpecialDate["kind"],
-                      })
-                    }
-                    className={`${MobileUI.input} col-span-1`}
-                  >
-                    <option value="support">{t("support")}</option>
-                    <option value="celebration">{t("celebration")}</option>
-                  </select>
-                  <input
-                    type="text"
-                    value={d.label}
-                    onChange={(e) => updateDate(i, { label: e.target.value })}
-                    className={`${MobileUI.input} col-span-1`}
-                    placeholder={t("datePlaceholder")}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeDate(i)}
-                    className={`${MobileUI.button} col-span-1 bg-red-50 text-red-600 hover:bg-red-100`}
-                  >
-                    {t("remove")}
-                  </button>
-                </div>
-              ))}
-            </div>
           </div>
 
           <div className="pt-2">

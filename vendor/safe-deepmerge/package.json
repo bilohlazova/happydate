@@ -1,0 +1,15 @@
+{
+  "name": "@happydate/safe-deepmerge",
+  "version": "4.3.1-happydate.1",
+  "private": true,
+  "description": "Audited local hardening of deepmerge 4.3.1 for GHSA-gcqx-w48m-w2h4",
+  "main": "index.cjs",
+  "type": "commonjs",
+  "license": "MIT",
+  "files": [
+    "index.cjs",
+    "LICENSE",
+    "UPSTREAM.md",
+    "hardening.patch"
+  ]
+}

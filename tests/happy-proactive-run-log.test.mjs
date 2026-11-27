@@ -132,6 +132,47 @@ test("alert delivery uses only a Vault HTTPS webhook and a message of numbers an
   assert.doesNotMatch(code, /sb_secret|sb_publishable|eyJ[A-Za-z0-9_-]{10,}|bearer [a-z]/i);
 });
 
+test("the monitor never raises: an exception would roll back the alert state and queued webhook messages", () => {
+  const monitor = code.match(/function private\.run_happy_proactive_monitor\(\)[\s\S]*?\$function\$;/)[0];
+  assert.doesNotMatch(monitor, /raise exception/);
+  // every step is isolated, so one failing step cannot hide the others
+  assert.equal((monitor.match(/exception when others then/g) ?? []).length, 5);
+  assert.match(monitor, /'monitor_failed', 'critical', problems <> ''/);
+  assert.match(monitor, /if problems = '' then\s+insert into private\.happy_proactive_monitor_state \(key, value\)\s+values \('last_monitor_ok_at'/);
+  // evaluation does not depend on the collector succeeding
+  assert.ok(monitor.indexOf("collect_happy_proactive_run_log") < monitor.indexOf("evaluate_happy_proactive_alerts"));
+});
+
+test("a failed webhook delivery is detected and retried without using up the reminder budget", () => {
+  assert.match(code, /last_request_id bigint,\s+delivery_failed boolean not null default false/);
+  assert.match(code, /set delivery_failed = \(coalesce\(r\.timed_out, false\) or r\.status_code is null\s+or r\.status_code not between 200 and 299\)/);
+  assert.match(code, /cur\.delivery_failed and now\(\) - cur\.last_notified_at >= interval '10 minutes'/);
+  assert.match(code, /'FIRING \(retry\)'/);
+  assert.match(code, /returns bigint[\s\S]*?function\$;/);
+  // only the HTTP status is looked at, never the webhook response body
+  const collector = code.match(/function private\.collect_happy_proactive_run_log\(\)[\s\S]*?\$function\$;/)[0];
+  assert.doesNotMatch(collector.slice(collector.indexOf("delivery_failed")), /\.content/);
+});
+
+test("poisoned or out-of-range responses cannot abort the collector batch", () => {
+  assert.match(code, /set http_status = case when r\.status_code between 100 and 599 then r\.status_code end/);
+  assert.match(code, /least\(coalesce\(sum\(value::bigint\), 0\), 2147483647\)::integer/);
+  assert.match(code, /value ~ '\^\[0-9\]\{1,9\}\$'/);
+});
+
+test("retention never prunes the newest successful run", () => {
+  const prune = code.match(/function private\.prune_happy_proactive_run_log\(\)[\s\S]*?\$function\$;/)[0];
+  assert.match(prune, /select max\(id\) into keep_id[\s\S]*?outcome in \('ok', 'truncated'\)/);
+  assert.equal((prune.match(/id is distinct from keep_id/g) ?? []).length, 2);
+});
+
+test("the health view exposes delivery and webhook state without secret values", () => {
+  const view = code.match(/create or replace view private\.happy_proactive_run_health[\s\S]*?;\n/)[0];
+  assert.match(view, /as alerts_delivery_failed/);
+  assert.match(view, /exists \(select 1 from vault\.decrypted_secrets[\s\S]*?\) as webhook_configured/);
+  assert.doesNotMatch(view, /decrypted_secret\s*[,)]|select decrypted_secret/);
+});
+
 test("the rollback restores the HD-PR-009 invoker, removes the job and drops every object", () => {
   assert.match(rollback, /cron\.unschedule\('happydate-happy-proactive-monitor'\)/);
   assert.match(rollback, /timeout_milliseconds := 160000/);

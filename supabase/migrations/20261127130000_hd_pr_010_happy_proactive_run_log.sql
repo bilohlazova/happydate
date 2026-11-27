@@ -61,7 +61,9 @@ create table if not exists private.happy_proactive_alerts (
   since timestamptz not null default now(),
   last_notified_at timestamptz,
   notify_count integer not null default 0,
-  detail text check (char_length(detail) <= 120)
+  detail text check (char_length(detail) <= 120),
+  last_request_id bigint,
+  delivery_failed boolean not null default false
 );
 
 create table if not exists private.happy_proactive_monitor_state (
@@ -151,7 +153,7 @@ security definer
 set search_path = ''
 as $function$
   select case when jsonb_typeof(p_json -> p_key) = 'object' then
-    (select coalesce(sum(value::integer), 0)::integer
+    (select least(coalesce(sum(value::bigint), 0), 2147483647)::integer
      from jsonb_each_text(p_json -> p_key) where value ~ '^[0-9]{1,9}$')
   end;
 $function$;
@@ -254,7 +256,7 @@ begin
     where l.outcome = 'pending'
   )
   update private.happy_proactive_run_log l
-  set http_status = r.status_code,
+  set http_status = case when r.status_code between 100 and 599 then r.status_code end,
       timed_out = r.timed_out,
       outcome = case
         when r.timed_out then 'timeout'
@@ -317,6 +319,14 @@ begin
   values ('cron_last_runid', seen_runid::text)
   on conflict (key) do update set value = excluded.value, updated_at = now();
 
+  -- Alert delivery results (the webhook answer, never its body): a failed one is retried by the
+  -- alert logic; a missing answer leaves the flag untouched.
+  update private.happy_proactive_alerts a
+  set delivery_failed = (coalesce(r.timed_out, false) or r.status_code is null
+                         or r.status_code not between 200 and 299)
+  from net._http_response r
+  where r.id = a.last_request_id;
+
   return changed;
 end;
 $function$;
@@ -326,7 +336,7 @@ $function$;
 -- ---------------------------------------------------------------------------------------
 create or replace function private.send_happy_proactive_alert(
   p_rule text, p_severity text, p_state text, p_detail text)
-returns void
+returns bigint
 language plpgsql
 security definer
 set search_path = ''
@@ -336,11 +346,12 @@ declare
   function_url text;
   env_label text;
   msg text;
+  sent_id bigint;
 begin
   select decrypted_secret into hook
   from vault.decrypted_secrets where name = 'happy_proactive_alert_webhook_url';
   if hook is null or hook !~ '^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[^[:space:]]*)?$' then
-    return;
+    return null;
   end if;
 
   select decrypted_secret into function_url
@@ -350,14 +361,22 @@ begin
   msg := format('[%s] HappyBot Proactive %s %s %s %s',
                 env_label, upper(p_severity), p_rule, p_state, left(coalesce(p_detail, ''), 120));
 
-  perform net.http_post(
+  select net.http_post(
     url := hook,
     headers := jsonb_build_object('Content-Type', 'application/json'),
     body := jsonb_build_object('text', msg, 'content', msg),
     timeout_milliseconds := 10000
-  );
+  ) into sent_id;
+
+  -- pg_net is asynchronous: remember the request so the collector can see a failed delivery.
+  update private.happy_proactive_alerts
+  set last_request_id = sent_id, delivery_failed = false
+  where rule_key = p_rule;
+
+  return sent_id;
 exception when others then
   raise warning 'happy_proactive_alert_send_failed %', sqlstate;
+  return null;
 end;
 $function$;
 
@@ -392,7 +411,11 @@ begin
   elsif p_firing then
     update private.happy_proactive_alerts set severity = p_severity, detail = left(p_detail, 120)
     where rule_key = p_rule;
-    if cur.notify_count < 8 and now() - cur.last_notified_at >= interval '6 hours' then
+    if cur.delivery_failed and now() - cur.last_notified_at >= interval '10 minutes' then
+      -- the previous message was not delivered: retry without using up the reminder budget
+      update private.happy_proactive_alerts set last_notified_at = now() where rule_key = p_rule;
+      perform private.send_happy_proactive_alert(p_rule, p_severity, 'FIRING (retry)', p_detail);
+    elsif cur.notify_count < 8 and now() - cur.last_notified_at >= interval '6 hours' then
       update private.happy_proactive_alerts
       set last_notified_at = now(), notify_count = notify_count + 1 where rule_key = p_rule;
       perform private.send_happy_proactive_alert(p_rule, p_severity, 'STILL FIRING', p_detail);
@@ -502,14 +525,21 @@ as $function$
 declare
   removed integer := 0;
   step_count integer;
+  keep_id bigint;
 begin
+  -- the newest successful run is never pruned: it anchors the "no success for 3.5 h" diagnosis
+  select max(id) into keep_id
+  from private.happy_proactive_run_log where outcome in ('ok', 'truncated');
+
   delete from private.happy_proactive_run_log
-  where started_at < now() - interval '30 days';
+  where started_at < now() - interval '30 days'
+    and id is distinct from keep_id;
   get diagnostics step_count = row_count;
   removed := removed + step_count;
 
   delete from private.happy_proactive_run_log
-  where id <= (select id from private.happy_proactive_run_log order by id desc offset 5000 limit 1);
+  where id <= (select id from private.happy_proactive_run_log order by id desc offset 5000 limit 1)
+    and id is distinct from keep_id;
   get diagnostics step_count = row_count;
   removed := removed + step_count;
 
@@ -579,13 +609,22 @@ begin
     problems := problems || 'heartbeat:' || sqlstate || ' ';
   end;
 
-  if problems <> '' then
-    raise exception 'happy_proactive_monitor_failed: %', trim(problems);
-  end if;
+  -- Never raise from here: pg_cron runs this function in ONE transaction, so an exception would
+  -- roll back the alert state and the queued webhook messages that report the very problem.
+  -- A broken step is reported as its own alert instead (and visible in the health view).
+  begin
+    perform private.happy_proactive_set_alert(
+      'monitor_failed', 'critical', problems <> '',
+      case when problems = '' then 'ok' else left(trim(problems), 100) end);
+  exception when others then
+    raise warning 'happy_proactive_monitor_alert_failed %', sqlstate;
+  end;
 
-  insert into private.happy_proactive_monitor_state (key, value)
-  values ('last_monitor_ok_at', now()::text)
-  on conflict (key) do update set value = excluded.value, updated_at = now();
+  if problems = '' then
+    insert into private.happy_proactive_monitor_state (key, value)
+    values ('last_monitor_ok_at', now()::text)
+    on conflict (key) do update set value = excluded.value, updated_at = now();
+  end if;
 end;
 $function$;
 
@@ -609,6 +648,9 @@ select
   (select max(duration_ms) from private.happy_proactive_run_log
     where started_at > now() - interval '24 hours') as max_duration_ms_24h,
   (select count(*) from private.happy_proactive_alerts where status = 'firing') as alerts_firing,
+  (select count(*) from private.happy_proactive_alerts where delivery_failed) as alerts_delivery_failed,
+  exists (select 1 from vault.decrypted_secrets
+          where name = 'happy_proactive_alert_webhook_url') as webhook_configured,
   (select value::timestamptz from private.happy_proactive_monitor_state
     where key = 'last_monitor_ok_at') as monitor_last_ok_at;
 

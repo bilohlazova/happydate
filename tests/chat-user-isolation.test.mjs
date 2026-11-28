@@ -215,3 +215,59 @@ test(`[${VARIANT}] 14. Logout makes no network or storage call (server memory un
   assert.equal(tab.requests.length, requests, "no chat request on logout");
   assert.deepEqual(tab.otherCalls, [], "no other network call on logout");
 }));
+
+test(`[${VARIANT}] 15. Switching people and back keeps each person's own conversation, without mixing`, () => withBrowser(async (browser) => {
+  await browser.signIn("A");
+  const tab = await browser.newTab();
+  const [mama, friend] = USERS.A.people;
+  await tab.setScope({ type: "person", personId: mama.id });
+  await tab.open();
+  await tab.send("БЮДЖЕТ-1000-МАМА");
+  await tab.setScope({ type: "person", personId: friend.id });
+  await tab.send("ПОБАЖАННЯ-ДРУГА");
+  assert.ok(!tab.text().includes("БЮДЖЕТ-1000-МАМА"));
+  await tab.setScope({ type: "person", personId: mama.id });
+  assert.ok(tab.text().includes("БЮДЖЕТ-1000-МАМА"), "mama's own conversation is restored");
+  assert.ok(!tab.text().includes("ПОБАЖАННЯ-ДРУГА"), "friend's conversation is not shown in mama's context");
+  const before = tab.requests.length;
+  await tab.send("Ще про маму");
+  const request = tab.requests[before];
+  assert.ok(JSON.stringify(request.body.conversation).includes("БЮДЖЕТ-1000-МАМА"));
+  assert.ok(!JSON.stringify(request.body).includes("ПОБАЖАННЯ-ДРУГА"), "friend's text never enters mama's request");
+}));
+
+test(`[${VARIANT}] 15b. Account switch drops every kept conversation, including other contexts`, () => withBrowser(async (browser) => {
+  await browser.signIn("A");
+  const tab = await browser.newTab();
+  const [mama, friend] = USERS.A.people;
+  await tab.setScope({ type: "person", personId: mama.id });
+  await tab.open(); await tab.send("БЮДЖЕТ-1000-МАМА");
+  await tab.setScope({ type: "person", personId: friend.id });
+  await tab.send("ПОБАЖАННЯ-ДРУГА");
+  await browser.signIn("B");
+  await tab.open();
+  for (const scope of [{ type: "global" }, { type: "person", personId: mama.id }, { type: "person", personId: friend.id }]) {
+    await tab.setScope(scope);
+    assert.ok(!tab.text().includes("БЮДЖЕТ-1000-МАМА") && !tab.text().includes("ПОБАЖАННЯ-ДРУГА"), JSON.stringify(scope));
+  }
+  await browser.signOut();
+  await browser.signIn("A");
+  await tab.open();
+  assert.ok(!tab.text().includes("БЮДЖЕТ-1000-МАМА"), "no restore even when A returns in the same tab");
+}));
+
+test(`[${VARIANT}] 15c. A request in a hidden context is aborted on logout and never surfaces`, () => withBrowser(async (browser) => {
+  await browser.signIn("A");
+  const tab = await browser.newTab();
+  const [mama, friend] = USERS.A.people;
+  await tab.setScope({ type: "person", personId: mama.id });
+  await tab.open();
+  tab.holdNextReply();
+  await tab.send("БЮДЖЕТ-1000-МАМА");
+  await tab.setScope({ type: "person", personId: friend.id }); // mama's instance keeps running, hidden
+  await browser.signOut();
+  assert.equal(tab.heldRequest.signal.aborted, true);
+  await tab.releaseHeld("ПІЗНЯ-ВІДПОВІДЬ-МАМА");
+  assert.ok(!tab.text().includes("ПІЗНЯ-ВІДПОВІДЬ-МАМА"));
+  assert.deepEqual(tab.memoryUpdates, []);
+}));

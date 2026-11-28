@@ -15,6 +15,7 @@ import { useAssistantHomeContext } from "@/hooks/useAssistantHomeContext";
 import { buildConversationHistory } from "@/lib/assistant/chatClient";
 import { classifyAiAvailabilityError } from "@/lib/assistant/aiAvailability";
 import { resolveChatPerson } from "@/lib/chat-person/resolveChatPerson";
+import { canApplyAsyncResult, sessionMatchesOwner } from "@/lib/assistant/chatOwnership";
 import { confirmHappyLearningCandidate, requestHappyLearningDetection } from "@/lib/happy-learning/happyLearningClient";
 import type { HappyLearningDetectionCandidate } from "@/lib/happy-learning/happyLearningDetectV2.types";
 import { savePersonGiftLinkOnce } from "@/lib/gifts/gift.loaders";
@@ -22,7 +23,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { isSupportedLocale } from "@/i18n/config";
 import { formatFriendlyFirstName } from "@/i18n/friendlyName";
 
-interface ChatAssistantModalProps {
+export interface ChatAssistantModalProps {
   open: boolean;
   onClose: () => void;
   onPersonMemoryUpdated?: (personId?: string) => void | Promise<void>;
@@ -30,6 +31,12 @@ interface ChatAssistantModalProps {
   autoSubmitInitialPrompt?: boolean;
   giftRequest?: { personId: string; eventId: string; mode?: "selection" | "supplementary" } | null;
   scope?: ChatScopeInput;
+  /**
+   * Authenticated owner this instance was created for (`null` = guest). Supplied by
+   * UserScopedChatAssistant, which also remounts the modal when the owner changes.
+   * `undefined` = legacy caller: ownership checks are skipped.
+   */
+  ownerId?: string | null;
 }
 
 const ACTION_DEFINITIONS = [
@@ -63,7 +70,7 @@ const INITIAL_HAPPY_LEARNING_STATE: ChatHappyLearningState = {
   detectionStatus: "idle",
 };
 
-export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdated, initialPrompt = null, autoSubmitInitialPrompt = false, giftRequest = null, scope = { type: "global" } }: ChatAssistantModalProps) {
+export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdated, initialPrompt = null, autoSubmitInitialPrompt = false, giftRequest = null, scope = { type: "global" }, ownerId }: ChatAssistantModalProps) {
   const t = useTranslations("assistant");
   const locale = useLocale();
   const router = useRouter();
@@ -89,6 +96,8 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const messageIdRef = useRef(0);
   const localeRef = useRef(locale);
+  const mountedRef = useRef(true);
+  const ownerIdRef = useRef(ownerId);
   const submittedInitialPromptRef = useRef<string | null>(null);
   const scopedPersonId = scope.type === "person" ? scope.personId : null;
   const isPersonScoped = scope.type === "person";
@@ -190,6 +199,25 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   }, [value]);
 
   useEffect(() => {
+    ownerIdRef.current = ownerId;
+  }, [ownerId]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      // Whatever is still running belongs to this instance's owner: stop it so a
+      // late answer can never be applied after sign-out or an account switch.
+      mountedRef.current = false;
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
+      happyLearningAbortRef.current?.abort();
+      happyLearningAbortRef.current = null;
+      if (homeTimerRef.current) clearTimeout(homeTimerRef.current);
+      homeTimerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     if (localeRef.current === locale) return;
     localeRef.current = locale;
     cancelActiveResponse();
@@ -285,6 +313,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   }) {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionMatchesOwner(ownerIdRef.current, sessionData.session?.user?.id)) return;
       const accessToken = sessionData.session?.access_token;
       const result = accessToken
         ? await requestHappyLearningDetection({
@@ -368,12 +397,27 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
     abortControllerRef.current?.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    const ownerAtStart = ownerIdRef.current;
+    // A result is applied only while this instance is mounted, this is still the
+    // latest request, it was not aborted and the owner has not changed.
+    const isCurrent = () => canApplyAsyncResult({
+      mounted: mountedRef.current,
+      aborted: controller.signal.aborted,
+      isLatestRequest: abortControllerRef.current === controller,
+      ownerAtStart,
+      ownerNow: ownerIdRef.current,
+    });
     shouldAutoScrollRef.current = true;
     setIsResponding(true);
     setShowTyping(true);
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
+      // Never authorise this chat's history with another user's access token.
+      if (!sessionMatchesOwner(ownerAtStart, sessionData.session?.user?.id)) {
+        throw Object.assign(new Error("chat owner mismatch"), { code: "owner_mismatch" });
+      }
+      if (!isCurrent()) return;
       const accessToken = sessionData.session?.access_token;
       const response = await fetch("/api/ai-chat", {
         method: "POST",
@@ -415,11 +459,16 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
         throw Object.assign(new Error("assistant unavailable"), availability);
       }
 
+      if (!isCurrent()) return;
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let receivedText = false;
       while (true) {
         const { done, value: chunk } = await reader.read();
+        if (!isCurrent()) {
+          void reader.cancel().catch(() => undefined);
+          return;
+        }
         if (done) break;
         const text = decoder.decode(chunk, { stream: true });
         if (!text) continue;
@@ -433,6 +482,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
             : message,
         ));
       }
+      if (!isCurrent()) return;
       setMessages((current) => [
         ...current.map((message) =>
           message.id === assistantMessageId ? { ...message, status: "complete" as const } : message,
@@ -442,7 +492,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
         await onPersonMemoryUpdated?.(requestPersonContext.activePersonId);
       }
     } catch (error) {
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted || !mountedRef.current) return;
       const failure = error as { code?: string; retryAfter?: number };
       const retryAfter = failure.code === "rate_limited" || failure.code === "daily_ai_budget_exceeded"
         ? Number(failure.retryAfter) || 60
@@ -521,6 +571,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   async function saveHappyLearningCandidate(candidate: HappyLearningDetectionCandidate) {
     if (candidate.semanticStatus !== "new") return "error" as const;
     const { data } = await supabase.auth.getSession();
+    if (!sessionMatchesOwner(ownerIdRef.current, data.session?.user?.id)) return "error" as const;
     const accessToken = data.session?.access_token;
     if (!accessToken) return "error" as const;
     const result = await confirmHappyLearningCandidate({ candidate, accessToken });

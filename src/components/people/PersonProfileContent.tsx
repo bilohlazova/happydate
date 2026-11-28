@@ -31,7 +31,7 @@ import {
   X,
 } from "lucide-react";
 
-import ChatAssistantModal from "@/components/ChatAssistantModal";
+import UserScopedChatAssistant from "@/components/assistant/UserScopedChatAssistant";
 import Avatar from "@/components/people/Avatar";
 import { PersonGiftManager } from "@/components/people/PersonGiftManager";
 import { PersonActionsSheet } from "@/components/people/PeoplePageContent";
@@ -158,7 +158,7 @@ export function PersonProfileContent({
         </div>
       </main>
 
-      <ChatAssistantModal
+      <UserScopedChatAssistant
         open={assistantOpen}
         onClose={() => setAssistantOpen(false)}
         onPersonMemoryUpdated={onProfileChanged}

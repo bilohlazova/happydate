@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import ChatAssistantModal from "@/components/ChatAssistantModal";
+import UserScopedChatAssistant from "@/components/assistant/UserScopedChatAssistant";
 
 /** Контролер модалки для /services/asystent-ai. Слухає `hd:openChat`. */
 export default function ChatModalControllerAI() {
@@ -13,5 +13,5 @@ export default function ChatModalControllerAI() {
     return () => window.removeEventListener("hd:openChat", onOpen);
   }, []);
 
-  return <ChatAssistantModal open={open} onClose={() => setOpen(false)} />;
+  return <UserScopedChatAssistant open={open} onClose={() => setOpen(false)} />;
 }

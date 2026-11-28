@@ -4,7 +4,8 @@ import HomeDashboard from "@/components/home-dashboard/HomeDashboard";
 import HomeSkeleton from "@/components/home-dashboard/HomeSkeleton";
 import HomeErrorState from "@/components/home-dashboard/HomeErrorState";
 import GiftOutcomeConfirmation from "@/components/home-dashboard/GiftOutcomeConfirmation";
-import ChatAssistantModal from "@/components/ChatAssistantModal";
+import UserScopedChatAssistant from "@/components/assistant/UserScopedChatAssistant";
+import { useChatOwnerReset } from "@/hooks/useChatOwnerReset";
 import { loadHome } from "@/lib/home/loadHome";
 import { buildHomeViewModel } from "@/lib/home/buildHomeViewModel";
 import { isCurrentHomeLoad } from "@/lib/home/homeLoadGuard";
@@ -130,6 +131,15 @@ export default function HomePageClient() {
   const viewModel = selectRenderableHomeSnapshot(homeSnapshot, user?.id ?? null, authLoading);
 
   const reload = useCallback(() => setReloadKey((value) => value + 1), []);
+
+  // Sign-out or account switch: drop every private chat input that lives outside the modal.
+  const resetChatForOwnerChange = useCallback(() => {
+    setChatOpen(false);
+    setChatScope({ type: "global" });
+    setChatInitialPrompt(null);
+    setChatGiftRequest(null);
+  }, []);
+  useChatOwnerReset(resetChatForOwnerChange);
 
   const finishGiftOutcomeConfirmation = useCallback(() => {
     if (giftOutcomeTimerRef.current) clearTimeout(giftOutcomeTimerRef.current);
@@ -405,7 +415,7 @@ export default function HomePageClient() {
         />
       )}
       <CookieConsent />
-      <ChatAssistantModal
+      <UserScopedChatAssistant
         open={chatOpen}
         onClose={() => setChatOpen(false)}
         initialPrompt={chatInitialPrompt}

@@ -19,6 +19,8 @@ import { canApplyAsyncResult, sessionMatchesOwner } from "@/lib/assistant/chatOw
 import { confirmHappyLearningCandidate, requestHappyLearningDetection } from "@/lib/happy-learning/happyLearningClient";
 import type { HappyLearningDetectionCandidate } from "@/lib/happy-learning/happyLearningDetectV2.types";
 import { savePersonGiftLinkOnce } from "@/lib/gifts/gift.loaders";
+import { historySegmentFor, mergeHydratedHistory } from "@/lib/happybot/chatHistory";
+import { loadSegmentHistory } from "@/lib/happybot/chatHistoryClient";
 import { supabase } from "@/lib/supabaseClient";
 import { isSupportedLocale } from "@/i18n/config";
 import { formatFriendlyFirstName } from "@/i18n/friendlyName";
@@ -87,6 +89,11 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   const [happyLearning, setHappyLearning] = useState<ChatHappyLearningState>(INITIAL_HAPPY_LEARNING_STATE);
   const [giftLinkStates, setGiftLinkStates] = useState<Record<string, "saving" | "saved" | "error">>({});
   const [giftLinkTargets, setGiftLinkTargets] = useState<Record<string, string>>({});
+  // Restoring this segment's stored history (HD-CHAT-002 Phase 1C). Sending waits until it settled so the first
+  // request carries the restored context; a failed or slow read never blocks the chat for long (6 s cap).
+  const [historyStatus, setHistoryStatus] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  const hydratedRef = useRef(false);
+  const historyAbortRef = useRef<AbortController | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -193,6 +200,36 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
     if (!open) submittedInitialPromptRef.current = null;
   }, [open]);
 
+  // Once per instance, on first open: restore the stored history of THIS segment (global or one person).
+  // Gift/event/task conversations and guests have no confirmable segment and start empty.
+  useEffect(() => {
+    if (!open || hydratedRef.current) return;
+    hydratedRef.current = true;
+    const segment = historySegmentFor(scope, giftRequest);
+    const owner = ownerIdRef.current;
+    if (!segment || !owner) {
+      setHistoryStatus("ready");
+      return;
+    }
+    const controller = new AbortController();
+    historyAbortRef.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 6_000);
+    setHistoryStatus("loading");
+    loadSegmentHistory({ ownerId: owner, segment, signal: controller.signal })
+      .then((history) => {
+        if (!mountedRef.current || controller.signal.aborted || ownerIdRef.current !== owner) return;
+        if (history.length) setMessages((current) => mergeHydratedHistory(history, current));
+        setHistoryStatus("ready");
+      })
+      .catch(() => {
+        if (mountedRef.current && ownerIdRef.current === owner) setHistoryStatus("failed");
+      })
+      .finally(() => {
+        clearTimeout(timeout);
+        if (historyAbortRef.current === controller) historyAbortRef.current = null;
+      });
+  }, [giftRequest, open, scope]);
+
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -219,6 +256,8 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
       // Whatever is still running belongs to this instance's owner: stop it so a
       // late answer can never be applied after sign-out or an account switch.
       mountedRef.current = false;
+      historyAbortRef.current?.abort();
+      historyAbortRef.current = null;
       abortControllerRef.current?.abort();
       abortControllerRef.current = null;
       happyLearningAbortRef.current?.abort();
@@ -531,7 +570,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
 
   function sendMessage() {
     const content = value.trim();
-    if (!content || isResponding || isHomeExiting) return;
+    if (!content || isResponding || isHomeExiting || historyStatus === "idle" || historyStatus === "loading") return;
     setValue("");
 
     if (messages.length === 0) {
@@ -549,7 +588,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   }
 
   useEffect(() => {
-    if (!open || !autoSubmitInitialPrompt || !initialPrompt || homeContext.loading) return;
+    if (!open || !autoSubmitInitialPrompt || !initialPrompt || homeContext.loading || historyStatus === "idle" || historyStatus === "loading") return;
     if (submittedInitialPromptRef.current === initialPrompt || isResponding || isHomeExiting) return;
     submittedInitialPromptRef.current = initialPrompt;
 
@@ -569,7 +608,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
     // This effect consumes one explicit prompt per chat opening. Message changes are
     // intentionally excluded so streaming updates cannot submit it a second time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoSubmitInitialPrompt, homeContext.loading, initialPrompt, open]);
+  }, [autoSubmitInitialPrompt, historyStatus, homeContext.loading, initialPrompt, open]);
 
   function dismissHappyLearningCandidate(candidateId: string) {
     setHappyLearning((current) => ({
@@ -802,7 +841,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
           messageLabel={t("messageLabel")}
           sendLabel={t("send")}
           keyboardHint={t("keyboardHint")}
-          disabled={!value.trim() || isResponding || isHomeExiting}
+          disabled={!value.trim() || isResponding || isHomeExiting || historyStatus === "idle" || historyStatus === "loading"}
           textareaRef={textareaRef}
           onChange={setValue}
           onKeyDown={handleComposerKeyDown}

@@ -11,6 +11,7 @@ import { getAppMetadata } from "@/i18n/metadata";
 import NativeDeepLinkBridge from "@/components/NativeDeepLinkBridge";
 import ClientErrorReporter from "@/components/ClientErrorReporter";
 import { AuthProvider } from "@/components/AuthProvider";
+import PrivateSnapshotBoundary from "@/components/PrivateSnapshotBoundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -66,7 +67,7 @@ export default async function RootLayout({
 
           {/* CONTENT */}
           <main className="hd-main">
-            {children}
+            <PrivateSnapshotBoundary>{children}</PrivateSnapshotBoundary>
           </main>
 
           {/* MOBILE NAV (FIXED) */}

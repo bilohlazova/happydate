@@ -55,5 +55,9 @@
     "error": "Benachrichtigungen konnten nicht geladen werden.",
     "unauthorized": "Melde dich erneut an, um Benachrichtigungen zu sehen.",
     "unavailable": "Benachrichtigungen sind vorübergehend nicht verfügbar."
+  },
+  "privateRestore": {
+    "unverified": "Dein Konto konnte nach der Rückkehr zu dieser Seite nicht bestätigt werden. Prüfe die Verbindung.",
+    "retry": "Erneut versuchen"
   }
 }

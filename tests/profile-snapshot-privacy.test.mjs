@@ -106,7 +106,7 @@ test("SEC-01 stale restore verification cannot reopen a page hidden again",()=>w
 test("SEC-01 failed restore verification (network error) stays closed and never reloads private data",()=>withProfile(async h=>{
   await loaded(h);h.holdAuth();await h.transition("pagehide");await h.transition("pageshow");
   await h.verifyError(0);assert.ok(!h.text().includes(marker));
-  assert.equal(h.pending.length,1);assert.ok(h.w.document.querySelector('[aria-busy="true"]'));
+  assert.equal(h.pending.length,1);assert.ok(h.w.document.querySelector('[role="alert"]'),"failure shows a retry action, not private content");
 }));
 
 test("SEC-01 non-persisted pageshow does not start a restore verification",()=>withProfile(async h=>{

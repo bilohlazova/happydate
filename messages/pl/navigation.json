@@ -55,5 +55,9 @@
     "error": "Nie udało się załadować powiadomień.",
     "unauthorized": "Zaloguj się ponownie, aby zobaczyć powiadomienia.",
     "unavailable": "Powiadomienia są chwilowo niedostępne."
+  },
+  "privateRestore": {
+    "unverified": "Nie udało się potwierdzić konta po powrocie na tę stronę. Sprawdź połączenie.",
+    "retry": "Spróbuj ponownie"
   }
 }

@@ -4,7 +4,9 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { useLocale } from "next-intl";
 import Image from "next/image";
 import { ImagePlus, Palette, Pencil, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabaseClient";
+import { purgeLegacySymbolDrafts, symbolDraftKey } from "@/lib/privateLocalDrafts";
 import { deletePersonSymbol, savePersonSymbol, updatePersonSymbolInterpretation, updatePersonSymbolMeaning, type PersonSymbolRow } from "@/lib/repositories/personSymbolRepository";
 import { gentleSymbolInterpretation } from "@/lib/memory-engine";
 
@@ -40,7 +42,10 @@ export function PersonSymbolSection({ personId, personName, symbol, onChanged }:
   const [hasDrawing, setHasDrawing] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
-  const draftKey = `happydate:symbol-draft:${personId}`;
+  const { user } = useAuth();
+  // Owner-scoped: no signed-in owner means no draft is read or written.
+  const draftKey = user?.id ? symbolDraftKey(user.id, personId) : null;
+  useEffect(() => { purgeLegacySymbolDrafts(); }, []);
 
   useEffect(() => {
     if (mode !== "draw") return;
@@ -51,7 +56,7 @@ export function PersonSymbolSection({ personId, personName, symbol, onChanged }:
     canvas.width = width * ratio; canvas.height = 260 * ratio;
     const context = canvas.getContext("2d");
     context?.scale(ratio, ratio);
-    const draft = localStorage.getItem(draftKey);
+    const draft = draftKey ? localStorage.getItem(draftKey) : null;
     if (draft) { const image = new window.Image(); image.onload = () => { context?.drawImage(image, 0, 0, width, 260); setHasDrawing(true); }; image.src = draft; }
   }, [draftKey, mode]);
 
@@ -60,7 +65,12 @@ export function PersonSymbolSection({ personId, personName, symbol, onChanged }:
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   }
   function start(event: PointerEvent<HTMLCanvasElement>) { drawing.current = true; event.currentTarget.setPointerCapture(event.pointerId); const p = point(event); const ctx = event.currentTarget.getContext("2d"); ctx?.beginPath(); ctx?.moveTo(p.x, p.y); }
-  function move(event: PointerEvent<HTMLCanvasElement>) { if (!drawing.current) return; const p = point(event); const ctx = event.currentTarget.getContext("2d"); if (!ctx) return; ctx.strokeStyle = penColor; ctx.lineWidth = penWidth; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.lineTo(p.x, p.y); ctx.stroke(); setHasDrawing(true); localStorage.setItem(draftKey, event.currentTarget.toDataURL("image/png")); }
+  function move(event: PointerEvent<HTMLCanvasElement>) { if (!drawing.current) return; const p = point(event); const ctx = event.currentTarget.getContext("2d"); if (!ctx) return; ctx.strokeStyle = penColor; ctx.lineWidth = penWidth; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.lineTo(p.x, p.y); ctx.stroke(); setHasDrawing(true); }
+  function finishStroke() {
+    drawing.current = false;
+    // Persist once per stroke (not on every pointer move) to limit private PNG writes and quota use.
+    try { if (draftKey && canvasRef.current) localStorage.setItem(draftKey, canvasRef.current.toDataURL("image/png")); } catch { /* quota/unavailable */ }
+  }
 
   async function persist(kind: "preset" | "happy" | "drawing" | "upload") {
     setBusy(true); setError(false);
@@ -74,7 +84,7 @@ export function PersonSymbolSection({ personId, personName, symbol, onChanged }:
       await savePersonSymbol({ userId, personId, kind, name, presetKey, image, prompt });
       if (userMeaning.trim()) await updatePersonSymbolMeaning(userId, personId, userMeaning);
       if (description.trim()) await updatePersonSymbolInterpretation(userId, personId, description);
-      localStorage.removeItem(draftKey); setMode(null); await onChanged?.();
+      if (draftKey) localStorage.removeItem(draftKey); setMode(null); await onChanged?.();
     } catch { setError(true); } finally { setBusy(false); }
   }
 
@@ -90,7 +100,7 @@ export function PersonSymbolSection({ personId, personName, symbol, onChanged }:
       {mode === "menu" && <div className="mt-5 grid gap-3 sm:grid-cols-2">{([["preset", Palette, t.choose], ["happy", Sparkles, t.happy], ["draw", Pencil, t.draw], ["upload", Upload, t.upload]] as const).map(([value, Icon, label]) => <button key={value} onClick={() => setMode(value)} className="flex min-h-20 items-center gap-3 rounded-2xl bg-slate-50 p-4 text-left font-bold hover:bg-sky-50"><Icon className="h-6 w-6 text-sky-600" />{label}</button>)}</div>}
       {mode === "preset" && <div className="mt-5 grid grid-cols-3 gap-3">{PRESETS.map(([key, icon]) => <button key={key} aria-pressed={chosen === key} onClick={() => setChosen(key)} className={`h-20 rounded-2xl text-4xl ${chosen === key ? "bg-sky-100 ring-2 ring-sky-500" : "bg-slate-50"}`}>{icon}</button>)}</div>}
       {mode === "happy" && <textarea className="mt-5 min-h-28 w-full rounded-2xl border border-slate-200 p-4" placeholder={t.prompt} value={prompt} onChange={(e) => setPrompt(e.target.value)} maxLength={500} />}
-      {mode === "draw" && <><p className="mt-2 text-sm text-slate-500">{personName}</p><canvas aria-label={t.hint} ref={canvasRef} className="mt-4 h-[260px] w-full touch-none rounded-2xl border-2 border-dashed border-sky-200 bg-transparent" onPointerDown={start} onPointerMove={move} onPointerUp={() => drawing.current = false} onPointerCancel={() => drawing.current = false} /><div className="mt-3 flex flex-wrap items-center gap-4"><label className="flex min-h-11 items-center gap-2 text-sm font-bold text-slate-600"><span>{ukLabel(locale, "Колір", "Color")}</span><input type="color" value={penColor} onChange={(e) => setPenColor(e.target.value)} className="h-10 w-12 cursor-pointer rounded-lg" /></label><label className="flex min-h-11 flex-1 items-center gap-2 text-sm font-bold text-slate-600"><span>{ukLabel(locale, "Товщина", "Width")}</span><input aria-label={ukLabel(locale, "Товщина лінії", "Line width")} type="range" min="2" max="14" value={penWidth} onChange={(e) => setPenWidth(Number(e.target.value))} className="min-w-24 flex-1" /></label><button className="min-h-11 text-sm font-bold text-slate-600" onClick={() => { const c = canvasRef.current; c?.getContext("2d")?.clearRect(0, 0, c.width, c.height); localStorage.removeItem(draftKey); setHasDrawing(false); }}>{t.clear}</button></div></>}
+      {mode === "draw" && <><p className="mt-2 text-sm text-slate-500">{personName}</p><canvas aria-label={t.hint} ref={canvasRef} className="mt-4 h-[260px] w-full touch-none rounded-2xl border-2 border-dashed border-sky-200 bg-transparent" onPointerDown={start} onPointerMove={move} onPointerUp={finishStroke} onPointerCancel={() => drawing.current = false} /><div className="mt-3 flex flex-wrap items-center gap-4"><label className="flex min-h-11 items-center gap-2 text-sm font-bold text-slate-600"><span>{ukLabel(locale, "Колір", "Color")}</span><input type="color" value={penColor} onChange={(e) => setPenColor(e.target.value)} className="h-10 w-12 cursor-pointer rounded-lg" /></label><label className="flex min-h-11 flex-1 items-center gap-2 text-sm font-bold text-slate-600"><span>{ukLabel(locale, "Товщина", "Width")}</span><input aria-label={ukLabel(locale, "Товщина лінії", "Line width")} type="range" min="2" max="14" value={penWidth} onChange={(e) => setPenWidth(Number(e.target.value))} className="min-w-24 flex-1" /></label><button className="min-h-11 text-sm font-bold text-slate-600" onClick={() => { const c = canvasRef.current; c?.getContext("2d")?.clearRect(0, 0, c.width, c.height); if (draftKey) localStorage.removeItem(draftKey); setHasDrawing(false); }}>{t.clear}</button></div></>}
       {mode === "upload" && <label className="mt-5 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-sky-200 bg-sky-50"><Upload className="mb-2 text-sky-600" />{file?.name ?? t.upload}<input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>}
       {mode === "meaning" ? <><p className="mt-2 text-sm text-slate-500">{t.meaningHint}</p><textarea autoFocus className="mt-4 min-h-32 w-full rounded-2xl border border-slate-200 p-4" placeholder={t.meaning} value={userMeaning} onChange={(e) => setUserMeaning(e.target.value)} maxLength={2000} /><button className="mt-4 min-h-12 w-full rounded-xl bg-sky-600 font-bold text-white" onClick={async () => { const auth = await supabase.auth.getUser(); if (!auth.data.user) return; await updatePersonSymbolMeaning(auth.data.user.id, personId, userMeaning); setMode(null); await onChanged?.(); }}>{t.saveMeaning}</button></> : mode !== "menu" && <><input className="mt-4 min-h-12 w-full rounded-xl border border-slate-200 px-4" placeholder={t.name} value={name} onChange={(e) => setName(e.target.value)} maxLength={120} /><textarea className="mt-3 min-h-24 w-full rounded-xl border border-slate-200 p-4" placeholder={t.meaning} value={userMeaning} onChange={(e) => setUserMeaning(e.target.value)} maxLength={2000} /><p className="mt-1 text-xs text-slate-500">{t.meaningHint}</p>{mode === "happy" && <label className="mt-4 block text-sm font-semibold"><input type="checkbox" className="mr-2" checked={Boolean(description)} onChange={(e) => setDescription(e.target.checked ? gentleSymbolInterpretation({ locale, kind: "happy", presetKey: chosen, prompt }).text : "")} />{t.describe}<span className="mt-1 block pl-5 text-xs font-normal text-slate-500">{t.inspiration}</span></label>}{error && <p className="mt-3 text-sm text-rose-600">{t.error}</p>}<div className="mt-5 flex gap-3"><button className="min-h-12 flex-1 rounded-xl bg-slate-100 font-bold" onClick={() => setMode(null)}>{t.cancel}</button><button disabled={busy || (mode === "upload" && !file) || (mode === "happy" && !prompt.trim()) || (mode === "draw" && !hasDrawing)} className="min-h-12 flex-1 rounded-xl bg-sky-600 font-bold text-white disabled:opacity-50" onClick={() => persist(mode === "draw" ? "drawing" : mode)}>{busy ? "…" : t.save}</button></div></>}
     </div></div>}

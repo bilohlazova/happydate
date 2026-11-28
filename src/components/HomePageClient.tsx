@@ -10,6 +10,7 @@ import { loadHome } from "@/lib/home/loadHome";
 import { buildHomeViewModel } from "@/lib/home/buildHomeViewModel";
 import { isCurrentHomeLoad } from "@/lib/home/homeLoadGuard";
 import { selectRenderableHomeSnapshot, type HomeSnapshot } from "@/lib/home/homeRender";
+import { useHomeRestoreGuard } from "@/lib/home/useHomeRestoreGuard";
 import { changeGiftOutcomeFollowUp, confirmPersonGiftOutcome, savePersonGiftOutcomeNote, undoPersonGiftOutcome } from "@/lib/gifts/gift.loaders";
 import { createSelectedPersonGift } from "@/lib/gifts/gift.loaders";
 import type { GiftOutcomeValue } from "@/lib/gifts/gift.types";
@@ -124,9 +125,11 @@ export default function HomePageClient() {
   const openedNotificationScopeRef = useRef<string | null>(null);
   const homeRequestVersionRef = useRef(0);
   const homeOwnerRef = useRef<string | null>(null);
-  const viewModel = selectRenderableHomeSnapshot(homeSnapshot, user?.id ?? null, authLoading);
-
   const reload = useCallback(() => setReloadKey((value) => value + 1), []);
+  // BFCache: private home content is removed before caching and shown only after the owner is re-verified.
+  const restore = useHomeRestoreGuard(user?.id ?? null, reload);
+  const privateHidden = restore.state !== null;
+  const viewModel = privateHidden ? null : selectRenderableHomeSnapshot(homeSnapshot, user?.id ?? null, authLoading);
 
 
   const finishGiftOutcomeConfirmation = useCallback(() => {
@@ -382,15 +385,20 @@ export default function HomePageClient() {
   return (
     <>
       {authLoading && <HomeSkeleton />}
-      {!authLoading && !user && <GuestHomePresentation />}
-      {!authLoading && user && !viewModel && !fatalError && <HomeSkeleton />}
-      {fatalError && (
+      {!authLoading && (!user || restore.state === "foreign") && <GuestHomePresentation />}
+      {!authLoading && user && !viewModel && !fatalError && (restore.state === null || restore.state === "verifying") && <HomeSkeleton />}
+      {!authLoading && user && restore.state === "unverified" && (
+        <div className="mx-auto w-full max-w-[980px] px-4 py-6 sm:px-6" role="alert">
+          <HomeErrorState title={homeT("error.title")} description={homeT("error.description")} retry={homeT("error.retry")} onRetry={restore.retry} />
+        </div>
+      )}
+      {fatalError && !privateHidden && (
         <div className="mx-auto w-full max-w-[980px] px-4 py-6 sm:px-6">
           <HomeErrorState title={homeT("error.title")} description={homeT("error.description")} retry={homeT("error.retry")} onRetry={reload} />
         </div>
       )}
       {viewModel && user && <HomeDashboard viewModel={viewModel} firstName={profile?.firstName ?? viewModel.greeting.name} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatScope({ type: "global" }); setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} onContinueHappyTask={continueHappyTask} onRespondHappyIdea={respondHappyIdea} onRespondHappyAction={respondHappyAction} onSelectOccasionPerson={selectOccasionPerson} onRequestRescue={requestOccasionRescue} onQuietOccasion={quietOccasion} onSubmitOccasionOutcome={submitOccasionOutcome} onAcceptOccasionLeadTime={acceptOccasionLeadTime} />}
-      {giftOutcomeConfirmation && (
+      {giftOutcomeConfirmation && !privateHidden && (
         <GiftOutcomeConfirmation
           message={homeT("recommendations.giftOutcomeSaved", { outcome: homeT(`recommendations.giftOutcomeValue.${giftOutcomeConfirmation.outcome}` as never) })}
           labels={{ undo: homeT("recommendations.giftOutcomeUndo"), undoing: homeT("recommendations.giftOutcomeUndoing"), undoError: homeT("recommendations.giftOutcomeUndoError"), addNote: homeT("recommendations.giftOutcomeAddNote"), noteLabel: homeT("recommendations.giftOutcomeNoteLabel"), notePlaceholder: homeT("recommendations.giftOutcomeNotePlaceholder"), saveNote: homeT("recommendations.giftOutcomeSaveNote"), savingNote: homeT("recommendations.giftOutcomeSavingNote"), skipNote: homeT("recommendations.giftOutcomeSkipNote"), noteError: homeT("recommendations.giftOutcomeNoteError"), noteCount: (count) => homeT("recommendations.giftOutcomeNoteCount", { count }) }}
@@ -404,7 +412,7 @@ export default function HomePageClient() {
       )}
       <CookieConsent />
       <UserScopedChatAssistant
-        open={chatOpen}
+        open={chatOpen && !privateHidden}
         onClose={() => setChatOpen(false)}
         initialPrompt={chatInitialPrompt}
         autoSubmitInitialPrompt={Boolean(chatInitialPrompt)}

@@ -12,6 +12,7 @@ import NativeDeepLinkBridge from "@/components/NativeDeepLinkBridge";
 import ClientErrorReporter from "@/components/ClientErrorReporter";
 import { AuthProvider } from "@/components/AuthProvider";
 import PrivateSnapshotBoundary from "@/components/PrivateSnapshotBoundary";
+import HappyBotProvider from "@/components/happybot/HappyBotProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -58,6 +59,7 @@ export default async function RootLayout({
           timeZone={timeZone}
         >
           <AuthProvider>
+          <HappyBotProvider>
           <NativeDeepLinkBridge />
           <ClientErrorReporter />
           <div className="flex min-h-screen flex-col">
@@ -79,6 +81,7 @@ export default async function RootLayout({
             <Footer />
           </div>
           </div>
+          </HappyBotProvider>
           </AuthProvider>
         </NextIntlClientProvider>
       </body>

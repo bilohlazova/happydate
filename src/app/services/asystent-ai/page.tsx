@@ -3,7 +3,6 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 import AskAIButton from "@/components/services/AskAIButton";
-import ChatModalControllerAI from "@/components/services/ChatModalControllerAI";
 import { ComingSoonNotice } from "@/components/ui/ComingSoonNotice";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -69,7 +68,6 @@ export default async function AsystentAIPage() {
         <p className="gift-ai-soul__soon-detail">{t("soon.detail")}</p>
       </section>
 
-      <ChatModalControllerAI />
     </main>
   );
 }

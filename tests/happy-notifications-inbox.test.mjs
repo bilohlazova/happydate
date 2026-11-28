@@ -60,5 +60,5 @@ test("header inbox and task CTA preserve the existing ChatScope boundary", async
   assert.match(inbox, /\/api\/happy\/notifications/);
   assert.match(inbox, /destination\.href/);
   assert.match(home, /notificationScope/);
-  assert.match(home, /setChatScope\(\{ type: "task", taskId \}\)/);
+  assert.match(home, /scope: scopeType === "task" && isUuid\(taskId\) \? \{ type: "task", taskId \} : \{ type: "global" \}/);
 });

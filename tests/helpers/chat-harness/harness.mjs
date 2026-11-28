@@ -22,7 +22,31 @@ export const USERS = {
   ] },
 };
 
+// HD-CHAT-002 Phase 1A: the REAL root-layout HappyBotProvider + useHappyBot, mounted like layout.tsx does.
+function providerEntrySource() {
+  return `
+    import React, { act } from "react";
+    import { createRoot } from "react-dom/client";
+    import { AuthProvider } from "@/components/AuthProvider";
+    import HappyBotProvider from "@/components/happybot/HappyBotProvider";
+    import { useHappyBot } from "@/components/happybot/useHappyBot";
+    import { __setPathname } from "next/navigation";
+    function Page() {
+      const bot = useHappyBot();
+      globalThis.__bot = bot;
+      globalThis.__pageState = { open: bot.isOpen, scope: bot.scope };
+      return <main>PAGE-CONTENT</main>;
+    }
+    function LoginPage() { return <main>LOGIN-PAGE</main>; }
+    globalThis.__act = act;
+    globalThis.__setPathname = __setPathname;
+    globalThis.__mount = (el, kind) => { globalThis.__root = createRoot(el); act(() => globalThis.__root.render(<AuthProvider><HappyBotProvider>{kind === "login" ? <LoginPage /> : <Page />}</HappyBotProvider></AuthProvider>)); };
+    globalThis.__unmount = () => act(() => globalThis.__root.unmount());
+  `;
+}
+
 function entrySource(variant) {
+  if (variant === "provider") return providerEntrySource();
   // patched  = the REAL production page state hook (useHomeChatState, which owns useChatOwnerReset)
   //            and the real UserScopedChatAssistant.
   // original = the pre-fix wiring from origin/main: same state, no reset, bare modal.
@@ -166,6 +190,18 @@ async function createTab(browser, { gateAuth = false } = {}) {
     async close() { await tab.act(async () => { w.__page.setOpen(false); }); await tab.settle(40); },
     async setScope(scope) { await tab.act(async () => { w.__page.setScope(scope); }); await tab.settle(60); },
     pageState: () => w.__pageState,
+    // HD-CHAT-002 provider variant: drive useHappyBot() like an entry point does.
+    async openBot(request) { await tab.act(async () => { w.__bot.open(request); }); await tab.settle(80); },
+    async openBotTwiceInOneTick(request) { await tab.act(async () => { w.__bot.open(request); w.__bot.open(request); }); await tab.settle(400); },
+    async closeBot() { await tab.act(async () => { w.__bot.close(); }); await tab.settle(40); },
+    async navigate(pathname) { await tab.act(async () => { w.__setPathname(pathname); }); await tab.settle(60); },
+    async dispatch(name) { await tab.act(async () => { w.dispatchEvent(new w.CustomEvent(name)); }); await tab.settle(80); },
+    async pagehide() { await tab.act(async () => { w.dispatchEvent(new w.Event("pagehide")); }); await tab.settle(40); },
+    async pageshowFromBfcache() {
+      await tab.act(async () => { const event = new w.Event("pageshow"); Object.defineProperty(event, "persisted", { value: true }); w.dispatchEvent(event); });
+      await tab.settle(120);
+    },
+    dialogCount: () => w.document.querySelectorAll('[role="dialog"]').length,
     async setPrompt(prompt) { await tab.act(async () => { w.__page.setPrompt(prompt); }); await tab.settle(60); },
     async setGift(gift) { await tab.act(async () => { w.__page.setGift(gift); }); await tab.settle(60); },
     async send(message) {

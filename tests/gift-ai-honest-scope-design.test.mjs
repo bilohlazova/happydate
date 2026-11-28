@@ -13,7 +13,8 @@ test("gift AI keeps useful ideation live while future commerce is explicit", asy
 
   assert.match(page, /availableNow/);
   assert.match(page, /<AskAIButton/);
-  assert.match(page, /<ChatModalControllerAI/);
+  // The chat itself is owned by the root-layout HappyBotProvider, which handles the AskAIButton event.
+  assert.doesNotMatch(page, /ChatModalController|UserScopedChatAssistant/);
   assert.match(page, /<ComingSoonNotice/);
   assert.match(page, /soon\.detail/);
   assert.doesNotMatch(page, /AIHowItWorks|AIFAQ|featureItems\.human/);

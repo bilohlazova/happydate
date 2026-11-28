@@ -1,28 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import ChatLauncherGiftTag from "@/components/ChatLauncherGiftTag";
-import UserScopedChatAssistant from "@/components/assistant/UserScopedChatAssistant";
 
+/**
+ * Floating launcher only. The chat itself is owned by the one HappyBotProvider in the root
+ * layout, which also handles the `happydate:open-chat` event the launcher dispatches.
+ */
 export default function ChatUIMount() {
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    function handleOpenChat() {
-      setOpen(true);
-    }
-
-    window.addEventListener("happydate:open-chat", handleOpenChat);
-
-    return () => {
-      window.removeEventListener("happydate:open-chat", handleOpenChat);
-    };
-  }, []);
-
-  return (
-    <>
-      <ChatLauncherGiftTag />
-      <UserScopedChatAssistant open={open} onClose={() => setOpen(false)} />
-    </>
-  );
+  return <ChatLauncherGiftTag />;
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   ArrowLeft,
@@ -31,7 +31,7 @@ import {
   X,
 } from "lucide-react";
 
-import UserScopedChatAssistant from "@/components/assistant/UserScopedChatAssistant";
+import { useHappyBot } from "@/components/happybot/useHappyBot";
 import Avatar from "@/components/people/Avatar";
 import { PersonGiftManager } from "@/components/people/PersonGiftManager";
 import { PersonActionsSheet } from "@/components/people/PeoplePageContent";
@@ -98,7 +98,15 @@ export function PersonProfileContent({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [assistantOpen, setAssistantOpen] = useState(false);
+  const { open: openHappyBot } = useHappyBot();
+  // The profile refresh is called later by the one root-level HappyBot, so it must always see the latest callback.
+  const onProfileChangedRef = useRef(onProfileChanged);
+  useEffect(() => { onProfileChangedRef.current = onProfileChanged; });
+  const heroId = viewModel?.hero?.id ?? null;
+  const openPersonAssistant = useCallback(() => {
+    if (!heroId) return;
+    openHappyBot({ scope: { type: "person", personId: heroId }, onPersonMemoryUpdated: () => onProfileChangedRef.current?.() });
+  }, [openHappyBot, heroId]);
   const [personActionsMode, setPersonActionsMode] = useState<"edit" | "delete" | null>(null);
   const requestedView = searchParams.get("view");
   const views = ["profile", "about", "notes", "gifts", "history"] as const;
@@ -149,7 +157,7 @@ export function PersonProfileContent({
             onTouchStart={(event) => { touchStart.current = event.touches[0]?.clientX ?? null; }}
             onTouchEnd={(event) => { const start = touchStart.current; const end = event.changedTouches[0]?.clientX; touchStart.current = null; if (start == null || end == null || Math.abs(end - start) < 55) return; const next = end < start ? activeIndex + 1 : activeIndex - 1; if (next >= 0 && next < views.length) navigateAlbum(views[next]); }}
           >
-            {activeView === "profile" && <div className="grid gap-4 lg:grid-cols-[1.3fr_.7fr]"><div className="flex flex-col gap-4"><ProfileHero model={viewModel} onAsk={() => setAssistantOpen(true)} onEdit={() => setPersonActionsMode("edit")} onDelete={() => setPersonActionsMode("delete")} t={t} /><HappyPersonSection personName={hero.name} happy={viewModel.happy} onAsk={() => setAssistantOpen(true)} t={t} /></div><div className="flex flex-col gap-4"><PetsSection personId={hero.id} pets={viewModel.pets} onChanged={onProfileChanged} />{viewModel.symbol && <PersonSymbolSection personId={hero.id} personName={hero.name} symbol={viewModel.symbol} onChanged={onProfileChanged} />}</div></div>}
+            {activeView === "profile" && <div className="grid gap-4 lg:grid-cols-[1.3fr_.7fr]"><div className="flex flex-col gap-4"><ProfileHero model={viewModel} onAsk={openPersonAssistant} onEdit={() => setPersonActionsMode("edit")} onDelete={() => setPersonActionsMode("delete")} t={t} /><HappyPersonSection personName={hero.name} happy={viewModel.happy} onAsk={openPersonAssistant} t={t} /></div><div className="flex flex-col gap-4"><PetsSection personId={hero.id} pets={viewModel.pets} onChanged={onProfileChanged} />{viewModel.symbol && <PersonSymbolSection personId={hero.id} personName={hero.name} symbol={viewModel.symbol} onChanged={onProfileChanged} />}</div></div>}
             {activeView === "about" && <div className="grid gap-4 lg:grid-cols-[1.35fr_.65fr]"><AboutPersonSection personId={hero.id} personName={hero.name} likes={viewModel.likes} dislikes={viewModel.dislikes} interests={viewModel.interests} importantFacts={viewModel.importantFacts} onChanged={onProfileChanged} t={t} /><div className="flex flex-col gap-4"><BrainSection items={viewModel.brainInsights} t={t} /><KnowledgeReviewSection personId={hero.id} review={viewModel.knowledgeReview} onChanged={onProfileChanged} t={t} /></div></div>}
             {activeView === "notes" && <PersonNotesSection personId={hero.id} personName={hero.name} notes={viewModel.notes} onChanged={onProfileChanged} />}
             {activeView === "gifts" && <PersonGiftManager personId={hero.id} personName={hero.name} onChanged={onProfileChanged} />}
@@ -158,12 +166,6 @@ export function PersonProfileContent({
         </div>
       </main>
 
-      <UserScopedChatAssistant
-        open={assistantOpen}
-        onClose={() => setAssistantOpen(false)}
-        onPersonMemoryUpdated={onProfileChanged}
-        scope={{ type: "person", personId: hero.id }}
-      />
       <PersonActionsSheet
         person={personActionsMode ? {
           id: hero.id,

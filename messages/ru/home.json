@@ -250,6 +250,7 @@
     "saveDeferred": "Хорошо 🙂 Если захочешь, сможешь записать подарок позже.",
     "assistantHandoff": "Конечно. Помогу 🙂",
     "assistantSubtitle": "Твой ассистент HappyDate",
+    "aiNotice": "Happy отвечает с помощью ИИ — только после того, как ты отправишь сообщение.",
     "typingLabel": "Happy печатает",
     "firstMessagePlaceholder": "Расскажи своими словами…",
     "inputPlaceholder": "Написать Happy…",

@@ -6,7 +6,7 @@ export type ChatMessage = {
   content: string;
   personId?: string | null;
   status?: "streaming" | "complete" | "error";
-  errorCode?: "request_failed" | "rate_limited" | "daily_ai_budget_exceeded";
+  errorCode?: "request_failed" | "rate_limited" | "daily_ai_budget_exceeded" | "ai_not_configured";
   retryAt?: number;
 };
 

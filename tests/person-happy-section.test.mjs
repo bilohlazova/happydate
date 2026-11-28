@@ -43,7 +43,7 @@ test("view model exposes zero-safe compact Happy counts instead of database rows
 test("profile card renders the compact counts and binds its CTA to the persisted profile id", async () => {
   const profile = await source("src/components/people/PersonProfileContent.tsx");
   assert.match(profile, /<HappyPersonSection personName=\{hero\.name\} happy=\{viewModel\.happy\}/);
-  assert.match(profile, /scope=\{\{ type: "person", personId: hero\.id \}\}/);
+  assert.match(profile, /scope: \{ type: "person", personId: heroId \}/);
   assert.match(profile, /t\("profileUi\.happy\.tasks", \{ count: happy\.activeTaskCount \}\)/);
   assert.match(profile, /t\("profileUi\.happy\.ideas", \{ count: happy\.currentIdeaCount \}\)/);
   assert.match(profile, /t\("profileUi\.happy\.ask", \{ name: personName \}\)/);

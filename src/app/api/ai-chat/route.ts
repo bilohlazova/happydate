@@ -1,7 +1,7 @@
 import { logHostedAiAttestation, readHostedSessionConfig } from "@/lib/assistant/hostedTestSession.server";
 import OpenAI from "openai";
 import { ASSISTANT_CHAT_CONFIG } from "@/lib/assistant/chatConfig";
-import { getAssistantEnvironmentStatus } from "@/lib/assistant/chatEnvironment";
+import { getAssistantEnvironmentStatus, getMissingAssistantConfiguration } from "@/lib/assistant/chatEnvironment";
 import { parseAssistantChatRequest } from "@/lib/assistant/chatContract";
 import { createAssistantRlsClient, getAssistantRequestIdentity } from "@/lib/assistant/chatIdentity";
 import { createConfiguredAssistantRateLimiter } from "@/lib/assistant/rateLimiter";
@@ -20,7 +20,7 @@ import { loadAssistantPersonSymbol } from "@/lib/assistant/personSymbolContext.s
 import { loadPersonHappyConversationHistory, savePersonHappyConversation } from "@/lib/assistant/happyConversationHistory.server";
 import { listShownGiftIdeas } from "@/lib/gift-intelligence/shownGiftIdeas.server";
 import { formatShownIdeasContext } from "@/lib/gift-intelligence/shownGiftIdeas";
-import { loadConversationMemoryContext, saveChatTurn, summarizeConversationsIfDue } from "@/lib/assistant/conversationMemory.server";
+import { loadConversationMemoryContext, loadMergedPersonHistory, saveChatTurn, summarizeConversationsIfDue } from "@/lib/assistant/conversationMemory.server";
 import { queueKnowledgeCandidate } from "@/lib/happy/learning/knowledgeQueue.server";
 import { memoryProposalCandidateSchema } from "@/lib/happy/actions/memoryProposal.server";
 import { after } from "next/server";
@@ -54,9 +54,13 @@ export async function POST(request: Request) {
 
   const environmentStatus = getAssistantEnvironmentStatus();
   if (process.env.NODE_ENV === "production" && !environmentStatus.productionReady) {
-    logOperationalError("assistant-chat", "configuration-missing");
+    // Names of the missing settings only (never values) so the cause is visible in logs, and a distinct
+    // error code so the UI does not present a missing environment as a transient failure. The guard stays closed.
+    logOperationalError("assistant-chat", "configuration-missing", {
+      category: getMissingAssistantConfiguration().join("."),
+    });
     return Response.json(
-      { error: "service_unavailable" },
+      { error: "ai_not_configured" },
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }
@@ -313,6 +317,10 @@ export async function POST(request: Request) {
                 ])
               : [[], [], [], null, [], []];
           const active = verifiedRequest.context.activePerson;
+          // One exchange enters the prompt once: merge both history stores and drop what the live window already carries.
+          const mergedPersonHistory = active && verifiedRequest.context.personResolutionStatus === "resolved"
+            ? await loadMergedPersonHistory({ userId: identity.userId, personId: active.id, legacy: serverHappyConversations, conversation: verifiedRequest.conversation })
+            : [];
           const homePerson = active ? homeData.people.find((person) => person.id === active.id) : null;
           const serverPersonMemoryProfile = active && homePerson ? buildUnifiedPersonContext({
             personId: active.id,
@@ -322,7 +330,7 @@ export async function POST(request: Request) {
             knowledge: homeData.knowledge,
             symbol: serverSymbol,
             pets: serverPets,
-            happyConversations: serverHappyConversations,
+            happyConversations: mergedPersonHistory,
             locale: verifiedRequest.locale === "uk" ? "uk" : "en",
           }).forChat : null;
           const memoryScope = verifiedScope?.type ?? "global";

@@ -7,6 +7,8 @@ import {
   CONTEXT_MAX_RECENT_TURNS,
   CONTEXT_MAX_SUMMARIES,
   dropTurnsAlreadyInConversation,
+  selectPersonHistoryForPrompt,
+  type PersonHistoryTurn,
   formatConversationMemoryContext,
   groupTurnsByPerson,
   isFactStatedByUser,
@@ -193,4 +195,30 @@ export async function summarizeConversationsIfDue(input: { userId: string; signa
   } catch {
     logOperationalWarning("assistant-chat", "conversation-summary-skipped");
   }
+}
+
+/**
+ * Merged, deduped earlier exchanges with one person (read path for the prompt).
+ * Reads `happy_chat_turns` and the legacy table; either failing degrades to the
+ * other. Never writes or deletes anything.
+ */
+export async function loadMergedPersonHistory(input: {
+  userId: string;
+  personId: string;
+  legacy: readonly PersonHistoryTurn[];
+  conversation?: ReadonlyArray<{ role: string; content: string }>;
+}): Promise<PersonHistoryTurn[]> {
+  let current: PersonHistoryTurn[] = [];
+  try {
+    const { data, error } = await adminClient().from("happy_chat_turns")
+      .select("id,user_message,happy_response,created_at")
+      .eq("user_id", input.userId).eq("person_id", input.personId)
+      .order("created_at", { ascending: false }).limit(12);
+    if (!error) {
+      current = (data ?? []).map((row) => ({ id: row.id, userMessage: row.user_message, happyResponse: row.happy_response, createdAt: row.created_at }));
+    }
+  } catch {
+    current = [];
+  }
+  return selectPersonHistoryForPrompt({ current, legacy: input.legacy, conversation: input.conversation });
 }

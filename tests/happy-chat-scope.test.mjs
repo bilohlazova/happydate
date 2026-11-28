@@ -44,7 +44,7 @@ test("modal has one scope prop, person profile supplies only the persisted perso
   assert.match(modal, /scope = \{ type: "global" \}/);
   assert.match(modal, /scope,\n          context:/);
   assert.doesNotMatch(modal, /initialPersonId|initialPerson/);
-  assert.match(profile, /scope=\{\{ type: "person", personId: hero\.id \}\}/);
+  assert.match(profile, /scope: \{ type: "person", personId: heroId \}/);
   assert.doesNotMatch(modal, /OpenAI|happyAgentProvider/);
 });
 

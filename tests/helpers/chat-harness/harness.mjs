@@ -22,7 +22,33 @@ export const USERS = {
   ] },
 };
 
+// HD-CHAT-002 Phase 1A: the REAL root-layout HappyBotProvider + useHappyBot, mounted like layout.tsx does.
+function providerEntrySource() {
+  return `
+    import React, { act } from "react";
+    import { createRoot } from "react-dom/client";
+    import { AuthProvider } from "@/components/AuthProvider";
+    import HappyBotProvider from "@/components/happybot/HappyBotProvider";
+    import { useHappyBot } from "@/components/happybot/useHappyBot";
+    import { __setPathname } from "next/navigation";
+    import WellbeingCheckIn from "@/components/home-dashboard/WellbeingCheckIn";
+    function Page() {
+      const bot = useHappyBot();
+      globalThis.__bot = bot;
+      globalThis.__pageState = { open: bot.isOpen, scope: bot.scope };
+      // The embedded HappyBot exactly as HomePageClient wires it: free text opens the one HappyBot.
+      return <main>PAGE-CONTENT<WellbeingCheckIn locale="uk" userName="Тест" featuredEvent={null} onSendToHappy={(text) => bot.open({ initialPrompt: text })} /></main>;
+    }
+    function LoginPage() { return <main>LOGIN-PAGE</main>; }
+    globalThis.__act = act;
+    globalThis.__setPathname = __setPathname;
+    globalThis.__mount = (el, kind) => { globalThis.__root = createRoot(el); act(() => globalThis.__root.render(<AuthProvider><HappyBotProvider>{kind === "login" ? <LoginPage /> : <Page />}</HappyBotProvider></AuthProvider>)); };
+    globalThis.__unmount = () => act(() => globalThis.__root.unmount());
+  `;
+}
+
 function entrySource(variant) {
+  if (variant === "provider") return providerEntrySource();
   // patched  = the REAL production page state hook (useHomeChatState, which owns useChatOwnerReset)
   //            and the real UserScopedChatAssistant.
   // original = the pre-fix wiring from origin/main: same state, no reset, bare modal.
@@ -120,7 +146,7 @@ export function createBrowser(variant = VARIANT) {
   return browser;
 }
 
-async function createTab(browser, { gateAuth = false } = {}) {
+async function createTab(browser, { gateAuth = false, db } = {}) {
   const variant = browser.variant;
   const dom = new JSDOM(`<!doctype html><body><div id="root"></div></body>`, { runScripts: "outside-only", pretendToBeVisual: true, url: "https://staging.test/" });
   const w = dom.window;
@@ -143,6 +169,7 @@ async function createTab(browser, { gateAuth = false } = {}) {
     },
   };
   w.__auth = auth;
+  if (db) w.__db = db; // seeds fake Supabase reads, e.g. { profiles: { single: { wellbeing_personalization_enabled: true } } }
 
   const tab = {
     window: w, auth, requests: [], hold: null, heldRequest: null, memoryUpdates: [], otherCalls: [],
@@ -166,6 +193,33 @@ async function createTab(browser, { gateAuth = false } = {}) {
     async close() { await tab.act(async () => { w.__page.setOpen(false); }); await tab.settle(40); },
     async setScope(scope) { await tab.act(async () => { w.__page.setScope(scope); }); await tab.settle(60); },
     pageState: () => w.__pageState,
+    // HD-CHAT-002 provider variant: drive useHappyBot() like an entry point does.
+    async openBot(request) { await tab.act(async () => { w.__bot.open(request); }); await tab.settle(80); },
+    async openBotTwiceInOneTick(request) { await tab.act(async () => { w.__bot.open(request); w.__bot.open(request); }); await tab.settle(400); },
+    async closeBot() { await tab.act(async () => { w.__bot.close(); }); await tab.settle(40); },
+    async navigate(pathname) { await tab.act(async () => { w.__setPathname(pathname); }); await tab.settle(60); },
+    async dispatch(name) { await tab.act(async () => { w.dispatchEvent(new w.CustomEvent(name)); }); await tab.settle(80); },
+    async pagehide() { await tab.act(async () => { w.dispatchEvent(new w.Event("pagehide")); }); await tab.settle(40); },
+    async pageshowFromBfcache() {
+      await tab.act(async () => { const event = new w.Event("pageshow"); Object.defineProperty(event, "persisted", { value: true }); w.dispatchEvent(event); });
+      await tab.settle(120);
+    },
+    embeddedInput: () => w.document.querySelector("main input"),
+    async typeEmbedded(message, { submit = "enter" } = {}) {
+      const input = tab.embeddedInput();
+      await tab.act(async () => {
+        Object.getOwnPropertyDescriptor(w.HTMLInputElement.prototype, "value").set.call(input, message);
+        input.dispatchEvent(new w.Event("input", { bubbles: true }));
+      });
+      await tab.act(async () => {
+        if (submit === "enter") input.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+        else w.document.querySelector("main button[aria-label]").click();
+      });
+      await tab.settle(500);
+    },
+    async historyBack() { await tab.act(async () => { w.history.back(); }); await tab.settle(120); },
+    writes: () => w.__writes ?? [],
+    dialogCount: () => w.document.querySelectorAll('[role="dialog"]').length,
     async setPrompt(prompt) { await tab.act(async () => { w.__page.setPrompt(prompt); }); await tab.settle(60); },
     async setGift(gift) { await tab.act(async () => { w.__page.setGift(gift); }); await tab.settle(60); },
     async send(message) {

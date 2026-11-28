@@ -23,6 +23,7 @@ interface ConversationViewProps {
   retryLabel: string;
   rateLimitLabel: string;
   dailyBudgetLabel: string;
+  notConfiguredLabel: string;
   retryInLabel: (seconds: number) => string;
   now: number;
   happyLearning: ChatHappyLearningViewState;
@@ -54,6 +55,7 @@ export default function ConversationView({
   retryLabel,
   rateLimitLabel,
   dailyBudgetLabel,
+  notConfiguredLabel,
   retryInLabel,
   now,
   happyLearning,
@@ -73,6 +75,11 @@ export default function ConversationView({
   onNavigateAway,
   onScroll,
 }: ConversationViewProps) {
+  const errorText = (code: ChatMessage["errorCode"]) =>
+    code === "daily_ai_budget_exceeded" ? dailyBudgetLabel
+      : code === "rate_limited" ? rateLimitLabel
+        : code === "ai_not_configured" ? notConfiguredLabel
+          : errorLabel;
   return (
     <div ref={scrollRef} onScroll={onScroll} className="happy-chat-conversation min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-5 sm:px-5" aria-live="polite">
       <div className="space-y-4 motion-safe:animate-[assistant-conversation-in_.22s_ease-out_both]">
@@ -91,16 +98,16 @@ export default function ConversationView({
                 </span>
               )}
               {message.content ? (message.role === "assistant" ? <LinkifiedText text={message.content} /> : message.content) : (message.status === "error"
-                ? message.errorCode === "daily_ai_budget_exceeded" ? dailyBudgetLabel : message.errorCode === "rate_limited" ? rateLimitLabel : errorLabel
+                ? errorText(message.errorCode)
                 : "")}
               {message.role === "assistant" && message.status === "error" && (
                 <div className="mt-2 border-t border-slate-200/80 pt-2">
-                  {message.content && <p className="mb-1.5 text-xs text-slate-500">{message.errorCode === "daily_ai_budget_exceeded" ? dailyBudgetLabel : message.errorCode === "rate_limited" ? rateLimitLabel : errorLabel}</p>}
-                  <button type="button" onClick={() => onRetry(message.id)} disabled={isResponding || Boolean(message.retryAt && message.retryAt > now)} className="min-h-9 rounded-xl px-2 text-xs font-extrabold text-sky-700 transition hover:bg-sky-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300">
+                  {message.content && <p className="mb-1.5 text-xs text-slate-500">{errorText(message.errorCode)}</p>}
+                  {message.errorCode !== "ai_not_configured" && <button type="button" onClick={() => onRetry(message.id)} disabled={isResponding || Boolean(message.retryAt && message.retryAt > now)} className="min-h-9 rounded-xl px-2 text-xs font-extrabold text-sky-700 transition hover:bg-sky-50 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300">
                     {message.retryAt && message.retryAt > now
                       ? retryInLabel(Math.max(1, Math.ceil((message.retryAt - now) / 1_000)))
                       : retryLabel}
-                  </button>
+                  </button>}
                 </div>
               )}
             </div>

@@ -47,6 +47,44 @@ export function dropTurnsAlreadyInConversation(
   return turns.filter((turn) => !live.has(oneLine(turn.userMessage, 4000)));
 }
 
+export type PersonHistoryTurn = { id: string; userMessage: string; happyResponse: string; createdAt: string };
+
+export const PERSON_HISTORY_PROMPT_LIMIT = 6;
+
+const pairKey = (turn: { userMessage: string; happyResponse: string }) =>
+  `${oneLine(turn.userMessage, 4000).toLowerCase()}\u0000${oneLine(turn.happyResponse, 8000).toLowerCase()}`;
+
+/**
+ * One person's earlier exchanges for the prompt, from BOTH stores:
+ * `happy_chat_turns` (current source of new history) and the legacy
+ * `person_happy_conversations` (historical rows, still written during the
+ * transition). The same exchange usually exists in both, so rows are deduped by
+ * wording; anything already in the live conversation window is dropped so a
+ * message enters the prompt once. Newest first, capped.
+ */
+export function selectPersonHistoryForPrompt(input: {
+  current: readonly PersonHistoryTurn[];
+  legacy: readonly PersonHistoryTurn[];
+  conversation?: ReadonlyArray<{ role: string; content: string }>;
+  limit?: number;
+}): PersonHistoryTurn[] {
+  const live = new Set((input.conversation ?? []).filter((item) => item.role === "user").map((item) => oneLine(item.content, 4000).toLowerCase()));
+  const seenIds = new Set<string>();
+  const seenPairs = new Set<string>();
+  const out: PersonHistoryTurn[] = [];
+  const ordered = [...input.current, ...input.legacy].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  for (const turn of ordered) {
+    const key = pairKey(turn);
+    if (seenIds.has(turn.id) || seenPairs.has(key)) continue;
+    seenIds.add(turn.id);
+    seenPairs.add(key);
+    if (live.has(oneLine(turn.userMessage, 4000).toLowerCase())) continue;
+    out.push(turn);
+    if (out.length >= (input.limit ?? PERSON_HISTORY_PROMPT_LIMIT)) break;
+  }
+  return out;
+}
+
 /** Server memory block for the chat. Summaries are interpretation, never confirmed facts. */
 export function formatConversationMemoryContext(input: {
   summaries: readonly StoredSummary[];

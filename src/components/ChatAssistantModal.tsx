@@ -19,6 +19,8 @@ import { canApplyAsyncResult, sessionMatchesOwner } from "@/lib/assistant/chatOw
 import { confirmHappyLearningCandidate, requestHappyLearningDetection } from "@/lib/happy-learning/happyLearningClient";
 import type { HappyLearningDetectionCandidate } from "@/lib/happy-learning/happyLearningDetectV2.types";
 import { savePersonGiftLinkOnce } from "@/lib/gifts/gift.loaders";
+import { historySegmentFor, mergeHydratedHistory } from "@/lib/happybot/chatHistory";
+import { loadSegmentHistory } from "@/lib/happybot/chatHistoryClient";
 import { supabase } from "@/lib/supabaseClient";
 import { isSupportedLocale } from "@/i18n/config";
 import { formatFriendlyFirstName } from "@/i18n/friendlyName";
@@ -87,6 +89,11 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   const [happyLearning, setHappyLearning] = useState<ChatHappyLearningState>(INITIAL_HAPPY_LEARNING_STATE);
   const [giftLinkStates, setGiftLinkStates] = useState<Record<string, "saving" | "saved" | "error">>({});
   const [giftLinkTargets, setGiftLinkTargets] = useState<Record<string, string>>({});
+  // Restoring this segment's stored history (HD-CHAT-002 Phase 1C). Sending waits until it settled so the first
+  // request carries the restored context; a failed or slow read never blocks the chat for long (6 s cap).
+  const [historyStatus, setHistoryStatus] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  const hydratedRef = useRef(false);
+  const historyAbortRef = useRef<AbortController | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -141,6 +148,14 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
     document.body.style.overflow = "hidden";
     dialogRef.current?.focus({ preventScroll: true });
 
+    // Mobile keyboards: keep the sheet inside the visible viewport so the composer is never covered.
+    const viewport = window.visualViewport;
+    const syncViewport = () => {
+      if (viewport) document.documentElement.style.setProperty("--hd-happybot-vvh", `${Math.round(viewport.height)}px`);
+    };
+    syncViewport();
+    viewport?.addEventListener("resize", syncViewport);
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -167,6 +182,8 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+      viewport?.removeEventListener("resize", syncViewport);
+      document.documentElement.style.removeProperty("--hd-happybot-vvh");
       document.body.style.overflow = previousOverflow;
       cancelActiveResponse();
       previouslyFocusedRef.current?.focus({ preventScroll: true });
@@ -192,6 +209,36 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   useEffect(() => {
     if (!open) submittedInitialPromptRef.current = null;
   }, [open]);
+
+  // Once per instance, on first open: restore the stored history of THIS segment (global or one person).
+  // Gift/event/task conversations and guests have no confirmable segment and start empty.
+  useEffect(() => {
+    if (!open || hydratedRef.current) return;
+    hydratedRef.current = true;
+    const segment = historySegmentFor(scope, giftRequest);
+    const owner = ownerIdRef.current;
+    if (!segment || !owner) {
+      setHistoryStatus("ready");
+      return;
+    }
+    const controller = new AbortController();
+    historyAbortRef.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 6_000);
+    setHistoryStatus("loading");
+    loadSegmentHistory({ ownerId: owner, segment, signal: controller.signal })
+      .then((history) => {
+        if (!mountedRef.current || controller.signal.aborted || ownerIdRef.current !== owner) return;
+        if (history.length) setMessages((current) => mergeHydratedHistory(history, current));
+        setHistoryStatus("ready");
+      })
+      .catch(() => {
+        if (mountedRef.current && ownerIdRef.current === owner) setHistoryStatus("failed");
+      })
+      .finally(() => {
+        clearTimeout(timeout);
+        if (historyAbortRef.current === controller) historyAbortRef.current = null;
+      });
+  }, [giftRequest, open, scope]);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -219,6 +266,8 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
       // Whatever is still running belongs to this instance's owner: stop it so a
       // late answer can never be applied after sign-out or an account switch.
       mountedRef.current = false;
+      historyAbortRef.current?.abort();
+      historyAbortRef.current = null;
       abortControllerRef.current?.abort();
       abortControllerRef.current = null;
       happyLearningAbortRef.current?.abort();
@@ -515,7 +564,9 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
               status: "error",
               errorCode: failure.code === "daily_ai_budget_exceeded"
                 ? "daily_ai_budget_exceeded"
-                : retryAfter ? "rate_limited" : "request_failed",
+                : failure.code === "ai_not_configured"
+                  ? "ai_not_configured"
+                  : retryAfter ? "rate_limited" : "request_failed",
               retryAt: retryAfter ? Date.now() + retryAfter * 1_000 : undefined,
             }
           : message,
@@ -531,7 +582,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
 
   function sendMessage() {
     const content = value.trim();
-    if (!content || isResponding || isHomeExiting) return;
+    if (!content || isResponding || isHomeExiting || historyStatus === "idle" || historyStatus === "loading") return;
     setValue("");
 
     if (messages.length === 0) {
@@ -549,7 +600,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   }
 
   useEffect(() => {
-    if (!open || !autoSubmitInitialPrompt || !initialPrompt || homeContext.loading) return;
+    if (!open || !autoSubmitInitialPrompt || !initialPrompt || homeContext.loading || historyStatus === "idle" || historyStatus === "loading") return;
     if (submittedInitialPromptRef.current === initialPrompt || isResponding || isHomeExiting) return;
     submittedInitialPromptRef.current = initialPrompt;
 
@@ -569,7 +620,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
     // This effect consumes one explicit prompt per chat opening. Message changes are
     // intentionally excluded so streaming updates cannot submit it a second time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoSubmitInitialPrompt, homeContext.loading, initialPrompt, open]);
+  }, [autoSubmitInitialPrompt, historyStatus, homeContext.loading, initialPrompt, open]);
 
   function dismissHappyLearningCandidate(candidateId: string) {
     setHappyLearning((current) => ({
@@ -681,8 +732,8 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
     : null;
 
   return (
-    <div className="happy-chat-backdrop fixed inset-0 z-[70] bg-slate-950/25 backdrop-blur-[3px] motion-safe:animate-[assistant-fade-in_.18s_ease-out_both]" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && closeAssistant()}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="happy-assistant-title" tabIndex={-1} className="happy-chat-shell fixed inset-x-0 bottom-0 flex h-[min(88dvh,760px)] flex-col overflow-hidden rounded-t-[28px] border border-white/70 bg-slate-50/95 shadow-[0_24px_80px_rgba(15,23,42,0.24)] backdrop-blur-2xl outline-none motion-safe:animate-[assistant-slide-up_.22s_ease-out_both] md:bottom-6 md:left-auto md:right-6 md:h-[min(78dvh,720px)] md:w-[460px] md:rounded-[28px]">
+    <div className="happy-chat-backdrop fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/25 backdrop-blur-[3px] motion-safe:animate-[assistant-fade-in_.18s_ease-out_both]" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && closeAssistant()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="happy-assistant-title" tabIndex={-1} className="happy-chat-shell relative flex w-full flex-col overflow-hidden rounded-t-[28px] border border-white/70 bg-slate-50/95 shadow-[0_24px_80px_rgba(15,23,42,0.24)] backdrop-blur-2xl outline-none motion-safe:animate-[assistant-slide-up_.22s_ease-out_both] md:rounded-[28px]">
         <ChatAssistantHeader
           title={t("title")}
           subtitle={t("subtitle")}
@@ -775,6 +826,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
             retryLabel={t("conversation.retry")}
             rateLimitLabel={t("conversation.rateLimited")}
             dailyBudgetLabel={t("conversation.dailyBudget")}
+            notConfiguredLabel={t("conversation.notConfigured")}
             retryInLabel={(seconds) => t("conversation.retryIn", { seconds })}
             now={rateLimitNow || Date.now()}
             happyLearning={happyLearning}
@@ -802,7 +854,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
           messageLabel={t("messageLabel")}
           sendLabel={t("send")}
           keyboardHint={t("keyboardHint")}
-          disabled={!value.trim() || isResponding || isHomeExiting}
+          disabled={!value.trim() || isResponding || isHomeExiting || historyStatus === "idle" || historyStatus === "loading"}
           textareaRef={textareaRef}
           onChange={setValue}
           onKeyDown={handleComposerKeyDown}

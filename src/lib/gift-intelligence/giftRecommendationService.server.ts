@@ -25,6 +25,7 @@ import { buildUnifiedPersonContext, type PersonProfileForStructuredAi } from "@/
 import { loadAssistantPetContext } from "@/lib/assistant/petContext.server";
 import { loadAssistantPersonSymbol } from "@/lib/assistant/personSymbolContext.server";
 import { loadPersonHappyConversationHistory } from "@/lib/assistant/happyConversationHistory.server";
+import { loadMergedPersonHistory } from "@/lib/assistant/conversationMemory.server";
 import { attachProductOffers } from "./giftProductSearch.server";
 import { listShownGiftIdeas, recordShownGiftIdeas } from "./shownGiftIdeas.server";
 import { ASSISTANT_CHAT_CONFIG } from "@/lib/assistant/chatConfig";
@@ -182,11 +183,12 @@ async function runPipeline(input: GiftPipelineInput) {
   // optional layer must never block recommendations.
   let personProfile: PersonProfileForStructuredAi | null = null;
   try {
-    const [pets, symbol, happyConversations] = await Promise.all([
+    const [pets, symbol, legacyConversations] = await Promise.all([
       loadAssistantPetContext({ userId: ownedPerson.userId, personId: person.id }),
       loadAssistantPersonSymbol({ userId: ownedPerson.userId, personId: person.id }),
       loadPersonHappyConversationHistory({ userId: ownedPerson.userId, personId: person.id }),
     ]);
+    const happyConversations = await loadMergedPersonHistory({ userId: ownedPerson.userId, personId: person.id, legacy: legacyConversations });
     personProfile = buildUnifiedPersonContext({
       personId: person.id,
       personName: person.name?.trim() || "Contact",

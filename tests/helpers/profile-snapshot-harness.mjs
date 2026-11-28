@@ -20,6 +20,7 @@ export async function profileHarness({ owner = "A", bare = false, unresolved = f
     import Page from '@/app/people/[id]/page';
     import Boundary from '@/components/PrivateSnapshotBoundary';
     import { AuthProvider, useAuth } from '@/components/AuthProvider';
+    import HappyBotProvider from '@/components/happybot/HappyBotProvider';
     // Records the committed DOM with the user React holds after every auth/route commit (layout phase: before passive
     // effects can clean up and before a paint). React's Profiler callback is NOT used: it can run after that cleanup.
     function Probe() { const { user } = useAuth(); useLayoutEffect(() => { globalThis.__commits.push({owner: user?.id ?? null, route: globalThis.__route.id, text: document.body.textContent}); }); return null; }
@@ -33,7 +34,7 @@ export async function profileHarness({ owner = "A", bare = false, unresolved = f
     });
     globalThis.__act = act;
     const app = createRoot(document.getElementById('root'));
-    globalThis.__render = () => app.render(<AuthProvider>${bare ? "<Page/>" : "<Boundary><Page/></Boundary>"}<Probe/></AuthProvider>);
+    globalThis.__render = () => app.render(<AuthProvider><HappyBotProvider>${bare ? "<Page/>" : "<Boundary><Page/></Boundary>"}</HappyBotProvider><Probe/></AuthProvider>);
     globalThis.__unmount = () => app.unmount();
   `;
   const navigation = `

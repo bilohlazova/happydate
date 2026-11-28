@@ -148,18 +148,14 @@ test("chat renders assistant links through the safe LinkifiedText component", as
 });
 
 test("every chat entry point shares the single ChatAssistantModal conversation renderer", async () => {
-  const files = [
-    "../src/components/ChatUIMount.tsx",
-    "../src/components/HomePageClient.tsx",
-    "../src/components/people/PersonProfileContent.tsx",
-    "../src/components/services/ChatModalController.tsx",
-    "../src/components/services/ChatModalControllerAI.tsx",
-  ];
-  for (const file of files) {
+  // HD-CHAT-002 Phase 1A: entry points no longer mount a chat; they open the one provider-owned HappyBot.
+  for (const file of ["../src/components/HomePageClient.tsx", "../src/components/people/PersonProfileContent.tsx"]) {
     const source = await readFile(new URL(file, import.meta.url), "utf8");
-    // Entry points reach the single modal through the owner-scoped wrapper (HD-CHAT-001 Phase 0).
-    assert.match(source, /ChatAssistantModal|UserScopedChatAssistant/, file);
+    assert.match(source, /useHappyBot\(\)/, file);
+    assert.doesNotMatch(source, /<UserScopedChatAssistant|<ChatAssistantModal/, file);
   }
+  const provider = await readFile(new URL("../src/components/happybot/HappyBotProvider.tsx", import.meta.url), "utf8");
+  assert.match(provider, /<UserScopedChatAssistant/);
   const scoped = await readFile(new URL("../src/components/assistant/UserScopedChatAssistant.tsx", import.meta.url), "utf8");
   assert.match(scoped, /<ChatAssistantModal/);
   const modal = await readFile(new URL("../src/components/ChatAssistantModal.tsx", import.meta.url), "utf8");

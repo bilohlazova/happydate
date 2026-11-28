@@ -18,12 +18,13 @@ export async function homeHarness({ owner = "A", hold = false } = {}) {
     import { createRoot } from 'react-dom/client';
     import Page from '@/components/HomePageClient';
     import { AuthProvider, useAuth } from '@/components/AuthProvider';
+    import HappyBotProvider from '@/components/happybot/HappyBotProvider';
     // Records the committed DOM text together with the user React currently holds, after EVERY commit (layout phase,
     // before passive effects can clean anything up and before the browser could paint).
     function Probe() { const { user } = useAuth(); useLayoutEffect(() => { globalThis.__commits.push({owner: user?.id ?? null, text: document.body.textContent}); }); return null; }
     globalThis.__act = act;
     const app = createRoot(document.getElementById('root'));
-    globalThis.__render = () => app.render(<AuthProvider><Page/><Probe/></AuthProvider>);
+    globalThis.__render = () => app.render(<AuthProvider><HappyBotProvider><Page/></HappyBotProvider><Probe/></AuthProvider>);
     globalThis.__unmount = () => app.unmount();
   `;
   const navigation = `

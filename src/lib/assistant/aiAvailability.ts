@@ -1,6 +1,7 @@
 export type AiAvailabilityErrorCode =
   | "daily_ai_budget_exceeded"
   | "rate_limited"
+  | "ai_not_configured"
   | "request_failed";
 
 const MAX_RETRY_AFTER_SECONDS = 90_000;
@@ -27,6 +28,9 @@ export function classifyAiAvailabilityError(input: {
       code: "rate_limited",
       retryAfter: normalizeAiRetryAfter(input.retryAfter),
     };
+  }
+  if (input.status === 503 && input.error === "ai_not_configured") {
+    return { code: "ai_not_configured", retryAfter: null };
   }
   return { code: "request_failed", retryAfter: null };
 }

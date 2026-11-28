@@ -4,8 +4,7 @@ import HomeDashboard from "@/components/home-dashboard/HomeDashboard";
 import HomeSkeleton from "@/components/home-dashboard/HomeSkeleton";
 import HomeErrorState from "@/components/home-dashboard/HomeErrorState";
 import GiftOutcomeConfirmation from "@/components/home-dashboard/GiftOutcomeConfirmation";
-import UserScopedChatAssistant from "@/components/assistant/UserScopedChatAssistant";
-import { useHomeChatState } from "@/hooks/useHomeChatState";
+import { useHappyBot } from "@/components/happybot/useHappyBot";
 import { loadHome } from "@/lib/home/loadHome";
 import { buildHomeViewModel } from "@/lib/home/buildHomeViewModel";
 import { isCurrentHomeLoad } from "@/lib/home/homeLoadGuard";
@@ -113,7 +112,7 @@ export default function HomePageClient() {
   const [homeSnapshot, setHomeSnapshot] = useState<HomeSnapshot | null>(null);
   const [fatalError, setFatalError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const { chatOpen, setChatOpen, chatInitialPrompt, setChatInitialPrompt, chatGiftRequest, setChatGiftRequest, chatScope, setChatScope } = useHomeChatState();
+  const { open: openHappyBot } = useHappyBot();
   const [reminder, setReminder] = useState<ReminderRecord | null>(null);
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminderError, setReminderError] = useState<string | null>(null);
@@ -165,15 +164,11 @@ export default function HomePageClient() {
     const taskId = searchParams.get("taskId");
     const isUuid = (value: string | null): value is string => Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value));
     const timeout = window.setTimeout(() => {
-      if (scopeType === "task" && isUuid(taskId)) setChatScope({ type: "task", taskId });
-      else setChatScope({ type: "global" });
-      setChatInitialPrompt(null);
-      setChatGiftRequest(null);
-      setChatOpen(true);
+      openHappyBot({ scope: scopeType === "task" && isUuid(taskId) ? { type: "task", taskId } : { type: "global" } });
       openedNotificationScopeRef.current = searchParams.toString();
     }, 0);
     return () => window.clearTimeout(timeout);
-  }, [authLoading, searchParams, user, setChatGiftRequest, setChatInitialPrompt, setChatOpen, setChatScope]);
+  }, [authLoading, searchParams, user, openHappyBot]);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -258,10 +253,11 @@ export default function HomePageClient() {
     const event = viewModel?.featuredEvent;
     const name = event?.personName;
     if (!name) return;
-    setChatGiftRequest(event.personId ? { personId: event.personId, eventId: event.giftContextId, mode } : null);
-    setChatInitialPrompt(homeT(mode === "supplementary" ? "wellbeing.supplementaryPrompt" : "reminder.pickGiftPrompt", { name }));
-    setChatOpen(true);
-  }, [homeT, viewModel?.featuredEvent, setChatGiftRequest, setChatInitialPrompt, setChatOpen]);
+    openHappyBot({
+      giftRequest: event.personId ? { personId: event.personId, eventId: event.giftContextId, mode } : null,
+      initialPrompt: homeT(mode === "supplementary" ? "wellbeing.supplementaryPrompt" : "reminder.pickGiftPrompt", { name }),
+    });
+  }, [homeT, viewModel?.featuredEvent, openHappyBot]);
 
   const saveGift = useCallback(async (title: string) => {
     const event = viewModel?.featuredEvent;
@@ -293,8 +289,8 @@ export default function HomePageClient() {
     if (!result.ok) throw new Error("Happy task continuation failed");
     const body = await result.json() as { kind?: string };
     reload();
-    if (body.kind === "generated") { setChatScope({ type: "task", taskId }); setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }
-  }, [reload, setChatGiftRequest, setChatInitialPrompt, setChatOpen, setChatScope]);
+    if (body.kind === "generated") openHappyBot({ scope: { type: "task", taskId } });
+  }, [reload, openHappyBot]);
 
   const selectOccasionPerson = useCallback(async (occurrenceKey: string, personId: string) => {
     const result = await fetch(`/api/happy/occasions/${encodeURIComponent(occurrenceKey)}/person`, {
@@ -397,7 +393,7 @@ export default function HomePageClient() {
           <HomeErrorState title={homeT("error.title")} description={homeT("error.description")} retry={homeT("error.retry")} onRetry={reload} />
         </div>
       )}
-      {viewModel && user && <HomeDashboard viewModel={viewModel} firstName={profile?.firstName ?? viewModel.greeting.name} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => { setChatScope({ type: "global" }); setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} onContinueHappyTask={continueHappyTask} onRespondHappyIdea={respondHappyIdea} onRespondHappyAction={respondHappyAction} onSelectOccasionPerson={selectOccasionPerson} onRequestRescue={requestOccasionRescue} onQuietOccasion={quietOccasion} onSubmitOccasionOutcome={submitOccasionOutcome} onAcceptOccasionLeadTime={acceptOccasionLeadTime} />}
+      {viewModel && user && <HomeDashboard viewModel={viewModel} firstName={profile?.firstName ?? viewModel.greeting.name} reminder={reminder} inAppDeliveryCount={inAppDeliveryCount} reminderBusy={reminderBusy} reminderError={reminderError} onRetry={reload} onAskHappy={() => openHappyBot()} onSendToHappy={(text) => openHappyBot({ initialPrompt: text })} onCompleteReminder={complete} onSnoozeReminder={snooze} onUndoReminder={undo} onPickGift={pickGift} onGiftOutcome={giftOutcome} onGiftFollowUp={giftFollowUp} onSaveGift={saveGift} onContinueHappyTask={continueHappyTask} onRespondHappyIdea={respondHappyIdea} onRespondHappyAction={respondHappyAction} onSelectOccasionPerson={selectOccasionPerson} onRequestRescue={requestOccasionRescue} onQuietOccasion={quietOccasion} onSubmitOccasionOutcome={submitOccasionOutcome} onAcceptOccasionLeadTime={acceptOccasionLeadTime} />}
       {giftOutcomeConfirmation && !privateHidden && (
         <GiftOutcomeConfirmation
           message={homeT("recommendations.giftOutcomeSaved", { outcome: homeT(`recommendations.giftOutcomeValue.${giftOutcomeConfirmation.outcome}` as never) })}
@@ -411,14 +407,6 @@ export default function HomePageClient() {
         />
       )}
       <CookieConsent />
-      <UserScopedChatAssistant
-        open={chatOpen && !privateHidden}
-        onClose={() => setChatOpen(false)}
-        initialPrompt={chatInitialPrompt}
-        autoSubmitInitialPrompt={Boolean(chatInitialPrompt)}
-        giftRequest={chatGiftRequest}
-            scope={chatScope}
-      />
     </>
   );
 }

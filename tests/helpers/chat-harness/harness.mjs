@@ -31,11 +31,13 @@ function providerEntrySource() {
     import HappyBotProvider from "@/components/happybot/HappyBotProvider";
     import { useHappyBot } from "@/components/happybot/useHappyBot";
     import { __setPathname } from "next/navigation";
+    import WellbeingCheckIn from "@/components/home-dashboard/WellbeingCheckIn";
     function Page() {
       const bot = useHappyBot();
       globalThis.__bot = bot;
       globalThis.__pageState = { open: bot.isOpen, scope: bot.scope };
-      return <main>PAGE-CONTENT</main>;
+      // The embedded HappyBot exactly as HomePageClient wires it: free text opens the one HappyBot.
+      return <main>PAGE-CONTENT<WellbeingCheckIn locale="uk" userName="Тест" featuredEvent={null} onSendToHappy={(text) => bot.open({ initialPrompt: text })} /></main>;
     }
     function LoginPage() { return <main>LOGIN-PAGE</main>; }
     globalThis.__act = act;
@@ -144,7 +146,7 @@ export function createBrowser(variant = VARIANT) {
   return browser;
 }
 
-async function createTab(browser, { gateAuth = false } = {}) {
+async function createTab(browser, { gateAuth = false, db } = {}) {
   const variant = browser.variant;
   const dom = new JSDOM(`<!doctype html><body><div id="root"></div></body>`, { runScripts: "outside-only", pretendToBeVisual: true, url: "https://staging.test/" });
   const w = dom.window;
@@ -167,6 +169,7 @@ async function createTab(browser, { gateAuth = false } = {}) {
     },
   };
   w.__auth = auth;
+  if (db) w.__db = db; // seeds fake Supabase reads, e.g. { profiles: { single: { wellbeing_personalization_enabled: true } } }
 
   const tab = {
     window: w, auth, requests: [], hold: null, heldRequest: null, memoryUpdates: [], otherCalls: [],
@@ -201,6 +204,21 @@ async function createTab(browser, { gateAuth = false } = {}) {
       await tab.act(async () => { const event = new w.Event("pageshow"); Object.defineProperty(event, "persisted", { value: true }); w.dispatchEvent(event); });
       await tab.settle(120);
     },
+    embeddedInput: () => w.document.querySelector("main input"),
+    async typeEmbedded(message, { submit = "enter" } = {}) {
+      const input = tab.embeddedInput();
+      await tab.act(async () => {
+        Object.getOwnPropertyDescriptor(w.HTMLInputElement.prototype, "value").set.call(input, message);
+        input.dispatchEvent(new w.Event("input", { bubbles: true }));
+      });
+      await tab.act(async () => {
+        if (submit === "enter") input.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+        else w.document.querySelector("main button[aria-label]").click();
+      });
+      await tab.settle(500);
+    },
+    async historyBack() { await tab.act(async () => { w.history.back(); }); await tab.settle(120); },
+    writes: () => w.__writes ?? [],
     dialogCount: () => w.document.querySelectorAll('[role="dialog"]').length,
     async setPrompt(prompt) { await tab.act(async () => { w.__page.setPrompt(prompt); }); await tab.settle(60); },
     async setGift(gift) { await tab.act(async () => { w.__page.setGift(gift); }); await tab.settle(60); },

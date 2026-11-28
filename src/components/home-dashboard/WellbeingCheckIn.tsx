@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Send } from "lucide-react";
 import Link from "next/link";
 import ProgressiveConversation from "./ProgressiveConversation";
+import HappyReplyField from "@/components/happybot/HappyReplyField";
 import { transitionGiftFlow } from "./giftFlow";
 import { supabase } from "@/lib/supabaseClient";
 import type { HomeFeaturedEvent } from "@/lib/home/home.types";
@@ -88,9 +88,11 @@ interface WellbeingCheckInProps {
   featuredEvent?: HomeFeaturedEvent | null;
   onPickGift?: (mode?: "selection" | "supplementary") => void;
   onSaveGift?: (title: string) => Promise<void>;
+  /** Hands a free-text reply to the one HappyBot, which opens over the home page. Nothing is sent to AI before this is called. */
+  onSendToHappy?: (text: string) => void;
 }
 
-export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPickGift, onSaveGift }: WellbeingCheckInProps) {
+export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPickGift, onSaveGift, onSendToHappy }: WellbeingCheckInProps) {
   const copy = getCopy(locale);
   const appLocale = isSupportedLocale(locale) ? locale : "uk";
   const friendlyName = formatFriendlyFirstName(userName, appLocale);
@@ -246,8 +248,21 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
     const value = note.trim();
     if (!value) return;
     setNote("");
+    if (onSendToHappy) {
+      // The text is a chat message for the one HappyBot (its history is stored by the chat itself), not a
+      // wellbeing check-in: mood buttons keep writing check-ins, free text is never copied into wellbeing tables.
+      setHasSubmittedWellbeingResponse(true);
+      onSendToHappy(value);
+      return;
+    }
     void answer("custom", value);
   };
+
+  const isBirthdayFeatured = featuredEvent?.source === "birthday" || featuredEvent?.category === "birthday";
+  const plainGreeting = `${copy.welcome}${friendlyName ? `, ${friendlyName}` : ""}! 👋`;
+  const plainEventLine = featuredEvent
+    ? `${featuredEvent.countdownLabel} ${isBirthdayFeatured ? wellbeingT("birthdayLabel") : wellbeingT("importantEventLabel")} — ${featuredEvent.title}.`
+    : wellbeingT("noEvent");
 
   useEffect(() => {
     if (!enabled || !wellbeingHistoryResolved) return;
@@ -282,8 +297,10 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
             <div><p className="text-sm font-extrabold text-slate-900">Happy</p><p className="text-xs text-slate-500">{wellbeingT("assistantSubtitle")}</p></div>
           </div>
           {enabled === null ? <div className="mt-3 h-10 animate-pulse rounded-xl bg-slate-100" /> : !enabled ? <>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">{copy.privacy}</p>
+            {onSendToHappy && <p className="mt-1 max-w-2xl whitespace-pre-line text-sm font-semibold leading-6 text-slate-800">{plainGreeting}{"\n"}<span className="font-normal text-slate-600">{plainEventLine}</span></p>}
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{copy.privacy}</p>
             <button type="button" onClick={() => void enableCare()} disabled={busy} className="mt-3 min-h-10 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white transition hover:bg-slate-700 disabled:cursor-wait disabled:opacity-60">{copy.consent}</button>
+            {onSendToHappy && <HappyReplyField value={note} onChange={setNote} onSubmit={submitNote} disabled={busy} placeholder={wellbeingT("inputPlaceholder")} sendLabel={copy.send} aiNotice={wellbeingT("aiNotice")} />}
           </> : <>
             <ProgressiveConversation lines={transcript} waiting={busy} typingLabel={wellbeingT("typingLabel")}>
               {(ready) => <>
@@ -320,7 +337,7 @@ export default function WellbeingCheckIn({ locale, userName, featuredEvent, onPi
             {giftStatusAction === "input" && conversationStep === "gift_status" ? (ready && <>
               <div className="flex gap-2"><input value={giftTitle} onChange={(event) => setGiftTitle(event.target.value)} placeholder={wellbeingT("giftInputPlaceholder")} maxLength={280} className="min-h-10 min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-sky-400 focus:bg-white" /><button type="button" disabled={!giftTitle.trim() || !onSaveGift || savingGift} onClick={async () => { if (!onSaveGift) return; setSavingGift(true); try { await onSaveGift(giftTitle.trim()); addUserLine(giftTitle.trim()); setGiftTitle(""); setGiftStatusAction("saved"); } catch { setError(copy.error); } finally { setSavingGift(false); } }} className="min-h-10 shrink-0 rounded-xl bg-sky-600 px-3 text-sm font-bold text-white disabled:opacity-50">{wellbeingT("saveAction")}</button></div>
             </>) : <>
-            <div className="mt-3 flex gap-2"><input value={note} onChange={(event) => setNote(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitNote(); }} disabled={busy || !ready} maxLength={1000} placeholder={conversationStep === "wellbeing" && !hasCheckedInToday && !hasSubmittedWellbeingResponse ? wellbeingT("firstMessagePlaceholder") : wellbeingT("inputPlaceholder")} className="min-h-10 min-w-0 flex-1 rounded-full border border-slate-200 bg-white px-3.5 text-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 disabled:bg-slate-50" /><button type="button" onClick={submitNote} disabled={busy || !ready || !note.trim()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-600 text-white shadow-sm disabled:opacity-40" aria-label={copy.send}><Send size={16} /></button></div>
+            <HappyReplyField value={note} onChange={setNote} onSubmit={submitNote} disabled={busy || !ready} placeholder={conversationStep === "wellbeing" && !hasCheckedInToday && !hasSubmittedWellbeingResponse ? wellbeingT("firstMessagePlaceholder") : wellbeingT("inputPlaceholder")} sendLabel={copy.send} aiNotice={wellbeingT("aiNotice")} />
             </>}
               </>}
             </ProgressiveConversation>

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useAuth } from "@/components/AuthProvider";
 import UserScopedChatAssistant from "@/components/assistant/UserScopedChatAssistant";
 import { HappyBotContext, type HappyBotApi } from "@/components/happybot/useHappyBot";
+import { useSheetNavigation } from "@/components/happybot/useSheetNavigation";
 import { useChatOwnerReset } from "@/hooks/useChatOwnerReset";
 import { useHomeChatState } from "@/hooks/useHomeChatState";
 import { HAPPYBOT_LEGACY_OPEN_EVENTS, resolveOpenRequest, sameGiftRequest, sameScope, type HappyBotOpenRequest } from "@/lib/happybot/openRequest";
@@ -25,7 +26,8 @@ const NOOP = () => {};
  * - nothing is mounted before the first open() and everything is dropped on owner change;
  * - opening is idempotent: re-opening the same context neither remounts nor re-sends;
  * - the sheet closes on route change, as the page-local mounts did when their page unmounted;
- * - the two legacy launch events are handled here only.
+ * - the two legacy launch events are handled here only;
+ * - Back closes the open sheet (one pushed history entry) and the page scroll position is restored on close.
  * Messages are never written to web storage, and nothing here calls the AI API: only the
  * conversation itself sends a request, and only after open() carries a prompt or the user submits.
  */
@@ -52,7 +54,12 @@ export default function HappyBotProvider({ children }: { children: ReactNode }) 
     if (chatOpen) setChatOpen(false);
   }
 
+  const isOpen = chatOpen && !privateHidden;
+  const close = useCallback(() => setChatOpen(false), [setChatOpen]);
+  const { rememberScroll } = useSheetNavigation(isOpen, close);
+
   const open = useCallback((request?: HappyBotOpenRequest) => {
+    rememberScroll();
     const next = resolveOpenRequest(request);
     memoryCallback.current = request?.onPersonMemoryUpdated;
     setChatScope((previous) => (sameScope(previous, next.scope) ? previous : next.scope));
@@ -60,9 +67,7 @@ export default function HappyBotProvider({ children }: { children: ReactNode }) 
     setChatInitialPrompt(next.initialPrompt);
     setMounted(true);
     setChatOpen(true);
-  }, [setChatGiftRequest, setChatInitialPrompt, setChatOpen, setChatScope]);
-
-  const close = useCallback(() => setChatOpen(false), [setChatOpen]);
+  }, [rememberScroll, setChatGiftRequest, setChatInitialPrompt, setChatOpen, setChatScope]);
 
   useEffect(() => {
     const onLegacyOpen = () => open();
@@ -74,7 +79,6 @@ export default function HappyBotProvider({ children }: { children: ReactNode }) 
 
   const handlePersonMemoryUpdated = useCallback((personId?: string) => memoryCallback.current?.(personId), []);
 
-  const isOpen = chatOpen && !privateHidden;
   const api = useMemo<HappyBotApi>(() => ({ open, close, isOpen, scope: chatScope }), [open, close, isOpen, chatScope]);
 
   return (

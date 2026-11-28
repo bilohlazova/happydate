@@ -1,6 +1,15 @@
 // Per-window fake of the Supabase browser client. `globalThis.__auth` is provided by the harness.
-function chain() {
-  const c = { select: () => c, eq: () => c, order: () => c, limit: () => c, maybeSingle: async () => ({ data: null, error: null }) };
+// `globalThis.__db[table] = { single, list }` seeds reads; every insert/update is recorded in `globalThis.__writes`.
+function chain(table) {
+  const seed = () => globalThis.__db?.[table] ?? {};
+  const record = (kind, row) => { (globalThis.__writes ??= []).push({ kind, table, row }); return Promise.resolve({ error: null }); };
+  const c = {
+    select: () => c, eq: () => c, order: () => c, limit: () => c, gte: () => c,
+    maybeSingle: async () => ({ data: seed().single ?? null, error: null }),
+    insert: (row) => record("insert", row),
+    update: (row) => ({ eq: () => record("update", row) }),
+    then: (resolve) => resolve({ data: seed().list ?? [], error: null }),
+  };
   return c;
 }
 export const supabase = {
@@ -13,5 +22,5 @@ export const supabase = {
     },
     signOut: async () => {},
   },
-  from: () => chain(),
+  from: (table) => chain(table),
 };

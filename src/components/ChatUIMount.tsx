@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ChatLauncherGiftTag from "@/components/ChatLauncherGiftTag";
-import ChatAssistantModal from "@/components/ChatAssistantModal";
+import UserScopedChatAssistant from "@/components/assistant/UserScopedChatAssistant";
 
 export default function ChatUIMount() {
   const [open, setOpen] = useState(false);
@@ -22,7 +22,7 @@ export default function ChatUIMount() {
   return (
     <>
       <ChatLauncherGiftTag />
-      <ChatAssistantModal open={open} onClose={() => setOpen(false)} />
+      <UserScopedChatAssistant open={open} onClose={() => setOpen(false)} />
     </>
   );
 }

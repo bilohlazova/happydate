@@ -157,8 +157,11 @@ test("every chat entry point shares the single ChatAssistantModal conversation r
   ];
   for (const file of files) {
     const source = await readFile(new URL(file, import.meta.url), "utf8");
-    assert.match(source, /ChatAssistantModal/, file);
+    // Entry points reach the single modal through the owner-scoped wrapper (HD-CHAT-001 Phase 0).
+    assert.match(source, /ChatAssistantModal|UserScopedChatAssistant/, file);
   }
+  const scoped = await readFile(new URL("../src/components/assistant/UserScopedChatAssistant.tsx", import.meta.url), "utf8");
+  assert.match(scoped, /<ChatAssistantModal/);
   const modal = await readFile(new URL("../src/components/ChatAssistantModal.tsx", import.meta.url), "utf8");
   assert.match(modal, /<ConversationView/);
 });

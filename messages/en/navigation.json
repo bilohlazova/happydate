@@ -55,5 +55,9 @@
     "error": "Notifications could not be loaded.",
     "unauthorized": "Sign in again to view notifications.",
     "unavailable": "Notifications are temporarily unavailable."
+  },
+  "privateRestore": {
+    "unverified": "We couldn't confirm your account after returning to this page. Check your connection.",
+    "retry": "Try again"
   }
 }

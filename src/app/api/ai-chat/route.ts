@@ -20,7 +20,7 @@ import { loadAssistantPersonSymbol } from "@/lib/assistant/personSymbolContext.s
 import { loadPersonHappyConversationHistory, savePersonHappyConversation } from "@/lib/assistant/happyConversationHistory.server";
 import { listShownGiftIdeas } from "@/lib/gift-intelligence/shownGiftIdeas.server";
 import { formatShownIdeasContext } from "@/lib/gift-intelligence/shownGiftIdeas";
-import { loadConversationMemoryContext, saveChatTurn, summarizeConversationsIfDue } from "@/lib/assistant/conversationMemory.server";
+import { loadConversationMemoryContext, loadMergedPersonHistory, saveChatTurn, summarizeConversationsIfDue } from "@/lib/assistant/conversationMemory.server";
 import { queueKnowledgeCandidate } from "@/lib/happy/learning/knowledgeQueue.server";
 import { memoryProposalCandidateSchema } from "@/lib/happy/actions/memoryProposal.server";
 import { after } from "next/server";
@@ -313,6 +313,10 @@ export async function POST(request: Request) {
                 ])
               : [[], [], [], null, [], []];
           const active = verifiedRequest.context.activePerson;
+          // One exchange enters the prompt once: merge both history stores and drop what the live window already carries.
+          const mergedPersonHistory = active && verifiedRequest.context.personResolutionStatus === "resolved"
+            ? await loadMergedPersonHistory({ userId: identity.userId, personId: active.id, legacy: serverHappyConversations, conversation: verifiedRequest.conversation })
+            : [];
           const homePerson = active ? homeData.people.find((person) => person.id === active.id) : null;
           const serverPersonMemoryProfile = active && homePerson ? buildUnifiedPersonContext({
             personId: active.id,
@@ -322,7 +326,7 @@ export async function POST(request: Request) {
             knowledge: homeData.knowledge,
             symbol: serverSymbol,
             pets: serverPets,
-            happyConversations: serverHappyConversations,
+            happyConversations: mergedPersonHistory,
             locale: verifiedRequest.locale === "uk" ? "uk" : "en",
           }).forChat : null;
           const memoryScope = verifiedScope?.type ?? "global";

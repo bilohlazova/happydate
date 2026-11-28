@@ -29,7 +29,7 @@ export function chatOwnerKey(owner: ChatOwner): string | null {
   }
 }
 
-export type ChatGiftRequestInput = { personId: string; eventId: string; mode?: string } | null | undefined;
+export type ChatGiftRequestInput = { personId: string; eventId: string; mode?: "selection" | "supplementary" } | null | undefined;
 
 /**
  * Identity of the person/event/task the conversation is about. Switching it

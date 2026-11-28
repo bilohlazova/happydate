@@ -37,6 +37,8 @@ export interface ChatAssistantModalProps {
    * `undefined` = legacy caller: ownership checks are skipped.
    */
   ownerId?: string | null;
+  /** Reports whether a request is running and whether the conversation holds messages (used for context eviction). */
+  onActivityChange?: (activity: { busy: boolean; hasMessages: boolean }) => void;
 }
 
 const ACTION_DEFINITIONS = [
@@ -70,7 +72,7 @@ const INITIAL_HAPPY_LEARNING_STATE: ChatHappyLearningState = {
   detectionStatus: "idle",
 };
 
-export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdated, initialPrompt = null, autoSubmitInitialPrompt = false, giftRequest = null, scope = { type: "global" }, ownerId }: ChatAssistantModalProps) {
+export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdated, initialPrompt = null, autoSubmitInitialPrompt = false, giftRequest = null, scope = { type: "global" }, ownerId, onActivityChange }: ChatAssistantModalProps) {
   const t = useTranslations("assistant");
   const locale = useLocale();
   const router = useRouter();
@@ -201,6 +203,15 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
   useEffect(() => {
     ownerIdRef.current = ownerId;
   }, [ownerId]);
+
+  const activityCallbackRef = useRef(onActivityChange);
+  useEffect(() => {
+    activityCallbackRef.current = onActivityChange;
+  }, [onActivityChange]);
+  const hasMessages = messages.length > 0;
+  useEffect(() => {
+    activityCallbackRef.current?.({ busy: isResponding, hasMessages });
+  }, [isResponding, hasMessages]);
 
   useEffect(() => {
     mountedRef.current = true;

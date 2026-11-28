@@ -23,28 +23,33 @@ export const USERS = {
 };
 
 function entrySource(variant) {
+  // patched  = the REAL production page state hook (useHomeChatState, which owns useChatOwnerReset)
+  //            and the real UserScopedChatAssistant.
+  // original = the pre-fix wiring from origin/main: same state, no reset, bare modal.
   const wiring = variant === "patched"
     ? `import UserScopedChatAssistant from "@/components/assistant/UserScopedChatAssistant";
-       import { useChatOwnerReset } from "@/hooks/useChatOwnerReset";
+       import { useHomeChatState } from "@/hooks/useHomeChatState";
        const Chat = UserScopedChatAssistant;`
     : `import ChatAssistantModal from "@/components/ChatAssistantModal";
        const Chat = ChatAssistantModal;
-       const useChatOwnerReset = () => {};`;
+       function useHomeChatState() {
+         const [chatOpen, setChatOpen] = useState(false);
+         const [chatInitialPrompt, setChatInitialPrompt] = useState(null);
+         const [chatGiftRequest, setChatGiftRequest] = useState(null);
+         const [chatScope, setChatScope] = useState({ type: "global" });
+         return { chatOpen, setChatOpen, chatInitialPrompt, setChatInitialPrompt, chatGiftRequest, setChatGiftRequest, chatScope, setChatScope };
+       }`;
   return `
-    import React, { useState, useCallback, act } from "react";
+    import React, { useState, act } from "react";
     import { createRoot } from "react-dom/client";
     import { AuthProvider } from "@/components/AuthProvider";
     ${wiring}
     function Page() {
-      const [open, setOpen] = useState(false);
-      const [scope, setScope] = useState({ type: "global" });
-      const [gift, setGift] = useState(null);
-      const [prompt, setPrompt] = useState(null);
-      globalThis.__page = { setOpen, setScope, setGift, setPrompt };
-      const reset = useCallback(() => { setOpen(false); setScope({ type: "global" }); setPrompt(null); setGift(null); }, []);
-      useChatOwnerReset(reset);
-      return <Chat open={open} onClose={() => setOpen(false)} scope={scope} giftRequest={gift}
-        initialPrompt={prompt} autoSubmitInitialPrompt={Boolean(prompt)}
+      const chat = useHomeChatState();
+      globalThis.__page = { setOpen: chat.setChatOpen, setScope: chat.setChatScope, setGift: chat.setChatGiftRequest, setPrompt: chat.setChatInitialPrompt };
+      globalThis.__pageState = { open: chat.chatOpen, scope: chat.chatScope, gift: chat.chatGiftRequest, prompt: chat.chatInitialPrompt };
+      return <Chat open={chat.chatOpen} onClose={() => chat.setChatOpen(false)} scope={chat.chatScope} giftRequest={chat.chatGiftRequest}
+        initialPrompt={chat.chatInitialPrompt} autoSubmitInitialPrompt={Boolean(chat.chatInitialPrompt)}
         onPersonMemoryUpdated={(id) => globalThis.__memoryUpdated && globalThis.__memoryUpdated(id)} />;
     }
     function LoginPage() { return <main>LOGIN-PAGE</main>; }
@@ -160,6 +165,8 @@ async function createTab(browser, { gateAuth = false } = {}) {
     async open() { await tab.act(async () => { w.__page.setOpen(true); }); await tab.settle(80); },
     async close() { await tab.act(async () => { w.__page.setOpen(false); }); await tab.settle(40); },
     async setScope(scope) { await tab.act(async () => { w.__page.setScope(scope); }); await tab.settle(60); },
+    pageState: () => w.__pageState,
+    async setPrompt(prompt) { await tab.act(async () => { w.__page.setPrompt(prompt); }); await tab.settle(60); },
     async setGift(gift) { await tab.act(async () => { w.__page.setGift(gift); }); await tab.settle(60); },
     async send(message) {
       const textarea = w.document.querySelector("textarea");

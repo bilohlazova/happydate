@@ -5,7 +5,7 @@ import HomeSkeleton from "@/components/home-dashboard/HomeSkeleton";
 import HomeErrorState from "@/components/home-dashboard/HomeErrorState";
 import GiftOutcomeConfirmation from "@/components/home-dashboard/GiftOutcomeConfirmation";
 import UserScopedChatAssistant from "@/components/assistant/UserScopedChatAssistant";
-import { useChatOwnerReset } from "@/hooks/useChatOwnerReset";
+import { useHomeChatState } from "@/hooks/useHomeChatState";
 import { loadHome } from "@/lib/home/loadHome";
 import { buildHomeViewModel } from "@/lib/home/buildHomeViewModel";
 import { isCurrentHomeLoad } from "@/lib/home/homeLoadGuard";
@@ -31,7 +31,6 @@ import { recordKnowledgeReviewInteraction } from "@/lib/repositories/knowledgeRe
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabaseClient";
 import GuestHomePresentation from "@/components/GuestHome";
-import type { ChatScopeInput } from "@/lib/assistant/chatScope";
 
 const safeStorage = {
   getItem: (key: string): string | null => {
@@ -113,10 +112,7 @@ export default function HomePageClient() {
   const [homeSnapshot, setHomeSnapshot] = useState<HomeSnapshot | null>(null);
   const [fatalError, setFatalError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [chatInitialPrompt, setChatInitialPrompt] = useState<string | null>(null);
-  const [chatGiftRequest, setChatGiftRequest] = useState<{ personId: string; eventId: string; mode?: "selection" | "supplementary" } | null>(null);
-  const [chatScope, setChatScope] = useState<ChatScopeInput>({ type: "global" });
+  const { chatOpen, setChatOpen, chatInitialPrompt, setChatInitialPrompt, chatGiftRequest, setChatGiftRequest, chatScope, setChatScope } = useHomeChatState();
   const [reminder, setReminder] = useState<ReminderRecord | null>(null);
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminderError, setReminderError] = useState<string | null>(null);
@@ -132,14 +128,6 @@ export default function HomePageClient() {
 
   const reload = useCallback(() => setReloadKey((value) => value + 1), []);
 
-  // Sign-out or account switch: drop every private chat input that lives outside the modal.
-  const resetChatForOwnerChange = useCallback(() => {
-    setChatOpen(false);
-    setChatScope({ type: "global" });
-    setChatInitialPrompt(null);
-    setChatGiftRequest(null);
-  }, []);
-  useChatOwnerReset(resetChatForOwnerChange);
 
   const finishGiftOutcomeConfirmation = useCallback(() => {
     if (giftOutcomeTimerRef.current) clearTimeout(giftOutcomeTimerRef.current);
@@ -182,7 +170,7 @@ export default function HomePageClient() {
       openedNotificationScopeRef.current = searchParams.toString();
     }, 0);
     return () => window.clearTimeout(timeout);
-  }, [authLoading, searchParams, user]);
+  }, [authLoading, searchParams, user, setChatGiftRequest, setChatInitialPrompt, setChatOpen, setChatScope]);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -270,7 +258,7 @@ export default function HomePageClient() {
     setChatGiftRequest(event.personId ? { personId: event.personId, eventId: event.giftContextId, mode } : null);
     setChatInitialPrompt(homeT(mode === "supplementary" ? "wellbeing.supplementaryPrompt" : "reminder.pickGiftPrompt", { name }));
     setChatOpen(true);
-  }, [homeT, viewModel?.featuredEvent]);
+  }, [homeT, viewModel?.featuredEvent, setChatGiftRequest, setChatInitialPrompt, setChatOpen]);
 
   const saveGift = useCallback(async (title: string) => {
     const event = viewModel?.featuredEvent;
@@ -303,7 +291,7 @@ export default function HomePageClient() {
     const body = await result.json() as { kind?: string };
     reload();
     if (body.kind === "generated") { setChatScope({ type: "task", taskId }); setChatInitialPrompt(null); setChatGiftRequest(null); setChatOpen(true); }
-  }, [reload]);
+  }, [reload, setChatGiftRequest, setChatInitialPrompt, setChatOpen, setChatScope]);
 
   const selectOccasionPerson = useCallback(async (occurrenceKey: string, personId: string) => {
     const result = await fetch(`/api/happy/occasions/${encodeURIComponent(occurrenceKey)}/person`, {

@@ -49,8 +49,10 @@
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "baseline-browser-mapping": "^2.10.43",
+    "esbuild": "0.28.2",
     "eslint": "9.39.5",
     "eslint-plugin-react-hooks": "7.1.0",
+    "jsdom": "31.0.1",
     "tailwindcss": "^4",
     "typescript": "5.9.3",
     "typescript-eslint": "8.73.0"

@@ -101,6 +101,13 @@ test("static guard: the profile history reads happy_chat_turns first and de-dupl
 
 test("this phase adds no migration, no new columns and no schema change", async () => {
   const { execFileSync } = await import("node:child_process");
-  const changed = execFileSync("git", ["diff", "--name-only", "dd24f2091638e1d658eb0ed55ba1ed40a4442696", "HEAD"], { cwd: root, encoding: "utf8" });
+  // The event pins the actual stacked PR base, even when HEAD is a PR merge ref.
+  // Outside a PR run, compare with the feature's documented base branch.
+  const event = process.env.GITHUB_EVENT_PATH
+    ? JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH, "utf8"))
+    : null;
+  const base = event?.pull_request?.base?.sha
+    ?? "refs/remotes/origin/fix/hd-chat-001-phase0-logout-privacy";
+  const changed = execFileSync("git", ["diff", "--name-only", "--no-renames", `${base}...HEAD`, "--"], { cwd: root, encoding: "utf8" });
   assert.doesNotMatch(changed, /^supabase\//m);
 });

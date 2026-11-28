@@ -4,22 +4,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { supabase } from "@/lib/supabaseClient";
 
-// "/" is public (guest home), so it cannot live inside PrivateSnapshotBoundary. This guard gives the
-// owner-gated part of the home the same BFCache protection: the private DOM is removed before the page
+// Components outside PrivateSnapshotBoundary that show owner data ("/" is public, so the home and the global
+// header cannot live inside it) use this guard to get the same BFCache protection: the private DOM is removed before the page
 // is cached (pagehide) and shown again only after supabase.auth.getUser() confirms the same owner.
 // auth-js emits no event when a restored page finds its storage empty, so AuthProvider alone can keep
 // showing a stale owner.
 //   verifying  -> private content hidden, check in flight (or retry pending)
 //   unverified -> check failed (offline/error): hidden, retry available
 //   foreign    -> no session or another account: private content stays hidden, guest view is shown
-export type HomeRestoreState = "verifying" | "unverified" | "foreign" | null;
+export type RestoreState = "verifying" | "unverified" | "foreign" | null;
 
 function sessionIsGone(error: { name?: string; status?: number } | null): boolean {
   return error?.name === "AuthSessionMissingError" || error?.status === 401 || error?.status === 403;
 }
 
-export function useHomeRestoreGuard(ownerId: string | null, onVerified: () => void) {
-  const [stored, setStored] = useState<{ ownerId: string; value: Exclude<HomeRestoreState, null> } | null>(null);
+export function useRestoreGuard(ownerId: string | null, onVerified: () => void) {
+  const [stored, setStored] = useState<{ ownerId: string; value: Exclude<RestoreState, null> } | null>(null);
   const generation = useRef(0);
   const failed = useRef(false);
   const verifyRef = useRef<() => void>(() => {});
@@ -73,6 +73,6 @@ export function useHomeRestoreGuard(ownerId: string | null, onVerified: () => vo
   }, [ownerId]);
 
   const retry = useCallback(() => verifyRef.current(), []);
-  const state: HomeRestoreState = stored && stored.ownerId === ownerId ? stored.value : null;
+  const state: RestoreState = stored && stored.ownerId === ownerId ? stored.value : null;
   return { state, retry };
 }

@@ -8,7 +8,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const file = (p) => path.join(root, p);
 const render = "src/lib/home/homeRender.ts";
 const page = "src/components/HomePageClient.tsx";
-const guard = "src/lib/home/useHomeRestoreGuard.ts";
+const header = "src/components/Header.tsx";
+const guard = "src/lib/privacy/useRestoreGuard.ts";
 const mutations = [
   ["selector: drop owner comparison", render, "|| snapshot.ownerId !== currentUserId", ""],
   ["page: bypass selector", page, "privateHidden ? null : selectRenderableHomeSnapshot(homeSnapshot, user?.id ?? null, authLoading);", "privateHidden ? null : (homeSnapshot?.viewModel ?? null); void selectRenderableHomeSnapshot;"],
@@ -17,17 +18,19 @@ const mutations = [
   ["guard: skip owner comparison", guard, "data.user?.id === ownerId", "true"],
   ["guard: treat any error as verified", guard, "if (error && !sessionIsGone(error)) throw error;", "void 0;"],
   ["guard: never clear failed flag", guard, "      failed.current = false;\n", ""],
+  ["header: bypass guard for account name and menu", header, "const shownUser = restore.state === null ? user : null;", "const shownUser = user;", "tests/header-restore-guard.test.mjs"],
+  ["header: inbox ignores guard", header, "{!isFocusedFlow && shownUser && <NotificationInbox />}", "{!isFocusedFlow && user && <NotificationInbox />}", "tests/header-restore-guard.test.mjs"],
 ];
 const originals = new Map();
 let survived = 0;
 try {
-  for (const [name, rel, from, to] of mutations) {
+  for (const [name, rel, from, to, testFile = "tests/home-snapshot-privacy.test.mjs"] of mutations) {
     const target = file(rel);
     if (!originals.has(rel)) originals.set(rel, await readFile(target, "utf8"));
     const original = originals.get(rel);
     if (!original.includes(from)) throw new Error(`Mutation target missing: ${name}`);
     await writeFile(target, original.replace(from, to));
-    const run = spawnSync(process.execPath, ["--experimental-strip-types", "--test", "--test-concurrency=1", "tests/home-snapshot-privacy.test.mjs"], { cwd: root, encoding: "utf8", timeout: 120000 });
+    const run = spawnSync(process.execPath, ["--experimental-strip-types", "--test", "--test-concurrency=1", testFile], { cwd: root, encoding: "utf8", timeout: 120000 });
     await writeFile(target, original);
     const log = run.stdout + run.stderr;
     const failures = log.match(/(?:ℹ|#) fail (\d+)/)?.[1];

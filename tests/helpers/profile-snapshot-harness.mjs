@@ -15,11 +15,14 @@ class TestMessageChannel extends MessageChannel {
 
 export async function profileHarness({ owner = "A", bare = false, unresolved = false } = {}) {
   const entry = `
-    import React, { act, Profiler } from 'react';
+    import React, { act, useLayoutEffect } from 'react';
     import { createRoot } from 'react-dom/client';
     import Page from '@/app/people/[id]/page';
     import Boundary from '@/components/PrivateSnapshotBoundary';
-    import { AuthProvider } from '@/components/AuthProvider';
+    import { AuthProvider, useAuth } from '@/components/AuthProvider';
+    // Records the committed DOM with the user React holds after every auth/route commit (layout phase: before passive
+    // effects can clean up and before a paint). React's Profiler callback is NOT used: it can run after that cleanup.
+    function Probe() { const { user } = useAuth(); useLayoutEffect(() => { globalThis.__commits.push({owner: user?.id ?? null, route: globalThis.__route.id, text: document.body.textContent}); }); return null; }
     import { buildPersonProfileViewModel } from '@/lib/people/buildPeopleViewModels';
     globalThis.__model = (owner, id, marker) => buildPersonProfileViewModel({
       person: {id, user_id: owner, name: marker, relationship: 'mother', relation_label: null,
@@ -30,9 +33,7 @@ export async function profileHarness({ owner = "A", bare = false, unresolved = f
     });
     globalThis.__act = act;
     const app = createRoot(document.getElementById('root'));
-    globalThis.__render = () => app.render(<AuthProvider><Profiler id='private' onRender={() =>
-      globalThis.__commits.push({owner: globalThis.__auth.session()?.user.id ?? null, route: globalThis.__route.id, text: document.body.textContent})
-    }>${bare ? "<Page/>" : "<Boundary><Page/></Boundary>"}</Profiler></AuthProvider>);
+    globalThis.__render = () => app.render(<AuthProvider>${bare ? "<Page/>" : "<Boundary><Page/></Boundary>"}<Probe/></AuthProvider>);
     globalThis.__unmount = () => app.unmount();
   `;
   const navigation = `
@@ -108,6 +109,7 @@ export async function profileHarness({ owner = "A", bare = false, unresolved = f
     async route(id) {w.__route={id,path:`/people/${id}`};await h.act(()=>w.__render());await h.settle();},
     async transition(type,persisted=true) {await h.act(()=>w.dispatchEvent(new w.PageTransitionEvent(type,{persisted})));await h.settle();},
     holdAuth(){holdAuth=true;},
+    silentSession(next){session=next?{user:{id:next},access_token:`synthetic-${next}-silent`}:null;},
     async verify(index,next) {await h.act(()=>checks[index]({data:{user:next?{id:next}:null},error:null}));await h.settle();},
     async verifyError(index) {await h.act(()=>checks[index]({data:{user:null},error:{message:"offline"}}));await h.settle();},
     async dispose() {await h.act(()=>w.__unmount());w.close();for(const c of channels){c.port1.close();c.port2.close();}channels.clear();},

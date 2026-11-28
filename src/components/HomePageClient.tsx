@@ -10,7 +10,7 @@ import { loadHome } from "@/lib/home/loadHome";
 import { buildHomeViewModel } from "@/lib/home/buildHomeViewModel";
 import { isCurrentHomeLoad } from "@/lib/home/homeLoadGuard";
 import { selectRenderableHomeSnapshot, type HomeSnapshot } from "@/lib/home/homeRender";
-import { useHomeRestoreGuard } from "@/lib/home/useHomeRestoreGuard";
+import { useRestoreGuard } from "@/lib/privacy/useRestoreGuard";
 import { changeGiftOutcomeFollowUp, confirmPersonGiftOutcome, savePersonGiftOutcomeNote, undoPersonGiftOutcome } from "@/lib/gifts/gift.loaders";
 import { createSelectedPersonGift } from "@/lib/gifts/gift.loaders";
 import type { GiftOutcomeValue } from "@/lib/gifts/gift.types";
@@ -127,7 +127,7 @@ export default function HomePageClient() {
   const homeOwnerRef = useRef<string | null>(null);
   const reload = useCallback(() => setReloadKey((value) => value + 1), []);
   // BFCache: private home content is removed before caching and shown only after the owner is re-verified.
-  const restore = useHomeRestoreGuard(user?.id ?? null, reload);
+  const restore = useRestoreGuard(user?.id ?? null, reload);
   const privateHidden = restore.state !== null;
   const viewModel = privateHidden ? null : selectRenderableHomeSnapshot(homeSnapshot, user?.id ?? null, authLoading);
 

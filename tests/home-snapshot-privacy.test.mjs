@@ -55,7 +55,7 @@ test("home: unresolved authentication renders no private data", () => withHome(a
   assert.ok(!h.text().includes(A));
 }, { owner: null }));
 
-// --- BFCache: "/" is outside PrivateSnapshotBoundary, so useHomeRestoreGuard protects it. ---
+// --- BFCache: "/" is outside PrivateSnapshotBoundary, so useRestoreGuard protects it. ---
 const afterFreeze = (h, from) => h.w.__commits.slice(from);
 const leaks = (h, from, marker) => afterFreeze(h, from).filter((c) => c.text.includes(marker));
 

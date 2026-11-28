@@ -1,7 +1,7 @@
 import { logHostedAiAttestation, readHostedSessionConfig } from "@/lib/assistant/hostedTestSession.server";
 import OpenAI from "openai";
 import { ASSISTANT_CHAT_CONFIG } from "@/lib/assistant/chatConfig";
-import { getAssistantEnvironmentStatus } from "@/lib/assistant/chatEnvironment";
+import { getAssistantEnvironmentStatus, getMissingAssistantConfiguration } from "@/lib/assistant/chatEnvironment";
 import { parseAssistantChatRequest } from "@/lib/assistant/chatContract";
 import { createAssistantRlsClient, getAssistantRequestIdentity } from "@/lib/assistant/chatIdentity";
 import { createConfiguredAssistantRateLimiter } from "@/lib/assistant/rateLimiter";
@@ -54,9 +54,13 @@ export async function POST(request: Request) {
 
   const environmentStatus = getAssistantEnvironmentStatus();
   if (process.env.NODE_ENV === "production" && !environmentStatus.productionReady) {
-    logOperationalError("assistant-chat", "configuration-missing");
+    // Names of the missing settings only (never values) so the cause is visible in logs, and a distinct
+    // error code so the UI does not present a missing environment as a transient failure. The guard stays closed.
+    logOperationalError("assistant-chat", "configuration-missing", {
+      category: getMissingAssistantConfiguration().join("."),
+    });
     return Response.json(
-      { error: "service_unavailable" },
+      { error: "ai_not_configured" },
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }

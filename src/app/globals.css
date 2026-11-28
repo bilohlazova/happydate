@@ -2248,6 +2248,22 @@ body[data-authenticated="false"] .hd-main { padding-bottom: 0; }
   background: linear-gradient(180deg,rgba(248,252,255,.98),rgba(247,249,252,.98)) !important;
   box-shadow: 0 28px 90px rgba(15,23,42,.24) !important;
 }
+/* Expanded HappyBot: near-fullscreen on phones, a large centred overlay on desktop. */
+.happy-chat-backdrop { padding-top: max(env(safe-area-inset-top), 8px); }
+.happy-chat-shell {
+  height: min(100%, calc(var(--hd-happybot-vvh, 100dvh) - max(env(safe-area-inset-top), 8px)));
+  max-height: 100%;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@media (min-width: 768px) {
+  .happy-chat-backdrop { align-items: center; padding: 24px; }
+  .happy-chat-shell {
+    width: min(880px, 100%);
+    height: min(86dvh, 860px);
+    max-height: calc(100dvh - 48px);
+    padding-bottom: 0;
+  }
+}
 .happy-chat-header { background: rgba(255,255,255,.9); }
 .happy-chat-avatar > span:last-child {
   background: linear-gradient(145deg,#fff,#f0f9ff); box-shadow: 0 9px 24px rgba(2,132,199,.16);

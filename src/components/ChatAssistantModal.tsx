@@ -148,6 +148,14 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
     document.body.style.overflow = "hidden";
     dialogRef.current?.focus({ preventScroll: true });
 
+    // Mobile keyboards: keep the sheet inside the visible viewport so the composer is never covered.
+    const viewport = window.visualViewport;
+    const syncViewport = () => {
+      if (viewport) document.documentElement.style.setProperty("--hd-happybot-vvh", `${Math.round(viewport.height)}px`);
+    };
+    syncViewport();
+    viewport?.addEventListener("resize", syncViewport);
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -174,6 +182,8 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+      viewport?.removeEventListener("resize", syncViewport);
+      document.documentElement.style.removeProperty("--hd-happybot-vvh");
       document.body.style.overflow = previousOverflow;
       cancelActiveResponse();
       previouslyFocusedRef.current?.focus({ preventScroll: true });
@@ -554,7 +564,9 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
               status: "error",
               errorCode: failure.code === "daily_ai_budget_exceeded"
                 ? "daily_ai_budget_exceeded"
-                : retryAfter ? "rate_limited" : "request_failed",
+                : failure.code === "ai_not_configured"
+                  ? "ai_not_configured"
+                  : retryAfter ? "rate_limited" : "request_failed",
               retryAt: retryAfter ? Date.now() + retryAfter * 1_000 : undefined,
             }
           : message,
@@ -720,8 +732,8 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
     : null;
 
   return (
-    <div className="happy-chat-backdrop fixed inset-0 z-[70] bg-slate-950/25 backdrop-blur-[3px] motion-safe:animate-[assistant-fade-in_.18s_ease-out_both]" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && closeAssistant()}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="happy-assistant-title" tabIndex={-1} className="happy-chat-shell fixed inset-x-0 bottom-0 flex h-[min(88dvh,760px)] flex-col overflow-hidden rounded-t-[28px] border border-white/70 bg-slate-50/95 shadow-[0_24px_80px_rgba(15,23,42,0.24)] backdrop-blur-2xl outline-none motion-safe:animate-[assistant-slide-up_.22s_ease-out_both] md:bottom-6 md:left-auto md:right-6 md:h-[min(78dvh,720px)] md:w-[460px] md:rounded-[28px]">
+    <div className="happy-chat-backdrop fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/25 backdrop-blur-[3px] motion-safe:animate-[assistant-fade-in_.18s_ease-out_both]" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && closeAssistant()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="happy-assistant-title" tabIndex={-1} className="happy-chat-shell relative flex w-full flex-col overflow-hidden rounded-t-[28px] border border-white/70 bg-slate-50/95 shadow-[0_24px_80px_rgba(15,23,42,0.24)] backdrop-blur-2xl outline-none motion-safe:animate-[assistant-slide-up_.22s_ease-out_both] md:rounded-[28px]">
         <ChatAssistantHeader
           title={t("title")}
           subtitle={t("subtitle")}
@@ -814,6 +826,7 @@ export default function ChatAssistantModal({ open, onClose, onPersonMemoryUpdate
             retryLabel={t("conversation.retry")}
             rateLimitLabel={t("conversation.rateLimited")}
             dailyBudgetLabel={t("conversation.dailyBudget")}
+            notConfiguredLabel={t("conversation.notConfigured")}
             retryInLabel={(seconds) => t("conversation.retryIn", { seconds })}
             now={rateLimitNow || Date.now()}
             happyLearning={happyLearning}
